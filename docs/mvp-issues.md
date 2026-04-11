@@ -2,6 +2,54 @@
 
 This file tracks the first public slice of work as issue-sized deliverables.
 
+## v0.1.0-alpha Scope
+
+Goal: ship a Python-first vertical slice that can reproduce:
+
+```text
+init -> plan -> fast -> review --from-run -> repair-prompt
+```
+
+Included:
+
+- `init`, `plan`, `fast`, `review`, and `repair-prompt`
+- a clear `deep` placeholder
+- Python fast runner
+- JSON and Markdown artifacts
+- tests and CI
+- one runnable Python workflow example
+
+Excluded until later milestones:
+
+- TypeScript runner
+- real `deep` execution
+- SARIF and GitHub annotations
+- live Codex or Claude runtime adapters
+- benchmark corpus and quantitative success metrics
+
+## Alpha Backlog
+
+### P0
+
+- Initial commit and repository baseline
+- CI for `python -m pytest` and `python -m qa_z fast`
+- Artifact schema v1 documentation and schema stability tests
+- Run-aware review flow documentation
+- Example Python workflow with passing and failing repair loops
+
+### P1
+
+- Diff parser groundwork
+- Changed-files-aware fast selection
+- Additional failure-mode tests
+- README product positioning improvements
+
+### P2
+
+- Release notes draft for `v0.1.0-alpha`
+- CONTRIBUTING and development workflow docs
+- Issue templates and default label guidance
+
 ## Issue 1: Diff and context intake
 
 - Goal: ingest issue text, spec docs, and git diff metadata into a single planning context.
