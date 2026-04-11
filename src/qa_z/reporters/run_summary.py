@@ -1,0 +1,67 @@
+"""Reporters for deterministic runner summaries."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from qa_z.runners.models import RunSummary
+
+
+def write_run_summary_artifacts(summary: RunSummary, artifact_dir: Path) -> Path:
+    """Write summary JSON, Markdown, and per-check JSON artifacts."""
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    checks_dir = artifact_dir / "checks"
+    checks_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_path = artifact_dir / "summary.json"
+    summary_path.write_text(
+        json.dumps(summary.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (artifact_dir / "summary.md").write_text(
+        render_summary_markdown(summary), encoding="utf-8"
+    )
+
+    for check in summary.checks:
+        check_path = checks_dir / f"{check.id}.json"
+        check_path.write_text(
+            json.dumps(check.to_dict(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    return summary_path
+
+
+def render_summary_markdown(summary: RunSummary) -> str:
+    """Render a compact human-readable run summary."""
+    lines = [
+        "# QA-Z Fast Summary",
+        "",
+        f"- Status: {summary.status}",
+        f"- Contract: {summary.contract_path or 'none'}",
+        f"- Started: {summary.started_at}",
+        f"- Finished: {summary.finished_at}",
+        "",
+        "## Totals",
+        "",
+        f"- Passed: {summary.totals['passed']}",
+        f"- Failed: {summary.totals['failed']}",
+        f"- Skipped: {summary.totals['skipped']}",
+        f"- Warning: {summary.totals['warning']}",
+        "",
+        "## Checks",
+        "",
+    ]
+
+    if not summary.checks:
+        lines.append("- No checks were executed.")
+    else:
+        for check in summary.checks:
+            detail = (
+                f"- {check.id}: {check.status} ({check.tool}, exit {check.exit_code})"
+            )
+            if check.message:
+                detail += f" - {check.message}"
+            lines.append(detail)
+
+    return "\n".join(lines).strip() + "\n"

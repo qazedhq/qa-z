@@ -1,0 +1,38 @@
+name: Codex Review Prep
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  review-prep:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: python -m pip install -e .[dev]
+
+      - name: Render QA-Z review guidance
+        run: python -m qa_z review
+
+      - name: Publish prompt summary
+        shell: bash
+        run: cat .github/codex/prompts/review.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Explain Codex review trigger
+        shell: bash
+        run: |
+          echo "Enable Codex code review in Codex settings for this repository." >> "$GITHUB_STEP_SUMMARY"
+          echo "Use @codex review in pull request comments for on-demand reviews." >> "$GITHUB_STEP_SUMMARY"
+          echo "Keep AGENTS.md review guidelines current so Codex sees the right guardrails." >> "$GITHUB_STEP_SUMMARY"

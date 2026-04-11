@@ -1,0 +1,90 @@
+project:
+  name: qa-z
+  languages:
+    - python
+  roots:
+    - src
+    - tests
+  critical_paths:
+    - auth/**
+    - payments/**
+    - migrations/**
+
+contracts:
+  sources:
+    - issue
+    - pull_request
+    - spec
+    - diff
+  output_dir: qa/contracts
+  required_sections:
+    - scope
+    - assumptions
+    - invariants
+    - risk_edges
+    - negative_cases
+    - acceptance_checks
+
+fast:
+  default_contract: latest
+  output_dir: ".qa-z/runs"
+  strict_no_tests: false
+  fail_on_missing_tool: true
+
+  checks:
+    - id: py_lint
+      enabled: true
+      run: ["ruff", "check", "."]
+      kind: "lint"
+
+    - id: py_format
+      enabled: true
+      run: ["ruff", "format", "--check", "."]
+      kind: "format"
+
+    - id: py_type
+      enabled: true
+      run: ["mypy", "src", "tests"]
+      kind: "typecheck"
+
+    - id: py_test
+      enabled: true
+      run: ["pytest", "-q"]
+      kind: "test"
+      no_tests: "warn"
+
+checks:
+  deep:
+    - property
+    - mutation
+    - security
+    - e2e_smoke
+  selection:
+    mode: diff-aware
+    max_changed_files: 40
+
+gates:
+  require_human_review: true
+  escalate_on:
+    - auth/**
+    - billing/**
+    - infra/**
+  block_on:
+    - failed_unit
+    - failed_security
+    - missing_contract
+
+reporters:
+  markdown: true
+  json: true
+  sarif: false
+  github_annotations: false
+  repair_packet: false
+
+adapters:
+  codex:
+    enabled: true
+    instructions_file: AGENTS.md
+  claude:
+    enabled: true
+    instructions_file: CLAUDE.md
