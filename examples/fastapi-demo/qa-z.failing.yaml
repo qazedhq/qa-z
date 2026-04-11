@@ -1,0 +1,34 @@
+project:
+  name: qa-z-fastapi-demo
+  languages:
+    - python
+  roots:
+    - app
+    - example_tests
+
+contracts:
+  output_dir: qa/contracts
+
+fast:
+  output_dir: .qa-z/runs
+  strict_no_tests: false
+  fail_on_missing_tool: true
+  checks:
+    - id: py_lint
+      enabled: true
+      run: ["ruff", "check", "app", "example_tests"]
+      kind: lint
+
+    - id: py_format
+      enabled: true
+      run: ["ruff", "format", "--check", "app", "example_tests"]
+      kind: format
+
+    - id: py_test_bug_demo
+      enabled: true
+      run: ["python", "-m", "pytest", "-q", "example_tests/app_bug_example.py"]
+      kind: test
+      no_tests: fail
+
+checks:
+  deep: []
