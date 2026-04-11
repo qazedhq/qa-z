@@ -25,3 +25,20 @@ jobs:
 
       - name: Run tests
         run: python -m pytest
+
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: python -m pip install -e .[dev]
+
+      - name: Run QA-Z fast gate
+        run: python -m qa_z fast --output-dir .qa-z/runs/ci
