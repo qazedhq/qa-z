@@ -121,6 +121,7 @@ class RunSummary:
     artifact_dir: str | None = None
     contract_title: str | None = None
     message: str = ""
+    schema_version: int = 1
 
     @property
     def totals(self) -> dict[str, int]:
@@ -135,6 +136,7 @@ class RunSummary:
     def to_dict(self) -> dict[str, Any]:
         """Render this summary as JSON-safe data."""
         data: dict[str, Any] = {
+            "schema_version": self.schema_version,
             "mode": self.mode,
             "contract_path": self.contract_path,
             "project_root": self.project_root,
@@ -193,4 +195,5 @@ class RunSummary:
                 str(data["contract_title"]) if data.get("contract_title") else None
             ),
             message=str(data.get("message", "")),
+            schema_version=int(data.get("schema_version", 1)),
         )

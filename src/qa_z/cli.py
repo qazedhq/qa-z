@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from .artifacts import (
     ArtifactLoadError,
@@ -14,7 +14,13 @@ from .artifacts import (
     resolve_contract_source,
     resolve_run_source,
 )
-from .config import COMMAND_GUIDANCE, CONTRACTS_README, EXAMPLE_CONFIG, load_config
+from .config import (
+    COMMAND_GUIDANCE,
+    CONTRACTS_README,
+    EXAMPLE_CONFIG,
+    ConfigError,
+    load_config,
+)
 from .planner.contracts import plan_contract
 from .reporters.repair_prompt import (
     build_repair_packet,
@@ -82,8 +88,9 @@ def handle_plan(args: argparse.Namespace) -> int:
     """Generate a QA contract draft from local context files."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config_path = Path(args.config).expanduser().resolve() if args.config else None
-    config = load_config(root, config_path=config_path)
+    config = load_cli_config(root, args, "plan")
+    if config is None:
+        return 2
 
     contract_path, created = plan_contract(
         root=root,
@@ -106,8 +113,9 @@ def handle_review(args: argparse.Namespace) -> int:
     """Render a review packet from a generated contract."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config_path = Path(args.config).expanduser().resolve() if args.config else None
-    config = load_config(root, config_path=config_path)
+    config = load_cli_config(root, args, "review")
+    if config is None:
+        return 2
 
     try:
         if args.from_run:
@@ -160,8 +168,9 @@ def handle_fast(args: argparse.Namespace) -> int:
     """Run deterministic fast checks."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config_path = Path(args.config).expanduser().resolve() if args.config else None
-    config = load_config(root, config_path=config_path)
+    config = load_cli_config(root, args, "fast")
+    if config is None:
+        return 2
 
     contract_path = resolve_cli_path(root, args.contract) if args.contract else None
     output_dir = resolve_cli_path(root, args.output_dir) if args.output_dir else None
@@ -199,8 +208,9 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
     """Render deterministic repair artifacts from a failed run."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config_path = Path(args.config).expanduser().resolve() if args.config else None
-    config = load_config(root, config_path=config_path)
+    config = load_cli_config(root, args, "repair-prompt")
+    if config is None:
+        return 2
 
     try:
         run_source = resolve_run_source(root, config, args.from_run)
@@ -246,6 +256,18 @@ def resolve_cli_path(root: Path, value: str) -> Path:
     if not path.is_absolute():
         path = root / path
     return path.resolve()
+
+
+def load_cli_config(
+    root: Path, args: argparse.Namespace, command: str
+) -> dict[str, Any] | None:
+    """Load config for a CLI command and print normalized errors."""
+    config_path = Path(args.config).expanduser().resolve() if args.config else None
+    try:
+        return load_config(root, config_path=config_path)
+    except ConfigError as exc:
+        print(f"qa-z {command}: configuration error: {exc}")
+        return None
 
 
 def render_fast_stdout(

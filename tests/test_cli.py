@@ -545,6 +545,19 @@ def test_fast_returns_unsupported_when_no_checks_are_configured(
     assert output["checks"] == []
 
 
+def test_fast_returns_config_error_for_broken_yaml(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("fast: [\n", encoding="utf-8")
+
+    exit_code = main(["fast", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z fast: configuration error:" in output
+
+
 @pytest.mark.parametrize("command", ["deep"])
 def test_placeholder_commands_emit_guidance(
     command: str,

@@ -152,6 +152,10 @@ COMMAND_GUIDANCE = {
 }
 
 
+class ConfigError(ValueError):
+    """Raised when qa-z configuration cannot be loaded."""
+
+
 def load_config(root: Path, config_path: Path | None = None) -> dict[str, Any]:
     """Load qa-z configuration or fall back to the built-in example config."""
     target = config_path if config_path is not None else root / "qa-z.yaml"
@@ -161,9 +165,12 @@ def load_config(root: Path, config_path: Path | None = None) -> dict[str, Any]:
     else:
         raw = EXAMPLE_CONFIG
 
-    loaded = yaml.safe_load(raw) or {}
+    try:
+        loaded = yaml.safe_load(raw) or {}
+    except yaml.YAMLError as exc:
+        raise ConfigError(f"Could not parse {target}: {exc}") from exc
     if not isinstance(loaded, dict):
-        raise ValueError("QA-Z config must deserialize into a mapping.")
+        raise ConfigError("QA-Z config must deserialize into a mapping.")
     return loaded
 
 

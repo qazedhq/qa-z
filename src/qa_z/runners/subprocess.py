@@ -11,8 +11,10 @@ from qa_z.runners.models import CheckResult, CheckSpec
 TAIL_LIMIT = 4000
 
 
-def tail_text(value: str, limit: int = TAIL_LIMIT) -> str:
+def tail_text(value: str | None, limit: int = TAIL_LIMIT) -> str:
     """Keep the final part of subprocess output for compact artifacts."""
+    if value is None:
+        return ""
     if len(value) <= limit:
         return value
     return value[-limit:]
@@ -40,6 +42,8 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             cwd=cwd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=spec.timeout_seconds,
             check=False,
         )
