@@ -31,6 +31,9 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
+      - name: Build package artifacts
+        run: python -m build --sdist --wheel
+
   qa-z:
     runs-on: ubuntu-latest
     permissions:
