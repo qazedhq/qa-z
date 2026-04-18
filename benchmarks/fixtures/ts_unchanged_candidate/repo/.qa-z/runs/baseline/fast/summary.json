@@ -1,0 +1,26 @@
+{
+  "artifact_dir": ".qa-z/runs/baseline/fast",
+  "checks": [
+    {
+      "command": [
+        "tsc",
+        "--noEmit"
+      ],
+      "duration_ms": 1,
+      "exit_code": 1,
+      "id": "ts_type",
+      "kind": "typecheck",
+      "status": "failed",
+      "stderr_tail": "",
+      "stdout_tail": "src/invoice.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.",
+      "tool": "tsc"
+    }
+  ],
+  "contract_path": "qa/contracts/contract.md",
+  "finished_at": "2026-04-14T00:00:01Z",
+  "mode": "fast",
+  "project_root": "benchmark-fixture",
+  "schema_version": 2,
+  "started_at": "2026-04-14T00:00:00Z",
+  "status": "failed"
+}

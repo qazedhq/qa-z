@@ -1,0 +1,20 @@
+{
+  "description": "Excluded paths are filtered out of active and blocking deep findings.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "filtered_findings_count": 1,
+    "filter_reasons": {
+      "excluded_path": 1
+    },
+    "findings_count": 1,
+    "rule_ids_absent": [
+      "generic.vendor.issue"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "name": "deep_exclude_paths_skipped",
+  "run": {
+    "deep": true
+  }
+}

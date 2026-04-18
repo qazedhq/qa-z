@@ -1,6 +1,6 @@
 # QA-Z Artifact Schema v1
 
-QA-Z writes deterministic artifacts that can be consumed by review, repair, and verification commands without invoking an LLM.
+QA-Z writes deterministic artifacts that can be consumed by review, repair, verification, and benchmark commands without invoking an LLM.
 
 ## Run Summary
 
@@ -231,3 +231,29 @@ Handoff artifacts are local files. They package evidence and validation commands
 - aggregate `summary`
 
 Verification compares deterministic artifacts only. It does not infer repair success from style or LLM judgment.
+
+
+## Benchmark Summary
+
+`qa-z benchmark` writes:
+
+```text
+benchmarks/results/summary.json
+benchmarks/results/report.md
+benchmarks/results/work/
+```
+
+Required `summary.json` fields:
+
+- `kind`: `qa_z.benchmark_summary`
+- `schema_version`: integer schema marker, currently `1`
+- `fixtures_total`
+- `fixtures_passed`
+- `fixtures_failed`
+- `overall_rate`
+- `snapshot`: compact text such as `22/22 fixtures, overall_rate 1.0`
+- `category_rates`: pass-rate buckets for detection, handoff, verify, artifact, and policy evidence
+- `failed_fixtures`: fixture names with mismatched expectations
+- `fixtures`: per-fixture results with `name`, `passed`, `failures`, `categories`, `actual`, and `artifacts`
+
+Benchmark artifacts are deterministic local evidence. `benchmarks/results/work/` is scratch output and should not be committed. `summary.json` and `report.md` are generated outputs; commit them only as intentional frozen evidence with surrounding context.

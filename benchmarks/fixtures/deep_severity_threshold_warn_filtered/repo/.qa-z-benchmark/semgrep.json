@@ -1,0 +1,17 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "check_id": "generic.safe.warning",
+      "path": "src/app.py",
+      "start": {"line": 2},
+      "extra": {"severity": "WARNING", "message": "Warning-level finding for threshold coverage."}
+    },
+    {
+      "check_id": "generic.generated.issue",
+      "path": "generated/app.py",
+      "start": {"line": 1},
+      "extra": {"severity": "ERROR", "message": "Generated path should be excluded."}
+    }
+  ]
+}

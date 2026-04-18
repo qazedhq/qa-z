@@ -1,0 +1,35 @@
+{
+  "description": "TypeScript test failure should be detected and handed off with the failing test file.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "ts_test"
+    ],
+    "failed_checks": [
+      "ts_test"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "tests/invoice.test.ts"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:ts_test"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:ts_test",
+      "qa-z-fast"
+    ]
+  },
+  "name": "ts_test_failure",
+  "run": {
+    "fast": true,
+    "repair_handoff": true
+  }
+}

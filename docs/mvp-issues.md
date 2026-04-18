@@ -21,6 +21,7 @@ Included:
 - run-aware review packets
 - repair packet and normalized handoff artifacts
 - post-repair verification comparison
+- seeded benchmark corpus for fast, deep, handoff, and verification behavior
 - tests and local CI examples
 
 Excluded until later milestones:
@@ -30,7 +31,6 @@ Excluded until later milestones:
 - GitHub API mutation surfaces
 - deep engines beyond Semgrep
 - autonomous planning loops
-- quantitative fixture scoring
 
 ## Alpha Issue Queue
 
@@ -55,6 +55,7 @@ Excluded until later milestones:
 - SARIF output for normalized deep findings
 - Repair handoff artifacts for Codex and Claude prompt renderers
 - Post-repair verification comparison
+- Benchmark corpus for TypeScript fast checks and Semgrep deep policy cases
 
 ## Issue 1: Diff and context intake
 
@@ -127,3 +128,10 @@ Excluded until later milestones:
 - Goal: compare a pre-repair run with a post-repair run and decide whether deterministic QA evidence improved.
 - Acceptance: `qa-z verify` writes summary, compare, and report artifacts, classifies resolved, still-failing, regressed, newly introduced, and not-comparable evidence, and returns a deterministic verdict.
 - Status: `qa-z verify` is functional for existing candidate runs and can create a candidate with `--rerun` using the existing fast and deep runners.
+
+
+## Issue 13: Benchmark corpus
+
+- Goal: measure QA-Z behavior against deterministic fixture repositories.
+- Acceptance: `qa-z benchmark` discovers fixtures, runs selected local QA-Z flows, compares observed artifacts with `expected.json`, and writes summary/report artifacts.
+- Status: seeded corpus covers Python fast failures, TypeScript fast failures, Semgrep deep policy cases, repair handoff generation, and post-repair verification comparisons.

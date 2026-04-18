@@ -1,0 +1,18 @@
+{
+  "description": "Verification should report unchanged when the same blocking fast check remains.",
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "resolved_count": 0,
+    "schema_version": 1,
+    "verdict": "unchanged"
+  },
+  "name": "unchanged_candidate",
+  "run": {
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

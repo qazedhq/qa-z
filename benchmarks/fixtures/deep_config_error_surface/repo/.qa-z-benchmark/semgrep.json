@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "message": "config .semgrep/missing.yml not found"
+    }
+  ],
+  "exit_code": 2,
+  "results": []
+}

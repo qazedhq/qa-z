@@ -1,0 +1,18 @@
+{
+  "description": "Invalid Semgrep configuration surfaces as a deep error instead of a no-finding pass.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "error_types": [
+      "semgrep_config_error"
+    ],
+    "expect_config_error": true,
+    "filtered_findings_count": 0,
+    "findings_count": 0,
+    "schema_version": 2,
+    "status": "error"
+  },
+  "name": "deep_config_error_surface",
+  "run": {
+    "deep": true
+  }
+}

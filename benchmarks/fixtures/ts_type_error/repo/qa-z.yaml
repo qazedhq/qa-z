@@ -1,0 +1,17 @@
+{
+  "project": {"name": "ts-type-error", "languages": ["typescript"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "ts_type",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/invoice.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'."],
+        "kind": "typecheck"
+      }
+    ]
+  },
+  "deep": {"checks": []}
+}

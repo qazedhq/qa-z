@@ -1,0 +1,25 @@
+{
+  "description": "Verification should report improved when the candidate resolves the baseline blocker.",
+  "expect_verify": {
+    "blocking_after": 0,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "improved"
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/candidate/verify/summary.json",
+      ".qa-z/runs/candidate/verify/compare.json",
+      ".qa-z/runs/candidate/verify/report.md"
+    ]
+  },
+  "name": "improved_candidate",
+  "run": {
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "description": "Multiple TypeScript fast failures should aggregate repair targets without duplicate source types.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "ts_lint",
+      "ts_type",
+      "ts_test"
+    ],
+    "failed_checks": [
+      "ts_lint",
+      "ts_type",
+      "ts_test"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/invoice.ts",
+      "tests/invoice.test.ts"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:ts_lint",
+      "check:ts_type",
+      "check:ts_test"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:ts_lint",
+      "check:ts_type",
+      "check:ts_test",
+      "qa-z-fast"
+    ]
+  },
+  "name": "ts_multiple_fast_failures",
+  "run": {
+    "fast": true,
+    "repair_handoff": true
+  }
+}

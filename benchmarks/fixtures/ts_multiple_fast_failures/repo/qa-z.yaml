@@ -1,0 +1,30 @@
+{
+  "project": {"name": "ts-multiple-fast-failures", "languages": ["typescript"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "ts_lint",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/invoice.ts:1:7 error no-unused-vars"],
+        "kind": "lint"
+      },
+      {
+        "id": "ts_type",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/invoice.ts(2,10): error TS2322: Type 'string' is not assignable to type 'number'."],
+        "kind": "typecheck"
+      },
+      {
+        "id": "ts_test",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "tests/invoice.test.ts > invoiceTotal > expected 42"],
+        "kind": "test",
+        "no_tests": "warn"
+      }
+    ]
+  },
+  "deep": {"checks": []}
+}

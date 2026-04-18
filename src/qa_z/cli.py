@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any, Iterable
 
 from .adapters.claude import render_claude_handoff
+from .benchmark import (
+    DEFAULT_FIXTURES_DIR,
+    DEFAULT_RESULTS_DIR,
+    BenchmarkError,
+    render_benchmark_report,
+    run_benchmark,
+)
 from .adapters.codex import render_codex_handoff
 from .artifacts import (
     ArtifactLoadError,
@@ -491,6 +499,29 @@ def handle_verify(args: argparse.Namespace) -> int:
         return 2
 
 
+def handle_benchmark(args: argparse.Namespace) -> int:
+    """Run the local QA-Z benchmark fixture corpus."""
+    root = Path(args.path).expanduser().resolve()
+    fixtures_dir = resolve_cli_path(root, args.fixtures_dir)
+    results_dir = resolve_cli_path(root, args.results_dir)
+
+    try:
+        summary = run_benchmark(
+            fixtures_dir=fixtures_dir,
+            results_dir=results_dir,
+            fixture_names=args.fixture,
+        )
+    except BenchmarkError as exc:
+        print(f"qa-z benchmark: benchmark error: {exc}")
+        return 2
+
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_benchmark_report(summary), end="")
+    return 0 if summary["fixtures_failed"] == 0 else 1
+
+
 def resolve_cli_path(root: Path, value: str) -> Path:
     """Resolve a CLI path relative to the project root when it is not absolute."""
     path = Path(value).expanduser()
@@ -848,6 +879,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="print the machine-readable verification comparison to stdout",
     )
     verify_parser.set_defaults(handler=handle_verify)
+
+    benchmark_parser = subparsers.add_parser(
+        "benchmark",
+        help="run the seeded QA-Z benchmark corpus",
+    )
+    benchmark_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root used to resolve benchmark fixture and results paths",
+    )
+    benchmark_parser.add_argument(
+        "--fixtures-dir",
+        default=DEFAULT_FIXTURES_DIR.as_posix(),
+        help="directory containing benchmark fixtures with expected.json files",
+    )
+    benchmark_parser.add_argument(
+        "--results-dir",
+        default=DEFAULT_RESULTS_DIR.as_posix(),
+        help="directory for benchmark summary/report artifacts",
+    )
+    benchmark_parser.add_argument(
+        "--fixture",
+        action="append",
+        help="run only the named fixture; repeat to select multiple fixtures",
+    )
+    benchmark_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable benchmark summary to stdout",
+    )
+    benchmark_parser.set_defaults(handler=handle_benchmark)
 
     return parser
 

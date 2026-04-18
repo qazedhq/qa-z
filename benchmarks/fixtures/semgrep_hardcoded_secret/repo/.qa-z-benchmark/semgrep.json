@@ -1,0 +1,11 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "check_id": "generic.secrets.security.detected-password",
+      "path": "src/settings.py",
+      "start": {"line": 1},
+      "extra": {"severity": "ERROR", "message": "Hardcoded password detected."}
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "description": "Semgrep shell=True finding should be a blocking deep target.",
+  "expect_deep": {
+    "blocking_findings_min": 1,
+    "rule_ids": [
+      "python.lang.security.audit.subprocess-shell-true"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "failed_checks": [],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/runner.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_sources": [
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "qa-z-deep"
+    ]
+  },
+  "name": "semgrep_shell_true",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

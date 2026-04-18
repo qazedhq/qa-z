@@ -1,0 +1,27 @@
+{
+  "description": "Mixed deep results keep raw, filtered, active, and blocking counts consistent.",
+  "expect_deep": {
+    "blocking_findings_count": 1,
+    "filtered_findings_count": 2,
+    "filter_reasons": {
+      "excluded_path": 1,
+      "ignored_rule": 1
+    },
+    "findings_count": 4,
+    "grouped_findings_count": 2,
+    "rule_ids_absent": [
+      "generic.generated.issue",
+      "generic.secrets.security.detected-private-key"
+    ],
+    "rule_ids_present": [
+      "python.lang.security.audit.eval",
+      "generic.safe.warning"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "name": "deep_filtered_vs_blocking_counts",
+  "run": {
+    "deep": true
+  }
+}

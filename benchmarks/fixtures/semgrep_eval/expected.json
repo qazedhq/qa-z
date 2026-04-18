@@ -1,0 +1,46 @@
+{
+  "description": "Semgrep eval finding should be normalized, blocking, and included in handoff.",
+  "expect_deep": {
+    "blocking_findings_min": 1,
+    "rule_ids": [
+      "python.lang.security.audit.eval"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "failed_checks": [],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "deep:python.lang.security.audit.eval:src/app.py"
+    ],
+    "target_sources": [
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "qa-z-fast",
+      "qa-z-deep"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/deep/results.sarif",
+      ".qa-z/runs/benchmark/deep/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "semgrep_eval",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

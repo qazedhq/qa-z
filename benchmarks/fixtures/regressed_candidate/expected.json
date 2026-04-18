@@ -1,0 +1,19 @@
+{
+  "description": "Verification should report regressed when the candidate introduces a new blocking check.",
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 0,
+    "new_issue_count": 1,
+    "regression_count": 1,
+    "resolved_count": 0,
+    "schema_version": 1,
+    "verdict": "regressed"
+  },
+  "name": "regressed_candidate",
+  "run": {
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

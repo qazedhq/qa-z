@@ -15,6 +15,7 @@ Today, QA-Z can:
 - generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
 - compare baseline and candidate runs with `qa-z verify`
 - write SARIF 2.1.0 from normalized deep findings
+- run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior
 
 QA-Z does not yet implement:
 
@@ -61,6 +62,7 @@ The current implementation includes:
 - a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
 - normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
 - a working `qa-z verify` comparison command for baseline and candidate run evidence
+- a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures
 - Codex and Claude integration templates
 - workflow examples for local deterministic QA gates
 
@@ -70,7 +72,6 @@ Roadmap work that is intentionally not part of this foundation slice:
 - live Codex or Claude runtime calls
 - remote comments, labels, or hosted status mutations
 - autonomous planning or external execution loops
-- quantitative fixture scoring
 
 ## Command Surface
 
@@ -89,6 +90,7 @@ The foundation implementation also includes:
 
 ```text
 qa-z verify
+qa-z benchmark
 ```
 
 All implemented commands operate on local files and deterministic subprocess output. They do not call live model APIs.
@@ -173,6 +175,16 @@ python -m qa_z verify --baseline-run .qa-z/runs/baseline --rerun --rerun-output-
 
 `verify` compares fast check changes and blocking deep findings, writes `summary.json`, `compare.json`, and `report.md`, and returns a deterministic verdict.
 
+Run the local benchmark corpus:
+
+```bash
+python -m qa_z benchmark
+python -m qa_z benchmark --json
+python -m qa_z benchmark --fixture ts_type_error
+```
+
+`benchmark` copies seeded fixtures into `benchmarks/results/work/`, runs deterministic QA-Z flows, compares observed artifacts with `expected.json`, and writes `benchmarks/results/summary.json` plus `benchmarks/results/report.md`.
+
 Run the local verification suite:
 
 ```bash
@@ -230,7 +242,8 @@ See `docs/artifact-schema-v1.md` for the required `summary.json`, repair packet,
 ## Repository Map
 
 ```text
-docs/                     design notes, plans, artifact schema, and MVP issue list
+docs/                     design notes, plans, artifact schema, benchmarking guide, and MVP issue list
+benchmarks/               seeded benchmark fixtures, support helpers, and generated local results
 qa/contracts/             QA contract workspace
 src/qa_z/                 Python package and CLI surface
 templates/                downstream Codex and Claude integration templates
@@ -244,7 +257,7 @@ examples/                 runnable and planned demos
 2. Add more deep engines after Semgrep artifacts stay stable.
 3. Expand downstream workflow templates around SARIF and local artifacts.
 4. Continue hardening repair handoff and verification evidence.
-5. Add quantitative fixture scoring only after the foundation commands are split and validated.
+5. Expand benchmark fixtures as new deterministic failure and repair-evidence gaps are found.
 
 ## Positioning
 

@@ -1,0 +1,35 @@
+{
+  "description": "Hardcoded secret finding should be normalized as blocking deep evidence.",
+  "expect_deep": {
+    "blocking_findings_min": 1,
+    "rule_ids": [
+      "generic.secrets.security.detected-password"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "failed_checks": [],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/settings.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_sources": [
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "qa-z-deep"
+    ]
+  },
+  "name": "semgrep_hardcoded_secret",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

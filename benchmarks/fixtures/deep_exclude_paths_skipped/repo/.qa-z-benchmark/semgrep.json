@@ -1,0 +1,11 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "check_id": "generic.vendor.issue",
+      "path": "vendor/generated.py",
+      "start": {"line": 1},
+      "extra": {"severity": "ERROR", "message": "Vendor path should be excluded."}
+    }
+  ]
+}

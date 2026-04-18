@@ -1,13 +1,11 @@
 # Benchmark
 
-This directory will hold the first QA-Z evaluation corpus.
+The active QA-Z benchmark corpus now lives in `../benchmarks/`.
 
-The initial benchmark should measure:
+Use:
 
-- seeded bug recall
-- false positive rate
-- useful review rate
-- mutation score delta
-- first repair cycle success rate
+```bash
+python -m qa_z benchmark
+```
 
-The long-term goal is to compare contract quality, review usefulness, and deterministic gate outcomes across representative agent-generated changes.
+The `benchmark/` directory is kept only as a historical placeholder from the earlier roadmap. New fixtures, support scripts, and generated benchmark reports should use `benchmarks/`.

@@ -1,0 +1,23 @@
+{
+  "description": "Warning findings remain non-blocking under an ERROR threshold while explicit exclusions are counted as filtered.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "filtered_findings_count_min": 1,
+    "filter_reasons": {
+      "excluded_path": 1
+    },
+    "findings_count": 2,
+    "rule_ids_absent": [
+      "generic.generated.issue"
+    ],
+    "rule_ids_present": [
+      "generic.safe.warning"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "name": "deep_severity_threshold_warn_filtered",
+  "run": {
+    "deep": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "project": {"name": "semgrep-shell-true", "languages": ["python"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_test",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "pass"],
+        "kind": "test"
+      }
+    ]
+  },
+  "deep": {
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "sg_scan",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fake_semgrep.py"],
+        "kind": "static-analysis",
+        "semgrep": {"config": "auto", "fail_on_severity": ["ERROR"], "ignore_rules": []}
+      }
+    ]
+  }
+}

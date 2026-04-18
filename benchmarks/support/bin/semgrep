@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+exec python "$(dirname "$0")/../.qa-z-benchmark/fake_semgrep.py" "$@"

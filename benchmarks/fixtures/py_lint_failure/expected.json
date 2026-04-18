@@ -1,0 +1,35 @@
+{
+  "description": "Fast lint failure should be detected and converted into a repair handoff target.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_lint"
+    ],
+    "failed_checks": [
+      "py_lint"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:py_lint"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:py_lint",
+      "qa-z-fast"
+    ]
+  },
+  "name": "py_lint_failure",
+  "run": {
+    "fast": true,
+    "repair_handoff": true
+  }
+}

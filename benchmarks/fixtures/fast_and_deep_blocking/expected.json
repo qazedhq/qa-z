@@ -1,0 +1,49 @@
+{
+  "description": "Mixed fixture should expose both fast and deep blocking targets in one handoff.",
+  "expect_deep": {
+    "blocking_findings_min": 1,
+    "rule_ids": [
+      "python.lang.security.audit.eval"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_test"
+    ],
+    "failed_checks": [
+      "py_test"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_sources": [
+      "fast_check",
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "check:py_test",
+      "qa-z-deep"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/deep/results.sarif",
+      ".qa-z/runs/benchmark/fast/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "fast_and_deep_blocking",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

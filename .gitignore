@@ -10,5 +10,10 @@ dist/
 .coverage
 .coverage.*
 .qa-z/
+!benchmarks/fixtures/**/repo/.qa-z/
+!benchmarks/fixtures/**/repo/.qa-z/**
+benchmarks/results/work/
+benchmarks/results/summary.json
+benchmarks/results/report.md
 .worktrees/
 worktrees/

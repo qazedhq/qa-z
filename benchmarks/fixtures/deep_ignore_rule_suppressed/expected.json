@@ -1,0 +1,20 @@
+{
+  "description": "Ignored Semgrep rules are filtered and do not become blocking repair targets.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "filtered_findings_count": 1,
+    "filter_reasons": {
+      "ignored_rule": 1
+    },
+    "findings_count": 1,
+    "rule_ids_absent": [
+      "generic.secrets.security.detected-private-key"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "name": "deep_ignore_rule_suppressed",
+  "run": {
+    "deep": true
+  }
+}

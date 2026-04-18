@@ -1,0 +1,18 @@
+{
+  "project": {"name": "ts-test-failure", "languages": ["typescript"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "ts_test",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "tests/invoice.test.ts > invoiceTotal > expected 42"],
+        "kind": "test",
+        "no_tests": "warn"
+      }
+    ]
+  },
+  "deep": {"checks": []}
+}

@@ -1,0 +1,11 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "check_id": "generic.secrets.security.detected-private-key",
+      "path": "src/settings.py",
+      "start": {"line": 3},
+      "extra": {"severity": "ERROR", "message": "Private key should be ignored by policy."}
+    }
+  ]
+}

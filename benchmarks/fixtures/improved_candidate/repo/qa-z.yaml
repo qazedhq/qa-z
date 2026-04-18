@@ -1,0 +1,6 @@
+{
+  "project": {"name": "improved-candidate", "languages": ["python"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {"output_dir": ".qa-z/runs", "checks": []},
+  "deep": {"checks": []}
+}

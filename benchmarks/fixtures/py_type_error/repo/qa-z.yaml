@@ -1,0 +1,17 @@
+{
+  "project": {"name": "py-type-error", "languages": ["python"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_type",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/app.py:1: error: Incompatible return value type"],
+        "kind": "typecheck"
+      }
+    ]
+  },
+  "deep": {"checks": []}
+}

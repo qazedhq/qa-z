@@ -1,0 +1,41 @@
+{
+  "description": "Fast type-check failure should be detected and converted into a repair target.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_type"
+    ],
+    "failed_checks": [
+      "py_type"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:py_type"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:py_type",
+      "qa-z-fast"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/fast/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "py_type_error",
+  "run": {
+    "fast": true,
+    "repair_handoff": true
+  }
+}

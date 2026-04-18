@@ -1,0 +1,35 @@
+{
+  "description": "Fast pytest failure should be detected and handed off with the failing test file.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_test"
+    ],
+    "failed_checks": [
+      "py_test"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "tests/test_app.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:py_test"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:py_test",
+      "qa-z-fast"
+    ]
+  },
+  "name": "py_test_failure",
+  "run": {
+    "fast": true,
+    "repair_handoff": true
+  }
+}
