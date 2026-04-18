@@ -26,8 +26,9 @@ Verified on 2026-04-18 from `F:\JustTyping`:
 Known release blockers:
 
 - The root `qa-z.yaml` gate mismatch is repaired: root fast no longer requires `eslint`, `tsc`, or `vitest`, and root deep no longer scans intentionally vulnerable benchmark fixtures.
-- The worktree is not releaseable as-is: `git status` reports 31 tracked modified files, 275 untracked status entries, and no staged files. `qa-z self-inspect --json` classifies this as dirty worktree and commit-isolation risk.
-- Release target frozen: Git tag `v0.9.8-alpha` and Python package `0.9.8a0`. Remaining release risk is commit isolation and final tag-time validation.
+- The tracked worktree is clean after the release-readiness commits. Ignored local caches, root `.qa-z/**`, and `benchmarks/results/**` remain local generated artifacts.
+- Release target frozen: Git tag `v0.9.8-alpha` and Python package `0.9.8a0`.
+- Publish blocker: local Git has no configured `origin` remote, so Task 6 cannot push or open the release PR until the intended GitHub repository target is configured.
 
 ## Files And Surfaces To Touch
 
@@ -342,7 +343,7 @@ Expected: current-truth tests pass after any README or policy links are added.
 **Files:**
 - No code changes expected
 
-- [ ] **Step 1: Run full deterministic validation**
+- [x] **Step 1: Run full deterministic validation**
 
 Run:
 
@@ -364,7 +365,7 @@ Expected:
 - fast/deep pass under the release root config
 - benchmark reports `50/50 fixtures, overall_rate 1.0` or a deliberately updated snapshot with matching docs/tests
 
-- [ ] **Step 2: Run CLI smoke checks**
+- [x] **Step 2: Run CLI smoke checks**
 
 Run:
 
@@ -390,7 +391,7 @@ python -m qa_z executor-result --help
 
 Expected: every help command exits `0`.
 
-- [ ] **Step 3: Confirm worktree cleanliness**
+- [x] **Step 3: Confirm worktree cleanliness**
 
 Run:
 
@@ -428,6 +429,10 @@ PR body must include:
 - known non-goals: no live Codex/Claude execution, no autonomous code editing, no remote orchestration, no GitHub bot comments
 - generated artifact policy
 - benchmark snapshot
+
+Local draft prepared while publish is blocked:
+
+- `docs/releases/v0.9.8-alpha-pr.md`
 
 - [ ] **Step 3: Merge after CI passes**
 
