@@ -497,8 +497,9 @@ batches.
 
 The latest full local gate pass for this accumulated alpha baseline is:
 
-- `python -m pytest`: 340 passed
+- `python -m pytest`: 341 passed
 - `python -m qa_z benchmark --json`: 50/50 fixtures, overall_rate 1.0
+- `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python -m ruff check .`: pass
 - `python -m ruff format --check .`: 126 files already formatted
 - `python -m mypy src tests`: success across 82 source files

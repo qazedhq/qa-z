@@ -136,19 +136,24 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "340 passed" in commit_plan
-    assert "340 passed" in release_plan
-    assert "`python -m pytest`: 340 passed" in release_notes
-    assert "`python -m pytest`: passed, `340 passed" in release_pr
-    assert "`python -m pytest`: passed, `340 passed`" in github_release
-    assert "339 passed" not in commit_plan
-    assert "339 passed" not in release_plan
-    assert "339 passed" not in release_notes
-    assert "339 passed" not in release_pr
-    assert "339 passed" not in github_release
+    assert "341 passed" in commit_plan
+    assert "341 passed" in release_plan
+    assert "`python -m pytest`: 341 passed" in release_notes
+    assert "`python -m pytest`: passed, `341 passed" in release_pr
+    assert "`python -m pytest`: passed, `341 passed`" in github_release
+    assert "340 passed" not in commit_plan
+    assert "340 passed" not in release_plan
+    assert "340 passed" not in release_notes
+    assert "340 passed" not in release_pr
+    assert "340 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
+    assert "python -m build --sdist --wheel" in commit_plan
+    assert "python -m build --sdist --wheel" in release_plan
+    assert "`python -m build --sdist --wheel`: passed" in release_notes
+    assert "`python -m build --sdist --wheel`: passed" in release_pr
+    assert "`python -m build --sdist --wheel`: passed" in github_release
     assert "50/50 fixtures" in commit_plan
     assert "50/50 fixtures, overall_rate 1.0" in release_pr
     assert "50/50 fixtures, overall_rate 1.0" in github_release
@@ -283,6 +288,19 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     )
     assert "git tag -a v0.9.8-alpha -m" in release_handoff
     assert "python -m qa_z benchmark --json" in release_handoff
+
+
+def test_dev_extra_includes_release_build_tooling() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    assert "build>=" in pyproject
+    assert 'license = "Apache-2.0"' in pyproject
+    assert "license = { text = " not in pyproject
+    assert "License :: OSI Approved :: Apache Software License" not in pyproject
+    assert "python -m build --sdist --wheel" in release_handoff
 
 
 def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:

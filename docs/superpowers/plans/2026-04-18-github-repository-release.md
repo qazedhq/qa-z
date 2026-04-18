@@ -14,13 +14,14 @@
 
 Verified on 2026-04-18 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `340 passed`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `341 passed`
 - `python -m ruff format --check .`: passed, `126 files already formatted`
 - `python -m ruff check .`: passed
 - `python -m mypy src tests`: passed, `82 source files`
 - `python -m qa_z fast --selection smart --json`: passed with Python-only root checks
 - `python -m qa_z deep --selection smart --json`: passed after installing Semgrep locally; root scan is scoped to `src` and `tests`
 - `python -m qa_z benchmark --json`: passed, `50/50 fixtures, overall_rate 1.0`
+- `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python -m qa_z --help`: command surface renders all current alpha commands
 
 Known release blockers:
@@ -370,6 +371,7 @@ python -m pytest
 python -m qa_z fast --selection smart --json
 python -m qa_z deep --selection smart --json
 python -m qa_z benchmark --json
+python -m build --sdist --wheel
 ```
 
 Expected:
