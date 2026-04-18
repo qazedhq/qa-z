@@ -304,6 +304,11 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
         "`f009d14 chore: add release build validation tooling`"
     ) in release_handoff
     assert (
+        "CI package-build gate commit: "
+        "`b2cdc07 ci: verify package build before alpha release`"
+    ) in release_handoff
+    assert "Build package artifacts" in release_handoff
+    assert (
         "git clone --branch codex/qa-z-bootstrap "
         "dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle"
     ) in release_handoff
