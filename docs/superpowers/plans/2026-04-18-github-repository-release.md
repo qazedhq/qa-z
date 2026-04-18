@@ -14,7 +14,7 @@
 
 Verified on 2026-04-18 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `339 passed`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `340 passed`
 - `python -m ruff format --check .`: passed, `126 files already formatted`
 - `python -m ruff check .`: passed
 - `python -m mypy src tests`: passed, `82 source files`
@@ -449,6 +449,7 @@ Local draft prepared while publish is blocked:
 
 - `docs/releases/v0.9.8-alpha-pr.md`
 - `docs/releases/v0.9.8-alpha-github-release.md`
+- `docs/releases/v0.9.8-alpha-publish-handoff.md`
 
 - [ ] **Step 3: Merge after CI passes**
 
@@ -483,6 +484,7 @@ Use the PR validation evidence and keep the wording alpha-honest:
 Local draft prepared while publish is blocked:
 
 - `docs/releases/v0.9.8-alpha-github-release.md`
+- `docs/releases/v0.9.8-alpha-publish-handoff.md`
 
 ## Task 7: Post-Release Follow-Up
 

@@ -136,16 +136,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "339 passed" in commit_plan
-    assert "339 passed" in release_plan
-    assert "`python -m pytest`: 339 passed" in release_notes
-    assert "`python -m pytest`: passed, `339 passed" in release_pr
-    assert "`python -m pytest`: passed, `339 passed`" in github_release
-    assert "338 passed" not in commit_plan
-    assert "338 passed" not in release_plan
-    assert "338 passed" not in release_notes
-    assert "338 passed" not in release_pr
-    assert "338 passed" not in github_release
+    assert "340 passed" in commit_plan
+    assert "340 passed" in release_plan
+    assert "`python -m pytest`: 340 passed" in release_notes
+    assert "`python -m pytest`: passed, `340 passed" in release_pr
+    assert "`python -m pytest`: passed, `340 passed`" in github_release
+    assert "339 passed" not in commit_plan
+    assert "339 passed" not in release_plan
+    assert "339 passed" not in release_notes
+    assert "339 passed" not in release_pr
+    assert "339 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
@@ -250,6 +250,39 @@ def test_release_plan_marks_completed_commit_split_truthfully() -> None:
         "0427add docs: add worktree triage and commit plan reports",
     ):
         assert commit in release_plan
+
+
+def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
+    release_plan = (
+        ROOT
+        / "docs"
+        / "superpowers"
+        / "plans"
+        / "2026-04-18-github-repository-release.md"
+    ).read_text(encoding="utf-8")
+    release_notes = (ROOT / "docs" / "releases" / "v0.9.8-alpha.md").read_text(
+        encoding="utf-8"
+    )
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_plan
+    assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_notes
+    assert "no configured `origin` remote" in release_handoff
+    assert "does not expose a `JustTyping` or `qa-z` repository target" in (
+        release_handoff
+    )
+    assert "git remote add origin <repository-url>" in release_handoff
+    assert "git push -u origin codex/qa-z-bootstrap" in release_handoff
+    assert "Release QA-Z v0.9.8-alpha" in release_handoff
+    assert "docs/releases/v0.9.8-alpha-pr.md" in release_handoff
+    assert "docs/releases/v0.9.8-alpha-github-release.md" in release_handoff
+    assert "Do not tag before remote CI passes and the release PR is merged." in (
+        release_handoff
+    )
+    assert "git tag -a v0.9.8-alpha -m" in release_handoff
+    assert "python -m qa_z benchmark --json" in release_handoff
 
 
 def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:

@@ -497,7 +497,7 @@ batches.
 
 The latest full local gate pass for this accumulated alpha baseline is:
 
-- `python -m pytest`: 339 passed
+- `python -m pytest`: 340 passed
 - `python -m qa_z benchmark --json`: 50/50 fixtures, overall_rate 1.0
 - `python -m ruff check .`: pass
 - `python -m ruff format --check .`: 126 files already formatted
