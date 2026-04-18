@@ -212,7 +212,7 @@ Expected: workflow tests and current-truth checks pass.
 - Do not stage: root `.qa-z/**`
 - Do not stage by default: `benchmarks/results/summary.json`, `benchmarks/results/report.md`, `benchmarks/results/work/**`
 
-- [ ] **Step 1: Confirm no generated runtime artifacts are staged**
+- [x] **Step 1: Confirm no generated runtime artifacts are staged**
 
 Run:
 
@@ -222,7 +222,7 @@ git status --short
 
 Expected: root `.qa-z/**` and `benchmarks/results/work/**` do not appear as staged source changes.
 
-- [ ] **Step 2: Commit foundation first**
+- [x] **Step 2: Commit foundation first**
 
 Commit message:
 
@@ -241,7 +241,7 @@ python -m mypy src tests
 python -m pytest tests/test_diffing.py tests/test_fast_config.py tests/test_fast_selection.py tests/test_deep_run_resolution.py tests/test_deep_selection.py tests/test_semgrep_normalization.py tests/test_sarif_cli.py tests/test_sarif_reporter.py tests/test_subprocess_runner.py tests/test_repair_handoff.py tests/test_verification.py -q
 ```
 
-- [ ] **Step 3: Commit benchmark coverage**
+- [x] **Step 3: Commit benchmark coverage**
 
 Commit message:
 
@@ -256,7 +256,7 @@ python -m pytest tests/test_benchmark.py -q
 python -m qa_z benchmark --json
 ```
 
-- [ ] **Step 4: Commit planning and autonomy layers**
+- [x] **Step 4: Commit planning and autonomy layers**
 
 Commit messages:
 
@@ -271,7 +271,7 @@ Validation before each commit:
 python -m pytest tests/test_self_improvement.py tests/test_autonomy.py tests/test_cli.py -q
 ```
 
-- [ ] **Step 5: Commit repair-session, publishing, and executor bridge**
+- [x] **Step 5: Commit repair-session, publishing, and executor bridge**
 
 Commit messages:
 
@@ -286,7 +286,7 @@ Validation before each commit:
 python -m pytest tests/test_repair_session.py tests/test_verification_publish.py tests/test_github_summary.py tests/test_executor_bridge.py tests/test_cli.py -q
 ```
 
-- [ ] **Step 6: Commit docs, examples, templates, and release reports last**
+- [x] **Step 6: Commit docs, examples, templates, and release reports last**
 
 Commit message:
 
@@ -299,6 +299,21 @@ Validation before commit:
 ```bash
 python -m pytest tests/test_current_truth.py tests/test_examples.py tests/test_github_workflow.py -q
 ```
+
+Completion evidence from the local commit history:
+
+- `7d39e3e feat: add runner repair and verification foundations`
+- `001e719 feat: expand benchmark coverage for typescript and deep policy cases`
+- `a32e7fc feat: add self-inspection backlog and task selection workflow`
+- `112b98e feat: add autonomy planning loops and loop artifacts`
+- `ee4a4e1 feat: add repair session workflow and verification publishing`
+- `a52d01e feat: add executor bridge packaging for external repair workflows`
+- `0427add docs: add worktree triage and commit plan reports`
+
+Follow-up release-readiness commits after the split added executor-result safety,
+public GitHub readiness templates, refreshed validation evidence, and local PR and
+release-note drafts. The tracked worktree is clean; ignored `.qa-z/**`,
+`benchmarks/results/**`, and local caches remain generated artifacts.
 
 ## Task 4: Add Public GitHub Repository Readiness Files
 

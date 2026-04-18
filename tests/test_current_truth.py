@@ -216,6 +216,42 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "- [x] **Step 3: Confirm worktree cleanliness**" in release_plan
 
 
+def test_release_plan_marks_completed_commit_split_truthfully() -> None:
+    release_plan = (
+        ROOT
+        / "docs"
+        / "superpowers"
+        / "plans"
+        / "2026-04-18-github-repository-release.md"
+    ).read_text(encoding="utf-8")
+
+    assert "- [x] **Step 1: Confirm no generated runtime artifacts are staged**" in (
+        release_plan
+    )
+    assert "- [x] **Step 2: Commit foundation first**" in release_plan
+    assert "- [x] **Step 3: Commit benchmark coverage**" in release_plan
+    assert "- [x] **Step 4: Commit planning and autonomy layers**" in release_plan
+    assert (
+        "- [x] **Step 5: Commit repair-session, publishing, and executor bridge**"
+        in release_plan
+    )
+    assert (
+        "- [x] **Step 6: Commit docs, examples, templates, and release reports last**"
+        in release_plan
+    )
+
+    for commit in (
+        "7d39e3e feat: add runner repair and verification foundations",
+        "001e719 feat: expand benchmark coverage for typescript and deep policy cases",
+        "a32e7fc feat: add self-inspection backlog and task selection workflow",
+        "112b98e feat: add autonomy planning loops and loop artifacts",
+        "ee4a4e1 feat: add repair session workflow and verification publishing",
+        "a52d01e feat: add executor bridge packaging for external repair workflows",
+        "0427add docs: add worktree triage and commit plan reports",
+    ):
+        assert commit in release_plan
+
+
 def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:
     policy = (ROOT / "docs" / "generated-vs-frozen-evidence-policy.md").read_text(
         encoding="utf-8"
