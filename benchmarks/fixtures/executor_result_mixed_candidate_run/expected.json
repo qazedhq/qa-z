@@ -1,0 +1,32 @@
+{
+  "description": "Executor-result ingest should attach a mixed verification verdict when a Python blocker is resolved and a TypeScript check regresses.",
+  "expect_executor_result": {
+    "next_recommendation": "inspect regressions",
+    "result_status": "completed",
+    "schema_version": 1,
+    "session_id": "session-one",
+    "session_state": "completed",
+    "verification_hint": "candidate_run",
+    "verification_triggered": true,
+    "verification_verdict": "mixed",
+    "verify_summary_path": ".qa-z/sessions/session-one/verify/summary.json"
+  },
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 1,
+    "new_issue_count": 1,
+    "regression_count": 1,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "mixed"
+  },
+  "name": "executor_result_mixed_candidate_run",
+  "run": {
+    "executor_result": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-session",
+      "result_path": "external-result.json",
+      "session_id": "session-one"
+    }
+  }
+}

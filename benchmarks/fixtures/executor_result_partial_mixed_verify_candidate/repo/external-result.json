@@ -1,0 +1,64 @@
+{
+  "bridge_id": "bridge-partial",
+  "candidate_run_dir": ".qa-z/runs/candidate",
+  "changed_files": [
+    {
+      "old_path": null,
+      "path": "src/app.py",
+      "status": "modified",
+      "summary": "Resolved the Python test failure."
+    },
+    {
+      "old_path": null,
+      "path": "src/invoice.ts",
+      "status": "modified",
+      "summary": "TypeScript still needs another pass."
+    }
+  ],
+  "created_at": "2026-04-16T00:00:00Z",
+  "kind": "qa_z.executor_result",
+  "notes": [
+    "needs another repair loop"
+  ],
+  "schema_version": 1,
+  "source_loop_id": null,
+  "source_session_id": "session-partial",
+  "status": "partial",
+  "summary": "Resolved the Python issue, but the TypeScript regression still needs follow-up.",
+  "validation": {
+    "commands": [
+      [
+        "python",
+        "-m",
+        "pytest"
+      ],
+      [
+        "tsc",
+        "--noEmit"
+      ]
+    ],
+    "results": [
+      {
+        "command": [
+          "python",
+          "-m",
+          "pytest"
+        ],
+        "exit_code": 0,
+        "status": "passed",
+        "summary": "pytest passed locally"
+      },
+      {
+        "command": [
+          "tsc",
+          "--noEmit"
+        ],
+        "exit_code": 1,
+        "status": "failed",
+        "summary": "ts_type still fails"
+      }
+    ],
+    "status": "failed"
+  },
+  "verification_hint": "candidate_run"
+}

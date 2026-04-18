@@ -1,0 +1,46 @@
+{
+  "description": "Executor-result dry-run should require manual review after repeated accepted no-op outcomes and preserve the no-op pattern operator action.",
+  "expect_executor_dry_run": {
+    "attention_rule_ids": [
+      "retry_boundary_is_manual"
+    ],
+    "attention_rule_count": 1,
+    "blocked_rule_ids": [],
+    "blocked_rule_count": 0,
+    "clear_rule_ids": [
+      "executor_history_recorded",
+      "no_op_requires_explanation",
+      "mutation_scope_limited",
+      "unrelated_refactors_prohibited",
+      "verification_required_for_completed",
+      "outcome_classification_must_be_honest"
+    ],
+    "clear_rule_count": 6,
+    "evaluated_attempt_count": 2,
+    "expected_source": "materialized",
+    "expected_recommendation": "inspect repeated no-op outcomes before another retry",
+    "history_signals": [
+      "repeated_no_op_attempts"
+    ],
+    "latest_ingest_status": "accepted_no_op",
+    "latest_result_status": "no_op",
+    "operator_decision": "inspect_no_op_pattern",
+    "operator_summary": "Repeated no-op executor attempts need manual review before another retry.",
+    "recommended_action_ids": [
+      "inspect_no_op_pattern"
+    ],
+    "recommended_action_summaries": [
+      "Review repeated no-op outcomes before another executor attempt."
+    ],
+    "schema_version": 1,
+    "session_id": "session-noop-repeat",
+    "verdict": "attention_required",
+    "verdict_reason": "manual_retry_review_required"
+  },
+  "name": "executor_dry_run_repeated_noop_operator_actions",
+  "run": {
+    "executor_result_dry_run": {
+      "session_id": "session-noop-repeat"
+    }
+  }
+}

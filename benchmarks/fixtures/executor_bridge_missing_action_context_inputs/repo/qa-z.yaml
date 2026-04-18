@@ -1,0 +1,6 @@
+{
+  "project": {"name": "executor-bridge-missing-action-context", "languages": ["python"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {"output_dir": ".qa-z/runs", "checks": []},
+  "deep": {"checks": []}
+}

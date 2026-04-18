@@ -6,12 +6,22 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from textwrap import dedent
 
 import pytest
 import yaml
 
-from qa_z.cli import build_parser, main
+from qa_z.cli import (
+    build_parser,
+    main,
+    render_select_next_stdout,
+    render_self_inspect_stdout,
+)
+from qa_z.config import EXAMPLE_CONFIG
+from qa_z.self_improvement import SelectionArtifactPaths
+
+ROOT = os.path.dirname(os.path.dirname(__file__))
 
 
 def get_subcommands(parser: argparse.ArgumentParser) -> set[str]:
@@ -20,6 +30,17 @@ def get_subcommands(parser: argparse.ArgumentParser) -> set[str]:
         if isinstance(action, argparse._SubParsersAction):
             return set(action.choices)
     raise AssertionError("Parser does not define subcommands")
+
+
+def get_nested_subcommands(parser: argparse.ArgumentParser, command: str) -> set[str]:
+    """Extract registered nested subcommand names from a named parser."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction) and command in action.choices:
+            nested = action.choices[command]
+            for nested_action in nested._actions:
+                if isinstance(nested_action, argparse._SubParsersAction):
+                    return set(nested_action.choices)
+    raise AssertionError(f"Parser does not define nested subcommands for {command}")
 
 
 def python_command(source: str) -> list[str]:
@@ -127,6 +148,21 @@ def write_deep_summary_artifact(tmp_path, run_id: str) -> None:
     )
 
 
+def write_backlog_artifact(tmp_path, items: list[dict]) -> None:
+    """Write a minimal improvement backlog artifact for selection tests."""
+    backlog_dir = tmp_path / ".qa-z" / "improvement"
+    backlog_dir.mkdir(parents=True, exist_ok=True)
+    backlog = {
+        "kind": "qa_z.improvement_backlog",
+        "schema_version": 1,
+        "generated_at": "2026-04-17T00:00:00Z",
+        "items": items,
+    }
+    (backlog_dir / "backlog.json").write_text(
+        json.dumps(backlog, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
 def test_parser_registers_core_subcommands() -> None:
     parser = build_parser()
     assert {
@@ -136,16 +172,231 @@ def test_parser_registers_core_subcommands() -> None:
         "deep",
         "review",
         "repair-prompt",
+        "repair-session",
+        "github-summary",
         "verify",
-        "benchmark",
         "self-inspect",
         "select-next",
         "backlog",
         "autonomy",
-        "repair-session",
-        "github-summary",
         "executor-bridge",
+        "executor-result",
     } <= get_subcommands(parser)
+
+
+def test_parser_registers_executor_result_dry_run_subcommand() -> None:
+    parser = build_parser()
+
+    assert {"ingest", "dry-run"} <= get_nested_subcommands(parser, "executor-result")
+
+
+def test_render_select_next_stdout_surfaces_selected_task_details(
+    tmp_path: Path,
+) -> None:
+    paths = SelectionArtifactPaths(
+        selected_tasks_path=tmp_path
+        / ".qa-z"
+        / "loops"
+        / "latest"
+        / "selected_tasks.json",
+        loop_plan_path=tmp_path / ".qa-z" / "loops" / "latest" / "loop_plan.md",
+        history_path=tmp_path / ".qa-z" / "loops" / "history.jsonl",
+    )
+
+    output = render_select_next_stdout(
+        {
+            "selected_tasks": [
+                {
+                    "id": "worktree_risk-dirty-worktree",
+                    "title": "Reduce dirty worktree integration risk",
+                    "category": "worktree_risk",
+                    "recommendation": "reduce_integration_risk",
+                    "selection_priority_score": 60,
+                    "selection_penalty": 5,
+                    "selection_penalty_reasons": [
+                        "recent_task_reselected",
+                        "recent_category_reselected",
+                    ],
+                    "evidence": [
+                        {
+                            "source": "git_status",
+                            "summary": (
+                                "modified=25; untracked=346; staged=0; "
+                                "areas=docs:2, source:1"
+                            ),
+                        }
+                    ],
+                }
+            ]
+        },
+        paths,
+        tmp_path,
+    )
+
+    assert "Selected task details:" in output
+    assert (
+        "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
+        in output
+    )
+    assert "recommendation: reduce_integration_risk" in output
+    assert (
+        "action: triage docs and source changes first, separate generated artifacts, "
+        "then rerun self-inspection" in output
+    )
+    assert "validation: python -m qa_z self-inspect" in output
+    assert "selection score: 60" in output
+    assert (
+        "selection penalty: 5 (recent_task_reselected, recent_category_reselected)"
+        in output
+    )
+    assert (
+        "evidence: git_status: modified=25; untracked=346; staged=0; "
+        "areas=docs:2, source:1" in output
+    )
+
+
+def test_render_self_inspect_stdout_surfaces_top_candidate_details(
+    tmp_path: Path,
+) -> None:
+    output = render_self_inspect_stdout(
+        {
+            "candidates": [
+                {
+                    "id": "worktree_risk-dirty-worktree",
+                    "title": "Reduce dirty worktree integration risk",
+                    "recommendation": "reduce_integration_risk",
+                    "priority_score": 65,
+                    "evidence": [
+                        {
+                            "source": "git_status",
+                            "summary": (
+                                "modified=25; untracked=346; staged=0; "
+                                "areas=docs:2, source:1"
+                            ),
+                        }
+                    ],
+                }
+            ]
+        },
+        self_inspection_path=tmp_path
+        / ".qa-z"
+        / "loops"
+        / "latest"
+        / "self_inspect.json",
+        backlog_path=tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        root=tmp_path,
+    )
+
+    assert "Top candidates:" in output
+    assert (
+        "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
+        in output
+    )
+    assert "recommendation: reduce_integration_risk" in output
+    assert (
+        "action: triage docs and source changes first, separate generated artifacts, "
+        "then rerun self-inspection" in output
+    )
+    assert "validation: python -m qa_z self-inspect" in output
+    assert "priority score: 65" in output
+    assert (
+        "evidence: git_status: modified=25; untracked=346; staged=0; "
+        "areas=docs:2, source:1" in output
+    )
+
+
+def test_render_self_inspect_stdout_handles_no_candidates(tmp_path: Path) -> None:
+    output = render_self_inspect_stdout(
+        {"candidates": []},
+        self_inspection_path=tmp_path
+        / ".qa-z"
+        / "loops"
+        / "latest"
+        / "self_inspect.json",
+        backlog_path=tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        root=tmp_path,
+    )
+
+    assert "Candidates: 0" in output
+    assert "Top candidates:\n- none" in output
+
+
+def test_render_self_inspect_stdout_orders_top_candidates_by_priority(
+    tmp_path: Path,
+) -> None:
+    output = render_self_inspect_stdout(
+        {
+            "candidates": [
+                {
+                    "id": "low",
+                    "title": "Low priority",
+                    "recommendation": "low_followup",
+                    "priority_score": 10,
+                    "evidence": [{"source": "report", "summary": "low"}],
+                },
+                {
+                    "id": "high",
+                    "title": "High priority",
+                    "recommendation": "reduce_integration_risk",
+                    "priority_score": 65,
+                    "evidence": [{"source": "git_status", "summary": "dirty"}],
+                },
+            ]
+        },
+        self_inspection_path=tmp_path
+        / ".qa-z"
+        / "loops"
+        / "latest"
+        / "self_inspect.json",
+        backlog_path=tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        root=tmp_path,
+    )
+
+    assert output.index("- high: High priority") < output.index("- low: Low priority")
+
+
+def test_select_next_plain_output_includes_selected_task_details(
+    tmp_path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_backlog_artifact(
+        tmp_path,
+        [
+            {
+                "id": "benchmark_gap-one",
+                "title": "Add benchmark fixture for replay gap",
+                "category": "benchmark_gap",
+                "status": "open",
+                "priority_score": 11,
+                "recommendation": "add_benchmark_fixture",
+                "impact": 3,
+                "likelihood": 3,
+                "confidence": 3,
+                "repair_cost": 2,
+                "signals": ["benchmark_fixture_missing"],
+                "evidence": [
+                    {
+                        "source": "benchmark",
+                        "path": "benchmarks/fixtures",
+                        "summary": "fixture coverage is missing for replay gap",
+                    }
+                ],
+            }
+        ],
+    )
+
+    exit_code = main(["select-next", "--path", str(tmp_path), "--count", "1"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "qa-z select-next: wrote loop planning artifacts" in captured.out
+    assert "Count: 1" in captured.out
+    assert "Selected task details:" in captured.out
+    assert "- benchmark_gap-one: Add benchmark fixture for replay gap" in captured.out
+    assert "recommendation: add_benchmark_fixture" in captured.out
+    assert (
+        "evidence: benchmark: fixture coverage is missing for replay gap"
+        in captured.out
+    )
 
 
 def test_init_creates_bootstrap_files(
@@ -158,6 +409,21 @@ def test_init_creates_bootstrap_files(
     assert (tmp_path / "qa-z.yaml").exists()
     assert (tmp_path / "qa" / "contracts" / "README.md").exists()
     assert "created: qa-z.yaml" in captured.out
+
+
+def test_init_config_matches_public_example(
+    tmp_path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    public_example = open(
+        os.path.join(ROOT, "qa-z.yaml.example"), encoding="utf-8"
+    ).read()
+
+    exit_code = main(["init", "--path", str(tmp_path)])
+    capsys.readouterr()
+
+    assert exit_code == 0
+    assert EXAMPLE_CONFIG == public_example
+    assert (tmp_path / "qa-z.yaml").read_text(encoding="utf-8") == public_example
 
 
 def test_init_is_idempotent(tmp_path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -327,6 +593,98 @@ def test_plan_reads_top_level_fast_check_ids(
     assert exit_code == 0
     assert "- py_lint" in contract
     assert "- py_test" in contract
+
+
+def test_backlog_plain_output_focuses_on_open_items(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    backlog_dir = tmp_path / ".qa-z" / "improvement"
+    backlog_dir.mkdir(parents=True, exist_ok=True)
+    (backlog_dir / "backlog.json").write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.improvement_backlog",
+                "schema_version": 1,
+                "updated_at": "2026-04-17T00:00:00Z",
+                "items": [
+                    {
+                        "id": "worktree_risk-dirty-worktree",
+                        "title": "Reduce dirty worktree integration risk",
+                        "category": "worktree_risk",
+                        "status": "open",
+                        "priority_score": 65,
+                        "recommendation": "reduce_integration_risk",
+                        "evidence": [
+                            {
+                                "source": "git_status",
+                                "path": ".",
+                                "summary": (
+                                    "modified=25; untracked=346; staged=0; "
+                                    "areas=docs:2, source:1"
+                                ),
+                            }
+                        ],
+                    },
+                    {
+                        "id": "session_gap-existing",
+                        "title": "Resume existing repair session",
+                        "category": "session_gap",
+                        "status": "in_progress",
+                        "priority_score": 40,
+                        "recommendation": "create_repair_session",
+                        "evidence": [
+                            {
+                                "source": "repair_session",
+                                "path": ".qa-z/sessions/session-one/session.json",
+                                "summary": "state=waiting_for_external_repair",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "docs_drift-current_truth_sync",
+                        "title": "Run a current-truth docs and schema sync audit",
+                        "category": "docs_drift",
+                        "status": "closed",
+                        "priority_score": 26,
+                        "recommendation": "sync_contract_and_docs",
+                        "evidence": [],
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["backlog", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "qa-z backlog: 3 item(s)" in output
+    assert "Open items: 2" in output
+    assert (
+        "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
+        in output
+    )
+    assert (
+        "status: open | priority: 65 | recommendation: reduce_integration_risk"
+        in output
+    )
+    assert (
+        "action: triage docs and source changes first, separate generated artifacts, "
+        "then rerun self-inspection" in output
+    )
+    assert "validation: python -m qa_z self-inspect" in output
+    assert (
+        "evidence: git_status: modified=25; untracked=346; staged=0; "
+        "areas=docs:2, source:1" in output
+    )
+    assert "Closed items: 1" in output
+    assert "use `qa-z backlog --json` for the full history" in output
+    assert "docs_drift-current_truth_sync" not in output
 
 
 def test_review_renders_a_packet_from_the_latest_contract(

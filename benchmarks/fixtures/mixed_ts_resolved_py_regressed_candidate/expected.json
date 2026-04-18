@@ -1,0 +1,19 @@
+{
+  "description": "Mixed verification should report mixed when a TypeScript blocker is resolved and a Python check regresses.",
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 1,
+    "new_issue_count": 1,
+    "regression_count": 1,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "mixed"
+  },
+  "name": "mixed_ts_resolved_py_regressed_candidate",
+  "run": {
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "attempt_count": 1,
+  "attempts": [
+    {
+      "attempt_id": "attempt-scope-1",
+      "attempt_path": ".qa-z/sessions/session-scope/executor_results/attempts/attempt-scope-1.json",
+      "backlog_categories": [
+        "provenance_gap"
+      ],
+      "bridge_id": "bridge-scope",
+      "changed_files_count": 2,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-scope-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-scope-1/ingest_report.md",
+      "ingest_status": "rejected_invalid",
+      "notes_count": 1,
+      "provenance_reason": "scope_validation_failed",
+      "provenance_status": "failed",
+      "recorded_at": "2026-04-16T00:20:00Z",
+      "result_status": "partial",
+      "source_loop_id": null,
+      "validation_status": "failed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_blocked",
+      "warning_ids": []
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-scope-1",
+  "schema_version": 1,
+  "session_id": "session-scope",
+  "updated_at": "2026-04-16T00:20:00Z"
+}

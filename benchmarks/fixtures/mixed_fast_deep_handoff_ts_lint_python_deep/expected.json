@@ -1,0 +1,55 @@
+{
+  "description": "Executed TypeScript fast lint failure plus Python Semgrep-backed deep finding should aggregate into one repair handoff.",
+  "expect_deep": {
+    "blocking_findings_min": 1,
+    "rule_ids_present": [
+      "python.lang.security.audit.eval"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "ts_lint"
+    ],
+    "failed_checks": [
+      "ts_lint"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py",
+      "src/invoice.ts"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:ts_lint",
+      "deep:python.lang.security.audit.eval:src/app.py"
+    ],
+    "target_sources": [
+      "fast_check",
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "check:ts_lint",
+      "qa-z-fast",
+      "qa-z-deep"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/deep/results.sarif",
+      ".qa-z/runs/benchmark/fast/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "mixed_fast_deep_handoff_ts_lint_python_deep",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

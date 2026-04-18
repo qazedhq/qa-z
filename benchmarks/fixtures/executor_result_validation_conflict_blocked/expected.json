@@ -1,0 +1,29 @@
+{
+  "description": "Executor-result ingest should keep completed results with conflicting validation evidence out of automatic verify resume.",
+  "expect_executor_result": {
+    "backlog_categories": [
+      "workflow_gap"
+    ],
+    "expected_ingest_status": "accepted_with_warning",
+    "expected_recommendation": "inspect executor result warnings",
+    "result_status": "completed",
+    "schema_version": 1,
+    "session_id": "session-validation",
+    "session_state": "candidate_generated",
+    "verification_hint": "rerun",
+    "verification_triggered": false,
+    "verify_resume_status": "verify_blocked",
+    "warning_ids_present": [
+      "validation_summary_conflicts_with_results"
+    ]
+  },
+  "name": "executor_result_validation_conflict_blocked",
+  "run": {
+    "executor_result": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-validation",
+      "result_path": "external-result.json",
+      "session_id": "session-validation"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "description": "Executed mixed Python/TypeScript fast failures plus Semgrep-backed deep findings should aggregate into one repair handoff.",
+  "expect_deep": {
+    "blocking_findings_min": 2,
+    "rule_ids_present": [
+      "python.lang.security.audit.eval",
+      "generic.secrets.security.detected-password"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_test",
+      "ts_type"
+    ],
+    "failed_checks": [
+      "py_test",
+      "ts_type"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py",
+      "src/invoice.ts"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:py_test",
+      "check:ts_type",
+      "deep:python.lang.security.audit.eval:src/app.py",
+      "deep:generic.secrets.security.detected-password:src/invoice.ts"
+    ],
+    "target_sources": [
+      "fast_check",
+      "deep_finding"
+    ],
+    "validation_command_ids": [
+      "check:py_test",
+      "check:ts_type",
+      "qa-z-fast",
+      "qa-z-deep"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/deep/results.sarif",
+      ".qa-z/runs/benchmark/fast/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "mixed_fast_deep_handoff_dual_surface",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

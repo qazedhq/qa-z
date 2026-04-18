@@ -21,11 +21,19 @@ from qa_z.artifacts import (
     write_latest_run_manifest,
 )
 from qa_z.config import load_config
+from qa_z.executor_bridge import create_executor_bridge, render_bridge_stdout
+from qa_z.executor_dry_run import run_executor_result_dry_run
+from qa_z.executor_ingest import (
+    ExecutorResultIngestRejected,
+    ingest_executor_result_artifact,
+)
+from qa_z.executor_result import write_json
 from qa_z.repair_handoff import (
     RepairHandoffPacket,
     build_repair_handoff,
     write_repair_handoff_artifact,
 )
+from qa_z.repair_session import create_repair_session
 from qa_z.reporters.deep_context import load_sibling_deep_summary
 from qa_z.reporters.repair_prompt import build_repair_packet, write_repair_artifacts
 from qa_z.reporters.run_summary import write_run_summary_artifacts
@@ -39,7 +47,6 @@ from qa_z.verification import (
     load_verification_run,
     write_verification_artifacts,
 )
-
 
 BENCHMARK_SUMMARY_KIND = "qa_z.benchmark_summary"
 BENCHMARK_SCHEMA_VERSION = 1
@@ -82,6 +89,9 @@ class BenchmarkExpectation:
     expect_deep: dict[str, Any] = field(default_factory=dict)
     expect_handoff: dict[str, Any] = field(default_factory=dict)
     expect_verify: dict[str, Any] = field(default_factory=dict)
+    expect_executor_bridge: dict[str, Any] = field(default_factory=dict)
+    expect_executor_result: dict[str, Any] = field(default_factory=dict)
+    expect_executor_dry_run: dict[str, Any] = field(default_factory=dict)
     expect_artifacts: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -98,6 +108,9 @@ class BenchmarkExpectation:
             expect_deep=coerce_mapping(data.get("expect_deep")),
             expect_handoff=coerce_mapping(data.get("expect_handoff")),
             expect_verify=coerce_mapping(data.get("expect_verify")),
+            expect_executor_bridge=coerce_mapping(data.get("expect_executor_bridge")),
+            expect_executor_result=coerce_mapping(data.get("expect_executor_result")),
+            expect_executor_dry_run=coerce_mapping(data.get("expect_executor_dry_run")),
             expect_artifacts=coerce_mapping(data.get("expect_artifacts")),
         )
 
@@ -134,6 +147,76 @@ class BenchmarkExpectation:
                 "baseline_run": ".qa-z/runs/baseline",
                 "candidate_run": ".qa-z/runs/candidate",
             }
+        return None
+
+    def executor_bridge_config(self) -> dict[str, Any] | None:
+        """Return repair-session bridge settings, if requested."""
+        configured = self.run.get("executor_bridge")
+        if isinstance(configured, dict):
+            return {
+                "baseline_run": str(
+                    configured.get("baseline_run") or ".qa-z/runs/baseline"
+                ),
+                "session_id": str(
+                    configured.get("session_id") or "benchmark-bridge-session"
+                ),
+                "bridge_id": str(configured.get("bridge_id") or "benchmark-bridge"),
+                "loop_id": str(configured.get("loop_id") or "loop-benchmark-bridge"),
+                "context_paths": string_list(configured.get("context_paths")),
+            }
+        if configured or self.expect_executor_bridge:
+            return {
+                "baseline_run": ".qa-z/runs/baseline",
+                "session_id": "benchmark-bridge-session",
+                "bridge_id": "benchmark-bridge",
+                "loop_id": "loop-benchmark-bridge",
+                "context_paths": [],
+            }
+        return None
+
+    def executor_result_config(self) -> dict[str, str] | None:
+        """Return session/bridge/result settings for executor-result ingest."""
+        configured = self.run.get("executor_result")
+        if isinstance(configured, dict):
+            return {
+                "baseline_run": str(
+                    configured.get("baseline_run") or ".qa-z/runs/baseline"
+                ),
+                "session_id": str(configured.get("session_id") or "benchmark-session"),
+                "bridge_id": str(configured.get("bridge_id") or "benchmark-bridge"),
+                "result_path": str(
+                    configured.get("result_path") or "external-result.json"
+                ),
+            }
+        if self.expect_executor_result:
+            return {
+                "baseline_run": ".qa-z/runs/baseline",
+                "session_id": "benchmark-session",
+                "bridge_id": "benchmark-bridge",
+                "result_path": "external-result.json",
+            }
+        return None
+
+    def executor_result_dry_run_config(self) -> dict[str, str] | None:
+        """Return session settings for executor-result dry-run."""
+        configured = self.run.get("executor_result_dry_run")
+        if isinstance(configured, dict):
+            return {
+                "session_id": str(
+                    configured.get("session_id")
+                    or configured.get("session")
+                    or "benchmark-session"
+                ),
+            }
+        if configured or self.expect_executor_dry_run:
+            executor_result = self.run.get("executor_result")
+            if isinstance(executor_result, dict):
+                session_id = str(
+                    executor_result.get("session_id") or "benchmark-session"
+                )
+            else:
+                session_id = "benchmark-session"
+            return {"session_id": session_id}
         return None
 
 
@@ -290,6 +373,68 @@ def run_fixture(
                     results_dir,
                 )
 
+            executor_bridge_config = fixture.expectation.executor_bridge_config()
+            if executor_bridge_config is not None:
+                bridge_manifest, bridge_guide = execute_executor_bridge_fixture(
+                    workspace=workspace,
+                    config=config,
+                    baseline_run=str(executor_bridge_config["baseline_run"]),
+                    session_id=str(executor_bridge_config["session_id"]),
+                    bridge_id=str(executor_bridge_config["bridge_id"]),
+                    loop_id=str(executor_bridge_config["loop_id"]),
+                    context_paths=list(executor_bridge_config["context_paths"]),
+                )
+                actual["executor_bridge"] = summarize_executor_bridge_actual(
+                    workspace=workspace,
+                    manifest=bridge_manifest,
+                    guide=bridge_guide,
+                )
+                artifacts["executor_bridge"] = format_path(
+                    workspace
+                    / ".qa-z"
+                    / "executor"
+                    / str(executor_bridge_config["bridge_id"])
+                    / "bridge.json",
+                    results_dir,
+                )
+
+            executor_result_config = fixture.expectation.executor_result_config()
+            if executor_result_config is not None:
+                outcome = execute_executor_result_fixture(
+                    workspace=workspace,
+                    config=config,
+                    baseline_run=executor_result_config["baseline_run"],
+                    session_id=executor_result_config["session_id"],
+                    bridge_id=executor_result_config["bridge_id"],
+                    result_path=executor_result_config["result_path"],
+                )
+                actual["executor_result"] = summarize_executor_result_actual(
+                    outcome.summary
+                )
+                if outcome.summary.get(
+                    "verification_triggered"
+                ) and outcome.summary.get("verify_summary_path"):
+                    verify_summary_path = workspace / str(
+                        outcome.summary["verify_summary_path"]
+                    )
+                    verify_summary = read_json_object(verify_summary_path)
+                    actual["verify"] = summarize_verify_summary_actual(verify_summary)
+                    artifacts["verify_summary"] = format_path(
+                        verify_summary_path, results_dir
+                    )
+
+            executor_dry_run_config = (
+                fixture.expectation.executor_result_dry_run_config()
+            )
+            if executor_dry_run_config is not None:
+                dry_run_outcome = execute_executor_dry_run_fixture(
+                    workspace=workspace,
+                    session_id=executor_dry_run_config["session_id"],
+                )
+                actual["executor_dry_run"] = summarize_executor_dry_run_actual(
+                    dry_run_outcome.summary
+                )
+
             if fixture.expectation.expect_artifacts:
                 actual["artifact"] = summarize_artifact_actual(workspace)
     except (
@@ -404,6 +549,112 @@ def execute_verify_fixture(
     return comparison
 
 
+def execute_executor_result_fixture(
+    *,
+    workspace: Path,
+    config: dict[str, Any],
+    baseline_run: str,
+    session_id: str,
+    bridge_id: str,
+    result_path: str,
+):
+    """Create a repair session, package a bridge, and ingest a result."""
+    fixed_now = "2026-04-16T00:00:00Z"
+    create_repair_session(
+        root=workspace,
+        config=config,
+        baseline_run=baseline_run,
+        session_id=session_id,
+    )
+    session_manifest_path = (
+        workspace / ".qa-z" / "sessions" / session_id / "session.json"
+    )
+    session_manifest = read_json_object(session_manifest_path)
+    session_manifest["created_at"] = fixed_now
+    session_manifest["updated_at"] = fixed_now
+    write_json(session_manifest_path, session_manifest)
+    create_executor_bridge(
+        root=workspace,
+        from_session=session_id,
+        bridge_id=bridge_id,
+        now=fixed_now,
+    )
+    try:
+        return ingest_executor_result_artifact(
+            root=workspace,
+            config=config,
+            result_path=workspace / result_path,
+            now=fixed_now,
+        )
+    except ExecutorResultIngestRejected as exc:
+        return exc.outcome
+
+
+def execute_executor_bridge_fixture(
+    *,
+    workspace: Path,
+    config: dict[str, Any],
+    baseline_run: str,
+    session_id: str,
+    bridge_id: str,
+    loop_id: str,
+    context_paths: list[str],
+) -> tuple[dict[str, Any], str]:
+    """Create a loop-sourced executor bridge for one benchmark fixture."""
+    fixed_now = "2026-04-16T00:00:00Z"
+    create_repair_session(
+        root=workspace,
+        config=config,
+        baseline_run=baseline_run,
+        session_id=session_id,
+    )
+    session_manifest_path = (
+        workspace / ".qa-z" / "sessions" / session_id / "session.json"
+    )
+    session_manifest = read_json_object(session_manifest_path)
+    session_manifest["created_at"] = fixed_now
+    session_manifest["updated_at"] = fixed_now
+    write_json(session_manifest_path, session_manifest)
+    loop_dir = workspace / ".qa-z" / "loops" / loop_id
+    write_json(
+        loop_dir / "outcome.json",
+        {
+            "kind": "qa_z.autonomy_outcome",
+            "schema_version": 1,
+            "loop_id": loop_id,
+            "generated_at": fixed_now,
+            "state": "completed",
+            "selected_task_ids": ["verify_regression-candidate"],
+            "actions_prepared": [
+                {
+                    "type": "repair_session",
+                    "task_id": "verify_regression-candidate",
+                    "session_id": session_id,
+                    "session_dir": f".qa-z/sessions/{session_id}",
+                    "context_paths": list(context_paths),
+                }
+            ],
+            "next_recommendations": ["run external repair, then repair-session verify"],
+            "artifacts": {"outcome": f".qa-z/loops/{loop_id}/outcome.json"},
+        },
+    )
+    paths = create_executor_bridge(
+        root=workspace,
+        from_loop=loop_id,
+        bridge_id=bridge_id,
+        now=fixed_now,
+    )
+    return (
+        read_json_object(paths.manifest_path),
+        paths.executor_guide_path.read_text(encoding="utf-8"),
+    )
+
+
+def execute_executor_dry_run_fixture(*, workspace: Path, session_id: str):
+    """Run executor-result dry-run for one seeded benchmark session."""
+    return run_executor_result_dry_run(root=workspace, session_ref=session_id)
+
+
 def compare_expected(
     actual: dict[str, Any], expectation: BenchmarkExpectation
 ) -> list[str]:
@@ -431,6 +682,27 @@ def compare_expected(
             "verify",
             coerce_mapping(actual.get("verify")),
             expectation.expect_verify,
+        )
+    )
+    failures.extend(
+        compare_section(
+            "executor_bridge",
+            coerce_mapping(actual.get("executor_bridge")),
+            expectation.expect_executor_bridge,
+        )
+    )
+    failures.extend(
+        compare_section(
+            "executor_result",
+            coerce_mapping(actual.get("executor_result")),
+            expectation.expect_executor_result,
+        )
+    )
+    failures.extend(
+        compare_section(
+            "executor_dry_run",
+            coerce_mapping(actual.get("executor_dry_run")),
+            expectation.expect_executor_dry_run,
         )
     )
     failures.extend(
@@ -557,6 +829,12 @@ def expectation_actual_key(key: str) -> str:
         return "config_error"
     if key == "expect_status":
         return "status"
+    if key == "expected_source":
+        return "summary_source"
+    if key == "expected_recommendation":
+        return "next_recommendation"
+    if key == "expected_ingest_status":
+        return "ingest_status"
     if key in {"grouped_findings_min", "grouped_findings_max"}:
         return "grouped_findings_count"
     if key.endswith("_present"):
@@ -592,13 +870,16 @@ def categorize_result(
         ),
         "artifact": category_status(
             failures,
-            prefixes=("artifact.",),
-            applies=bool(expectation.expect_artifacts),
+            prefixes=("artifact.", "executor_bridge."),
+            applies=bool(
+                expectation.expect_artifacts or expectation.expect_executor_bridge
+            ),
         ),
         "policy": category_status(
             failures,
-            prefixes=("deep.",),
-            applies=has_policy_expectation(expectation.expect_deep),
+            prefixes=("deep.", "executor_dry_run."),
+            applies=bool(expectation.expect_executor_dry_run)
+            or has_policy_expectation(expectation.expect_deep),
         ),
     }
 
@@ -831,6 +1112,176 @@ def summarize_verify_actual(comparison: dict[str, Any]) -> dict[str, Any]:
         "new_issue_count": summary.get("new_issue_count"),
         "regression_count": summary.get("regression_count"),
         "not_comparable_count": summary.get("not_comparable_count"),
+    }
+
+
+def summarize_verify_summary_actual(summary: dict[str, Any]) -> dict[str, Any]:
+    """Return benchmark-relevant observations from verify/summary.json."""
+    return {
+        "schema_version": summary.get("schema_version", VERIFY_SCHEMA_VERSION),
+        "verdict": summary.get("verdict"),
+        "blocking_before": summary.get("blocking_before"),
+        "blocking_after": summary.get("blocking_after"),
+        "resolved_count": summary.get("resolved_count"),
+        "remaining_issue_count": summary.get(
+            "remaining_issue_count", summary.get("still_failing_count")
+        ),
+        "new_issue_count": summary.get("new_issue_count"),
+        "regression_count": summary.get("regression_count"),
+        "not_comparable_count": summary.get("not_comparable_count"),
+    }
+
+
+def summarize_executor_bridge_actual(
+    *, workspace: Path, manifest: dict[str, Any], guide: str
+) -> dict[str, Any]:
+    """Return benchmark-relevant executor bridge packaging observations."""
+    inputs = coerce_mapping(manifest.get("inputs"))
+    context_items = inputs.get("action_context", [])
+    if not isinstance(context_items, list):
+        context_items = []
+    action_context = [dict(item) for item in context_items if isinstance(item, dict)]
+    copied_paths = [
+        str(item.get("copied_path"))
+        for item in action_context
+        if str(item.get("copied_path") or "").strip()
+    ]
+    missing_items = inputs.get("action_context_missing", [])
+    if not isinstance(missing_items, list):
+        missing_items = []
+    missing_context = [str(item) for item in missing_items if str(item).strip()]
+    stdout = render_bridge_stdout(manifest)
+    return {
+        "kind": manifest.get("kind"),
+        "schema_version": manifest.get("schema_version"),
+        "bridge_id": manifest.get("bridge_id"),
+        "source_loop_id": manifest.get("source_loop_id"),
+        "source_session_id": manifest.get("source_session_id"),
+        "prepared_action_type": manifest.get("prepared_action_type"),
+        "action_context_count": len(action_context),
+        "action_context_paths": [
+            str(item.get("source_path"))
+            for item in action_context
+            if str(item.get("source_path") or "").strip()
+        ],
+        "action_context_copied_paths": copied_paths,
+        "action_context_missing": missing_context,
+        "action_context_missing_count": len(missing_context),
+        "action_context_files_exist": all(
+            (workspace / copied_path).is_file() for copied_path in copied_paths
+        ),
+        "guide_mentions_action_context": (
+            "Action context" in guide
+            and all(copied_path in guide for copied_path in copied_paths)
+        ),
+        "guide_mentions_missing_action_context": (
+            "Action context missing" in guide
+            and all(missing_path in guide for missing_path in missing_context)
+        ),
+        "stdout_mentions_action_context": (
+            f"Action context inputs: {len(action_context)}" in stdout
+        ),
+        "stdout_mentions_missing_action_context": (
+            "Missing action context:" in stdout
+            and all(missing_path in stdout for missing_path in missing_context)
+        ),
+    }
+
+
+def summarize_executor_result_actual(summary: dict[str, Any]) -> dict[str, Any]:
+    """Return benchmark-relevant executor-result ingest observations."""
+    backlog_implications = [
+        dict(item)
+        for item in summary.get("backlog_implications", [])
+        if isinstance(item, dict)
+    ]
+    freshness_check = coerce_mapping(summary.get("freshness_check"))
+    provenance_check = coerce_mapping(summary.get("provenance_check"))
+    return {
+        "kind": summary.get("kind"),
+        "schema_version": summary.get("schema_version"),
+        "bridge_id": summary.get("bridge_id"),
+        "session_id": summary.get("session_id"),
+        "result_status": summary.get("result_status"),
+        "ingest_status": summary.get("ingest_status"),
+        "session_state": summary.get("session_state"),
+        "verification_hint": summary.get("verification_hint"),
+        "verification_triggered": summary.get("verification_triggered"),
+        "verification_verdict": summary.get("verification_verdict"),
+        "verify_resume_status": summary.get("verify_resume_status"),
+        "verify_summary_path": summary.get("verify_summary_path"),
+        "freshness_status": freshness_check.get("status"),
+        "freshness_reason": freshness_check.get("reason"),
+        "provenance_status": provenance_check.get("status"),
+        "provenance_reason": provenance_check.get("reason"),
+        "warning_ids": list(summary.get("warnings") or []),
+        "backlog_categories": unique_strings(
+            [
+                str(item.get("category") or "")
+                for item in backlog_implications
+                if str(item.get("category") or "").strip()
+            ]
+        ),
+        "next_recommendation": summary.get("next_recommendation"),
+    }
+
+
+def summarize_executor_dry_run_actual(summary: dict[str, Any]) -> dict[str, Any]:
+    """Return benchmark-relevant executor dry-run observations."""
+    evaluations = [
+        dict(item)
+        for item in summary.get("rule_evaluations", [])
+        if isinstance(item, dict)
+    ]
+    actions = [
+        dict(item)
+        for item in summary.get("recommended_actions", [])
+        if isinstance(item, dict)
+    ]
+
+    def rule_ids(status: str) -> list[str]:
+        return [
+            str(item.get("id"))
+            for item in evaluations
+            if str(item.get("id") or "").strip()
+            and str(item.get("status") or "").strip() == status
+        ]
+
+    counts = summary.get("rule_status_counts")
+    rule_counts = counts if isinstance(counts, dict) else {}
+    return {
+        "kind": summary.get("kind"),
+        "schema_version": summary.get("schema_version"),
+        "session_id": summary.get("session_id"),
+        "summary_source": summary.get("summary_source"),
+        "evaluated_attempt_count": summary.get("evaluated_attempt_count"),
+        "latest_attempt_id": summary.get("latest_attempt_id"),
+        "latest_result_status": summary.get("latest_result_status"),
+        "latest_ingest_status": summary.get("latest_ingest_status"),
+        "verdict": summary.get("verdict"),
+        "verdict_reason": summary.get("verdict_reason"),
+        "operator_decision": summary.get("operator_decision"),
+        "operator_summary": summary.get("operator_summary"),
+        "recommended_action_ids": [
+            str(item.get("id")) for item in actions if str(item.get("id") or "").strip()
+        ],
+        "recommended_action_summaries": [
+            str(item.get("summary"))
+            for item in actions
+            if str(item.get("summary") or "").strip()
+        ],
+        "history_signals": [
+            str(item)
+            for item in summary.get("history_signals", [])
+            if str(item).strip()
+        ],
+        "next_recommendation": summary.get("next_recommendation"),
+        "clear_rule_count": int(rule_counts.get("clear", 0) or 0),
+        "attention_rule_count": int(rule_counts.get("attention", 0) or 0),
+        "blocked_rule_count": int(rule_counts.get("blocked", 0) or 0),
+        "attention_rule_ids": rule_ids("attention"),
+        "blocked_rule_ids": rule_ids("blocked"),
+        "clear_rule_ids": rule_ids("clear"),
     }
 
 

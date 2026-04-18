@@ -1,0 +1,49 @@
+{
+  "description": "Executor-result dry-run should stay blocked when a completed attempt remains verification-blocked in recorded session history.",
+  "expect_executor_dry_run": {
+    "attention_rule_ids": [
+      "outcome_classification_must_be_honest"
+    ],
+    "attention_rule_count": 1,
+    "blocked_rule_ids": [
+      "verification_required_for_completed"
+    ],
+    "blocked_rule_count": 1,
+    "clear_rule_ids": [
+      "executor_history_recorded",
+      "no_op_requires_explanation",
+      "retry_boundary_is_manual",
+      "mutation_scope_limited",
+      "unrelated_refactors_prohibited"
+    ],
+    "clear_rule_count": 5,
+    "evaluated_attempt_count": 1,
+    "expected_source": "materialized",
+    "expected_recommendation": "resolve verification blocking evidence before another completed attempt",
+    "history_signals": [
+      "completed_verify_blocked"
+    ],
+    "latest_ingest_status": "accepted_with_warning",
+    "latest_result_status": "completed",
+    "operator_decision": "resolve_verification_blockers",
+    "operator_summary": "A completed executor attempt is still blocked by verification evidence.",
+    "recommended_action_ids": [
+      "resolve_verification_blockers",
+      "review_validation_conflict"
+    ],
+    "recommended_action_summaries": [
+      "Review verify/summary.json and repair remaining or regressed blockers before accepting completion.",
+      "Compare executor validation claims with deterministic verification artifacts before retrying."
+    ],
+    "schema_version": 1,
+    "session_id": "session-blocked",
+    "verdict": "blocked",
+    "verdict_reason": "completed_attempt_not_verification_clean"
+  },
+  "name": "executor_dry_run_completed_verify_blocked",
+  "run": {
+    "executor_result_dry_run": {
+      "session_id": "session-blocked"
+    }
+  }
+}

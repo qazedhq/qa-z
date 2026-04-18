@@ -1,0 +1,30 @@
+{
+  "project": {
+    "name": "benchmark-fixture",
+    "languages": [
+      "python",
+      "typescript"
+    ]
+  },
+  "contracts": {
+    "output_dir": "qa/contracts"
+  },
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_test",
+        "kind": "test",
+        "run": [
+          "python",
+          "-c",
+          ""
+        ]
+      }
+    ]
+  },
+  "deep": {
+    "checks": []
+  }
+}

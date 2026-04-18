@@ -1,0 +1,42 @@
+{
+  "description": "Executor-result dry-run should stay clear when session history records one accepted completed attempt that is not blocked by verification evidence.",
+  "expect_executor_dry_run": {
+    "attention_rule_ids": [],
+    "attention_rule_count": 0,
+    "blocked_rule_ids": [],
+    "blocked_rule_count": 0,
+    "clear_rule_ids": [
+      "executor_history_recorded",
+      "no_op_requires_explanation",
+      "retry_boundary_is_manual",
+      "mutation_scope_limited",
+      "unrelated_refactors_prohibited",
+      "verification_required_for_completed",
+      "outcome_classification_must_be_honest"
+    ],
+    "clear_rule_count": 7,
+    "evaluated_attempt_count": 1,
+    "expected_source": "materialized",
+    "expected_recommendation": "no immediate safety concerns",
+    "latest_ingest_status": "accepted",
+    "latest_result_status": "completed",
+    "operator_decision": "continue_standard_verification",
+    "operator_summary": "Executor history is clear under the pre-live safety rules.",
+    "recommended_action_ids": [
+      "continue_standard_verification"
+    ],
+    "recommended_action_summaries": [
+      "Continue normal verification and review; no immediate dry-run safety concern is recorded."
+    ],
+    "schema_version": 1,
+    "session_id": "session-clear",
+    "verdict": "clear",
+    "verdict_reason": "history_clear"
+  },
+  "name": "executor_dry_run_clear_verified_completed",
+  "run": {
+    "executor_result_dry_run": {
+      "session_id": "session-clear"
+    }
+  }
+}

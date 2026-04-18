@@ -1,0 +1,42 @@
+{
+  "project": {
+    "name": "mixed-fast-handoff-functional-worktree-cleanup",
+    "languages": [
+      "python",
+      "typescript"
+    ]
+  },
+  "contracts": {
+    "output_dir": "qa/contracts"
+  },
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_test",
+        "enabled": true,
+        "run": [
+          "python",
+          ".qa-z-benchmark/fast_check.py",
+          "fail",
+          "tests/test_app.py::test_answer FAILED"
+        ],
+        "kind": "test"
+      },
+      {
+        "id": "ts_type",
+        "enabled": true,
+        "run": [
+          "python",
+          ".qa-z-benchmark/fast_check.py",
+          "pass"
+        ],
+        "kind": "typecheck"
+      }
+    ]
+  },
+  "deep": {
+    "checks": []
+  }
+}

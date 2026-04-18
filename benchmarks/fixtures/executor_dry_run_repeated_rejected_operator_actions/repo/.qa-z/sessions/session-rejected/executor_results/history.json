@@ -1,0 +1,62 @@
+{
+  "attempt_count": 2,
+  "attempts": [
+    {
+      "attempt_id": "attempt-rejected-1",
+      "attempt_path": ".qa-z/sessions/session-rejected/executor_results/attempts/attempt-rejected-1.json",
+      "backlog_categories": [
+        "evidence_freshness_gap"
+      ],
+      "bridge_id": "bridge-rejected",
+      "changed_files_count": 1,
+      "freshness_reason": "result_too_old",
+      "freshness_status": "failed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-rejected-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-rejected-1/ingest_report.md",
+      "ingest_status": "rejected_stale",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-18T01:00:00Z",
+      "result_status": "completed",
+      "source_loop_id": null,
+      "validation_status": "passed",
+      "verification_hint": "rerun",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "stale_result",
+      "warning_ids": []
+    },
+    {
+      "attempt_id": "attempt-rejected-2",
+      "attempt_path": ".qa-z/sessions/session-rejected/executor_results/attempts/attempt-rejected-2.json",
+      "backlog_categories": [
+        "provenance_gap"
+      ],
+      "bridge_id": "bridge-rejected-other",
+      "changed_files_count": 1,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-rejected-2/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-rejected-2/ingest_report.md",
+      "ingest_status": "rejected_mismatch",
+      "notes_count": 1,
+      "provenance_reason": "bridge_id_mismatch",
+      "provenance_status": "failed",
+      "recorded_at": "2026-04-18T01:05:00Z",
+      "result_status": "completed",
+      "source_loop_id": null,
+      "validation_status": "passed",
+      "verification_hint": "rerun",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "mismatch_detected",
+      "warning_ids": []
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-rejected-2",
+  "schema_version": 1,
+  "session_id": "session-rejected",
+  "updated_at": "2026-04-18T01:05:00Z"
+}

@@ -1,5 +1,10 @@
 name: CI
 
+# QA-Z workflow templates are deterministic CI gates.
+# This deterministic CI gate preserves local artifacts before applying the fast/deep verdict.
+# This workflow does not call live executors.
+# This workflow does not create branches, commits, pushes, or bot comments.
+
 on:
   push:
     branches:
@@ -26,8 +31,12 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
-  fast:
+  qa-z:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,12 +46,107 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install project
-        run: python -m pip install -e .[dev]
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install project and Semgrep
+        run: python -m pip install -e .[dev] semgrep
+
+      - name: Install Node dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack enable
+            pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then
+            corepack enable
+            yarn install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Run QA-Z fast gate
-        run: python -m qa_z fast --output-dir .qa-z/runs/ci
+        shell: bash
+        run: |
+          mkdir -p .qa-z/runs/ci
+          set +e
+          python -m qa_z fast --selection smart --output-dir .qa-z/runs/ci --json | tee .qa-z/runs/ci/fast-stdout.json
+          fast_exit=${PIPESTATUS[0]}
+          set -e
+          echo "$fast_exit" > .qa-z/runs/ci/fast-exit-code
 
-      - name: Write QA-Z GitHub summary
-        if: always()
-        run: python -m qa_z github-summary --from-run .qa-z/runs/ci >> "$GITHUB_STEP_SUMMARY"
+      - name: Run QA-Z deep gate
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          mkdir -p .qa-z/runs/ci
+          set +e
+          python -m qa_z deep --selection smart --json | tee .qa-z/runs/ci/deep-stdout.json
+          deep_exit=${PIPESTATUS[0]}
+          set -e
+          echo "$deep_exit" > .qa-z/runs/ci/deep-exit-code
+
+      - name: Generate QA-Z review and repair artifacts
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          mkdir -p .qa-z/runs/ci/review .qa-z/runs/ci/repair
+          python -m qa_z review --from-run latest --output-dir .qa-z/runs/ci/review > .qa-z/runs/ci/review/review-stdout.md || true
+          python -m qa_z repair-prompt --from-run latest --output-dir .qa-z/runs/ci/repair > .qa-z/runs/ci/repair/prompt-stdout.md || true
+
+      - name: Publish QA-Z job summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          python -m qa_z github-summary --from-run latest --output .qa-z/runs/ci/github-summary.md > .qa-z/runs/ci/github-summary-stdout.md || true
+          if [ -f .qa-z/runs/ci/github-summary.md ]; then
+            cat .qa-z/runs/ci/github-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "# QA-Z Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "QA-Z did not produce a summary artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload QA-Z SARIF to code scanning
+        if: ${{ always() }}
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: .qa-z/runs/ci/deep/results.sarif
+          category: qa-z-semgrep
+
+      - name: Upload QA-Z run artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-z-runs
+          path: |
+            .qa-z/runs
+            .qa-z/sessions
+          if-no-files-found: warn
+
+      - name: Fail if QA-Z fast or deep failed
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          fast_exit=1
+          deep_exit=1
+
+          if [ -f .qa-z/runs/ci/fast-exit-code ]; then
+            fast_exit="$(cat .qa-z/runs/ci/fast-exit-code)"
+          fi
+
+          if [ -f .qa-z/runs/ci/deep-exit-code ]; then
+            deep_exit="$(cat .qa-z/runs/ci/deep-exit-code)"
+          fi
+
+          if [ "$fast_exit" -ne 0 ] || [ "$deep_exit" -ne 0 ]; then
+            echo "QA-Z checks failed: fast=$fast_exit deep=$deep_exit"
+            exit 1
+          fi

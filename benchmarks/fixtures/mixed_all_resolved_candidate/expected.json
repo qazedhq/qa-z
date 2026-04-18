@@ -1,0 +1,19 @@
+{
+  "description": "Mixed verification should report improved when Python and TypeScript blockers are both resolved.",
+  "expect_verify": {
+    "blocking_after": 0,
+    "blocking_before": 2,
+    "new_issue_count": 0,
+    "regression_count": 0,
+    "resolved_count": 2,
+    "schema_version": 1,
+    "verdict": "improved"
+  },
+  "name": "mixed_all_resolved_candidate",
+  "run": {
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project": {
+    "name": "executor-result-no-op-with-justification-candidate",
+    "languages": [
+      "python"
+    ]
+  },
+  "contracts": {
+    "output_dir": "qa/contracts"
+  },
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "docs_schema",
+        "kind": "lint",
+        "run": [
+          "python",
+          "-c",
+          ""
+        ]
+      }
+    ]
+  },
+  "deep": {
+    "checks": []
+  }
+}

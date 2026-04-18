@@ -1,0 +1,46 @@
+{
+  "description": "Executor-result dry-run should require attention after repeated accepted partial attempts even when the latest attempt stays within scope.",
+  "expect_executor_dry_run": {
+    "attention_rule_ids": [
+      "retry_boundary_is_manual"
+    ],
+    "attention_rule_count": 1,
+    "blocked_rule_ids": [],
+    "blocked_rule_count": 0,
+    "clear_rule_ids": [
+      "executor_history_recorded",
+      "no_op_requires_explanation",
+      "mutation_scope_limited",
+      "unrelated_refactors_prohibited",
+      "verification_required_for_completed",
+      "outcome_classification_must_be_honest"
+    ],
+    "clear_rule_count": 6,
+    "evaluated_attempt_count": 2,
+    "expected_source": "materialized",
+    "expected_recommendation": "inspect repeated partial attempts before another retry",
+    "history_signals": [
+      "repeated_partial_attempts"
+    ],
+    "latest_ingest_status": "accepted_partial",
+    "latest_result_status": "partial",
+    "operator_decision": "inspect_partial_attempts",
+    "operator_summary": "Repeated partial executor attempts need manual review before another retry.",
+    "recommended_action_ids": [
+      "inspect_partial_attempts"
+    ],
+    "recommended_action_summaries": [
+      "Review unresolved repair targets across repeated partial attempts before retrying."
+    ],
+    "schema_version": 1,
+    "session_id": "session-partial",
+    "verdict": "attention_required",
+    "verdict_reason": "manual_retry_review_required"
+  },
+  "name": "executor_dry_run_repeated_partial_attention",
+  "run": {
+    "executor_result_dry_run": {
+      "session_id": "session-partial"
+    }
+  }
+}

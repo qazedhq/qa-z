@@ -1,0 +1,17 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.eval",
+      "path": "src/app.py",
+      "start": {"line": 2},
+      "extra": {"severity": "ERROR", "message": "Avoid use of eval."}
+    },
+    {
+      "check_id": "generic.secrets.security.detected-password",
+      "path": "src/invoice.ts",
+      "start": {"line": 3},
+      "extra": {"severity": "ERROR", "message": "Hard-coded secret in invoice fixture."}
+    }
+  ]
+}

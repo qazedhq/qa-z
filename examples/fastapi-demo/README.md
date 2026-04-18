@@ -4,6 +4,8 @@ This dependency-light demo shows the QA-Z alpha loop against a small FastAPI-sha
 
 The service exposes pure functions so the demo works without installing a web server. If `fastapi` is installed, `app/main.py` also creates a real `FastAPI` app.
 
+It is a deterministic fast and repair-prompt demo. It does not configure deep checks, does not call live agents, and does not run `repair-session`, `executor-bridge`, or `executor-result`.
+
 ## Passing Flow
 
 From this directory:

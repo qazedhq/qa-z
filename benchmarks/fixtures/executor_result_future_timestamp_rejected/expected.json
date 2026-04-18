@@ -1,0 +1,26 @@
+{
+  "description": "Executor-result ingest should reject future-dated evidence instead of resuming verification from impossible timestamps.",
+  "expect_executor_result": {
+    "backlog_categories": [
+      "evidence_freshness_gap"
+    ],
+    "expected_ingest_status": "rejected_invalid",
+    "expected_recommendation": "fix executor result timestamps",
+    "freshness_reason": "result_from_future",
+    "result_status": "completed",
+    "schema_version": 1,
+    "session_id": "session-future",
+    "verification_hint": "rerun",
+    "verification_triggered": false,
+    "verify_resume_status": "verify_blocked"
+  },
+  "name": "executor_result_future_timestamp_rejected",
+  "run": {
+    "executor_result": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-future",
+      "result_path": "external-result.json",
+      "session_id": "session-future"
+    }
+  }
+}

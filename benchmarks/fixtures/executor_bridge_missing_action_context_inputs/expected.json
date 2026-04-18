@@ -1,0 +1,53 @@
+{
+  "description": "Loop-sourced executor bridge should preserve missing action context diagnostics in bridge guides.",
+  "expect_executor_bridge": {
+    "action_context_copied_paths": [
+      ".qa-z/executor/bridge-missing-context/inputs/context/001-summary.json"
+    ],
+    "action_context_count": 1,
+    "action_context_files_exist": true,
+    "action_context_missing": [
+      ".qa-z/runs/candidate/verify/missing-context.json"
+    ],
+    "action_context_missing_count": 1,
+    "action_context_paths": [
+      ".qa-z/runs/candidate/verify/summary.json"
+    ],
+    "bridge_id": "bridge-missing-context",
+    "guide_mentions_action_context": true,
+    "guide_mentions_missing_action_context": true,
+    "kind": "qa_z.executor_bridge",
+    "prepared_action_type": "repair_session",
+    "schema_version": 1,
+    "source_loop_id": "loop-bridge-missing-context",
+    "source_session_id": "session-bridge-missing-context",
+    "stdout_mentions_action_context": true,
+    "stdout_mentions_missing_action_context": true
+  },
+  "expect_verify": {
+    "blocking_after": 0,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "regression_count": 0,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "improved"
+  },
+  "name": "executor_bridge_missing_action_context_inputs",
+  "run": {
+    "executor_bridge": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-missing-context",
+      "context_paths": [
+        ".qa-z/runs/candidate/verify/summary.json",
+        ".qa-z/runs/candidate/verify/missing-context.json"
+      ],
+      "loop_id": "loop-bridge-missing-context",
+      "session_id": "session-bridge-missing-context"
+    },
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

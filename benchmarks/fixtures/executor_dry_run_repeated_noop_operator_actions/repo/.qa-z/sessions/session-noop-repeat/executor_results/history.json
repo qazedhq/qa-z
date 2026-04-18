@@ -1,0 +1,62 @@
+{
+  "attempt_count": 2,
+  "attempts": [
+    {
+      "attempt_id": "attempt-noop-repeat-1",
+      "attempt_path": ".qa-z/sessions/session-noop-repeat/executor_results/attempts/attempt-noop-repeat-1.json",
+      "backlog_categories": [
+        "no_op_safeguard_gap"
+      ],
+      "bridge_id": "bridge-noop-repeat",
+      "changed_files_count": 0,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-noop-repeat-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-noop-repeat-1/ingest_report.md",
+      "ingest_status": "accepted_no_op",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-18T01:10:00Z",
+      "result_status": "no_op",
+      "source_loop_id": null,
+      "validation_status": "passed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_skipped",
+      "warning_ids": []
+    },
+    {
+      "attempt_id": "attempt-noop-repeat-2",
+      "attempt_path": ".qa-z/sessions/session-noop-repeat/executor_results/attempts/attempt-noop-repeat-2.json",
+      "backlog_categories": [
+        "no_op_safeguard_gap"
+      ],
+      "bridge_id": "bridge-noop-repeat",
+      "changed_files_count": 0,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-noop-repeat-2/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-noop-repeat-2/ingest_report.md",
+      "ingest_status": "accepted_no_op",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-18T01:15:00Z",
+      "result_status": "no_op",
+      "source_loop_id": null,
+      "validation_status": "passed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_skipped",
+      "warning_ids": []
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-noop-repeat-2",
+  "schema_version": 1,
+  "session_id": "session-noop-repeat",
+  "updated_at": "2026-04-18T01:15:00Z"
+}

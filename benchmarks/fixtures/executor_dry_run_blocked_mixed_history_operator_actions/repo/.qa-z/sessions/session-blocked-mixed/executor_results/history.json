@@ -1,0 +1,91 @@
+{
+  "attempt_count": 3,
+  "attempts": [
+    {
+      "attempt_id": "attempt-blocked-mixed-1",
+      "attempt_path": ".qa-z/sessions/session-blocked-mixed/executor_results/attempts/attempt-blocked-mixed-1.json",
+      "backlog_categories": [
+        "partial_completion_gap"
+      ],
+      "bridge_id": "bridge-blocked-mixed",
+      "changed_files_count": 1,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-blocked-mixed-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-blocked-mixed-1/ingest_report.md",
+      "ingest_status": "accepted_partial",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-16T00:00:00Z",
+      "result_status": "partial",
+      "source_loop_id": null,
+      "validation_status": "failed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_blocked",
+      "warning_ids": []
+    },
+    {
+      "attempt_id": "attempt-blocked-mixed-2",
+      "attempt_path": ".qa-z/sessions/session-blocked-mixed/executor_results/attempts/attempt-blocked-mixed-2.json",
+      "backlog_categories": [
+        "partial_completion_gap"
+      ],
+      "bridge_id": "bridge-blocked-mixed",
+      "changed_files_count": 1,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-blocked-mixed-2/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-blocked-mixed-2/ingest_report.md",
+      "ingest_status": "accepted_partial",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-16T00:05:00Z",
+      "result_status": "partial",
+      "source_loop_id": null,
+      "validation_status": "failed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_blocked",
+      "warning_ids": []
+    },
+    {
+      "attempt_id": "attempt-blocked-mixed-3",
+      "attempt_path": ".qa-z/sessions/session-blocked-mixed/executor_results/attempts/attempt-blocked-mixed-3.json",
+      "backlog_categories": [
+        "partial_completion_gap",
+        "workflow_gap"
+      ],
+      "bridge_id": "bridge-blocked-mixed",
+      "changed_files_count": 1,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-blocked-mixed-3/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-blocked-mixed-3/ingest_report.md",
+      "ingest_status": "accepted_with_warning",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-16T00:15:00Z",
+      "result_status": "completed",
+      "source_loop_id": null,
+      "validation_status": "failed",
+      "verification_hint": "rerun",
+      "verification_triggered": false,
+      "verification_verdict": "mixed",
+      "verify_resume_status": "verify_blocked",
+      "warning_ids": [
+        "completed_validation_failed"
+      ]
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-blocked-mixed-3",
+  "schema_version": 1,
+  "session_id": "session-blocked-mixed",
+  "updated_at": "2026-04-16T00:15:00Z"
+}

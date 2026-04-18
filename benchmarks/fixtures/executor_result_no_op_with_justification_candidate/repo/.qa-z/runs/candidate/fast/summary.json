@@ -1,0 +1,28 @@
+{
+  "artifact_dir": ".qa-z/runs/candidate/fast",
+  "checks": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "qa_z",
+        "lint-docs"
+      ],
+      "duration_ms": 1,
+      "exit_code": 1,
+      "id": "docs_schema",
+      "kind": "lint",
+      "status": "failed",
+      "stderr_tail": "",
+      "stdout_tail": "docs/schema drift remains open",
+      "tool": "docs-schema"
+    }
+  ],
+  "contract_path": "qa/contracts/contract.md",
+  "finished_at": "2026-04-14T00:00:01Z",
+  "mode": "fast",
+  "project_root": "benchmark-fixture",
+  "schema_version": 2,
+  "started_at": "2026-04-14T00:00:00Z",
+  "status": "failed"
+}

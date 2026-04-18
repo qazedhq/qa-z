@@ -1,0 +1,34 @@
+{
+  "project": {"name": "mixed-fast-deep-handoff-dual-surface", "languages": ["python", "typescript"]},
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_test",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "tests/test_app.py::test_rejects_eval FAILED"],
+        "kind": "test"
+      },
+      {
+        "id": "ts_type",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/invoice.ts(2,14): error TS2322: Type 'string' is not assignable to type 'number'."],
+        "kind": "typecheck"
+      }
+    ]
+  },
+  "deep": {
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "sg_scan",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fake_semgrep.py"],
+        "kind": "static-analysis",
+        "semgrep": {"config": "auto", "fail_on_severity": ["ERROR"], "ignore_rules": []}
+      }
+    ]
+  }
+}

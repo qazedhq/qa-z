@@ -1,0 +1,49 @@
+{
+  "description": "Executor-result dry-run should preserve operator diagnostics for validation conflicts combined with missing no-op explanations.",
+  "expect_executor_dry_run": {
+    "attention_rule_ids": [
+      "no_op_requires_explanation",
+      "outcome_classification_must_be_honest"
+    ],
+    "attention_rule_count": 2,
+    "blocked_rule_ids": [],
+    "blocked_rule_count": 0,
+    "clear_rule_ids": [
+      "executor_history_recorded",
+      "retry_boundary_is_manual",
+      "mutation_scope_limited",
+      "unrelated_refactors_prohibited",
+      "verification_required_for_completed"
+    ],
+    "clear_rule_count": 5,
+    "evaluated_attempt_count": 1,
+    "expected_source": "materialized",
+    "expected_recommendation": "review executor validation conflict before another retry",
+    "history_signals": [
+      "validation_conflict",
+      "missing_no_op_explanation"
+    ],
+    "latest_ingest_status": "accepted_no_op",
+    "latest_result_status": "no_op",
+    "operator_decision": "review_validation_conflict",
+    "operator_summary": "Executor history has validation conflicts and no-op explanation gaps; review both recommended actions before another retry.",
+    "recommended_action_ids": [
+      "review_validation_conflict",
+      "require_no_op_explanation"
+    ],
+    "recommended_action_summaries": [
+      "Compare executor validation claims with deterministic verification artifacts before retrying.",
+      "Ask the executor to explain the no-op or not-applicable result before accepting it."
+    ],
+    "schema_version": 1,
+    "session_id": "session-validation-noop",
+    "verdict": "attention_required",
+    "verdict_reason": "classification_conflict_requires_review"
+  },
+  "name": "executor_dry_run_validation_noop_operator_actions",
+  "run": {
+    "executor_result_dry_run": {
+      "session_id": "session-validation-noop"
+    }
+  }
+}

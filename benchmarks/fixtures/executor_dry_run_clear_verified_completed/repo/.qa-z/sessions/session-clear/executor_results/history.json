@@ -1,0 +1,34 @@
+{
+  "attempt_count": 1,
+  "attempts": [
+    {
+      "attempt_id": "attempt-clear-1",
+      "attempt_path": ".qa-z/sessions/session-clear/executor_results/attempts/attempt-clear-1.json",
+      "backlog_categories": [],
+      "bridge_id": "bridge-clear",
+      "changed_files_count": 1,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-clear-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-clear-1/ingest_report.md",
+      "ingest_status": "accepted",
+      "notes_count": 1,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-16T00:00:00Z",
+      "result_status": "completed",
+      "source_loop_id": null,
+      "validation_status": "passed",
+      "verification_hint": "rerun",
+      "verification_triggered": true,
+      "verification_verdict": "improved",
+      "verify_resume_status": "ready_for_verify",
+      "warning_ids": []
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-clear-1",
+  "schema_version": 1,
+  "session_id": "session-clear",
+  "updated_at": "2026-04-16T00:00:00Z"
+}

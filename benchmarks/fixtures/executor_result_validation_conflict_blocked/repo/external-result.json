@@ -1,0 +1,45 @@
+{
+  "bridge_id": "bridge-validation",
+  "candidate_run_dir": null,
+  "changed_files": [
+    {
+      "old_path": null,
+      "path": "src/app.py",
+      "status": "modified",
+      "summary": "Adjusted Python logic during repair."
+    }
+  ],
+  "created_at": "2026-04-16T00:00:00Z",
+  "kind": "qa_z.executor_result",
+  "notes": [
+    "validation evidence should block optimistic verify resume"
+  ],
+  "schema_version": 1,
+  "source_loop_id": null,
+  "source_session_id": "session-validation",
+  "status": "completed",
+  "summary": "Claims a passing validation summary while the detailed validation still fails.",
+  "validation": {
+    "commands": [
+      [
+        "python",
+        "-m",
+        "pytest"
+      ]
+    ],
+    "results": [
+      {
+        "command": [
+          "python",
+          "-m",
+          "pytest"
+        ],
+        "exit_code": 1,
+        "status": "failed",
+        "summary": "pytest still fails"
+      }
+    ],
+    "status": "passed"
+  },
+  "verification_hint": "rerun"
+}

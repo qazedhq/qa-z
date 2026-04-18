@@ -1,0 +1,47 @@
+{
+  "description": "Loop-sourced executor bridge should copy repair-session action context into bridge-local inputs.",
+  "expect_executor_bridge": {
+    "action_context_copied_paths": [
+      ".qa-z/executor/bridge-context/inputs/context/001-summary.json"
+    ],
+    "action_context_count": 1,
+    "action_context_files_exist": true,
+    "action_context_missing_count": 0,
+    "action_context_paths": [
+      ".qa-z/runs/candidate/verify/summary.json"
+    ],
+    "bridge_id": "bridge-context",
+    "guide_mentions_action_context": true,
+    "kind": "qa_z.executor_bridge",
+    "prepared_action_type": "repair_session",
+    "schema_version": 1,
+    "source_loop_id": "loop-bridge-context",
+    "source_session_id": "session-bridge-context",
+    "stdout_mentions_action_context": true
+  },
+  "expect_verify": {
+    "blocking_after": 0,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "regression_count": 0,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "improved"
+  },
+  "name": "executor_bridge_action_context_inputs",
+  "run": {
+    "executor_bridge": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-context",
+      "context_paths": [
+        ".qa-z/runs/candidate/verify/summary.json"
+      ],
+      "loop_id": "loop-bridge-context",
+      "session_id": "session-bridge-context"
+    },
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

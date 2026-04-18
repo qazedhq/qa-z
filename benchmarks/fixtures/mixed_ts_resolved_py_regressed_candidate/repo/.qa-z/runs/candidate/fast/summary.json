@@ -1,0 +1,41 @@
+{
+  "artifact_dir": ".qa-z/runs/candidate/fast",
+  "checks": [
+    {
+      "command": [
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_ms": 1,
+      "exit_code": 1,
+      "id": "py_lint",
+      "kind": "lint",
+      "status": "failed",
+      "stderr_tail": "",
+      "stdout_tail": "src/app.py:1:1: F401 imported but unused",
+      "tool": "ruff"
+    },
+    {
+      "command": [
+        "vitest",
+        "run"
+      ],
+      "duration_ms": 1,
+      "exit_code": 0,
+      "id": "ts_test",
+      "kind": "test",
+      "status": "passed",
+      "stderr_tail": "",
+      "stdout_tail": "",
+      "tool": "vitest"
+    }
+  ],
+  "contract_path": "qa/contracts/contract.md",
+  "finished_at": "2026-04-14T00:00:01Z",
+  "mode": "fast",
+  "project_root": "benchmark-fixture",
+  "schema_version": 2,
+  "started_at": "2026-04-14T00:00:00Z",
+  "status": "failed"
+}

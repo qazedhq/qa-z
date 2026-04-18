@@ -1,0 +1,21 @@
+{
+  "bridge_id": "bridge-noop",
+  "candidate_run_dir": null,
+  "changed_files": [],
+  "created_at": "2026-04-16T00:00:00Z",
+  "kind": "qa_z.executor_result",
+  "notes": [
+    "README and artifact schema already match the intended maintenance surface."
+  ],
+  "schema_version": 1,
+  "source_loop_id": null,
+  "source_session_id": "session-noop",
+  "status": "no_op",
+  "summary": "The requested maintenance surface was already aligned, so no code changes were applied.",
+  "validation": {
+    "commands": [],
+    "results": [],
+    "status": "not_run"
+  },
+  "verification_hint": "skip"
+}

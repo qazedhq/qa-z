@@ -1,0 +1,49 @@
+{
+  "description": "Executed mixed fast and handoff coverage should stay realistic when a functional Python fix is bundled with worktree cleanup guidance.",
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "py_test"
+    ],
+    "passed_checks": [
+      "ts_type"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/app.py",
+      "scripts/worktree_cleanup.py"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:py_test"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:py_test",
+      "qa-z-fast"
+    ]
+  },
+  "expect_verify": {
+    "blocking_after": 0,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "remaining_issue_count": 0,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "improved"
+  },
+  "name": "mixed_fast_handoff_functional_worktree_cleanup",
+  "run": {
+    "fast": true,
+    "repair_handoff": true,
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

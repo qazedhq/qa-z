@@ -1,0 +1,41 @@
+{
+  "description": "A justified no-op executor result should stay functionally unchanged without emitting the missing-explanation warning.",
+  "expect_executor_result": {
+    "backlog_categories": [
+      "no_op_safeguard_gap"
+    ],
+    "expected_ingest_status": "accepted_no_op",
+    "expected_recommendation": "inspect no-op result",
+    "schema_version": 1,
+    "session_id": "session-noop",
+    "session_state": "candidate_generated",
+    "verification_hint": "skip",
+    "verification_triggered": false,
+    "verify_resume_status": "verify_blocked",
+    "warning_ids_absent": [
+      "no_op_without_explanation"
+    ]
+  },
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 1,
+    "new_issue_count": 0,
+    "remaining_issue_count_min": 1,
+    "resolved_count": 0,
+    "schema_version": 1,
+    "verdict": "unchanged"
+  },
+  "name": "executor_result_no_op_with_justification_candidate",
+  "run": {
+    "executor_result": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-noop",
+      "result_path": "external-result.json",
+      "session_id": "session-noop"
+    },
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

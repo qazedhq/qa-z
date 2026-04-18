@@ -7,7 +7,15 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from .adapters.claude import render_claude_handoff
+from .artifacts import (
+    ArtifactLoadError,
+    ArtifactSourceNotFound,
+    load_contract_context,
+    load_run_summary,
+    resolve_contract_source,
+    resolve_run_source,
+    write_latest_run_manifest,
+)
 from .autonomy import (
     load_autonomy_status,
     render_autonomy_status,
@@ -21,36 +29,45 @@ from .benchmark import (
     render_benchmark_report,
     run_benchmark,
 )
-from .adapters.codex import render_codex_handoff
-from .artifacts import (
-    ArtifactLoadError,
-    ArtifactSourceNotFound,
-    RunSource,
-    load_contract_context,
-    load_run_summary,
-    resolve_contract_source,
-    resolve_run_source,
-    write_latest_run_manifest,
+from .executor_bridge import (
+    ExecutorBridgeError,
+    create_executor_bridge,
+    render_bridge_stdout,
 )
+from .executor_dry_run import run_executor_result_dry_run
+from .executor_ingest import (
+    ExecutorResultIngestRejected,
+    create_verify_candidate_run,
+    ingest_executor_result_artifact,
+    verify_repair_session,
+)
+from .self_improvement import (
+    SelectionArtifactPaths,
+    compact_backlog_evidence_summary,
+    int_value,
+    load_backlog,
+    open_backlog_items,
+    run_self_inspection,
+    select_next_tasks,
+    selected_task_action_hint,
+    selected_task_validation_command,
+)
+from .adapters.claude import render_claude_handoff
+from .adapters.codex import render_codex_handoff
 from .config import (
+    COMMAND_GUIDANCE,
     CONTRACTS_README,
     EXAMPLE_CONFIG,
     ConfigError,
     get_nested,
     load_config,
 )
-from .executor_bridge import (
-    ExecutorBridgeError,
-    create_executor_bridge,
-    render_bridge_stdout,
-)
 from .planner.contracts import plan_contract
-from .self_improvement import (
-    compact_backlog_evidence_summary,
-    load_backlog,
-    open_backlog_items,
-    run_self_inspection,
-    select_next_tasks,
+from .reporters.deep_context import load_sibling_deep_summary
+from .reporters.repair_prompt import (
+    build_repair_packet,
+    repair_packet_json,
+    write_repair_artifacts,
 )
 from .repair_handoff import (
     build_repair_handoff,
@@ -60,18 +77,20 @@ from .repair_handoff import (
 from .repair_session import (
     create_repair_session,
     load_repair_session,
-    render_session_status,
-    repair_session_exit_code,
-    session_status_json,
-    verify_repair_session,
+    load_session_dry_run_summary,
+    render_session_start_stdout,
+    render_session_status_with_dry_run,
+    render_session_verify_stdout,
+    session_status_dict,
+    session_summary_json,
 )
-from .reporters.deep_context import load_sibling_deep_summary
-from .reporters.github_summary import github_summary_json, render_github_summary
-from .reporters.repair_prompt import (
-    build_repair_packet,
-    repair_packet_json,
-    write_repair_artifacts,
+from .reporters.github_summary import render_github_summary
+from .reporters.run_summary import write_run_summary_artifacts
+from .reporters.verification_publish import (
+    detect_publish_summary_for_run,
+    load_session_publish_summary,
 )
+from .reporters.sarif import write_sarif_artifact
 from .reporters.review_packet import (
     find_latest_contract,
     render_review_packet,
@@ -80,13 +99,10 @@ from .reporters.review_packet import (
     run_review_packet_json,
     write_review_artifacts,
 )
-from .reporters.run_summary import write_run_summary_artifacts
-from .reporters.sarif import write_sarif_artifact
 from .runners.deep import run_deep
 from .runners.fast import run_fast, summary_json
 from .verification import (
     VerificationArtifactPaths,
-    VerificationRun,
     comparison_json,
     compare_verification_runs,
     load_verification_run,
@@ -228,6 +244,281 @@ def handle_review(args: argparse.Namespace) -> int:
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
         print(f"qa-z review: source not found: {exc}")
         return 4
+
+
+def handle_github_summary(args: argparse.Namespace) -> int:
+    """Render compact Markdown for GitHub Actions job summaries."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "github-summary")
+    if config is None:
+        return 2
+
+    try:
+        run_source = resolve_run_source(root, config, args.from_run)
+        summary = load_run_summary(run_source.summary_path)
+        deep_summary = load_sibling_deep_summary(run_source)
+        publish_summary = (
+            load_session_publish_summary(root=root, session=args.from_session)
+            if args.from_session
+            else detect_publish_summary_for_run(root=root, run_source=run_source)
+        )
+        markdown = render_github_summary(
+            summary=summary,
+            run_source=run_source,
+            root=root,
+            deep_summary=deep_summary,
+            publish_summary=publish_summary,
+        )
+        if args.output:
+            output_path = resolve_cli_path(root, args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(markdown, encoding="utf-8")
+        print(markdown, end="")
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z github-summary: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z github-summary: source not found: {exc}")
+        return 4
+
+
+def handle_self_inspect(args: argparse.Namespace) -> int:
+    """Inspect local QA-Z artifacts and update the improvement backlog."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    paths = run_self_inspection(root=root)
+    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True), end="\n")
+    else:
+        print(
+            render_self_inspect_stdout(
+                report,
+                self_inspection_path=paths.self_inspection_path,
+                backlog_path=paths.backlog_path,
+                root=root,
+            )
+        )
+    return 0
+
+
+def render_self_inspect_stdout(
+    report: dict[str, Any],
+    *,
+    self_inspection_path: Path,
+    backlog_path: Path,
+    root: Path,
+) -> str:
+    """Render human stdout for qa-z self-inspect."""
+    candidates = [
+        item for item in report.get("candidates", []) if isinstance(item, dict)
+    ]
+    lines = [
+        "qa-z self-inspect: wrote self-improvement artifacts",
+        f"Self inspection: {format_relative_path(self_inspection_path, root)}",
+        f"Backlog: {format_relative_path(backlog_path, root)}",
+        f"Candidates: {len(candidates)}",
+        "Top candidates:",
+    ]
+    if not candidates:
+        lines.append("- none")
+    top_candidates = sorted(
+        candidates,
+        key=lambda item: (-int_value(item.get("priority_score")), str(item.get("id"))),
+    )
+    for item in top_candidates[:3]:
+        lines.extend(
+            [
+                f"- {item.get('id')}: {item.get('title', item.get('id', 'untitled'))}",
+                f"  recommendation: {item.get('recommendation', '')}",
+                f"  action: {selected_task_action_hint(item)}",
+                f"  validation: {selected_task_validation_command(item)}",
+                f"  priority score: {item.get('priority_score', 0)}",
+                f"  evidence: {compact_backlog_evidence_summary(item)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def handle_select_next(args: argparse.Namespace) -> int:
+    """Select the next highest-priority self-improvement tasks."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    paths = select_next_tasks(root=root, count=args.count)
+    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    if args.json:
+        print(json.dumps(selected, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_select_next_stdout(selected, paths, root))
+    return 0
+
+
+def handle_backlog(args: argparse.Namespace) -> int:
+    """Print the current improvement backlog."""
+    root = Path(args.path).expanduser().resolve()
+    backlog = load_backlog(root)
+    if args.json:
+        print(json.dumps(backlog, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_backlog(backlog))
+    return 0
+
+
+def render_backlog(backlog: dict[str, Any]) -> str:
+    """Render a human backlog summary that focuses on active work."""
+    items = [item for item in backlog.get("items", []) if isinstance(item, dict)]
+    open_items = open_backlog_items(backlog)
+    closed_items = [
+        item
+        for item in items
+        if str(item.get("status", "open")) not in {"open", "selected", "in_progress"}
+    ]
+    lines = [
+        f"qa-z backlog: {len(items)} item(s)",
+        f"Open items: {len(open_items)}",
+    ]
+    if not open_items:
+        lines.append("- none")
+    for item in open_items:
+        lines.extend(
+            [
+                f"- {item.get('id')}: {item.get('title', item.get('id', 'untitled'))}",
+                "  status: "
+                f"{item.get('status', 'open')} | "
+                f"priority: {item.get('priority_score', 0)} | "
+                f"recommendation: {item.get('recommendation', '')}",
+                f"  action: {selected_task_action_hint(item)}",
+                f"  validation: {selected_task_validation_command(item)}",
+                f"  evidence: {compact_backlog_evidence_summary(item)}",
+            ]
+        )
+    lines.extend(
+        [
+            f"Closed items: {len(closed_items)}",
+            "- use `qa-z backlog --json` for the full history"
+            if closed_items
+            else "- no closed history recorded",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_select_next_stdout(
+    selected: dict[str, Any], paths: SelectionArtifactPaths, root: Path
+) -> str:
+    """Render human stdout for qa-z select-next."""
+    items = [
+        item for item in selected.get("selected_tasks", []) if isinstance(item, dict)
+    ]
+    lines = [
+        "qa-z select-next: wrote loop planning artifacts",
+        f"Selected tasks: {format_relative_path(paths.selected_tasks_path, root)}",
+        f"Loop plan: {format_relative_path(paths.loop_plan_path, root)}",
+        f"History: {format_relative_path(paths.history_path, root)}",
+        f"Count: {len(items)}",
+        "Selected task details:",
+    ]
+    if not items:
+        lines.append("- none")
+    for item in items:
+        lines.append(
+            f"- {item.get('id')}: {item.get('title', item.get('id', 'untitled'))}"
+        )
+        if item.get("recommendation"):
+            lines.append(f"  recommendation: {item['recommendation']}")
+        lines.append(f"  action: {selected_task_action_hint(item)}")
+        lines.append(f"  validation: {selected_task_validation_command(item)}")
+        selection_score = item.get(
+            "selection_priority_score", item.get("priority_score")
+        )
+        if selection_score is not None:
+            lines.append(f"  selection score: {selection_score}")
+        selection_penalty = item.get("selection_penalty")
+        penalty_reasons = [
+            str(reason)
+            for reason in item.get("selection_penalty_reasons", [])
+            if isinstance(reason, str) and reason.strip()
+        ]
+        if selection_penalty:
+            if penalty_reasons:
+                lines.append(
+                    "  selection penalty: "
+                    f"{selection_penalty} ({', '.join(penalty_reasons)})"
+                )
+            else:
+                lines.append(f"  selection penalty: {selection_penalty}")
+        evidence_summary = compact_backlog_evidence_summary(item)
+        if evidence_summary:
+            lines.append(f"  evidence: {evidence_summary}")
+    return "\n".join(lines)
+
+
+def handle_autonomy(args: argparse.Namespace) -> int:
+    """Run or inspect deterministic autonomy planning loops."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    if args.autonomy_command == "status":
+        status = load_autonomy_status(root)
+        if args.json:
+            print(json.dumps(status, indent=2, sort_keys=True), end="\n")
+        else:
+            print(render_autonomy_status(status))
+        return 0
+
+    config = load_cli_config(root, args, "autonomy")
+    if config is None:
+        return 2
+    summary = run_autonomy(
+        root=root,
+        config=config,
+        loops=args.loops,
+        count=args.count,
+        min_runtime_seconds=args.min_runtime_hours * 3600,
+        min_loop_seconds=args.min_loop_seconds,
+    )
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_autonomy_summary(summary, root))
+    return 0
+
+
+def handle_executor_bridge(args: argparse.Namespace) -> int:
+    """Package autonomy/session evidence for an external executor."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    if bool(args.from_loop) == bool(args.from_session):
+        print(
+            "qa-z executor-bridge: configuration error: provide exactly one of "
+            "--from-loop or --from-session."
+        )
+        return 2
+    output_dir = resolve_cli_path(root, args.output_dir) if args.output_dir else None
+    try:
+        paths = create_executor_bridge(
+            root=root,
+            from_loop=args.from_loop,
+            from_session=args.from_session,
+            bridge_id=args.bridge_id,
+            output_dir=output_dir,
+        )
+        manifest = json.loads(paths.manifest_path.read_text(encoding="utf-8"))
+        if args.json:
+            print(json.dumps(manifest, indent=2, sort_keys=True), end="\n")
+        else:
+            print(render_bridge_stdout(manifest))
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z executor-bridge: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z executor-bridge: source not found: {exc}")
+        return 4
+    except ExecutorBridgeError as exc:
+        print(f"qa-z executor-bridge: configuration error: {exc}")
+        return 2
 
 
 def handle_fast(args: argparse.Namespace) -> int:
@@ -377,211 +668,6 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
         return 4
 
 
-def handle_repair_session_start(args: argparse.Namespace) -> int:
-    """Create a repair session from baseline run evidence."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "repair-session start")
-    if config is None:
-        return 2
-
-    try:
-        result = create_repair_session(
-            root=root,
-            config=config,
-            baseline_run=args.baseline_run,
-            session_id=args.session_id,
-        )
-        if args.json:
-            print(session_status_json(result.session), end="")
-        else:
-            print(render_session_status(result.session))
-        return 0
-    except ArtifactLoadError as exc:
-        print(f"qa-z repair-session start: artifact error: {exc}")
-        return 2
-    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session start: source not found: {exc}")
-        return 4
-
-
-def handle_repair_session_status(args: argparse.Namespace) -> int:
-    """Print repair-session status."""
-    root = Path(args.path).expanduser().resolve()
-
-    try:
-        session = load_repair_session(root, args.session)
-        if args.json:
-            print(session_status_json(session), end="")
-        else:
-            print(render_session_status(session))
-        return 0
-    except ArtifactLoadError as exc:
-        print(f"qa-z repair-session status: artifact error: {exc}")
-        return 2
-    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session status: source not found: {exc}")
-        return 4
-
-
-def handle_repair_session_verify(args: argparse.Namespace) -> int:
-    """Verify a repair session candidate run."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "repair-session verify")
-    if config is None:
-        return 2
-
-    try:
-        result = verify_repair_session(
-            root=root,
-            config=config,
-            session_ref=args.session,
-            candidate_run=args.candidate_run,
-        )
-        summary_json_text = result.summary_path.read_text(encoding="utf-8")
-        if args.json:
-            print(summary_json_text, end="")
-        else:
-            print(result.outcome_path.read_text(encoding="utf-8"), end="")
-        return repair_session_exit_code(str(result.comparison.verdict))
-    except ArtifactLoadError as exc:
-        print(f"qa-z repair-session verify: artifact error: {exc}")
-        return 2
-    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session verify: source not found: {exc}")
-        return 4
-    except ValueError as exc:
-        print(f"qa-z repair-session verify: configuration error: {exc}")
-        return 2
-
-
-def handle_github_summary(args: argparse.Namespace) -> int:
-    """Render compact Markdown or JSON for GitHub Actions summaries."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "github-summary")
-    if config is None:
-        return 2
-
-    try:
-        if args.json:
-            print(
-                github_summary_json(
-                    root=root,
-                    config=config,
-                    from_run=args.from_run,
-                    from_verify=args.from_verify,
-                    from_session=args.from_session,
-                ),
-                end="",
-            )
-        else:
-            print(
-                render_github_summary(
-                    root=root,
-                    config=config,
-                    from_run=args.from_run,
-                    from_verify=args.from_verify,
-                    from_session=args.from_session,
-                ),
-                end="",
-            )
-        return 0
-    except ArtifactLoadError as exc:
-        print(f"qa-z github-summary: artifact error: {exc}")
-        return 2
-    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z github-summary: source not found: {exc}")
-        return 4
-    except ValueError as exc:
-        print(f"qa-z github-summary: configuration error: {exc}")
-        return 2
-
-
-def create_verify_candidate_run(
-    *,
-    root: Path,
-    config: dict[str, Any],
-    rerun_output_dir: Path,
-    strict_no_tests: bool,
-    baseline: VerificationRun,
-) -> str:
-    """Run fast and deep checks to create candidate evidence for verification."""
-    contract_path = None
-    if baseline.fast_summary.contract_path:
-        candidate_contract = resolve_cli_path(root, baseline.fast_summary.contract_path)
-        if candidate_contract.is_file():
-            contract_path = candidate_contract
-
-    fast_run = run_fast(
-        root=root,
-        config=config,
-        contract_path=contract_path,
-        output_dir=rerun_output_dir,
-        strict_no_tests=strict_no_tests,
-        selection_mode=resolve_fast_selection_mode(config, None),
-    )
-    artifact_dir = Path(fast_run.summary.artifact_dir or "")
-    if not artifact_dir.is_absolute():
-        artifact_dir = root / artifact_dir
-    summary_path = write_run_summary_artifacts(fast_run.summary, artifact_dir)
-    run_dir = artifact_dir.parent
-    write_latest_run_manifest(root, config, run_dir)
-
-    deep_run = run_deep(
-        root=root,
-        config=config,
-        from_run=str(run_dir),
-        selection_mode=resolve_deep_selection_mode(config, None),
-    )
-    write_run_summary_artifacts(deep_run.summary, deep_run.resolution.deep_dir)
-    write_sarif_artifact(
-        deep_run.summary, deep_run.resolution.deep_dir / "results.sarif"
-    )
-    candidate_source = RunSource(
-        run_dir=run_dir,
-        fast_dir=summary_path.parent,
-        summary_path=summary_path,
-    )
-    write_verify_rerun_review_artifacts(
-        root=root,
-        config=config,
-        run_source=candidate_source,
-        summary=load_run_summary(summary_path),
-        deep_summary=load_sibling_deep_summary(candidate_source) or deep_run.summary,
-    )
-    return format_relative_path(run_dir, root)
-
-
-def write_verify_rerun_review_artifacts(
-    *,
-    root: Path,
-    config: dict[str, Any],
-    run_source: RunSource,
-    summary: Any,
-    deep_summary: Any,
-) -> None:
-    """Write run-aware review artifacts for a freshly rerun candidate."""
-    contract_path = resolve_contract_source(root, config, summary=summary)
-    contract = load_contract_context(contract_path, root)
-    markdown = render_run_review_packet(
-        summary=summary,
-        run_source=run_source,
-        contract=contract,
-        root=root,
-        deep_summary=deep_summary,
-    )
-    json_text = run_review_packet_json(
-        summary=summary,
-        run_source=run_source,
-        contract=contract,
-        root=root,
-        deep_summary=deep_summary,
-    )
-    write_review_artifacts(markdown, json_text, run_source.run_dir / "review")
-
-
 def handle_verify(args: argparse.Namespace) -> int:
     """Compare a baseline run against a post-repair candidate run."""
     root = Path(args.path).expanduser().resolve()
@@ -648,6 +734,170 @@ def handle_verify(args: argparse.Namespace) -> int:
         return 2
 
 
+def handle_repair_session_start(args: argparse.Namespace) -> int:
+    """Create a local repair-session from a baseline run."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "repair-session start")
+    if config is None:
+        return 2
+
+    try:
+        result = create_repair_session(
+            root=root,
+            config=config,
+            baseline_run=args.baseline_run,
+            session_id=args.session_id,
+        )
+        print(render_session_start_stdout(result.session))
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session start: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z repair-session start: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z repair-session start: configuration error: {exc}")
+        return 2
+
+
+def handle_repair_session_status(args: argparse.Namespace) -> int:
+    """Print the current state of a repair-session."""
+    root = Path(args.path).expanduser().resolve()
+
+    try:
+        session = load_repair_session(root, args.session)
+        dry_run_summary = load_session_dry_run_summary(session, root)
+        if args.json:
+            print(
+                json.dumps(
+                    session_status_dict(session, dry_run_summary=dry_run_summary),
+                    indent=2,
+                    sort_keys=True,
+                ),
+                end="\n",
+            )
+        else:
+            print(
+                render_session_status_with_dry_run(
+                    session,
+                    dry_run_summary=dry_run_summary,
+                )
+            )
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session status: artifact error: {exc}")
+        return 2
+
+
+def handle_repair_session_verify(args: argparse.Namespace) -> int:
+    """Verify a repair-session with an existing or freshly rerun candidate."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "repair-session verify")
+    if config is None:
+        return 2
+
+    if bool(args.candidate_run) == bool(args.rerun):
+        print(
+            "qa-z repair-session verify: configuration error: provide exactly one "
+            "of --candidate-run or --rerun."
+        )
+        return 2
+
+    try:
+        session = load_repair_session(root, args.session)
+        updated, summary, comparison = verify_repair_session(
+            session=session,
+            root=root,
+            config=config,
+            candidate_run=args.candidate_run,
+            rerun=args.rerun,
+            rerun_output_dir=args.rerun_output_dir,
+            strict_no_tests=args.strict_no_tests,
+            output_dir=args.output_dir,
+        )
+
+        if args.json:
+            print(session_summary_json(summary), end="")
+        else:
+            print(render_session_verify_stdout(updated, summary))
+        return verify_exit_code(comparison.verdict)
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session verify: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z repair-session verify: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z repair-session verify: configuration error: {exc}")
+        return 2
+
+
+def handle_executor_result_ingest(args: argparse.Namespace) -> int:
+    """Ingest an external executor result and optionally resume verification."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "executor-result ingest")
+    if config is None:
+        return 2
+
+    try:
+        outcome = ingest_executor_result_artifact(
+            root=root,
+            config=config,
+            result_path=args.result,
+        )
+        if args.json:
+            print(json.dumps(outcome.summary, indent=2, sort_keys=True), end="\n")
+        else:
+            print(render_executor_result_ingest_stdout(outcome.summary))
+        if (
+            outcome.summary.get("verification_triggered")
+            and outcome.verification_verdict
+        ):
+            return verify_exit_code(outcome.verification_verdict)
+        return 0
+    except ExecutorResultIngestRejected as exc:
+        if args.json:
+            print(json.dumps(exc.outcome.summary, indent=2, sort_keys=True), end="\n")
+        else:
+            print(render_executor_result_ingest_stdout(exc.outcome.summary))
+        return exc.exit_code
+    except ArtifactLoadError as exc:
+        print(f"qa-z executor-result ingest: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z executor-result ingest: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z executor-result ingest: configuration error: {exc}")
+        return 2
+
+
+def handle_executor_result_dry_run(args: argparse.Namespace) -> int:
+    """Run a live-free safety dry-run against one session history."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        outcome = run_executor_result_dry_run(root=root, session_ref=args.session)
+        if args.json:
+            print(json.dumps(outcome.summary, indent=2, sort_keys=True), end="\n")
+        else:
+            print(render_executor_result_dry_run_stdout(outcome.summary))
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z executor-result dry-run: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z executor-result dry-run: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z executor-result dry-run: configuration error: {exc}")
+        return 2
+
+
 def handle_benchmark(args: argparse.Namespace) -> int:
     """Run the local QA-Z benchmark fixture corpus."""
     root = Path(args.path).expanduser().resolve()
@@ -671,145 +921,10 @@ def handle_benchmark(args: argparse.Namespace) -> int:
     return 0 if summary["fixtures_failed"] == 0 else 1
 
 
-def handle_self_inspect(args: argparse.Namespace) -> int:
-    """Inspect local QA-Z artifacts and update the improvement backlog."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    paths = run_self_inspection(root=root)
-    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
-    if args.json:
-        print(json.dumps(report, indent=2, sort_keys=True), end="\n")
-    else:
-        print(render_self_inspect_stdout(report, paths, root))
+def handle_placeholder(args: argparse.Namespace) -> int:
+    """Render roadmap guidance for a scaffolded command."""
+    print(COMMAND_GUIDANCE[args.command])
     return 0
-
-
-def handle_backlog(args: argparse.Namespace) -> int:
-    """Print the current self-improvement backlog."""
-    root = Path(args.path).expanduser().resolve()
-    backlog = load_backlog(root)
-    if args.json:
-        print(json.dumps(backlog, indent=2, sort_keys=True), end="\n")
-    else:
-        print(render_backlog_stdout(backlog))
-    return 0
-
-
-def handle_select_next(args: argparse.Namespace) -> int:
-    """Select the next one to three self-improvement backlog tasks."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    paths = select_next_tasks(root=root, count=args.count)
-    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
-    if args.json:
-        print(json.dumps(selected, indent=2, sort_keys=True), end="\n")
-    else:
-        print(render_select_next_stdout(selected, paths, root))
-    return 0
-
-
-def render_self_inspect_stdout(report: dict[str, Any], paths: Any, root: Path) -> str:
-    """Render human output for qa-z self-inspect."""
-    return "\n".join(
-        [
-            f"Self inspection: {report.get('candidates_total', 0)} candidate(s)",
-            f"Report: {format_relative_path(paths.self_inspection_path, root)}",
-            f"Backlog: {format_relative_path(paths.backlog_path, root)}",
-            "No code was edited; this command only inspected local artifacts.",
-        ]
-    )
-
-
-def render_backlog_stdout(backlog: dict[str, Any]) -> str:
-    """Render human output for qa-z backlog."""
-    open_items = open_backlog_items(backlog)
-    lines = [f"Open backlog items: {len(open_items)}"]
-    for item in open_items[:10]:
-        lines.append(
-            f"- {item.get('id')} [{item.get('category')}] "
-            f"score={item.get('priority_score')}: {item.get('title')}"
-        )
-        lines.append(f"  Evidence: {compact_backlog_evidence_summary(item)}")
-    return "\n".join(lines)
-
-
-def render_select_next_stdout(selected: dict[str, Any], paths: Any, root: Path) -> str:
-    """Render human output for qa-z select-next."""
-    lines = [
-        f"Selected tasks: {selected.get('selected_count', 0)}",
-        f"Selected: {format_relative_path(paths.selected_tasks_path, root)}",
-        f"Loop plan: {format_relative_path(paths.loop_plan_path, root)}",
-        f"History: {format_relative_path(paths.history_path, root)}",
-    ]
-    for task in selected.get("selected_tasks", []):
-        lines.append(
-            f"- {task.get('id')} [{task.get('category')}] "
-            f"score={task.get('priority_score')}: {task.get('title')}"
-        )
-        lines.append(f"  Action: {task.get('action_hint')}")
-        lines.append(f"  Validation: {task.get('validation_command')}")
-        lines.append(f"  Evidence: {task.get('compact_evidence')}")
-    return "\n".join(lines)
-
-
-def handle_autonomy(args: argparse.Namespace) -> int:
-    """Run deterministic self-improvement planning loops."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    min_runtime_seconds = float(args.min_runtime_hours) * 3600
-    summary = run_autonomy(
-        root=root,
-        loops=args.loops,
-        count=args.count,
-        min_runtime_seconds=min_runtime_seconds,
-        min_loop_seconds=args.min_loop_seconds,
-    )
-    if args.json:
-        print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
-    else:
-        print(render_autonomy_summary(summary, root))
-    return 0
-
-
-def handle_autonomy_status(args: argparse.Namespace) -> int:
-    """Print the latest autonomy loop status."""
-    root = Path(args.path).expanduser().resolve()
-    status = load_autonomy_status(root)
-    if args.json:
-        print(json.dumps(status, indent=2, sort_keys=True), end="\n")
-    else:
-        print(render_autonomy_status(status))
-    return 0
-
-
-def handle_executor_bridge(args: argparse.Namespace) -> int:
-    """Package loop or session evidence for an external executor."""
-    root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
-    output_dir = resolve_cli_path(root, args.output_dir) if args.output_dir else None
-    try:
-        paths = create_executor_bridge(
-            root=root,
-            from_loop=args.from_loop,
-            from_session=args.from_session,
-            bridge_id=args.bridge_id,
-            output_dir=output_dir,
-        )
-        manifest = json.loads(paths.manifest_path.read_text(encoding="utf-8"))
-        if args.json:
-            print(json.dumps(manifest, indent=2, sort_keys=True), end="\n")
-        else:
-            print(render_bridge_stdout(manifest))
-        return 0
-    except ArtifactLoadError as exc:
-        print(f"qa-z executor-bridge: artifact error: {exc}")
-        return 2
-    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z executor-bridge: source not found: {exc}")
-        return 4
-    except ExecutorBridgeError as exc:
-        print(f"qa-z executor-bridge: configuration error: {exc}")
-        return 2
 
 
 def resolve_cli_path(root: Path, value: str) -> Path:
@@ -896,6 +1011,56 @@ def render_verify_stdout(
             f"Report: {format_relative_path(paths.report_path, root)}",
         ]
     )
+
+
+def render_executor_result_ingest_stdout(summary: dict[str, Any]) -> str:
+    """Render human stdout for executor-result ingest."""
+    return "\n".join(
+        [
+            f"qa-z executor-result ingest: {summary.get('ingest_status', summary['result_status'])}",
+            f"Result: {summary['result_status']}",
+            f"Session: {summary['session_id']}",
+            f"Stored result: {summary.get('stored_result_path') or 'none'}",
+            f"Verify resume: {summary.get('verify_resume_status', 'verify_blocked')}",
+            f"Verification: {summary['verification_verdict'] or 'not_run'}",
+            f"Next: {summary['next_recommendation']}",
+        ]
+    )
+
+
+def render_executor_result_dry_run_stdout(summary: dict[str, Any]) -> str:
+    """Render human stdout for executor-result dry-run."""
+    lines = [
+        f"qa-z executor-result dry-run: {summary['verdict']}",
+        f"Session: {summary['session_id']}",
+        f"Attempts: {summary['evaluated_attempt_count']}",
+        f"Latest attempt: {summary.get('latest_attempt_id') or 'none'}",
+    ]
+    operator_summary = str(summary.get("operator_summary") or "").strip()
+    if operator_summary:
+        lines.append(f"Diagnostic: {operator_summary}")
+    operator_decision = str(summary.get("operator_decision") or "").strip()
+    if operator_decision:
+        lines.append(f"Decision: {operator_decision}")
+    actions = dry_run_action_summaries(summary.get("recommended_actions"))
+    for action in actions[:3]:
+        lines.append(f"Action: {action}")
+    lines.append(f"Next: {summary['next_recommendation']}")
+    return "\n".join(lines)
+
+
+def dry_run_action_summaries(value: object) -> list[str]:
+    """Return readable recommended dry-run actions from optional payload data."""
+    if not isinstance(value, list):
+        return []
+    actions: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        summary = str(item.get("summary") or "").strip()
+        if summary:
+            actions.append(summary)
+    return actions
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1122,126 +1287,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     repair_parser.set_defaults(handler=handle_repair_prompt)
 
-    repair_session_parser = subparsers.add_parser(
-        "repair-session",
-        help="create and verify local repair-session artifacts",
-    )
-    repair_session_subparsers = repair_session_parser.add_subparsers(
-        dest="repair_session_command"
-    )
-
-    repair_session_start = repair_session_subparsers.add_parser(
-        "start",
-        help="create a repair session from a baseline run",
-    )
-    repair_session_start.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains qa-z.yaml and run artifacts",
-    )
-    repair_session_start.add_argument(
-        "--config",
-        help="optional explicit path to a qa-z config file",
-    )
-    repair_session_start.add_argument(
-        "--baseline-run",
-        required=True,
-        help="baseline run root, fast directory, summary.json, or latest",
-    )
-    repair_session_start.add_argument(
-        "--session-id",
-        help="optional stable id for the session directory",
-    )
-    repair_session_start.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable repair-session manifest to stdout",
-    )
-    repair_session_start.set_defaults(handler=handle_repair_session_start)
-
-    repair_session_status = repair_session_subparsers.add_parser(
-        "status",
-        help="print a repair-session manifest",
-    )
-    repair_session_status.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains QA-Z session artifacts",
-    )
-    repair_session_status.add_argument(
-        "--session",
-        required=True,
-        help="session id, directory, or session.json path",
-    )
-    repair_session_status.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable repair-session manifest to stdout",
-    )
-    repair_session_status.set_defaults(handler=handle_repair_session_status)
-
-    repair_session_verify = repair_session_subparsers.add_parser(
-        "verify",
-        help="verify a candidate run for a repair session",
-    )
-    repair_session_verify.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains qa-z.yaml and run artifacts",
-    )
-    repair_session_verify.add_argument(
-        "--config",
-        help="optional explicit path to a qa-z config file",
-    )
-    repair_session_verify.add_argument(
-        "--session",
-        required=True,
-        help="session id, directory, or session.json path",
-    )
-    repair_session_verify.add_argument(
-        "--candidate-run",
-        required=True,
-        help="candidate run root, fast directory, summary.json, or latest",
-    )
-    repair_session_verify.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable repair-session summary to stdout",
-    )
-    repair_session_verify.set_defaults(handler=handle_repair_session_verify)
-
-    github_summary_parser = subparsers.add_parser(
-        "github-summary",
-        help="render local QA-Z evidence for GitHub Actions summaries",
-    )
-    github_summary_parser.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains QA-Z artifacts",
-    )
-    github_summary_parser.add_argument(
-        "--config",
-        help="optional explicit path to a qa-z config file",
-    )
-    github_summary_parser.add_argument(
-        "--from-run",
-        help="run root, fast directory, summary.json, or latest",
-    )
-    github_summary_parser.add_argument(
-        "--from-verify",
-        help="verification summary.json path",
-    )
-    github_summary_parser.add_argument(
-        "--from-session",
-        help="repair session id, directory, or summary.json path",
-    )
-    github_summary_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable publish summary to stdout",
-    )
-    github_summary_parser.set_defaults(handler=handle_github_summary)
-
     verify_parser = subparsers.add_parser(
         "verify",
         help="compare a baseline run against a post-repair candidate run",
@@ -1290,36 +1335,109 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_parser.set_defaults(handler=handle_verify)
 
-    benchmark_parser = subparsers.add_parser(
-        "benchmark",
-        help="run the seeded QA-Z benchmark corpus",
+    repair_session_parser = subparsers.add_parser(
+        "repair-session",
+        help="create and verify local repair workflow sessions",
     )
-    benchmark_parser.add_argument(
+    repair_session_subparsers = repair_session_parser.add_subparsers(
+        dest="repair_session_command"
+    )
+
+    repair_session_start_parser = repair_session_subparsers.add_parser(
+        "start",
+        help="create a repair session from a baseline run",
+    )
+    repair_session_start_parser.add_argument(
         "--path",
         default=".",
-        help="repository root used to resolve benchmark fixture and results paths",
+        help="repository root that contains qa-z.yaml and run artifacts",
     )
-    benchmark_parser.add_argument(
-        "--fixtures-dir",
-        default=DEFAULT_FIXTURES_DIR.as_posix(),
-        help="directory containing benchmark fixtures with expected.json files",
+    repair_session_start_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
     )
-    benchmark_parser.add_argument(
-        "--results-dir",
-        default=DEFAULT_RESULTS_DIR.as_posix(),
-        help="directory for benchmark summary/report artifacts",
+    repair_session_start_parser.add_argument(
+        "--baseline-run",
+        required=True,
+        help="baseline run root, fast directory, summary.json, or latest",
     )
-    benchmark_parser.add_argument(
-        "--fixture",
-        action="append",
-        help="run only the named fixture; repeat to select multiple fixtures",
+    repair_session_start_parser.add_argument(
+        "--session-id",
+        help="optional stable session id; defaults to a UTC timestamp plus suffix",
     )
-    benchmark_parser.add_argument(
+    repair_session_start_parser.set_defaults(handler=handle_repair_session_start)
+
+    repair_session_status_parser = repair_session_subparsers.add_parser(
+        "status",
+        help="print repair-session state and artifact paths",
+    )
+    repair_session_status_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains .qa-z/sessions",
+    )
+    repair_session_status_parser.add_argument(
+        "--session",
+        required=True,
+        help="session id, session directory, or session.json path",
+    )
+    repair_session_status_parser.add_argument(
         "--json",
         action="store_true",
-        help="print the machine-readable benchmark summary to stdout",
+        help="print the machine-readable session manifest to stdout",
     )
-    benchmark_parser.set_defaults(handler=handle_benchmark)
+    repair_session_status_parser.set_defaults(handler=handle_repair_session_status)
+
+    repair_session_verify_parser = repair_session_subparsers.add_parser(
+        "verify",
+        help="verify a repair session against a candidate run",
+    )
+    repair_session_verify_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains qa-z.yaml and session artifacts",
+    )
+    repair_session_verify_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    repair_session_verify_parser.add_argument(
+        "--session",
+        required=True,
+        help="session id, session directory, or session.json path",
+    )
+    repair_session_candidate_group = (
+        repair_session_verify_parser.add_mutually_exclusive_group()
+    )
+    repair_session_candidate_group.add_argument(
+        "--candidate-run",
+        help="candidate run root, fast directory, summary.json, or latest",
+    )
+    repair_session_candidate_group.add_argument(
+        "--rerun",
+        action="store_true",
+        help="run qa-z fast and qa-z deep into the session candidate directory",
+    )
+    repair_session_verify_parser.add_argument(
+        "--rerun-output-dir",
+        help="optional run directory for a --rerun candidate",
+    )
+    repair_session_verify_parser.add_argument(
+        "--output-dir",
+        help="optional verify artifact directory; defaults to session/verify",
+    )
+    repair_session_verify_parser.add_argument(
+        "--strict-no-tests",
+        action="store_true",
+        help="with --rerun, treat pytest no-tests exit code as a failure",
+    )
+    repair_session_verify_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable session outcome summary to stdout",
+    )
+    repair_session_verify_parser.set_defaults(handler=handle_repair_session_verify)
+
     self_inspect_parser = subparsers.add_parser(
         "self-inspect",
         help="inspect local QA-Z artifacts and update the improvement backlog",
@@ -1336,97 +1454,92 @@ def build_parser() -> argparse.ArgumentParser:
     )
     self_inspect_parser.set_defaults(handler=handle_self_inspect)
 
-    backlog_parser = subparsers.add_parser(
-        "backlog",
-        help="print the artifact-derived improvement backlog",
-    )
-    backlog_parser.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains QA-Z artifacts",
-    )
-    backlog_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable backlog to stdout",
-    )
-    backlog_parser.set_defaults(handler=handle_backlog)
-
     select_next_parser = subparsers.add_parser(
         "select-next",
-        help="select the next artifact-derived improvement tasks",
+        help="select the next 1 to 3 self-improvement backlog tasks",
     )
     select_next_parser.add_argument(
         "--path",
         default=".",
-        help="repository root that contains QA-Z artifacts",
+        help="repository root that contains the improvement backlog",
     )
     select_next_parser.add_argument(
         "--count",
         type=int,
-        default=1,
-        help="number of open backlog items to select, clamped to 1 through 3",
+        default=3,
+        help="number of open tasks to select, clamped to 1 through 3",
     )
     select_next_parser.add_argument(
         "--json",
         action="store_true",
-        help="print the machine-readable selected-task artifact to stdout",
+        help="print the machine-readable selected-tasks artifact to stdout",
     )
     select_next_parser.set_defaults(handler=handle_select_next)
+
+    backlog_parser = subparsers.add_parser(
+        "backlog",
+        help="print the current QA-Z improvement backlog",
+    )
+    backlog_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains the improvement backlog",
+    )
+    backlog_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable improvement backlog to stdout",
+    )
+    backlog_parser.set_defaults(handler=handle_backlog)
+
     autonomy_parser = subparsers.add_parser(
         "autonomy",
         help="run deterministic self-improvement planning loops",
     )
     autonomy_parser.add_argument(
+        "autonomy_command",
+        nargs="?",
+        choices=("status",),
+        help="print the latest autonomy workflow status",
+    )
+    autonomy_parser.add_argument(
         "--path",
         default=".",
         help="repository root that contains QA-Z artifacts",
+    )
+    autonomy_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
     )
     autonomy_parser.add_argument(
         "--loops",
         type=int,
         default=1,
-        help="minimum number of planning loops to run",
+        help="number of planning loops to run",
     )
     autonomy_parser.add_argument(
         "--count",
         type=int,
         default=3,
-        help="number of backlog items to select per loop, clamped by select-next",
+        help="number of open tasks to select per loop, clamped to 1 through 3",
     )
     autonomy_parser.add_argument(
         "--min-runtime-hours",
         type=float,
         default=0.0,
-        help="minimum wall-clock runtime budget in hours before stopping",
+        help="minimum wall-clock runtime budget in hours before the run may finish",
     )
     autonomy_parser.add_argument(
         "--min-loop-seconds",
         type=float,
         default=0.0,
-        help="minimum elapsed seconds to account for each loop",
+        help="minimum wall-clock duration to spend in each loop before advancing",
     )
     autonomy_parser.add_argument(
         "--json",
         action="store_true",
-        help="print the machine-readable autonomy summary to stdout",
+        help="print the machine-readable autonomy summary or status",
     )
-    autonomy_subparsers = autonomy_parser.add_subparsers(dest="autonomy_command")
-    autonomy_status_parser = autonomy_subparsers.add_parser(
-        "status",
-        help="print the latest autonomy loop status",
-    )
-    autonomy_status_parser.add_argument(
-        "--path",
-        default=".",
-        help="repository root that contains QA-Z artifacts",
-    )
-    autonomy_status_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="print the machine-readable autonomy status to stdout",
-    )
-    autonomy_status_parser.set_defaults(handler=handle_autonomy_status)
     autonomy_parser.set_defaults(handler=handle_autonomy)
 
     executor_bridge_parser = subparsers.add_parser(
@@ -1463,6 +1576,121 @@ def build_parser() -> argparse.ArgumentParser:
         help="print the machine-readable bridge manifest to stdout",
     )
     executor_bridge_parser.set_defaults(handler=handle_executor_bridge)
+
+    executor_result_parser = subparsers.add_parser(
+        "executor-result",
+        help="ingest an external executor result and resume QA-Z verification",
+    )
+    executor_result_subparsers = executor_result_parser.add_subparsers(
+        dest="executor_result_command"
+    )
+
+    executor_result_ingest_parser = executor_result_subparsers.add_parser(
+        "ingest",
+        help="ingest an executor result JSON and optionally rerun verification",
+    )
+    executor_result_ingest_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    executor_result_ingest_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    executor_result_ingest_parser.add_argument(
+        "--result",
+        required=True,
+        help="path to a filled executor result JSON artifact",
+    )
+    executor_result_ingest_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable ingest summary to stdout",
+    )
+    executor_result_ingest_parser.set_defaults(handler=handle_executor_result_ingest)
+    executor_result_dry_run_parser = executor_result_subparsers.add_parser(
+        "dry-run",
+        help="evaluate session executor history against the pre-live safety package",
+    )
+    executor_result_dry_run_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    executor_result_dry_run_parser.add_argument(
+        "--session",
+        required=True,
+        help="repair-session id, session directory, or session.json path",
+    )
+    executor_result_dry_run_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable dry-run summary to stdout",
+    )
+    executor_result_dry_run_parser.set_defaults(handler=handle_executor_result_dry_run)
+
+    benchmark_parser = subparsers.add_parser(
+        "benchmark",
+        help="run the seeded QA-Z benchmark corpus",
+    )
+    benchmark_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root used to resolve benchmark fixture and results paths",
+    )
+    benchmark_parser.add_argument(
+        "--fixtures-dir",
+        default=DEFAULT_FIXTURES_DIR.as_posix(),
+        help="directory containing benchmark fixtures with expected.json files",
+    )
+    benchmark_parser.add_argument(
+        "--results-dir",
+        default=DEFAULT_RESULTS_DIR.as_posix(),
+        help="directory for benchmark summary/report artifacts",
+    )
+    benchmark_parser.add_argument(
+        "--fixture",
+        action="append",
+        help="run only the named fixture; repeat to select multiple fixtures",
+    )
+    benchmark_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable benchmark summary to stdout",
+    )
+    benchmark_parser.set_defaults(handler=handle_benchmark)
+
+    github_summary_parser = subparsers.add_parser(
+        "github-summary",
+        help="render compact Markdown for a GitHub Actions job summary",
+    )
+    github_summary_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains qa-z.yaml and run artifacts",
+    )
+    github_summary_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    github_summary_parser.add_argument(
+        "--from-run",
+        default="latest",
+        help="run root, fast directory, summary.json, or latest fast run artifact",
+    )
+    github_summary_parser.add_argument(
+        "--from-session",
+        help=(
+            "optional repair-session id, directory, or session.json whose "
+            "outcome should be included"
+        ),
+    )
+    github_summary_parser.add_argument(
+        "--output",
+        help="optional file path for the rendered GitHub summary Markdown",
+    )
+    github_summary_parser.set_defaults(handler=handle_github_summary)
 
     return parser
 

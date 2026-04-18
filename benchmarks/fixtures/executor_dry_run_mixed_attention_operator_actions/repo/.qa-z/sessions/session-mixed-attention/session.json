@@ -1,0 +1,28 @@
+{
+  "baseline_deep_summary_path": null,
+  "baseline_fast_summary_path": ".qa-z/runs/baseline/fast/summary.json",
+  "baseline_run_dir": ".qa-z/runs/baseline",
+  "candidate_run_dir": null,
+  "created_at": "2026-04-18T02:00:00Z",
+  "executor_guide_path": ".qa-z/sessions/session-mixed-attention/executor_guide.md",
+  "executor_result_bridge_id": null,
+  "executor_result_path": null,
+  "executor_result_status": null,
+  "executor_result_validation_status": null,
+  "handoff_artifacts": {},
+  "handoff_dir": ".qa-z/sessions/session-mixed-attention/handoff",
+  "kind": "qa_z.repair_session",
+  "outcome_path": null,
+  "provenance": {
+    "repair_needed": true
+  },
+  "safety_artifacts": {},
+  "schema_version": 1,
+  "session_dir": ".qa-z/sessions/session-mixed-attention",
+  "session_id": "session-mixed-attention",
+  "state": "waiting_for_external_repair",
+  "summary_path": null,
+  "updated_at": "2026-04-18T02:05:00Z",
+  "verify_artifacts": {},
+  "verify_dir": null
+}

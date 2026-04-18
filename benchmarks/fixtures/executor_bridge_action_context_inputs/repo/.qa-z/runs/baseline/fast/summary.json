@@ -1,0 +1,26 @@
+{
+  "artifact_dir": ".qa-z/runs/baseline/fast",
+  "checks": [
+    {
+      "command": [
+        "pytest",
+        "-q"
+      ],
+      "duration_ms": 1,
+      "exit_code": 1,
+      "id": "py_test",
+      "kind": "test",
+      "status": "failed",
+      "stderr_tail": "",
+      "stdout_tail": "tests/test_app.py::test_answer FAILED",
+      "tool": "pytest"
+    }
+  ],
+  "contract_path": "qa/contracts/contract.md",
+  "finished_at": "2026-04-14T00:00:01Z",
+  "mode": "fast",
+  "project_root": "benchmark-fixture",
+  "schema_version": 2,
+  "started_at": "2026-04-14T00:00:00Z",
+  "status": "failed"
+}

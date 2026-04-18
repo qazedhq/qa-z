@@ -1,0 +1,37 @@
+{
+  "project": {
+    "name": "mixed-fast-deep-handoff-py-lint-ts-test-dual-deep",
+    "languages": ["python", "typescript"]
+  },
+  "contracts": {"output_dir": "qa/contracts"},
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "py_lint",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "src/app.py:2:5 F821 undefined name eval"],
+        "kind": "lint"
+      },
+      {
+        "id": "ts_test",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fast_check.py", "fail", "tests/invoice.test.ts:5: expected invoice total to be numeric"],
+        "kind": "test"
+      }
+    ]
+  },
+  "deep": {
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "sg_scan",
+        "enabled": true,
+        "run": ["python", ".qa-z-benchmark/fake_semgrep.py"],
+        "kind": "static-analysis",
+        "semgrep": {"config": "auto", "fail_on_severity": ["ERROR"], "ignore_rules": []}
+      }
+    ]
+  }
+}

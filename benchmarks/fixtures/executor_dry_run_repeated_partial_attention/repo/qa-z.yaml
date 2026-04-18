@@ -1,0 +1,19 @@
+{
+  "project": {
+    "name": "executor-dry-run-repeated-partial-attention",
+    "languages": [
+      "python"
+    ]
+  },
+  "contracts": {
+    "output_dir": "qa/contracts"
+  },
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": []
+  },
+  "deep": {
+    "checks": []
+  }
+}

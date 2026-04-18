@@ -1,4 +1,4 @@
-"""Tests for executor bridge packaging."""
+"""Tests for external executor bridge packaging."""
 
 from __future__ import annotations
 
@@ -16,16 +16,17 @@ from qa_z.config import load_config
 from qa_z.executor_bridge import (
     ExecutorBridgeError,
     create_executor_bridge,
-    render_bridge_stdout,
 )
-from qa_z.repair_session import create_repair_session
+from qa_z.executor_result import PLACEHOLDER_SUMMARY
+from qa_z.executor_safety import EXECUTOR_SAFETY_RULE_IDS
+from qa_z.autonomy import run_autonomy
 
 
 NOW = "2026-04-15T00:00:00Z"
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write a deterministic JSON fixture."""
+    """Write a deterministic JSON object fixture."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
@@ -41,7 +42,11 @@ def write_config(tmp_path: Path) -> None:
             "output_dir": ".qa-z/runs",
             "fail_on_missing_tool": True,
             "checks": [
-                {"id": "py_test", "run": [sys.executable, "-c", ""], "kind": "test"}
+                {
+                    "id": "py_test",
+                    "run": [sys.executable, "-c", ""],
+                    "kind": "test",
+                }
             ],
         },
         "deep": {"checks": []},
@@ -68,7 +73,7 @@ def write_contract(tmp_path: Path) -> None:
 
             ## Acceptance Checks
 
-            - The candidate run resolves the baseline failure.
+            - The candidate run no longer regresses deterministic evidence.
             """
         ).strip()
         + "\n",
@@ -76,8 +81,14 @@ def write_contract(tmp_path: Path) -> None:
     )
 
 
-def write_fast_summary(tmp_path: Path, run_id: str) -> None:
-    """Write a compact failing fast run summary."""
+def write_fast_summary(
+    tmp_path: Path,
+    run_id: str,
+    *,
+    status: str,
+    exit_code: int | None,
+) -> None:
+    """Write a compact fast run summary."""
     fast_dir = tmp_path / ".qa-z" / "runs" / run_id / "fast"
     fast_dir.mkdir(parents=True, exist_ok=True)
     write_json(
@@ -87,7 +98,7 @@ def write_fast_summary(tmp_path: Path, run_id: str) -> None:
             "mode": "fast",
             "contract_path": "qa/contracts/contract.md",
             "project_root": str(tmp_path),
-            "status": "failed",
+            "status": "failed" if status in {"failed", "error"} else "passed",
             "started_at": "2026-04-14T00:00:00Z",
             "finished_at": "2026-04-14T00:00:01Z",
             "artifact_dir": f".qa-z/runs/{run_id}/fast",
@@ -97,8 +108,8 @@ def write_fast_summary(tmp_path: Path, run_id: str) -> None:
                     "tool": "pytest",
                     "command": ["pytest"],
                     "kind": "test",
-                    "status": "failed",
-                    "exit_code": 1,
+                    "status": status,
+                    "exit_code": exit_code,
                     "duration_ms": 1,
                     "stdout_tail": "test failed",
                     "stderr_tail": "",
@@ -108,53 +119,70 @@ def write_fast_summary(tmp_path: Path, run_id: str) -> None:
     )
 
 
-def prepare_session(tmp_path: Path) -> None:
-    """Create a repair session fixture."""
-    write_config(tmp_path)
-    write_contract(tmp_path)
-    write_fast_summary(tmp_path, "baseline")
-    create_repair_session(
-        root=tmp_path,
-        config=load_config(tmp_path),
-        baseline_run=".qa-z/runs/baseline",
-        session_id="session-one",
-        now=NOW,
-    )
-
-
-def write_loop_outcome(tmp_path: Path) -> None:
-    """Write a loop outcome that points at the prepared repair session."""
-    path = tmp_path / ".qa-z" / "loops" / "loop-one" / "outcome.json"
+def write_regressed_verify_artifacts(tmp_path: Path) -> None:
+    """Seed verification artifacts that identify a baseline run for repair."""
+    verify_dir = tmp_path / ".qa-z" / "runs" / "candidate" / "verify"
     write_json(
-        path,
+        verify_dir / "summary.json",
         {
-            "kind": "qa_z.autonomy_outcome",
+            "kind": "qa_z.verify_summary",
             "schema_version": 1,
-            "loop_id": "loop-one",
-            "generated_at": NOW,
-            "state": "awaiting_repair",
-            "selected_task_ids": ["task-one"],
-            "actions_prepared": [
-                {
-                    "type": "repair_session",
-                    "task_id": "task-one",
-                    "session_dir": ".qa-z/sessions/session-one",
-                }
-            ],
-            "next_recommendations": ["repair the prepared session"],
-            "artifacts": {"outcome": ".qa-z/loops/loop-one/outcome.json"},
+            "repair_improved": False,
+            "verdict": "regressed",
+            "blocking_before": 0,
+            "blocking_after": 1,
+            "resolved_count": 0,
+            "new_issue_count": 1,
+            "regression_count": 1,
+            "not_comparable_count": 0,
+        },
+    )
+    write_json(
+        verify_dir / "compare.json",
+        {
+            "kind": "qa_z.verify_compare",
+            "schema_version": 1,
+            "baseline_run_id": "baseline",
+            "candidate_run_id": "candidate",
+            "baseline": {
+                "run_dir": ".qa-z/runs/baseline",
+                "fast_status": "passed",
+                "deep_status": None,
+            },
+            "candidate": {
+                "run_dir": ".qa-z/runs/candidate",
+                "fast_status": "failed",
+                "deep_status": None,
+            },
+            "verdict": "regressed",
+            "fast_checks": {},
+            "deep_findings": {},
+            "summary": {"regression_count": 1},
         },
     )
 
 
-def test_executor_bridge_from_session_packages_manifest_guides_and_inputs(
+def prepare_autonomy_session(tmp_path: Path) -> tuple[str, str]:
+    """Create an autonomy loop that prepares a repair session."""
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    write_fast_summary(tmp_path, "candidate", status="passed", exit_code=0)
+    write_regressed_verify_artifacts(tmp_path)
+    run_autonomy(root=tmp_path, config=load_config(tmp_path), loops=1, count=1, now=NOW)
+    loop_id = "loop-20260415-000000-01"
+    session_id = f"{loop_id}-verify_regression-candidate"
+    return loop_id, session_id
+
+
+def test_executor_bridge_from_loop_packages_manifest_guides_and_inputs(
     tmp_path: Path,
 ) -> None:
-    prepare_session(tmp_path)
+    loop_id, session_id = prepare_autonomy_session(tmp_path)
 
     result = create_executor_bridge(
         root=tmp_path,
-        from_session="session-one",
+        from_loop=loop_id,
         bridge_id="bridge-one",
         now=NOW,
     )
@@ -164,25 +192,45 @@ def test_executor_bridge_from_session_packages_manifest_guides_and_inputs(
     guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
     codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
     claude = (bridge_dir / "claude.md").read_text(encoding="utf-8")
+    result_template = json.loads(
+        (bridge_dir / "result_template.json").read_text(encoding="utf-8")
+    )
+    safety_json = json.loads(
+        (bridge_dir / "inputs" / "executor_safety.json").read_text(encoding="utf-8")
+    )
+    safety_markdown = (bridge_dir / "inputs" / "executor_safety.md").read_text(
+        encoding="utf-8"
+    )
 
     assert result.manifest_path == bridge_dir / "bridge.json"
     assert manifest["kind"] == "qa_z.executor_bridge"
     assert manifest["schema_version"] == 1
     assert manifest["bridge_id"] == "bridge-one"
     assert manifest["status"] == "ready_for_external_executor"
-    assert manifest["source_session_id"] == "session-one"
-    assert manifest["source_loop_id"] is None
-    assert manifest["baseline_run"] == ".qa-z/runs/baseline"
-    assert manifest["session_dir"] == ".qa-z/sessions/session-one"
-    assert manifest["handoff_dir"] == ".qa-z/sessions/session-one/handoff"
-    assert manifest["inputs"]["session"] == (
-        ".qa-z/executor/bridge-one/inputs/session.json"
+    assert manifest["source_loop_id"] == loop_id
+    assert manifest["source_session_id"] == session_id
+    assert manifest["prepared_action_type"] == "repair_session"
+    assert manifest["baseline_run_dir"] == ".qa-z/runs/baseline"
+    assert manifest["session_dir"] == f".qa-z/sessions/{session_id}"
+    assert (
+        manifest["handoff_path"] == f".qa-z/sessions/{session_id}/handoff/handoff.json"
     )
-    assert manifest["inputs"]["handoff"] == (
-        ".qa-z/executor/bridge-one/inputs/handoff.json"
+    assert manifest["inputs"]["autonomy_outcome"] == (
+        ".qa-z/executor/bridge-one/inputs/autonomy_outcome.json"
     )
-    assert manifest["handoff_paths"]["codex_markdown"] == (
-        ".qa-z/sessions/session-one/handoff/codex.md"
+    assert (
+        manifest["inputs"]["session"] == ".qa-z/executor/bridge-one/inputs/session.json"
+    )
+    assert (
+        manifest["inputs"]["handoff"] == ".qa-z/executor/bridge-one/inputs/handoff.json"
+    )
+    assert (
+        manifest["inputs"]["executor_safety_json"]
+        == ".qa-z/executor/bridge-one/inputs/executor_safety.json"
+    )
+    assert (
+        manifest["inputs"]["executor_safety_markdown"]
+        == ".qa-z/executor/bridge-one/inputs/executor_safety.md"
     )
     assert manifest["validation_commands"] == [
         [
@@ -192,117 +240,359 @@ def test_executor_bridge_from_session_packages_manifest_guides_and_inputs(
             "repair-session",
             "verify",
             "--session",
-            ".qa-z/sessions/session-one",
-            "--candidate-run",
-            "<candidate-run>",
+            f".qa-z/sessions/{session_id}",
+            "--rerun",
         ]
     ]
     assert manifest["return_contract"]["expected_next_step"] == (
-        "run repair-session verify after external repair"
+        "run repair-session verify after edits"
     )
-    assert "do not call Codex or Claude APIs from QA-Z" in manifest["non_goals"]
+    assert manifest["return_contract"]["expected_result_artifact"] == (
+        ".qa-z/executor/bridge-one/result.json"
+    )
+    assert manifest["return_contract"]["verification_hint_default"] == "rerun"
+    assert manifest["safety_package"]["package_id"] == "pre_live_executor_safety_v1"
+    assert manifest["safety_package"]["status"] == "pre_live_only"
+    expected_rule_count = len(EXECUTOR_SAFETY_RULE_IDS)
+    assert manifest["safety_package"]["rule_ids"] == list(EXECUTOR_SAFETY_RULE_IDS)
+    assert manifest["safety_package"]["rule_count"] == expected_rule_count
+    assert "do not perform unrelated refactors" in manifest["non_goals"]
+    assert (bridge_dir / "inputs" / "autonomy_outcome.json").exists()
     assert (bridge_dir / "inputs" / "session.json").exists()
     assert (bridge_dir / "inputs" / "handoff.json").exists()
-    assert "# QA-Z External Executor Bridge" in guide
+    assert (bridge_dir / "inputs" / "executor_safety.json").exists()
+    assert (bridge_dir / "inputs" / "executor_safety.md").exists()
+    assert result_template["kind"] == "qa_z.executor_result"
+    assert result_template["bridge_id"] == "bridge-one"
+    assert result_template["source_session_id"] == session_id
+    assert result_template["verification_hint"] == "rerun"
+    assert "changed_files" in result_template
+    assert "Why This Work Was Selected" in guide
+    assert "Safety Package" in guide
     assert "Return Contract" in guide
+    assert "result_template.json" in guide
     assert "python -m qa_z repair-session verify" in guide
     assert "QA-Z Executor Bridge for Codex" in codex
     assert "Bridge id: `bridge-one`" in codex
+    assert "executor_safety.md" in codex
     assert "QA-Z Executor Bridge for Claude" in claude
-    assert "Bridge id: `bridge-one`" in claude
-
-
-def test_executor_bridge_from_loop_copies_loop_outcome(tmp_path: Path) -> None:
-    prepare_session(tmp_path)
-    write_loop_outcome(tmp_path)
-
-    create_executor_bridge(
-        root=tmp_path,
-        from_loop="loop-one",
-        bridge_id="bridge-one",
-        now=NOW,
+    assert "Do not call Codex or Claude APIs from QA-Z" in claude
+    assert "executor_safety.md" in claude
+    assert f"Safety rule count: `{expected_rule_count}`" in guide
+    assert f"Safety rule count: `{expected_rule_count}`" in codex
+    assert f"Safety rule count: `{expected_rule_count}`" in claude
+    placeholder_guidance = (
+        f"Replace the placeholder summary before ingest: `{PLACEHOLDER_SUMMARY}`"
     )
-
-    bridge_dir = tmp_path / ".qa-z" / "executor" / "bridge-one"
-    manifest = json.loads((bridge_dir / "bridge.json").read_text(encoding="utf-8"))
-
-    assert manifest["source_loop_id"] == "loop-one"
-    assert manifest["source_session_id"] == "session-one"
-    assert manifest["selected_task_ids"] == ["task-one"]
-    assert manifest["inputs"]["autonomy_outcome"] == (
-        ".qa-z/executor/bridge-one/inputs/autonomy_outcome.json"
-    )
-    assert (bridge_dir / "inputs" / "autonomy_outcome.json").exists()
+    assert placeholder_guidance in guide
+    assert placeholder_guidance in codex
+    assert placeholder_guidance in claude
+    assert safety_json["kind"] == "qa_z.executor_safety"
+    assert safety_markdown.startswith("# QA-Z Pre-Live Executor Safety Package")
 
 
-def test_executor_bridge_rejects_existing_bridge_dir(tmp_path: Path) -> None:
-    prepare_session(tmp_path)
-    create_executor_bridge(
-        root=tmp_path,
-        from_session="session-one",
-        bridge_id="bridge-one",
-        now=NOW,
-    )
-
-    with pytest.raises(ExecutorBridgeError, match="already exists"):
-        create_executor_bridge(
-            root=tmp_path,
-            from_session="session-one",
-            bridge_id="bridge-one",
-            now=NOW,
-        )
-
-
-def test_executor_bridge_cli_outputs_json_and_human_summary(
-    tmp_path: Path, capsys
+def test_executor_bridge_from_session_without_loop_uses_session_inputs(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    prepare_session(tmp_path)
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    start_exit = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
 
-    json_exit = main(
+    result = create_executor_bridge(
+        root=tmp_path,
+        from_session=".qa-z/sessions/session-one",
+        bridge_id="bridge-session",
+        now=NOW,
+    )
+
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+
+    assert start_exit == 0
+    assert manifest["source_loop_id"] is None
+    assert manifest["source_session_id"] == "session-one"
+    assert manifest["selected_task_ids"] == []
+    assert manifest["prepared_action_type"] == "repair_session"
+    assert manifest["inputs"]["autonomy_outcome"] is None
+    assert manifest["safety_package"]["policy_json"].endswith("executor_safety.json")
+    assert (tmp_path / ".qa-z" / "executor" / "bridge-session" / "codex.md").exists()
+    assert (tmp_path / ".qa-z" / "executor" / "bridge-session" / "claude.md").exists()
+
+
+def test_executor_bridge_copies_repair_action_context_inputs(
+    tmp_path: Path,
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+
+    result = create_executor_bridge(
+        root=tmp_path,
+        from_loop=loop_id,
+        bridge_id="bridge-context",
+        now=NOW,
+    )
+
+    bridge_dir = tmp_path / ".qa-z" / "executor" / "bridge-context"
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
+    codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
+    copied_context = bridge_dir / "inputs" / "context" / "001-summary.json"
+
+    assert manifest["inputs"]["action_context"] == [
+        {
+            "source_path": ".qa-z/runs/candidate/verify/summary.json",
+            "copied_path": (
+                ".qa-z/executor/bridge-context/inputs/context/001-summary.json"
+            ),
+        }
+    ]
+    assert manifest["inputs"]["action_context_missing"] == []
+    assert copied_context.exists()
+    assert json.loads(copied_context.read_text(encoding="utf-8"))["verdict"] == (
+        "regressed"
+    )
+    assert "Action context" in guide
+    assert ".qa-z/executor/bridge-context/inputs/context/001-summary.json" in guide
+    assert ".qa-z/executor/bridge-context/inputs/context/001-summary.json" in codex
+
+
+def test_executor_bridge_guides_show_missing_action_context_inputs(
+    tmp_path: Path,
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+    outcome_path = tmp_path / ".qa-z" / "loops" / loop_id / "outcome.json"
+    outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
+    action = outcome["actions_prepared"][0]
+    action["context_paths"] = [
+        ".qa-z/runs/candidate/verify/summary.json",
+        ".qa-z/runs/candidate/verify/missing-context.json",
+    ]
+    write_json(outcome_path, outcome)
+
+    result = create_executor_bridge(
+        root=tmp_path,
+        from_loop=loop_id,
+        bridge_id="bridge-missing-context",
+        now=NOW,
+    )
+
+    bridge_dir = tmp_path / ".qa-z" / "executor" / "bridge-missing-context"
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
+    codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
+    claude = (bridge_dir / "claude.md").read_text(encoding="utf-8")
+
+    assert manifest["inputs"]["action_context_missing"] == [
+        ".qa-z/runs/candidate/verify/missing-context.json"
+    ]
+    for text in (guide, codex, claude):
+        assert "Action context missing" in text
+        assert ".qa-z/runs/candidate/verify/missing-context.json" in text
+
+
+def test_executor_bridge_backfills_missing_session_safety_artifacts(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    start_exit = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-backfill",
+        ]
+    )
+    capsys.readouterr()
+
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-backfill"
+    manifest_path = session_dir / "session.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("safety_artifacts", None)
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (session_dir / "executor_safety.json").unlink()
+    (session_dir / "executor_safety.md").unlink()
+
+    result = create_executor_bridge(
+        root=tmp_path,
+        from_session=".qa-z/sessions/session-backfill",
+        bridge_id="bridge-backfill",
+        now=NOW,
+    )
+
+    repaired_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert start_exit == 0
+    assert repaired_manifest["safety_artifacts"]["policy_json"].endswith(
+        "executor_safety.json"
+    )
+    assert repaired_manifest["safety_artifacts"]["policy_markdown"].endswith(
+        "executor_safety.md"
+    )
+    assert (session_dir / "executor_safety.json").exists()
+    assert (session_dir / "executor_safety.md").exists()
+    assert (
+        tmp_path
+        / ".qa-z"
+        / "executor"
+        / "bridge-backfill"
+        / "inputs"
+        / "executor_safety.json"
+    ).exists()
+    assert result.manifest_path.exists()
+
+
+def test_executor_bridge_requires_repair_session_action_for_loop(
+    tmp_path: Path,
+) -> None:
+    loop_dir = tmp_path / ".qa-z" / "loops" / "loop-no-session"
+    write_json(
+        loop_dir / "outcome.json",
+        {
+            "kind": "qa_z.autonomy_outcome",
+            "schema_version": 1,
+            "loop_id": "loop-no-session",
+            "selected_task_ids": ["docs_drift-self_improvement_commands"],
+            "actions_prepared": [
+                {
+                    "type": "docs_sync_plan",
+                    "task_id": "docs_drift-self_improvement_commands",
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ExecutorBridgeError, match="repair_session action"):
+        create_executor_bridge(root=tmp_path, from_loop="loop-no-session")
+
+
+def test_executor_bridge_cli_from_loop_and_missing_session(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+
+    exit_code = main(
         [
             "executor-bridge",
             "--path",
             str(tmp_path),
-            "--from-session",
-            "session-one",
+            "--from-loop",
+            loop_id,
             "--bridge-id",
-            "bridge-json",
+            "bridge-cli",
             "--json",
         ]
     )
-    payload = json.loads(capsys.readouterr().out)
-    human_exit = main(
+    output = json.loads(capsys.readouterr().out)
+    missing_exit = main(
         [
             "executor-bridge",
             "--path",
             str(tmp_path),
             "--from-session",
-            "session-one",
+            ".qa-z/sessions/missing",
+        ]
+    )
+    missing_output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert output["kind"] == "qa_z.executor_bridge"
+    assert output["bridge_id"] == "bridge-cli"
+    assert (
+        tmp_path / ".qa-z" / "executor" / "bridge-cli" / "executor_guide.md"
+    ).exists()
+    assert missing_exit == 4
+    assert "qa-z executor-bridge: source not found:" in missing_output
+
+
+def test_executor_bridge_cli_stdout_points_to_return_and_safety_entrypoints(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    loop_id, session_id = prepare_autonomy_session(tmp_path)
+
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-loop",
+            loop_id,
             "--bridge-id",
-            "bridge-human",
+            "bridge-stdout",
         ]
     )
     output = capsys.readouterr().out
 
-    assert json_exit == 0
-    assert payload["bridge_id"] == "bridge-json"
-    assert human_exit == 0
+    assert exit_code == 0
     assert "qa-z executor-bridge: ready_for_external_executor" in output
-    assert "Bridge: .qa-z/executor/bridge-human" in output
-    assert "Verify: python -m qa_z repair-session verify" in output
-
-
-def test_render_bridge_stdout_includes_return_contract(tmp_path: Path) -> None:
-    prepare_session(tmp_path)
-    result = create_executor_bridge(
-        root=tmp_path,
-        from_session="session-one",
-        bridge_id="bridge-one",
-        now=NOW,
+    assert "Executor guide: .qa-z/executor/bridge-stdout/executor_guide.md" in output
+    assert (
+        "Result template: .qa-z/executor/bridge-stdout/result_template.json" in output
     )
-    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert "Expected result: .qa-z/executor/bridge-stdout/result.json" in output
+    assert (
+        "Safety package: .qa-z/executor/bridge-stdout/inputs/executor_safety.md"
+        in output
+    )
+    assert f"Safety rule count: {len(EXECUTOR_SAFETY_RULE_IDS)}" in output
+    assert (
+        "Verify command: python -m qa_z repair-session verify --session "
+        f".qa-z/sessions/{session_id} --rerun"
+    ) in output
+    assert "Template summary: replace placeholder before ingest" in output
 
-    output = render_bridge_stdout(manifest)
 
-    assert "qa-z executor-bridge: ready_for_external_executor" in output
-    assert "Return: run repair-session verify after external repair" in output
+def test_executor_bridge_cli_stdout_surfaces_missing_action_context(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+    outcome_path = tmp_path / ".qa-z" / "loops" / loop_id / "outcome.json"
+    outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
+    action = outcome["actions_prepared"][0]
+    action["context_paths"] = [
+        ".qa-z/runs/candidate/verify/summary.json",
+        ".qa-z/runs/candidate/verify/missing-context.json",
+    ]
+    write_json(outcome_path, outcome)
+    capsys.readouterr()
+
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-loop",
+            loop_id,
+            "--bridge-id",
+            "bridge-stdout-missing-context",
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Action context inputs: 1" in output
+    assert "Missing action context: 1" in output
+    assert ".qa-z/runs/candidate/verify/missing-context.json" in output

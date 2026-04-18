@@ -1,0 +1,50 @@
+project:
+  name: qa-z-typescript-demo
+  languages:
+    - typescript
+  roots:
+    - src
+    - tests
+
+contracts:
+  output_dir: qa/contracts
+
+fast:
+  output_dir: .qa-z/runs
+  strict_no_tests: false
+  fail_on_missing_tool: true
+  selection:
+    default_mode: smart
+    full_run_threshold: 20
+    high_risk_paths:
+      - package.json
+      - package-lock.json
+      - pnpm-lock.yaml
+      - yarn.lock
+      - tsconfig.json
+      - vitest.config.ts
+      - vitest.config.js
+      - vite.config.ts
+      - vite.config.js
+      - eslint.config.js
+      - eslint.config.mjs
+      - .eslintrc.json
+  checks:
+    - id: ts_lint
+      enabled: true
+      run: ["eslint", "."]
+      kind: lint
+
+    - id: ts_type
+      enabled: true
+      run: ["tsc", "--noEmit"]
+      kind: typecheck
+
+    - id: ts_test
+      enabled: true
+      run: ["vitest", "run"]
+      kind: test
+      no_tests: warn
+
+checks:
+  deep: []

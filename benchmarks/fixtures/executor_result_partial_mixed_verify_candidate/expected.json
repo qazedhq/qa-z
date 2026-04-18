@@ -1,0 +1,41 @@
+{
+  "description": "Executor-result ingest should preserve partial completion realism while a separate seeded verify comparison still reports mixed cross-surface evidence.",
+  "expect_executor_result": {
+    "backlog_categories": [
+      "partial_completion_gap"
+    ],
+    "expected_ingest_status": "accepted_partial",
+    "expected_recommendation": "continue repair",
+    "schema_version": 1,
+    "session_id": "session-partial",
+    "session_state": "candidate_generated",
+    "verification_hint": "candidate_run",
+    "verification_triggered": false,
+    "verify_resume_status": "verify_blocked",
+    "warning_ids_absent": [
+      "no_op_without_explanation"
+    ]
+  },
+  "expect_verify": {
+    "blocking_after": 1,
+    "blocking_before": 1,
+    "new_issue_count": 1,
+    "regression_count": 1,
+    "resolved_count": 1,
+    "schema_version": 1,
+    "verdict": "mixed"
+  },
+  "name": "executor_result_partial_mixed_verify_candidate",
+  "run": {
+    "executor_result": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "bridge_id": "bridge-partial",
+      "result_path": "external-result.json",
+      "session_id": "session-partial"
+    },
+    "verify": {
+      "baseline_run": ".qa-z/runs/baseline",
+      "candidate_run": ".qa-z/runs/candidate"
+    }
+  }
+}

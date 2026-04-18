@@ -16,8 +16,10 @@ from qa_z.benchmark import (
     render_benchmark_report,
     run_benchmark,
     summarize_deep_actual,
+    summarize_executor_dry_run_actual,
 )
 from qa_z.cli import main
+from qa_z.executor_dry_run_logic import DRY_RUN_RULE_IDS
 from qa_z.runners.models import CheckResult, RunSummary
 
 
@@ -255,6 +257,197 @@ def test_compare_expected_supports_deep_policy_expectation_keys() -> None:
     assert compare_expected(actual, expectation) == []
 
 
+def test_compare_expected_supports_additive_mixed_surface_expectation_aliases() -> None:
+    expectation = BenchmarkExpectation.from_dict(
+        {
+            "name": "mixed_surface_aliases",
+            "expect_verify": {
+                "verdict": "unchanged",
+                "remaining_issue_count_min": 1,
+                "resolved_count_min": 0,
+                "schema_version": 1,
+            },
+            "expect_executor_result": {
+                "expected_ingest_status": "accepted_partial",
+                "expected_recommendation": "continue repair",
+                "backlog_categories": ["partial_completion_gap"],
+                "warning_ids_absent": ["no_op_without_explanation"],
+                "schema_version": 1,
+            },
+        }
+    )
+    actual = {
+        "verify": {
+            "verdict": "unchanged",
+            "remaining_issue_count": 2,
+            "resolved_count": 0,
+            "schema_version": 1,
+        },
+        "executor_result": {
+            "ingest_status": "accepted_partial",
+            "next_recommendation": "continue repair",
+            "backlog_categories": ["partial_completion_gap"],
+            "warning_ids": [],
+            "schema_version": 1,
+        },
+    }
+
+    assert compare_expected(actual, expectation) == []
+
+
+def test_compare_expected_supports_executor_bridge_expectations() -> None:
+    expectation = BenchmarkExpectation.from_dict(
+        {
+            "name": "bridge_context",
+            "expect_executor_bridge": {
+                "action_context_count": 1,
+                "action_context_paths": [".qa-z/runs/candidate/verify/summary.json"],
+                "guide_mentions_missing_action_context": True,
+                "schema_version": 1,
+            },
+        }
+    )
+    actual = {
+        "executor_bridge": {
+            "action_context_count": 0,
+            "action_context_paths": [],
+            "guide_mentions_missing_action_context": False,
+            "schema_version": 1,
+        }
+    }
+
+    assert compare_expected(actual, expectation) == [
+        "executor_bridge.action_context_count expected 1 but got 0",
+        (
+            "executor_bridge.action_context_paths missing expected values: "
+            ".qa-z/runs/candidate/verify/summary.json"
+        ),
+        "executor_bridge.guide_mentions_missing_action_context expected True but got False",
+    ]
+
+
+def test_compare_expected_supports_executor_dry_run_expectations() -> None:
+    expectation = BenchmarkExpectation.from_dict(
+        {
+            "name": "executor_dry_run_aliases",
+            "expect_executor_dry_run": {
+                "verdict": "attention_required",
+                "verdict_reason": "manual_retry_review_required",
+                "expected_source": "materialized",
+                "history_signals": ["repeated_partial_attempts"],
+                "expected_recommendation": "inspect repeated partial attempts before another retry",
+                "attention_rule_ids": ["retry_boundary_is_manual"],
+                "attention_rule_count": 1,
+                "clear_rule_count": 5,
+                "blocked_rule_count": 0,
+                "clear_rule_ids": ["no_op_requires_explanation"],
+                "operator_summary": (
+                    "Repeated partial executor attempts need manual review before "
+                    "another retry."
+                ),
+                "recommended_action_ids": ["inspect_partial_attempts"],
+                "recommended_action_summaries": [
+                    (
+                        "Review unresolved repair targets across repeated partial "
+                        "attempts before retrying."
+                    )
+                ],
+                "schema_version": 1,
+            },
+        }
+    )
+    actual = {
+        "executor_dry_run": {
+            "verdict": "attention_required",
+            "verdict_reason": "manual_retry_review_required",
+            "summary_source": "materialized",
+            "history_signals": ["repeated_partial_attempts"],
+            "next_recommendation": "inspect repeated partial attempts before another retry",
+            "attention_rule_ids": ["retry_boundary_is_manual"],
+            "attention_rule_count": 1,
+            "clear_rule_count": 5,
+            "blocked_rule_count": 0,
+            "clear_rule_ids": ["no_op_requires_explanation"],
+            "operator_summary": (
+                "Repeated partial executor attempts need manual review before "
+                "another retry."
+            ),
+            "recommended_action_ids": ["inspect_partial_attempts"],
+            "recommended_action_summaries": [
+                (
+                    "Review unresolved repair targets across repeated partial attempts "
+                    "before retrying."
+                )
+            ],
+            "schema_version": 1,
+        }
+    }
+
+    assert expectation.expect_executor_dry_run["verdict"] == "attention_required"
+    assert compare_expected(actual, expectation) == []
+
+
+def test_summarize_executor_dry_run_actual_preserves_operator_actions() -> None:
+    actual = summarize_executor_dry_run_actual(
+        {
+            "kind": "qa_z.executor_result_dry_run",
+            "schema_version": 1,
+            "session_id": "session-one",
+            "summary_source": "materialized",
+            "evaluated_attempt_count": 1,
+            "latest_attempt_id": "attempt-one",
+            "latest_result_status": "no_op",
+            "latest_ingest_status": "accepted_no_op",
+            "verdict": "attention_required",
+            "verdict_reason": "classification_conflict_requires_review",
+            "history_signals": [
+                "validation_conflict",
+                "missing_no_op_explanation",
+            ],
+            "operator_summary": (
+                "Executor history has validation conflicts that need manual review."
+            ),
+            "recommended_actions": [
+                {
+                    "id": "review_validation_conflict",
+                    "summary": (
+                        "Compare executor validation claims with deterministic "
+                        "verification artifacts before retrying."
+                    ),
+                },
+                {
+                    "id": "require_no_op_explanation",
+                    "summary": (
+                        "Ask the executor to explain the no-op or not-applicable "
+                        "result before accepting it."
+                    ),
+                },
+            ],
+            "next_recommendation": "inspect executor attempt history before another retry",
+            "rule_status_counts": {"clear": 4, "attention": 2, "blocked": 0},
+            "rule_evaluations": [],
+        }
+    )
+
+    assert actual["operator_summary"] == (
+        "Executor history has validation conflicts that need manual review."
+    )
+    assert actual["recommended_action_ids"] == [
+        "review_validation_conflict",
+        "require_no_op_explanation",
+    ]
+    assert actual["recommended_action_summaries"] == [
+        (
+            "Compare executor validation claims with deterministic verification "
+            "artifacts before retrying."
+        ),
+        (
+            "Ask the executor to explain the no-op or not-applicable result before "
+            "accepting it."
+        ),
+    ]
+
+
 def test_compare_expected_reports_deep_policy_absent_rule_violations() -> None:
     expectation = BenchmarkExpectation.from_dict(
         {
@@ -384,6 +577,35 @@ def test_build_benchmark_summary_calculates_category_rates() -> None:
         "total": 1,
         "rate": 0.0,
     }
+    assert summary["category_rates"]["policy"] == {
+        "passed": 1,
+        "total": 1,
+        "rate": 1.0,
+    }
+
+
+def test_build_benchmark_summary_counts_executor_dry_run_fixtures_under_policy() -> (
+    None
+):
+    results = [
+        BenchmarkFixtureResult(
+            name="dry_run_case",
+            passed=True,
+            failures=[],
+            categories={
+                "detection": None,
+                "handoff": None,
+                "verify": None,
+                "artifact": None,
+                "policy": True,
+            },
+            actual={"executor_dry_run": {"verdict": "clear"}},
+            artifacts={},
+        )
+    ]
+
+    summary = build_benchmark_summary(results)
+
     assert summary["category_rates"]["policy"] == {
         "passed": 1,
         "total": 1,
@@ -627,6 +849,523 @@ def test_run_benchmark_executes_typescript_fast_handoff_and_verify_fixture(
     assert fixture_result["categories"]["verify"] is True
 
 
+def test_run_benchmark_executes_executor_result_candidate_run_fixture(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixtures" / "executor_result_mixed_candidate_run"
+    repo = fixture / "repo"
+    repo.joinpath("src").mkdir(parents=True)
+    repo.joinpath("src", "app.py").write_text("def answer():\n    return 42\n")
+    repo.joinpath("src", "invoice.ts").write_text(
+        "export const total: number = 1;\n", encoding="utf-8"
+    )
+    write_contract(
+        repo,
+        related_files=["src/app.py", "src/invoice.ts"],
+        title="Executor result mixed candidate benchmark fixture",
+    )
+    write_config(
+        repo,
+        [{"id": "py_test", "kind": "test", "run": [sys.executable, "-c", ""]}],
+        languages=["python", "typescript"],
+    )
+    write_mixed_fast_summary(
+        repo,
+        "baseline",
+        py_status="failed",
+        py_exit_code=1,
+        ts_status="passed",
+        ts_exit_code=0,
+    )
+    write_mixed_fast_summary(
+        repo,
+        "candidate",
+        py_status="passed",
+        py_exit_code=0,
+        ts_status="failed",
+        ts_exit_code=1,
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "executor_result_mixed_candidate_run",
+            "run": {
+                "executor_result": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "bridge_id": "bridge-session",
+                    "result_path": "external-result.json",
+                    "session_id": "session-one",
+                }
+            },
+            "expect_executor_result": {
+                "result_status": "completed",
+                "session_id": "session-one",
+                "session_state": "completed",
+                "verification_hint": "candidate_run",
+                "verification_triggered": True,
+                "verification_verdict": "mixed",
+                "next_recommendation": "inspect regressions",
+                "verify_summary_path": ".qa-z/sessions/session-one/verify/summary.json",
+                "schema_version": 1,
+            },
+            "expect_verify": {
+                "verdict": "mixed",
+                "blocking_before": 1,
+                "blocking_after": 1,
+                "resolved_count": 1,
+                "regression_count": 1,
+                "new_issue_count": 1,
+                "schema_version": 1,
+            },
+        },
+    )
+    write_expected(
+        repo / "external-result.json",
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": "2026-04-16T00:00:00Z",
+            "status": "completed",
+            "summary": "Resolved the Python failure, but the TypeScript typecheck regressed.",
+            "verification_hint": "candidate_run",
+            "candidate_run_dir": ".qa-z/runs/candidate",
+            "changed_files": [
+                {
+                    "path": "src/app.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Adjusted Python logic during repair.",
+                },
+                {
+                    "path": "src/invoice.ts",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "TypeScript edits introduced a new failure.",
+                },
+            ],
+            "validation": {
+                "status": "failed",
+                "commands": [["python", "-m", "pytest"], ["tsc", "--noEmit"]],
+                "results": [
+                    {
+                        "command": ["python", "-m", "pytest"],
+                        "status": "passed",
+                        "exit_code": 0,
+                        "summary": "pytest passed locally",
+                    },
+                    {
+                        "command": ["tsc", "--noEmit"],
+                        "status": "failed",
+                        "exit_code": 1,
+                        "summary": "ts_type still fails",
+                    },
+                ],
+            },
+            "notes": ["candidate run should attach mixed verification evidence"],
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_total"] == 1
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["executor_result"]["result_status"] == "completed"
+    assert (
+        fixture_result["actual"]["executor_result"]["verification_verdict"] == "mixed"
+    )
+    assert fixture_result["actual"]["verify"]["verdict"] == "mixed"
+    assert fixture_result["categories"]["verify"] is True
+
+
+def test_run_benchmark_executes_maintenance_verify_fixture_with_remaining_issue_count(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixtures" / "mixed_docs_schema_sync_maintenance_candidate"
+    repo = fixture / "repo"
+    write_contract(
+        repo,
+        related_files=["README.md", "docs/artifact-schema-v1.md"],
+        title="Docs/schema sync maintenance fixture",
+    )
+    write_config(
+        repo,
+        [{"id": "docs_schema", "kind": "lint", "run": [sys.executable, "-c", ""]}],
+    )
+    write_fast_summary(
+        repo, "baseline", check_id="docs_schema", status="failed", exit_code=1
+    )
+    write_fast_summary(
+        repo, "candidate", check_id="docs_schema", status="failed", exit_code=1
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "mixed_docs_schema_sync_maintenance_candidate",
+            "run": {
+                "verify": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "candidate_run": ".qa-z/runs/candidate",
+                }
+            },
+            "expect_verify": {
+                "verdict": "unchanged",
+                "blocking_before": 1,
+                "blocking_after": 1,
+                "remaining_issue_count_min": 1,
+                "resolved_count": 0,
+                "new_issue_count": 0,
+                "schema_version": 1,
+            },
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_total"] == 1
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["verify"]["verdict"] == "unchanged"
+    assert fixture_result["actual"]["verify"]["remaining_issue_count"] == 1
+
+
+def test_run_benchmark_executes_executor_result_partial_fixture_with_realism_fields(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixtures" / "executor_result_partial_mixed_verify_candidate"
+    repo = fixture / "repo"
+    repo.joinpath("src").mkdir(parents=True)
+    repo.joinpath("src", "app.py").write_text("def answer():\n    return 42\n")
+    repo.joinpath("src", "invoice.ts").write_text(
+        "export const total: number = 1;\n", encoding="utf-8"
+    )
+    write_contract(
+        repo,
+        related_files=["src/app.py", "src/invoice.ts"],
+        title="Executor result partial mixed verify fixture",
+    )
+    write_config(
+        repo,
+        [{"id": "py_test", "kind": "test", "run": [sys.executable, "-c", ""]}],
+        languages=["python", "typescript"],
+    )
+    write_mixed_fast_summary(
+        repo,
+        "baseline",
+        py_status="failed",
+        py_exit_code=1,
+        ts_status="passed",
+        ts_exit_code=0,
+    )
+    write_mixed_fast_summary(
+        repo,
+        "candidate",
+        py_status="passed",
+        py_exit_code=0,
+        ts_status="failed",
+        ts_exit_code=1,
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "executor_result_partial_mixed_verify_candidate",
+            "run": {
+                "verify": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "candidate_run": ".qa-z/runs/candidate",
+                },
+                "executor_result": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "bridge_id": "bridge-partial",
+                    "result_path": "external-result.json",
+                    "session_id": "session-partial",
+                },
+            },
+            "expect_executor_result": {
+                "result_status": "partial",
+                "expected_ingest_status": "accepted_partial",
+                "session_id": "session-partial",
+                "session_state": "candidate_generated",
+                "verification_hint": "candidate_run",
+                "verification_triggered": False,
+                "expected_recommendation": "continue repair",
+                "backlog_categories": ["partial_completion_gap"],
+                "warning_ids_absent": ["no_op_without_explanation"],
+                "schema_version": 1,
+            },
+            "expect_verify": {
+                "verdict": "mixed",
+                "blocking_before": 1,
+                "blocking_after": 1,
+                "resolved_count": 1,
+                "regression_count": 1,
+                "new_issue_count": 1,
+                "schema_version": 1,
+            },
+        },
+    )
+    write_expected(
+        repo / "external-result.json",
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-partial",
+            "source_session_id": "session-partial",
+            "source_loop_id": None,
+            "created_at": "2026-04-16T00:00:00Z",
+            "status": "partial",
+            "summary": "Resolved the Python issue, but the TypeScript regression still needs follow-up.",
+            "verification_hint": "candidate_run",
+            "candidate_run_dir": ".qa-z/runs/candidate",
+            "changed_files": [
+                {
+                    "path": "src/app.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Adjusted Python logic.",
+                },
+                {
+                    "path": "src/invoice.ts",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "TypeScript still needs another pass.",
+                },
+            ],
+            "validation": {
+                "status": "failed",
+                "commands": [["python", "-m", "pytest"], ["tsc", "--noEmit"]],
+                "results": [
+                    {
+                        "command": ["python", "-m", "pytest"],
+                        "status": "passed",
+                        "exit_code": 0,
+                        "summary": "pytest passed locally",
+                    },
+                    {
+                        "command": ["tsc", "--noEmit"],
+                        "status": "failed",
+                        "exit_code": 1,
+                        "summary": "ts_type still fails",
+                    },
+                ],
+            },
+            "notes": ["needs another repair loop"],
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_total"] == 1
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["executor_result"]["ingest_status"] == (
+        "accepted_partial"
+    )
+    assert fixture_result["actual"]["executor_result"]["backlog_categories"] == [
+        "partial_completion_gap"
+    ]
+    assert fixture_result["actual"]["verify"]["verdict"] == "mixed"
+
+
+def test_run_benchmark_executes_executor_result_future_timestamp_rejection_fixture(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixtures" / "executor_result_future_timestamp_rejected"
+    repo = fixture / "repo"
+    repo.joinpath("src").mkdir(parents=True)
+    repo.joinpath("src", "app.py").write_text("def answer():\n    return 42\n")
+    write_contract(
+        repo,
+        related_files=["src/app.py"],
+        title="Executor result future timestamp rejection fixture",
+    )
+    write_config(
+        repo,
+        [{"id": "py_test", "kind": "test", "run": [sys.executable, "-c", ""]}],
+    )
+    write_fast_summary(
+        repo, "baseline", check_id="py_test", status="failed", exit_code=1
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "executor_result_future_timestamp_rejected",
+            "run": {
+                "executor_result": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "bridge_id": "bridge-future",
+                    "result_path": "external-result.json",
+                    "session_id": "session-future",
+                }
+            },
+            "expect_executor_result": {
+                "result_status": "completed",
+                "expected_ingest_status": "rejected_invalid",
+                "session_id": "session-future",
+                "verification_hint": "rerun",
+                "verification_triggered": False,
+                "verify_resume_status": "verify_blocked",
+                "expected_recommendation": "fix executor result timestamps",
+                "freshness_reason": "result_from_future",
+                "backlog_categories": ["evidence_freshness_gap"],
+                "schema_version": 1,
+            },
+        },
+    )
+    write_expected(
+        repo / "external-result.json",
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-future",
+            "source_session_id": "session-future",
+            "source_loop_id": None,
+            "created_at": "2026-04-16T00:10:00Z",
+            "status": "completed",
+            "summary": "Claims completion from a timestamp after benchmark ingest begins.",
+            "verification_hint": "rerun",
+            "candidate_run_dir": None,
+            "changed_files": [
+                {
+                    "path": "src/app.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Adjusted Python logic.",
+                }
+            ],
+            "validation": {"status": "passed", "commands": [], "results": []},
+            "notes": ["should be rejected as future-dated evidence"],
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_total"] == 1
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["executor_result"]["ingest_status"] == (
+        "rejected_invalid"
+    )
+    assert fixture_result["actual"]["executor_result"]["freshness_reason"] == (
+        "result_from_future"
+    )
+
+
+def test_run_benchmark_executes_executor_result_validation_conflict_fixture(
+    tmp_path: Path,
+) -> None:
+    fixture = tmp_path / "fixtures" / "executor_result_validation_conflict_blocked"
+    repo = fixture / "repo"
+    repo.joinpath("src").mkdir(parents=True)
+    repo.joinpath("src", "app.py").write_text("def answer():\n    return 42\n")
+    write_contract(
+        repo,
+        related_files=["src/app.py"],
+        title="Executor result validation conflict fixture",
+    )
+    write_config(
+        repo,
+        [{"id": "py_test", "kind": "test", "run": [sys.executable, "-c", ""]}],
+    )
+    write_fast_summary(
+        repo, "baseline", check_id="py_test", status="failed", exit_code=1
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "executor_result_validation_conflict_blocked",
+            "run": {
+                "executor_result": {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "bridge_id": "bridge-validation",
+                    "result_path": "external-result.json",
+                    "session_id": "session-validation",
+                }
+            },
+            "expect_executor_result": {
+                "result_status": "completed",
+                "expected_ingest_status": "accepted_with_warning",
+                "session_id": "session-validation",
+                "session_state": "candidate_generated",
+                "verification_hint": "rerun",
+                "verification_triggered": False,
+                "verify_resume_status": "verify_blocked",
+                "expected_recommendation": "inspect executor result warnings",
+                "warning_ids_present": ["validation_summary_conflicts_with_results"],
+                "backlog_categories": ["workflow_gap"],
+                "schema_version": 1,
+            },
+        },
+    )
+    write_expected(
+        repo / "external-result.json",
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-validation",
+            "source_session_id": "session-validation",
+            "source_loop_id": None,
+            "created_at": "2026-04-16T00:00:00Z",
+            "status": "completed",
+            "summary": "Claims a passing summary while the detailed validation still fails.",
+            "verification_hint": "rerun",
+            "candidate_run_dir": None,
+            "changed_files": [
+                {
+                    "path": "src/app.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Adjusted Python logic.",
+                }
+            ],
+            "validation": {
+                "status": "passed",
+                "commands": [["python", "-m", "pytest"]],
+                "results": [
+                    {
+                        "command": ["python", "-m", "pytest"],
+                        "status": "failed",
+                        "exit_code": 1,
+                        "summary": "pytest still fails",
+                    }
+                ],
+            },
+            "notes": ["validation evidence should block optimistic verify resume"],
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_total"] == 1
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["executor_result"]["verify_resume_status"] == (
+        "verify_blocked"
+    )
+    assert (
+        "validation_summary_conflicts_with_results"
+        in fixture_result["actual"]["executor_result"]["warning_ids"]
+    )
+
+
 def test_typescript_benchmark_results_are_counted_in_summary() -> None:
     summary = build_benchmark_summary(
         [
@@ -724,6 +1463,158 @@ def test_benchmark_cli_writes_report_and_returns_success(
     assert (tmp_path / "results" / "summary.json").exists()
 
 
+def test_run_benchmark_executes_executor_dry_run_fixture(tmp_path: Path) -> None:
+    fixture = tmp_path / "fixtures" / "executor_dry_run_repeated_partial_attention"
+    repo = fixture / "repo"
+    write_contract(
+        repo, related_files=["src/app.py"], title="Dry-run benchmark fixture"
+    )
+    repo.joinpath("src").mkdir(parents=True, exist_ok=True)
+    repo.joinpath("src", "app.py").write_text(
+        "def answer() -> int:\n    return 42\n", encoding="utf-8"
+    )
+    write_config(repo, [])
+    write_json(
+        repo / ".qa-z" / "sessions" / "session-one" / "session.json",
+        {
+            "kind": "qa_z.repair_session",
+            "schema_version": 1,
+            "session_id": "session-one",
+            "session_dir": ".qa-z/sessions/session-one",
+            "baseline_run_dir": ".qa-z/runs/baseline",
+            "baseline_fast_summary_path": ".qa-z/runs/baseline/fast/summary.json",
+            "baseline_deep_summary_path": None,
+            "handoff_dir": ".qa-z/sessions/session-one/handoff",
+            "handoff_artifacts": {},
+            "executor_guide_path": ".qa-z/sessions/session-one/executor_guide.md",
+            "candidate_run_dir": None,
+            "verify_dir": None,
+            "verify_artifacts": {},
+            "outcome_path": None,
+            "summary_path": None,
+            "provenance": {"repair_needed": True},
+            "safety_artifacts": {},
+            "executor_result_path": None,
+            "executor_result_status": None,
+            "executor_result_validation_status": None,
+            "executor_result_bridge_id": None,
+            "state": "waiting_for_external_repair",
+            "created_at": "2026-04-16T00:00:00Z",
+            "updated_at": "2026-04-16T00:00:00Z",
+        },
+    )
+    write_json(
+        repo
+        / ".qa-z"
+        / "sessions"
+        / "session-one"
+        / "executor_results"
+        / "history.json",
+        {
+            "kind": "qa_z.executor_result_history",
+            "schema_version": 1,
+            "session_id": "session-one",
+            "updated_at": "2026-04-16T00:00:00Z",
+            "attempt_count": 2,
+            "latest_attempt_id": "attempt-2",
+            "attempts": [
+                {
+                    "attempt_id": "attempt-1",
+                    "recorded_at": "2026-04-16T00:00:00Z",
+                    "bridge_id": "bridge-one",
+                    "source_loop_id": None,
+                    "result_status": "partial",
+                    "ingest_status": "accepted_partial",
+                    "verify_resume_status": "verify_blocked",
+                    "verification_hint": "skip",
+                    "verification_triggered": False,
+                    "verification_verdict": None,
+                    "validation_status": "failed",
+                    "warning_ids": [],
+                    "backlog_categories": ["partial_completion_gap"],
+                    "changed_files_count": 1,
+                    "notes_count": 1,
+                    "attempt_path": ".qa-z/sessions/session-one/executor_results/attempts/attempt-1.json",
+                    "ingest_artifact_path": ".qa-z/executor-results/attempt-1/ingest.json",
+                    "ingest_report_path": ".qa-z/executor-results/attempt-1/ingest_report.md",
+                    "freshness_status": "passed",
+                    "freshness_reason": None,
+                    "provenance_status": "passed",
+                    "provenance_reason": None,
+                },
+                {
+                    "attempt_id": "attempt-2",
+                    "recorded_at": "2026-04-16T00:05:00Z",
+                    "bridge_id": "bridge-one",
+                    "source_loop_id": None,
+                    "result_status": "partial",
+                    "ingest_status": "accepted_partial",
+                    "verify_resume_status": "verify_blocked",
+                    "verification_hint": "skip",
+                    "verification_triggered": False,
+                    "verification_verdict": None,
+                    "validation_status": "failed",
+                    "warning_ids": [],
+                    "backlog_categories": ["partial_completion_gap"],
+                    "changed_files_count": 1,
+                    "notes_count": 1,
+                    "attempt_path": ".qa-z/sessions/session-one/executor_results/attempts/attempt-2.json",
+                    "ingest_artifact_path": ".qa-z/executor-results/attempt-2/ingest.json",
+                    "ingest_report_path": ".qa-z/executor-results/attempt-2/ingest_report.md",
+                    "freshness_status": "passed",
+                    "freshness_reason": None,
+                    "provenance_status": "passed",
+                    "provenance_reason": None,
+                },
+            ],
+        },
+    )
+    write_expected(
+        fixture / "expected.json",
+        {
+            "name": "executor_dry_run_repeated_partial_attention",
+            "run": {
+                "executor_result_dry_run": {
+                    "session_id": "session-one",
+                }
+            },
+            "expect_executor_dry_run": {
+                "verdict": "attention_required",
+                "verdict_reason": "manual_retry_review_required",
+                "evaluated_attempt_count": 2,
+                "latest_result_status": "partial",
+                "history_signals": ["repeated_partial_attempts"],
+                "attention_rule_ids": ["retry_boundary_is_manual"],
+                "attention_rule_count": 1,
+                "clear_rule_count": 6,
+                "blocked_rule_count": 0,
+                "expected_recommendation": "inspect repeated partial attempts before another retry",
+                "schema_version": 1,
+            },
+        },
+    )
+
+    summary = run_benchmark(
+        fixtures_dir=tmp_path / "fixtures",
+        results_dir=tmp_path / "results",
+    )
+
+    assert summary["fixtures_passed"] == 1
+    fixture_result = summary["fixtures"][0]
+    assert fixture_result["actual"]["executor_dry_run"]["verdict"] == (
+        "attention_required"
+    )
+    assert (
+        fixture_result["actual"]["executor_dry_run"]["verdict_reason"]
+        == "manual_retry_review_required"
+    )
+    assert fixture_result["actual"]["executor_dry_run"]["history_signals"] == [
+        "repeated_partial_attempts"
+    ]
+    assert fixture_result["actual"]["executor_dry_run"]["attention_rule_count"] == 1
+    assert fixture_result["categories"]["policy"] is True
+
+
 def test_committed_benchmark_corpus_has_initial_high_signal_set() -> None:
     fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
     names = {fixture.name for fixture in fixtures}
@@ -815,3 +1706,432 @@ def test_committed_benchmark_corpus_has_deep_policy_fixture_set() -> None:
         ]
         is True
     )
+
+
+def test_committed_benchmark_corpus_has_mixed_language_verification_fixture_set() -> (
+    None
+):
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    by_name = {fixture.name: fixture for fixture in fixtures}
+
+    assert {
+        "mixed_py_resolved_ts_regressed_candidate",
+        "mixed_ts_resolved_py_regressed_candidate",
+        "mixed_all_resolved_candidate",
+        "mixed_partial_resolved_with_regression_candidate",
+    } <= set(by_name)
+
+    assert (
+        by_name["mixed_py_resolved_ts_regressed_candidate"].expectation.expect_verify[
+            "verdict"
+        ]
+        == "mixed"
+    )
+    assert (
+        by_name["mixed_ts_resolved_py_regressed_candidate"].expectation.expect_verify[
+            "verdict"
+        ]
+        == "mixed"
+    )
+    assert (
+        by_name["mixed_all_resolved_candidate"].expectation.expect_verify["verdict"]
+        == "improved"
+    )
+    assert (
+        by_name[
+            "mixed_partial_resolved_with_regression_candidate"
+        ].expectation.expect_verify["blocking_before"]
+        == 2
+    )
+    assert (
+        by_name[
+            "mixed_partial_resolved_with_regression_candidate"
+        ].expectation.expect_verify["blocking_after"]
+        == 2
+    )
+
+
+def test_committed_benchmark_corpus_has_mixed_surface_realism_fixture_set() -> None:
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    by_name = {fixture.name: fixture for fixture in fixtures}
+
+    assert {
+        "mixed_fast_handoff_functional_worktree_cleanup",
+        "mixed_fast_deep_handoff_dual_surface",
+        "mixed_fast_deep_handoff_ts_lint_python_deep",
+        "mixed_fast_deep_handoff_py_lint_ts_test_dual_deep",
+        "mixed_docs_schema_sync_maintenance_candidate",
+        "executor_result_partial_mixed_verify_candidate",
+        "executor_result_no_op_with_justification_candidate",
+        "mixed_cleanup_only_worktree_risk_candidate",
+        "executor_result_future_timestamp_rejected",
+        "executor_result_validation_conflict_blocked",
+    } <= set(by_name)
+
+    assert by_name["mixed_fast_handoff_functional_worktree_cleanup"].expectation.run[
+        "repair_handoff"
+    ]
+    mixed_fast_deep = by_name["mixed_fast_deep_handoff_dual_surface"].expectation
+    assert mixed_fast_deep.run == {
+        "fast": True,
+        "deep": True,
+        "repair_handoff": True,
+    }
+    assert mixed_fast_deep.expect_fast["blocking_failed_checks"] == [
+        "py_test",
+        "ts_type",
+    ]
+    assert mixed_fast_deep.expect_deep["blocking_findings_min"] == 2
+    assert mixed_fast_deep.expect_handoff["target_sources"] == [
+        "fast_check",
+        "deep_finding",
+    ]
+    assert "src/invoice.ts" in mixed_fast_deep.expect_handoff["affected_files"]
+    mixed_fast_deep_ts_lint = by_name[
+        "mixed_fast_deep_handoff_ts_lint_python_deep"
+    ].expectation
+    assert mixed_fast_deep_ts_lint.run == {
+        "fast": True,
+        "deep": True,
+        "repair_handoff": True,
+    }
+    assert mixed_fast_deep_ts_lint.expect_fast["blocking_failed_checks"] == ["ts_lint"]
+    assert mixed_fast_deep_ts_lint.expect_deep["rule_ids_present"] == [
+        "python.lang.security.audit.eval"
+    ]
+    assert mixed_fast_deep_ts_lint.expect_handoff["target_sources"] == [
+        "fast_check",
+        "deep_finding",
+    ]
+    assert "src/app.py" in mixed_fast_deep_ts_lint.expect_handoff["affected_files"]
+    assert "src/invoice.ts" in mixed_fast_deep_ts_lint.expect_handoff["affected_files"]
+    mixed_fast_deep_py_lint_ts_test = by_name[
+        "mixed_fast_deep_handoff_py_lint_ts_test_dual_deep"
+    ].expectation
+    assert mixed_fast_deep_py_lint_ts_test.run == {
+        "fast": True,
+        "deep": True,
+        "repair_handoff": True,
+    }
+    assert mixed_fast_deep_py_lint_ts_test.expect_fast["blocking_failed_checks"] == [
+        "py_lint",
+        "ts_test",
+    ]
+    assert mixed_fast_deep_py_lint_ts_test.expect_deep["blocking_findings_min"] == 2
+    assert mixed_fast_deep_py_lint_ts_test.expect_deep["rule_ids_present"] == [
+        "python.lang.security.audit.eval",
+        "generic.secrets.security.detected-password",
+    ]
+    assert mixed_fast_deep_py_lint_ts_test.expect_handoff["target_sources"] == [
+        "fast_check",
+        "deep_finding",
+    ]
+    assert (
+        "src/app.py" in mixed_fast_deep_py_lint_ts_test.expect_handoff["affected_files"]
+    )
+    assert (
+        "src/invoice.ts"
+        in mixed_fast_deep_py_lint_ts_test.expect_handoff["affected_files"]
+    )
+    assert (
+        "tests/invoice.test.ts"
+        in mixed_fast_deep_py_lint_ts_test.expect_handoff["affected_files"]
+    )
+    assert (
+        by_name[
+            "mixed_docs_schema_sync_maintenance_candidate"
+        ].expectation.expect_verify["verdict"]
+        == "unchanged"
+    )
+    assert (
+        by_name[
+            "executor_result_partial_mixed_verify_candidate"
+        ].expectation.expect_executor_result["expected_ingest_status"]
+        == "accepted_partial"
+    )
+    assert (
+        by_name[
+            "executor_result_no_op_with_justification_candidate"
+        ].expectation.expect_executor_result["expected_ingest_status"]
+        == "accepted_no_op"
+    )
+    assert (
+        by_name["mixed_cleanup_only_worktree_risk_candidate"].expectation.expect_verify[
+            "remaining_issue_count_min"
+        ]
+        == 1
+    )
+    assert (
+        by_name[
+            "executor_result_future_timestamp_rejected"
+        ].expectation.expect_executor_result["freshness_reason"]
+        == "result_from_future"
+    )
+    assert by_name[
+        "executor_result_validation_conflict_blocked"
+    ].expectation.expect_executor_result["warning_ids_present"] == [
+        "validation_summary_conflicts_with_results"
+    ]
+
+
+def test_committed_benchmark_corpus_has_executor_result_fixture_set() -> None:
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    by_name = {fixture.name: fixture for fixture in fixtures}
+
+    assert "executor_result_mixed_candidate_run" in by_name
+    assert (
+        by_name[
+            "executor_result_mixed_candidate_run"
+        ].expectation.expect_executor_result["verification_verdict"]
+        == "mixed"
+    )
+
+
+def test_committed_benchmark_corpus_has_executor_bridge_action_context_fixture() -> (
+    None
+):
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    by_name = {fixture.name: fixture for fixture in fixtures}
+
+    assert "executor_bridge_action_context_inputs" in by_name
+    assert "executor_bridge_missing_action_context_inputs" in by_name
+    expectation = by_name["executor_bridge_action_context_inputs"].expectation
+    missing_expectation = by_name[
+        "executor_bridge_missing_action_context_inputs"
+    ].expectation
+
+    assert expectation.run["executor_bridge"]["bridge_id"] == "bridge-context"
+    assert expectation.expect_executor_bridge["action_context_count"] == 1
+    assert expectation.expect_executor_bridge["action_context_paths"] == [
+        ".qa-z/runs/candidate/verify/summary.json"
+    ]
+    assert (
+        missing_expectation.expect_executor_bridge["action_context_missing_count"] == 1
+    )
+    assert (
+        missing_expectation.expect_executor_bridge[
+            "guide_mentions_missing_action_context"
+        ]
+        is True
+    )
+    assert expectation.expect_executor_bridge["stdout_mentions_action_context"] is True
+    assert (
+        missing_expectation.expect_executor_bridge["stdout_mentions_action_context"]
+        is True
+    )
+    assert (
+        missing_expectation.expect_executor_bridge[
+            "stdout_mentions_missing_action_context"
+        ]
+        is True
+    )
+
+
+def test_committed_benchmark_corpus_has_executor_dry_run_fixture_set() -> None:
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    by_name = {fixture.name: fixture for fixture in fixtures}
+
+    assert {
+        "executor_dry_run_clear_verified_completed",
+        "executor_dry_run_repeated_partial_attention",
+        "executor_dry_run_completed_verify_blocked",
+        "executor_dry_run_validation_noop_operator_actions",
+        "executor_dry_run_repeated_rejected_operator_actions",
+        "executor_dry_run_repeated_noop_operator_actions",
+        "executor_dry_run_blocked_mixed_history_operator_actions",
+        "executor_dry_run_empty_history_operator_actions",
+        "executor_dry_run_scope_validation_operator_actions",
+        "executor_dry_run_missing_noop_explanation_operator_actions",
+        "executor_dry_run_mixed_attention_operator_actions",
+    } <= set(by_name)
+
+    assert (
+        by_name[
+            "executor_dry_run_clear_verified_completed"
+        ].expectation.expect_executor_dry_run["verdict"]
+        == "clear"
+    )
+    assert (
+        by_name[
+            "executor_dry_run_clear_verified_completed"
+        ].expectation.expect_executor_dry_run["verdict_reason"]
+        == "history_clear"
+    )
+    assert (
+        by_name[
+            "executor_dry_run_clear_verified_completed"
+        ].expectation.expect_executor_dry_run["expected_source"]
+        == "materialized"
+    )
+    assert by_name[
+        "executor_dry_run_repeated_partial_attention"
+    ].expectation.expect_executor_dry_run["history_signals"] == [
+        "repeated_partial_attempts"
+    ]
+    assert (
+        by_name[
+            "executor_dry_run_repeated_partial_attention"
+        ].expectation.expect_executor_dry_run["attention_rule_count"]
+        == 1
+    )
+    assert by_name[
+        "executor_dry_run_completed_verify_blocked"
+    ].expectation.expect_executor_dry_run["blocked_rule_ids"] == [
+        "verification_required_for_completed"
+    ]
+    assert (
+        by_name[
+            "executor_dry_run_repeated_partial_attention"
+        ].expectation.expect_executor_dry_run["expected_source"]
+        == "materialized"
+    )
+    assert (
+        by_name[
+            "executor_dry_run_completed_verify_blocked"
+        ].expectation.expect_executor_dry_run["verdict_reason"]
+        == "completed_attempt_not_verification_clean"
+    )
+    assert (
+        by_name[
+            "executor_dry_run_completed_verify_blocked"
+        ].expectation.expect_executor_dry_run["expected_source"]
+        == "materialized"
+    )
+    assert by_name[
+        "executor_dry_run_validation_noop_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "review_validation_conflict",
+        "require_no_op_explanation",
+    ]
+    assert by_name[
+        "executor_dry_run_validation_noop_operator_actions"
+    ].expectation.expect_executor_dry_run["expected_recommendation"] == (
+        "review executor validation conflict before another retry"
+    )
+    assert by_name[
+        "executor_dry_run_repeated_rejected_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "inspect_rejected_results"
+    ]
+    assert by_name[
+        "executor_dry_run_repeated_noop_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "inspect_no_op_pattern"
+    ]
+    assert by_name[
+        "executor_dry_run_repeated_noop_operator_actions"
+    ].expectation.expect_executor_dry_run["attention_rule_ids"] == [
+        "retry_boundary_is_manual"
+    ]
+    assert by_name[
+        "executor_dry_run_repeated_noop_operator_actions"
+    ].expectation.expect_executor_dry_run["expected_recommendation"] == (
+        "inspect repeated no-op outcomes before another retry"
+    )
+    assert by_name[
+        "executor_dry_run_missing_noop_explanation_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "require_no_op_explanation"
+    ]
+    assert by_name[
+        "executor_dry_run_blocked_mixed_history_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "resolve_verification_blockers",
+        "review_validation_conflict",
+        "inspect_partial_attempts",
+    ]
+    assert by_name[
+        "executor_dry_run_empty_history_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "ingest_executor_result"
+    ]
+    assert by_name[
+        "executor_dry_run_empty_history_operator_actions"
+    ].expectation.expect_executor_dry_run["attention_rule_ids"] == [
+        "executor_history_recorded"
+    ]
+    assert by_name[
+        "executor_dry_run_scope_validation_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "inspect_scope_drift"
+    ]
+    assert by_name[
+        "executor_dry_run_mixed_attention_operator_actions"
+    ].expectation.expect_executor_dry_run["recommended_action_ids"] == [
+        "review_validation_conflict",
+        "require_no_op_explanation",
+        "inspect_no_op_pattern",
+    ]
+    assert by_name[
+        "executor_dry_run_mixed_attention_operator_actions"
+    ].expectation.expect_executor_dry_run["operator_summary"] == (
+        "Executor history has validation conflicts, no-op explanation gaps, and "
+        "retry pressure; review all recommended actions before another retry."
+    )
+
+
+def test_committed_executor_dry_run_fixtures_pin_operator_action_residue() -> None:
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    dry_run_fixtures = [
+        fixture for fixture in fixtures if fixture.name.startswith("executor_dry_run_")
+    ]
+
+    assert dry_run_fixtures
+
+    missing: list[str] = []
+    for fixture in dry_run_fixtures:
+        expected = fixture.expectation.expect_executor_dry_run
+        for key in (
+            "operator_decision",
+            "operator_summary",
+            "recommended_action_ids",
+            "recommended_action_summaries",
+        ):
+            if not expected.get(key):
+                missing.append(f"{fixture.name}:{key}")
+
+    assert missing == []
+
+
+def test_committed_executor_dry_run_fixtures_pin_complete_rule_buckets() -> None:
+    fixtures = discover_fixtures(Path("benchmarks") / "fixtures")
+    dry_run_fixtures = [
+        fixture for fixture in fixtures if fixture.name.startswith("executor_dry_run_")
+    ]
+
+    assert dry_run_fixtures
+
+    expected_rule_ids = set(DRY_RUN_RULE_IDS)
+    required_buckets = {
+        "clear_rule_ids": "clear_rule_count",
+        "attention_rule_ids": "attention_rule_count",
+        "blocked_rule_ids": "blocked_rule_count",
+    }
+
+    missing: list[str] = []
+    mismatched_counts: list[str] = []
+    duplicate_ids: list[str] = []
+    mismatched_rule_sets: list[str] = []
+
+    for fixture in dry_run_fixtures:
+        expected = fixture.expectation.expect_executor_dry_run
+        observed_rule_ids: set[str] = set()
+        for bucket_key, count_key in required_buckets.items():
+            if bucket_key not in expected:
+                missing.append(f"{fixture.name}:{bucket_key}")
+                continue
+            bucket = expected[bucket_key]
+            if len(bucket) != len(set(bucket)):
+                duplicate_ids.append(f"{fixture.name}:{bucket_key}")
+            if len(bucket) != expected[count_key]:
+                mismatched_counts.append(
+                    f"{fixture.name}:{bucket_key}:{len(bucket)}!={expected[count_key]}"
+                )
+            observed_rule_ids.update(bucket)
+        if observed_rule_ids != expected_rule_ids:
+            mismatched_rule_sets.append(f"{fixture.name}:{sorted(observed_rule_ids)}")
+
+    assert missing == []
+    assert duplicate_ids == []
+    assert mismatched_counts == []
+    assert mismatched_rule_sets == []

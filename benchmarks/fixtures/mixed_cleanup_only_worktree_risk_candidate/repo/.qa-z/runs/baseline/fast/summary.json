@@ -1,0 +1,28 @@
+{
+  "artifact_dir": ".qa-z/runs/baseline/fast",
+  "checks": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "qa_z",
+        "integration-cleanup"
+      ],
+      "duration_ms": 1,
+      "exit_code": 1,
+      "id": "integration_cleanup",
+      "kind": "lint",
+      "status": "failed",
+      "stderr_tail": "",
+      "stdout_tail": "worktree cleanup follow-up is still required",
+      "tool": "cleanup-audit"
+    }
+  ],
+  "contract_path": "qa/contracts/contract.md",
+  "finished_at": "2026-04-14T00:00:01Z",
+  "mode": "fast",
+  "project_root": "benchmark-fixture",
+  "schema_version": 2,
+  "started_at": "2026-04-14T00:00:00Z",
+  "status": "failed"
+}

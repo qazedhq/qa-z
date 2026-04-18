@@ -1,0 +1,40 @@
+{
+  "attempt_count": 1,
+  "attempts": [
+    {
+      "attempt_id": "attempt-validation-noop-1",
+      "attempt_path": ".qa-z/sessions/session-validation-noop/executor_results/attempts/attempt-validation-noop-1.json",
+      "backlog_categories": [
+        "no_op_safeguard_gap",
+        "workflow_gap"
+      ],
+      "bridge_id": "bridge-validation-noop",
+      "changed_files_count": 0,
+      "freshness_reason": null,
+      "freshness_status": "passed",
+      "ingest_artifact_path": ".qa-z/executor-results/attempt-validation-noop-1/ingest.json",
+      "ingest_report_path": ".qa-z/executor-results/attempt-validation-noop-1/ingest_report.md",
+      "ingest_status": "accepted_no_op",
+      "notes_count": 0,
+      "provenance_reason": null,
+      "provenance_status": "passed",
+      "recorded_at": "2026-04-18T00:05:00Z",
+      "result_status": "no_op",
+      "source_loop_id": null,
+      "validation_status": "failed",
+      "verification_hint": "skip",
+      "verification_triggered": false,
+      "verification_verdict": null,
+      "verify_resume_status": "verify_skipped",
+      "warning_ids": [
+        "no_op_without_explanation",
+        "validation_summary_conflicts_with_results"
+      ]
+    }
+  ],
+  "kind": "qa_z.executor_result_history",
+  "latest_attempt_id": "attempt-validation-noop-1",
+  "schema_version": 1,
+  "session_id": "session-validation-noop",
+  "updated_at": "2026-04-18T00:05:00Z"
+}

@@ -6,6 +6,8 @@ import json
 import shutil
 from pathlib import Path
 
+import yaml
+
 from qa_z.cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,3 +104,70 @@ def test_fastapi_demo_failing_flow_generates_repair_packet(tmp_path, capsys) -> 
     assert repair_exit == 0
     assert repair_packet["repair_needed"] is True
     assert repair_packet["suggested_fix_order"] == ["py_test_bug_demo"]
+
+
+def test_fastapi_demo_readme_states_dependency_light_deterministic_boundary() -> None:
+    demo = ROOT / "examples" / "fastapi-demo"
+    readme = (demo / "README.md").read_text(encoding="utf-8")
+    config = yaml.safe_load((demo / "qa-z.yaml").read_text(encoding="utf-8"))
+    failing_config = yaml.safe_load(
+        (demo / "qa-z.failing.yaml").read_text(encoding="utf-8")
+    )
+
+    assert [check["id"] for check in config["fast"]["checks"]] == [
+        "py_lint",
+        "py_format",
+        "py_test",
+    ]
+    assert [check["id"] for check in failing_config["fast"]["checks"]] == [
+        "py_lint",
+        "py_format",
+        "py_test_bug_demo",
+    ]
+    assert config["checks"]["deep"] == []
+    assert failing_config["checks"]["deep"] == []
+    assert "dependency-light" in readme
+    assert "works without installing a web server" in readme
+    assert "deterministic fast and repair-prompt demo" in readme
+    assert "does not configure deep checks" in readme
+    assert "does not call live agents" in readme
+    assert (
+        "does not run `repair-session`, `executor-bridge`, or `executor-result`"
+        in readme
+    )
+
+
+def test_nextjs_demo_readme_is_honest_placeholder() -> None:
+    demo = ROOT / "examples" / "nextjs-demo"
+    readme = (demo / "README.md").read_text(encoding="utf-8")
+
+    assert sorted(path.name for path in demo.iterdir()) == ["README.md"]
+    assert "placeholder-only" in readme
+    assert "not a runnable Next.js project" in readme
+    assert "does not include `package.json`" in readme
+    assert "does not include `qa-z.yaml`" in readme
+    assert "does not call live agents" in readme
+    assert "does not run `executor-bridge` or `executor-result`" in readme
+    assert "not wired" in readme.lower()
+    assert "examples/typescript-demo" in readme
+    assert "Stryker" not in readme
+    assert "Playwright smoke coverage" not in readme
+
+
+def test_typescript_demo_readme_states_fast_only_live_free_boundary() -> None:
+    demo = ROOT / "examples" / "typescript-demo"
+    readme = (demo / "README.md").read_text(encoding="utf-8")
+    config = yaml.safe_load((demo / "qa-z.yaml").read_text(encoding="utf-8"))
+
+    assert [check["id"] for check in config["fast"]["checks"]] == [
+        "ts_lint",
+        "ts_type",
+        "ts_test",
+    ]
+    assert config["checks"]["deep"] == []
+    assert "TypeScript fast gate" in readme
+    assert "fast-only demo" in readme
+    assert "not a Next.js demo" in readme
+    assert "does not configure TypeScript-specific deep automation" in readme
+    assert "does not call live agents" in readme
+    assert "does not run `executor-bridge` or `executor-result`" in readme
