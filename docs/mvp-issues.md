@@ -2,32 +2,37 @@
 
 This file tracks the first public slice of work as issue-sized deliverables.
 
-## v0.1.0-alpha Scope
+## Alpha Foundation Scope
 
-Goal: ship a Python-first vertical slice that can reproduce:
+Goal: ship a deterministic local QA loop that can reproduce:
 
 ```text
-init -> plan -> fast -> review --from-run -> repair-prompt
+init -> plan -> fast -> deep -> review --from-run -> repair-prompt -> verify
 ```
 
 Included:
 
-- `init`, `plan`, `fast`, `review`, and `repair-prompt`
-- a clear `deep` placeholder
-- Python fast runner
-- JSON and Markdown artifacts
-- tests and CI
-- one runnable Python workflow example
+- `init`, `plan`, `fast`, `deep`, `review`, `repair-prompt`, and `verify`
+- Python and TypeScript command-based fast checks
+- full and smart fast/deep selection
+- Semgrep-backed deep execution
+- normalized deep findings and SARIF output
+- JSON and Markdown run artifacts
+- run-aware review packets
+- repair packet and normalized handoff artifacts
+- post-repair verification comparison
+- tests and local CI examples
 
 Excluded until later milestones:
 
-- TypeScript runner
-- real `deep` execution
-- SARIF and GitHub annotations
-- live Codex or Claude runtime adapters
-- benchmark corpus and quantitative success metrics
+- live model execution
+- remote orchestration or automatic code repair
+- GitHub API mutation surfaces
+- deep engines beyond Semgrep
+- autonomous planning loops
+- quantitative fixture scoring
 
-## Alpha Backlog
+## Alpha Issue Queue
 
 ### P0
 
@@ -46,14 +51,16 @@ Excluded until later milestones:
 
 ### P2
 
-- Release notes draft for `v0.1.0-alpha`
-- CONTRIBUTING and development workflow docs
-- Issue templates and default label guidance
+- Semgrep-backed deep runner
+- SARIF output for normalized deep findings
+- Repair handoff artifacts for Codex and Claude prompt renderers
+- Post-repair verification comparison
 
 ## Issue 1: Diff and context intake
 
 - Goal: ingest issue text, spec docs, and git diff metadata into a single planning context.
 - Acceptance: a planner object can normalize issue, diff, and spec inputs into one payload.
+- Status: bootstrap context intake landed through `qa-z plan`; diff parsing groundwork also supports smart runner selection.
 
 ## Issue 2: Contract extraction v1
 
@@ -63,53 +70,60 @@ Excluded until later milestones:
 
 ## Issue 3: Fast runner orchestration
 
-- Goal: run lint, typecheck, and unit checks based on configured language plugins.
+- Goal: run lint, typecheck, and unit checks based on configured language commands.
 - Acceptance: `qa-z fast` executes configured fast checks and returns a summarized result.
-- Status: Python-only vertical slice landed with explicit subprocess checks, JSON/Markdown run artifacts, and documented exit codes. TypeScript and deeper selection remain future work.
+- Status: Python and TypeScript command-based fast checks are supported through explicit subprocess checks. Fast runs write JSON/Markdown artifacts, latest-run manifests, and schema v2 selection metadata when selection context exists.
 
 ## Issue 4: Reporter pipeline
 
-- Goal: emit Markdown, SARIF, and GitHub-friendly annotations from runner output.
-- Acceptance: one runner invocation can produce at least Markdown plus one machine-readable format.
-- Status: bootstrap slice landed with markdown and JSON review-packet output from `qa-z review`; `qa-z review --from-run` can include fast run verdicts, executed checks, and failed-check evidence. `qa-z fast` emits JSON plus Markdown run summaries. SARIF and annotation output remain next.
+- Goal: emit Markdown, SARIF, and machine-readable artifacts from runner output.
+- Acceptance: one runner invocation can produce Markdown plus one machine-readable format.
+- Status: `qa-z fast` and `qa-z deep` emit summary artifacts; `qa-z review --from-run` can include fast run verdicts, selection context, executed checks, failed-check evidence, and sibling deep findings. `qa-z deep` emits SARIF 2.1.0 from normalized deep findings.
 
 ## Issue 5: Repair packet generation
 
 - Goal: compress failures into an agent-friendly repair prompt packet.
-- Acceptance: QA-Z produces a structured payload with failures, impacted files, and next questions.
-- Status: first repair loop landed with `qa-z repair-prompt`, shared run/contract artifact loading, deterministic candidate file extraction, suggested fix ordering, and `packet.json` plus `prompt.md` artifacts.
+- Acceptance: QA-Z produces a structured payload with failures, impacted files, and next validation criteria.
+- Status: `qa-z repair-prompt` builds packet and prompt artifacts from failed fast checks and blocking deep findings, carries selection context, and writes normalized `handoff.json`, `codex.md`, and `claude.md` artifacts without live execution.
 
-## Issue 6: Python plugin
+## Issue 6: Python command support
 
-- Goal: support pytest, Hypothesis, and mutmut selection for Python repositories.
-- Acceptance: plugin can map configured checks into concrete Python commands.
+- Goal: support deterministic Python lint, type, format, and test commands.
+- Acceptance: configured Python checks run as subprocesses and normalize no-tests, missing-tool, and non-zero exit behavior.
+- Status: Python command support is functional through the fast runner.
 
-## Issue 7: TypeScript plugin
+## Issue 7: TypeScript command support
 
-- Goal: support Vitest or Jest, fast-check, Stryker, and Playwright smoke tests.
-- Acceptance: plugin can map configured checks into concrete TypeScript commands.
+- Goal: support deterministic TypeScript lint, type, and test commands.
+- Acceptance: configured TypeScript checks can run through the same deterministic fast-runner contract.
+- Status: TypeScript command examples are included in `qa-z.yaml.example`; runner selection can target TypeScript paths and common TypeScript config files.
 
-## Issue 8: Security plugin
+## Issue 8: Security/deep checks
 
-- Goal: wire CodeQL, Semgrep, and Trivy into the deep-check layer.
-- Acceptance: QA-Z can run at least one security command and normalize its output.
+- Goal: wire at least one deep static-analysis command into the deep-check layer.
+- Acceptance: QA-Z can run a configured deep command and normalize its output.
+- Status: Semgrep-backed `sg_scan` is functional. QA-Z normalizes active findings, grouped findings, severity thresholds, ignored rules, excluded paths, and missing-tool behavior.
 
-## Issue 9: Codex adapter
+## Issue 9: Codex handoff renderer
 
-- Goal: produce Codex-friendly prompts, review packets, and repository templates.
-- Acceptance: repo ships a working review prompt and adapter-facing contract output shape.
+- Goal: produce Codex-friendly prompts and handoff artifacts from deterministic repair evidence.
+- Acceptance: repo ships a Codex-facing Markdown renderer derived from the same normalized handoff JSON.
+- Status: `qa-z repair-prompt --adapter codex` renders `codex.md` and always writes `handoff.json` with validation commands and non-goals.
 
-## Issue 10: Claude adapter
+## Issue 10: Claude handoff renderer
 
-- Goal: produce CLAUDE.md guidance, skills, and hook integration points.
-- Acceptance: repo ships reusable Claude templates that match QA-Z contract stages.
+- Goal: produce Claude-friendly prompts and handoff artifacts from deterministic repair evidence.
+- Acceptance: repo ships a Claude-facing Markdown renderer derived from the same normalized handoff JSON.
+- Status: `qa-z repair-prompt --adapter claude` renders `claude.md` and shares the normalized handoff contract.
 
 ## Issue 11: Example repositories
 
-- Goal: add one FastAPI demo and one Next.js demo.
-- Acceptance: examples show both fast and deep policy modes with realistic config.
+- Goal: add realistic examples that exercise fast, deep, repair, and verification policy modes.
+- Acceptance: examples show deterministic local commands with explicit policy.
+- Status: Python examples remain the primary runnable path. TypeScript command examples are present in the config surface; additional runnable example hardening remains future work.
 
-## Issue 12: Benchmark seed set
+## Issue 12: Verification loop
 
-- Goal: define a seeded bug corpus and usefulness metrics for QA-Z evaluation.
-- Acceptance: benchmark folder contains at least an initial case taxonomy and expected outputs.
+- Goal: compare a pre-repair run with a post-repair run and decide whether deterministic QA evidence improved.
+- Acceptance: `qa-z verify` writes summary, compare, and report artifacts, classifies resolved, still-failing, regressed, newly introduced, and not-comparable evidence, and returns a deterministic verdict.
+- Status: `qa-z verify` is functional for existing candidate runs and can create a candidate with `--rerun` using the existing fast and deep runners.

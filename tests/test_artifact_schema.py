@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from qa_z.diffing.models import ChangedFile
 from qa_z.reporters.repair_prompt import FailureContext, RepairPacket
-from qa_z.runners.models import CheckResult, RunSummary
+from qa_z.runners.models import CheckResult, RunSummary, SelectionSummary
 
 
 def test_run_summary_schema_v1_required_fields_are_stable() -> None:
@@ -56,6 +57,76 @@ def test_run_summary_schema_v1_required_fields_are_stable() -> None:
         "stderr_tail",
     } <= payload["checks"][0].keys()
     assert RunSummary.from_dict(payload).schema_version == 1
+
+
+def test_run_summary_schema_v2_selection_fields_are_persisted() -> None:
+    changed_file = ChangedFile(
+        path="src/qa_z/cli.py",
+        old_path="src/qa_z/cli.py",
+        status="modified",
+        additions=8,
+        deletions=2,
+        language="python",
+        kind="source",
+    )
+    summary = RunSummary(
+        mode="fast",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="passed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        selection=SelectionSummary(
+            mode="smart",
+            input_source="cli_diff",
+            changed_files=[changed_file],
+            selected_checks=["py_lint"],
+            targeted_checks=["py_lint"],
+        ),
+        checks=[
+            CheckResult(
+                id="py_lint",
+                tool="ruff",
+                command=["ruff", "check", "src/qa_z/cli.py"],
+                kind="lint",
+                status="passed",
+                exit_code=0,
+                duration_ms=123,
+                execution_mode="targeted",
+                target_paths=["src/qa_z/cli.py"],
+                selection_reason="python source/test files changed",
+            )
+        ],
+    )
+
+    payload = summary.to_dict()
+    loaded = RunSummary.from_dict(payload)
+
+    assert payload["schema_version"] == 2
+    assert payload["selection"]["changed_files"][0]["path"] == "src/qa_z/cli.py"
+    assert payload["checks"][0]["execution_mode"] == "targeted"
+    assert loaded.selection is not None
+    assert loaded.selection.input_source == "cli_diff"
+    assert loaded.selection.changed_files[0].kind == "source"
+    assert loaded.checks[0].target_paths == ["src/qa_z/cli.py"]
+
+
+def test_run_summary_loads_v1_without_schema_version_or_selection() -> None:
+    loaded = RunSummary.from_dict(
+        {
+            "mode": "fast",
+            "contract_path": None,
+            "project_root": "/repo",
+            "status": "passed",
+            "started_at": "2026-04-11T12:00:00Z",
+            "finished_at": "2026-04-11T12:00:01Z",
+            "checks": [],
+        }
+    )
+
+    assert loaded.schema_version == 1
+    assert loaded.selection is None
 
 
 def test_repair_packet_schema_v1_required_fields_are_stable() -> None:

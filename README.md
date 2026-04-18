@@ -1,29 +1,34 @@
 # QA-Z
 
-QA-Z is a Python-first QA control plane for coding agents.
+QA-Z is a Codex-first, model-agnostic QA control plane for coding agents.
 
-It generates QA contracts, runs deterministic fast checks, and emits review/repair packets from run artifacts.
+It turns local QA contracts, deterministic runner output, deep findings, review packets, repair handoffs, and post-repair verification into explicit evidence that a coding agent or human can act on.
 
 Today, QA-Z can:
 
 - initialize a repository scaffold
 - generate QA contracts from issue, spec, and diff inputs
-- run deterministic fast checks for Python projects
-- emit run-aware review packets
-- generate repair prompts from failed run artifacts
+- run deterministic fast checks from configured Python and TypeScript commands
+- choose full or smart fast/deep check scope from changed files or an explicit diff
+- run Semgrep-backed deep checks and normalize findings, grouped findings, severity counts, and policy decisions
+- emit run-aware review packets that include fast check results, selection context, and sibling deep findings
+- generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
+- compare baseline and candidate runs with `qa-z verify`
+- write SARIF 2.1.0 from normalized deep findings
 
 QA-Z does not yet implement:
 
-- deep QA runners
-- TypeScript fast runners
-- SARIF or GitHub annotation output
-- live Codex or Claude adapters
+- live model execution
+- remote orchestration, scheduling, or automatic code repair
+- GitHub API posting or Checks API annotations
+- deep engines beyond the current Semgrep check
+- a production plugin system
 
-## Why this exists
+## Why This Exists
 
 Most agentic coding tools are optimized to generate or edit code. QA-Z is optimized to answer a different question:
 
-> Should this change be merged, and if not, what should the agent fix next?
+> Should this change be merged, and if not, what should be fixed next?
 
 The project is intentionally:
 
@@ -35,12 +40,10 @@ The project is intentionally:
 
 ## Alpha Status
 
-This repository is targeting `v0.1.0-alpha`: a public Python-first vertical slice, not a finished QA control plane.
-
-The reproducible alpha loop is:
+This repository is in an alpha foundation stage. The current reproducible loop is:
 
 ```text
-init -> plan -> fast -> review --from-run -> repair-prompt
+init -> plan -> fast -> deep -> review --from-run -> repair-prompt -> verify
 ```
 
 The current implementation includes:
@@ -48,23 +51,28 @@ The current implementation includes:
 - a public-facing product narrative
 - a repository-level `AGENTS.md`
 - a starter `qa-z.yaml.example`
-- a minimal Python CLI with stable command names
+- a Python CLI with stable command names
 - a working `qa-z plan` contract generator
-- a working Python-first `qa-z fast` deterministic runner with JSON and Markdown artifacts
-- a working `qa-z review` review-packet generator, including run-aware packets
-- a working `qa-z repair-prompt` generator for failed fast runs
+- a working `qa-z fast` deterministic runner with JSON and Markdown artifacts
+- full and smart fast check selection
+- a working `qa-z deep` Semgrep runner with full and smart selection
+- normalized deep finding metadata and SARIF output
+- a working `qa-z review` review-packet generator with run and deep context
+- a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
+- normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
+- a working `qa-z verify` comparison command for baseline and candidate run evidence
 - Codex and Claude integration templates
-- GitHub workflow examples for CI and Codex review
+- workflow examples for local deterministic QA gates
 
-Roadmap work that is intentionally not part of the alpha:
+Roadmap work that is intentionally not part of this foundation slice:
 
-- dynamic check selection
-- TypeScript fast-check orchestration
-- property, mutation, or security execution engines
-- SARIF or GitHub annotation reporters
-- live Codex or Claude adapter runtimes
+- additional deep engines such as CodeQL, Trivy, property checks, mutation checks, and smoke E2E
+- live Codex or Claude runtime calls
+- remote comments, labels, or hosted status mutations
+- autonomous planning or external execution loops
+- quantitative fixture scoring
 
-## Command surface
+## Command Surface
 
 QA-Z reserves these commands from day one:
 
@@ -77,7 +85,13 @@ qa-z review
 qa-z repair-prompt
 ```
 
-In this bootstrap, `init`, `plan`, `fast`, `review`, and `repair-prompt` are functional. `deep` still returns structured guidance for the capability it will own.
+The foundation implementation also includes:
+
+```text
+qa-z verify
+```
+
+All implemented commands operate on local files and deterministic subprocess output. They do not call live model APIs.
 
 ## Quickstart
 
@@ -105,14 +119,28 @@ Generate a first QA contract draft:
 python -m qa_z plan --title "Protect billing auth guard" --issue issue.md --spec spec.md
 ```
 
-Run the Python fast gate and write JSON/Markdown artifacts:
+Run fast deterministic checks and write JSON/Markdown artifacts:
 
 ```bash
 python -m qa_z fast
 python -m qa_z fast --json
+python -m qa_z fast --selection smart --diff changes.diff
 python -m qa_z fast --output-dir .qa-z/runs/local
 python -m qa_z fast --strict-no-tests
 ```
+
+Run Semgrep-backed deep checks attached to the latest fast run, or to an explicit run directory:
+
+```bash
+python -m qa_z deep
+python -m qa_z deep --json
+python -m qa_z deep --from-run .qa-z/runs/local
+python -m qa_z deep --output-dir .qa-z/runs/local
+python -m qa_z deep --selection smart --diff changes.diff
+python -m qa_z deep --sarif-output qa-z.sarif
+```
+
+`deep` expects Semgrep on `PATH` when `sg_scan` is enabled. Missing tools and malformed Semgrep output are recorded in run artifacts instead of being hidden.
 
 Render a review packet from a run:
 
@@ -121,14 +149,29 @@ python -m qa_z review --from-run latest
 python -m qa_z review --from-run .qa-z/runs/local --json
 ```
 
-Generate an agent-friendly repair packet from the latest fast run:
+Generate an agent-friendly repair packet and handoff artifacts from a run:
 
 ```bash
 python -m qa_z repair-prompt
 python -m qa_z repair-prompt --from-run latest
 python -m qa_z repair-prompt --from-run .qa-z/runs/local
+python -m qa_z repair-prompt --from-run latest --adapter codex
+python -m qa_z repair-prompt --from-run latest --adapter claude
 python -m qa_z repair-prompt --json
+python -m qa_z repair-prompt --handoff-json
 ```
+
+`repair-prompt` writes `packet.json`, `prompt.md`, `handoff.json`, `codex.md`, and `claude.md` under the source run's `repair/` directory by default.
+
+Verify a candidate run against the original baseline:
+
+```bash
+python -m qa_z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+python -m qa_z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate --json
+python -m qa_z verify --baseline-run .qa-z/runs/baseline --rerun --rerun-output-dir .qa-z/runs/candidate
+```
+
+`verify` compares fast check changes and blocking deep findings, writes `summary.json`, `compare.json`, and `report.md`, and returns a deterministic verdict.
 
 Run the local verification suite:
 
@@ -136,37 +179,41 @@ Run the local verification suite:
 python -m pytest
 ```
 
-## Example policy
+## Example Policy
 
-`qa-z.yaml.example` shows the intended policy shape:
+`qa-z.yaml.example` shows the current policy shape. The important foundation sections are:
 
 ```yaml
-project:
-  name: qa-z
-  languages:
-    - python
 fast:
-  output_dir: .qa-z/runs
-  strict_no_tests: false
-  fail_on_missing_tool: true
+  output_dir: ".qa-z/runs"
+  selection:
+    default_mode: "full"
+    full_run_threshold: 40
   checks:
     - id: py_lint
-      enabled: true
       run: ["ruff", "check", "."]
-      kind: lint
-    - id: py_format
-      enabled: true
-      run: ["ruff", "format", "--check", "."]
-      kind: format
-    - id: py_type
-      enabled: true
-      run: ["mypy", "src", "tests"]
-      kind: typecheck
-    - id: py_test
-      enabled: true
-      run: ["pytest", "-q"]
-      kind: test
-      no_tests: warn
+      kind: "lint"
+    - id: ts_type
+      run: ["tsc", "--noEmit"]
+      kind: "typecheck"
+
+deep:
+  fail_on_missing_tool: true
+  selection:
+    default_mode: "full"
+    full_run_threshold: 15
+    exclude_paths:
+      - dist/**
+      - build/**
+      - coverage/**
+  checks:
+    - id: sg_scan
+      run: ["semgrep", "--json"]
+      kind: "static-analysis"
+      semgrep:
+        config: "auto"
+        fail_on_severity:
+          - ERROR
 ```
 
 The long-term design is for QA-Z to combine:
@@ -174,32 +221,30 @@ The long-term design is for QA-Z to combine:
 - repository metadata
 - issue or PR context
 - explicit QA contracts
-- deterministic runner outputs
-- agent-friendly repair packets
+- deterministic fast and deep runner outputs
+- repair handoffs that preserve exact evidence and validation commands
+- verification comparisons after a repair attempt
 
-Today, `qa-z plan` turns a title plus optional source files into a contract draft under `qa/contracts/`, `qa-z fast` runs configured deterministic Python checks and writes run artifacts under `.qa-z/runs/`, `qa-z review` turns contracts or fast runs into reusable review packets, and `qa-z repair-prompt` writes `packet.json` plus `prompt.md` under the source run's `repair/` directory.
+See `docs/artifact-schema-v1.md` for the required `summary.json`, repair packet, handoff, SARIF, and verification artifact fields.
 
-See `docs/artifact-schema-v1.md` for the required `summary.json` and repair packet fields.
-
-## Repository map
+## Repository Map
 
 ```text
-docs/                     design notes, plans, artifact schema, and MVP backlog
+docs/                     design notes, plans, artifact schema, and MVP issue list
 qa/contracts/             QA contract workspace
 src/qa_z/                 Python package and CLI surface
 templates/                downstream Codex and Claude integration templates
-.github/workflows/        CI and Codex review workflows for this repo
+.github/workflows/        local CI workflow examples
 examples/                 runnable and planned demos
-benchmark/                planned seeded bug and evaluation corpus
 ```
 
-## Near-term roadmap
+## Near-Term Roadmap
 
-1. Add diff-aware check selection for fast runs.
-2. Add TypeScript fast checks after the Python runner stays stable.
-3. Connect review output directly to PR comments and SARIF reporters.
-4. Add live Codex and Claude adapter handoff helpers around repair packets.
-5. Add deep checks for property, mutation, security, and smoke E2E.
+1. Keep fast/deep runner selection stable across Python and TypeScript command configs.
+2. Add more deep engines after Semgrep artifacts stay stable.
+3. Expand downstream workflow templates around SARIF and local artifacts.
+4. Continue hardening repair handoff and verification evidence.
+5. Add quantitative fixture scoring only after the foundation commands are split and validated.
 
 ## Positioning
 

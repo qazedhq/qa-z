@@ -15,9 +15,14 @@ EXAMPLE_CONFIG = (
       name: qa-z
       languages:
         - python
+        - typescript
       roots:
         - src
         - tests
+      critical_paths:
+        - auth/**
+        - payments/**
+        - migrations/**
 
     contracts:
       sources:
@@ -26,43 +31,113 @@ EXAMPLE_CONFIG = (
         - spec
         - diff
       output_dir: qa/contracts
+      required_sections:
+        - scope
+        - assumptions
+        - invariants
+        - risk_edges
+        - negative_cases
+        - acceptance_checks
 
     fast:
       default_contract: latest
-      output_dir: .qa-z/runs
+      output_dir: ".qa-z/runs"
       strict_no_tests: false
       fail_on_missing_tool: true
+      selection:
+        default_mode: "full"
+        full_run_threshold: 40
+        high_risk_paths:
+          - package.json
+          - package-lock.json
+          - pnpm-lock.yaml
+          - yarn.lock
+          - tsconfig.json
+          - tsconfig.base.json
+          - vitest.config.ts
+          - vitest.config.js
+          - vite.config.ts
+          - vite.config.js
+          - eslint.config.js
+          - eslint.config.mjs
+          - .eslintrc.json
+
       checks:
         - id: py_lint
           enabled: true
           run: ["ruff", "check", "."]
-          kind: lint
+          kind: "lint"
 
         - id: py_format
           enabled: true
           run: ["ruff", "format", "--check", "."]
-          kind: format
+          kind: "format"
 
         - id: py_type
           enabled: true
           run: ["mypy", "src", "tests"]
-          kind: typecheck
+          kind: "typecheck"
 
         - id: py_test
           enabled: true
           run: ["pytest", "-q"]
-          kind: test
-          no_tests: warn
+          kind: "test"
+          no_tests: "warn"
+
+        - id: ts_lint
+          enabled: true
+          run: ["eslint", "."]
+          kind: "lint"
+
+        - id: ts_type
+          enabled: true
+          run: ["tsc", "--noEmit"]
+          kind: "typecheck"
+
+        - id: ts_test
+          enabled: true
+          run: ["vitest", "run"]
+          kind: "test"
+          no_tests: "warn"
+
+    deep:
+      fail_on_missing_tool: true
+      selection:
+        default_mode: "full"
+        full_run_threshold: 15
+        exclude_paths:
+          - dist/**
+          - build/**
+          - coverage/**
+          - "**/*.generated.*"
+        high_risk_paths:
+          - qa-z.yaml
+          - pyproject.toml
+          - package.json
+          - tsconfig.json
+          - eslint.config.js
+      checks:
+        - id: sg_scan
+          enabled: true
+          run: ["semgrep", "--json"]
+          kind: "static-analysis"
+          semgrep:
+            config: "auto"
+            fail_on_severity:
+              - ERROR
+            ignore_rules: []
 
     checks:
-      deep:
-        - property
-        - mutation
-        - security
-        - e2e_smoke
+      selection:
+        mode: diff-aware
+        max_changed_files: 40
 
     gates:
       require_human_review: true
+      escalate_on:
+        - auth/**
+        - billing/**
+        - infra/**
       block_on:
         - failed_unit
         - failed_security
@@ -71,9 +146,9 @@ EXAMPLE_CONFIG = (
     reporters:
       markdown: true
       json: true
-      sarif: false
+      sarif: true
       github_annotations: false
-      repair_packet: false
+      repair_packet: true
 
     adapters:
       codex:
@@ -111,42 +186,51 @@ CONTRACTS_README = (
 COMMAND_GUIDANCE = {
     "fast": dedent(
         """
-        qa-z fast runs deterministic Python checks.
+        qa-z fast runs deterministic Python and TypeScript checks.
 
         Current responsibility:
         - run configured subprocess checks without LLM judgment
+        - target eligible Python and TypeScript checks from changed-file metadata
         - normalize pass, fail, warning, skipped, and tool errors
         - emit JSON and Markdown artifacts under .qa-z/runs
         """
     ).strip(),
     "deep": dedent(
         """
-        qa-z deep is scaffolded, not fully implemented yet.
+        qa-z deep runs configured higher-cost checks.
+
+        Current responsibility:
+        - run configured Semgrep checks through sg_scan
+        - skip docs-only smart selections and target source/test changes
+        - normalize Semgrep JSON findings into summary artifacts
+        - apply Semgrep severity thresholds, config overrides, grouping, and suppression
+        - emit SARIF 2.1.0 for normalized deep findings
+        - preserve summary and check artifacts when Semgrep fails
 
         Planned responsibility:
-        - run property, mutation, security, and smoke E2E checks
+        - add property, mutation, and smoke E2E checks
         - gate critical-path changes with stronger evidence
         - surface higher-cost failures with repair guidance
         """
     ).strip(),
     "review": dedent(
         """
-        qa-z review is scaffolded, not fully implemented yet.
+        qa-z review renders a deterministic review packet from local artifacts.
 
-        Planned responsibility:
-        - compress runner results into a PR review packet
-        - emit human-readable findings plus machine-readable annotations
-        - keep pass/fail tied to deterministic checks
+        Current responsibility:
+        - render review packets from a contract or attached run artifacts
+        - include fast-check context and sibling deep findings when available
+        - emit human-readable Markdown plus machine-readable JSON
         """
     ).strip(),
     "repair-prompt": dedent(
         """
-        qa-z repair-prompt is scaffolded, not fully implemented yet.
+        qa-z repair-prompt builds a deterministic repair packet from local artifacts.
 
-        Planned responsibility:
-        - convert failures into an agent-friendly repair packet
-        - highlight broken contracts, affected files, and next questions
-        - make the next agent loop easier instead of noisier
+        Current responsibility:
+        - convert failed fast checks and blocking deep findings into repair artifacts
+        - highlight affected files, validation commands, and next repair targets
+        - emit human-readable Markdown plus machine-readable JSON
         """
     ).strip(),
 }

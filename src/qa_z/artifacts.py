@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from qa_z.config import get_nested
+from qa_z.diffing.models import ChangeSet
 from qa_z.runners.models import RunSummary
 
 
@@ -24,7 +25,7 @@ class RunSource:
     summary_path: Path
 
 
-@dataclass
+@dataclass(slots=True)
 class ContractContext:
     """Best-effort structured context loaded from a QA contract."""
 
@@ -36,6 +37,7 @@ class ContractContext:
     assumptions: list[str]
     constraints: list[str]
     raw_markdown: str
+    change_set: ChangeSet | None = None
 
 
 class ArtifactSourceNotFound(FileNotFoundError):
@@ -108,11 +110,15 @@ def resolve_run_source(
 
 def resolve_latest_run_source(root: Path, config: dict[str, Any]) -> RunSource:
     """Resolve the latest run containing fast/summary.json."""
-    runs_dir = Path(str(get_nested(config, "fast", "output_dir", default=".qa-z/runs")))
-    if not runs_dir.is_absolute():
-        runs_dir = root / runs_dir
+    runs_dir = fast_runs_dir(root, config)
     if not runs_dir.exists():
         raise ArtifactSourceNotFound(f"No run directory found at {runs_dir}")
+
+    manifest_path = latest_run_manifest_path(root, config)
+    if manifest_path.is_file():
+        manifest_source = resolve_manifest_run_source(manifest_path, root)
+        if manifest_source is not None:
+            return manifest_source
 
     summaries = list(runs_dir.glob("*/fast/summary.json"))
     if not summaries:
@@ -125,6 +131,60 @@ def resolve_latest_run_source(root: Path, config: dict[str, Any]) -> RunSource:
     return RunSource(
         run_dir=summary_path.parent.parent,
         fast_dir=summary_path.parent,
+        summary_path=summary_path,
+    )
+
+
+def fast_runs_dir(root: Path, config: dict[str, Any]) -> Path:
+    """Resolve the configured fast runs directory."""
+    runs_dir = Path(str(get_nested(config, "fast", "output_dir", default=".qa-z/runs")))
+    if not runs_dir.is_absolute():
+        runs_dir = root / runs_dir
+    return runs_dir.resolve()
+
+
+def latest_run_manifest_path(root: Path, config: dict[str, Any]) -> Path:
+    """Return the configured latest-run manifest path."""
+    return fast_runs_dir(root, config) / "latest-run.json"
+
+
+def write_latest_run_manifest(
+    root: Path, config: dict[str, Any], run_dir: Path
+) -> Path:
+    """Write a stable manifest pointing at the latest fast run directory."""
+    manifest_path = latest_run_manifest_path(root, config)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps({"run_dir": format_path(run_dir, root)}, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
+def resolve_manifest_run_source(manifest_path: Path, root: Path) -> RunSource | None:
+    """Resolve a latest-run manifest, returning None when it points at stale data."""
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ArtifactLoadError(
+            f"Could not read latest run manifest: {manifest_path}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ArtifactLoadError(
+            f"Latest run manifest is not valid JSON: {manifest_path}"
+        ) from exc
+
+    if not isinstance(data, dict) or not isinstance(data.get("run_dir"), str):
+        raise ArtifactLoadError("Latest run manifest must contain a run_dir string.")
+
+    run_dir = resolve_path(root, data["run_dir"])
+    summary_path = run_dir / "fast" / "summary.json"
+    if not summary_path.is_file():
+        return None
+    return RunSource(
+        run_dir=run_dir,
+        fast_dir=run_dir / "fast",
         summary_path=summary_path,
     )
 
@@ -188,6 +248,7 @@ def load_contract_context(contract_path: Path, root: Path) -> ContractContext:
     acceptance_checks = metadata_list(metadata, "acceptance_checks")
     assumptions = metadata_list(metadata, "assumptions")
     constraints = metadata_list(metadata, "constraints")
+    change_set = parse_change_set_metadata(metadata)
 
     if not title:
         title = extract_title(markdown_body)
@@ -213,7 +274,19 @@ def load_contract_context(contract_path: Path, root: Path) -> ContractContext:
         assumptions=assumptions,
         constraints=constraints,
         raw_markdown=raw_markdown,
+        change_set=change_set,
     )
+
+
+def parse_change_set_metadata(metadata: dict[str, Any]) -> ChangeSet | None:
+    """Parse front matter changes best-effort without failing contract loading."""
+    changes = metadata.get("changes")
+    if not isinstance(changes, dict):
+        return None
+    try:
+        return ChangeSet.from_dict(changes)
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def split_front_matter(raw_markdown: str) -> tuple[dict[str, Any], str]:

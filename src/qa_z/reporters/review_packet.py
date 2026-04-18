@@ -16,6 +16,12 @@ from qa_z.artifacts import (
     format_path,
     load_contract_context,
 )
+from qa_z.reporters.deep_context import (
+    DeepContext,
+    build_deep_context,
+    format_finding_location,
+    format_severity_summary,
+)
 from qa_z.reporters.repair_prompt import fix_priority
 from qa_z.runners.models import CheckResult, RunSummary
 
@@ -129,8 +135,10 @@ def render_run_review_packet(
     run_source: RunSource,
     contract: ContractContext,
     root: Path,
+    deep_summary: RunSummary | None = None,
 ) -> str:
     """Render a review packet enriched with fast run context."""
+    deep_context = build_deep_context(deep_summary)
     lines = [
         render_review_packet(Path(root / (contract.path or "")), root).rstrip(),
         "",
@@ -140,9 +148,9 @@ def render_run_review_packet(
         f"- Run directory: `{format_path(run_source.run_dir, root)}`",
         f"- Summary: `{format_path(run_source.summary_path, root)}`",
         "",
-        "## Executed Checks",
-        "",
     ]
+    lines.extend(render_selection_markdown(summary))
+    lines.extend(["## Executed Checks", ""])
     if not summary.checks:
         lines.append("- No checks were executed.")
     else:
@@ -164,6 +172,7 @@ def render_run_review_packet(
     else:
         for index, check in enumerate(failed_checks, start=1):
             lines.append(f"{index}. {check.id}")
+    lines.extend(render_deep_findings_markdown(deep_context))
     return "\n".join(lines).strip() + "\n"
 
 
@@ -173,9 +182,11 @@ def run_review_packet_json(
     run_source: RunSource,
     contract: ContractContext,
     root: Path,
+    deep_summary: RunSummary | None = None,
 ) -> str:
     """Render run-aware review context as JSON."""
     failed_checks = ordered_failed_checks(summary)
+    deep_context = build_deep_context(deep_summary)
     packet: dict[str, Any] = {
         "version": 1,
         "contract": {
@@ -191,12 +202,30 @@ def run_review_packet_json(
             "status": summary.status,
             "started_at": summary.started_at,
             "finished_at": summary.finished_at,
+            "selection": (
+                summary.selection.to_dict() if summary.selection is not None else None
+            ),
         },
         "executed_checks": [check_summary(check) for check in summary.checks],
         "failed_checks": [failed_check_summary(check) for check in failed_checks],
         "review_priority_order": [check.id for check in failed_checks],
+        "deep": deep_context.to_dict() if deep_context else None,
     }
     return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+
+
+def write_review_artifacts(
+    markdown: str, json_text: str | None, output_dir: Path
+) -> tuple[Path, Path | None]:
+    """Write review Markdown and optional JSON artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    markdown_path = output_dir / "review.md"
+    markdown_path.write_text(markdown, encoding="utf-8")
+    json_path = None
+    if json_text is not None:
+        json_path = output_dir / "review.json"
+        json_path.write_text(json_text, encoding="utf-8")
+    return markdown_path, json_path
 
 
 def load_contract_review_context(contract_path: Path, root: Path) -> ContractContext:
@@ -245,6 +274,10 @@ def check_summary(check: CheckResult) -> dict[str, Any]:
         "status": check.status,
         "exit_code": check.exit_code,
         "duration_ms": check.duration_ms,
+        "execution_mode": check.execution_mode,
+        "target_paths": check.target_paths,
+        "selection_reason": check.selection_reason,
+        "high_risk_reasons": check.high_risk_reasons,
     }
 
 
@@ -280,3 +313,94 @@ def evidence_tail(check: CheckResult) -> str:
     if check.stderr_tail:
         parts.append(check.stderr_tail.rstrip())
     return "\n".join(parts) if parts else "No stdout or stderr tail captured."
+
+
+def render_selection_markdown(summary: RunSummary) -> list[str]:
+    """Render v2 check-selection context when present."""
+    if summary.selection is None:
+        return []
+    selection = summary.selection
+    return [
+        "## Check Selection",
+        "",
+        f"- Mode: {selection.mode}",
+        f"- Input source: {selection.input_source}",
+        f"- Changed files: {len(selection.changed_files)}",
+        f"- Full checks: {format_check_list(selection.full_checks)}",
+        f"- Targeted checks: {format_check_list(selection.targeted_checks)}",
+        f"- Skipped checks: {format_check_list(selection.skipped_checks)}",
+        f"- High-risk reasons: {format_check_list(selection.high_risk_reasons)}",
+        "",
+    ]
+
+
+def format_check_list(items: list[str]) -> str:
+    """Render a compact comma-separated list for review output."""
+    return ", ".join(items) if items else "none"
+
+
+def render_deep_findings_markdown(deep: DeepContext | None) -> list[str]:
+    """Render optional deep findings for run-aware review packets."""
+    if deep is None:
+        return []
+    lines = [
+        "",
+        "## Deep Findings",
+        "",
+        f"- Status: {deep.summary.status}",
+        f"- Findings: {deep.findings_count}",
+        f"- Blocking findings: {deep.blocking_findings_count}",
+        f"- Filtered findings: {deep.filtered_findings_count}",
+        f"- Highest severity: {deep.highest_severity or 'none'}",
+        f"- Severity summary: {format_severity_summary(deep.severity_summary)}",
+        f"- Affected files: {format_affected_files(deep.affected_files)}",
+    ]
+    if deep.primary_check is not None:
+        lines.append(f"- {format_deep_check_run_sentence(deep)}")
+        if deep.primary_check.selection_reason:
+            lines.append(f"- Selection reason: {deep.primary_check.selection_reason}")
+
+    if deep.grouped_findings:
+        lines.extend(["", "Top grouped findings:"])
+        for finding in deep.grouped_findings[:5]:
+            lines.append(format_grouped_finding(finding))
+    elif deep.findings:
+        lines.extend(["", "Top findings:"])
+        for finding in deep.findings[:5]:
+            lines.append(
+                "- "
+                f"`{format_finding_location(finding)}` "
+                f"{finding['severity']} {finding['rule_id']} - {finding['message']}"
+            )
+    else:
+        lines.extend(["", "No Semgrep findings were reported."])
+    return lines
+
+
+def format_deep_check_run_sentence(deep: DeepContext) -> str:
+    """Render the primary deep check execution mode in one sentence."""
+    check_id = deep.primary_check.id if deep.primary_check else "deep check"
+    mode = deep.execution_mode
+    if deep.target_count:
+        noun = "file" if deep.target_count == 1 else "files"
+        return f"`{check_id}` ran in {mode} mode for {deep.target_count} {noun}"
+    return f"`{check_id}` ran in {mode} mode"
+
+
+def format_affected_files(paths: list[str]) -> str:
+    """Render affected files for Markdown."""
+    if not paths:
+        return "none"
+    return ", ".join(f"`{path}`" for path in paths)
+
+
+def format_grouped_finding(finding: dict[str, Any]) -> str:
+    """Render one grouped Semgrep finding for review packets."""
+    count = int(finding.get("count") or 1)
+    occurrence = "occurrence" if count == 1 else "occurrences"
+    location = format_finding_location(finding)
+    return (
+        "- "
+        f"`{finding.get('rule_id', 'unknown')}` in `{location}` "
+        f"({count} {occurrence}) - {finding.get('message', '')}"
+    )

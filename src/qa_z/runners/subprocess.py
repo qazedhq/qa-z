@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -9,6 +10,14 @@ from pathlib import Path
 from qa_z.runners.models import CheckResult, CheckSpec
 
 TAIL_LIMIT = 4000
+
+
+def utf8_subprocess_env() -> dict[str, str]:
+    """Return an environment that keeps Python-based tools UTF-8 stable."""
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
 
 
 def tail_text(value: str | None, limit: int = TAIL_LIMIT) -> str:
@@ -40,6 +49,7 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
         completed = subprocess.run(
             spec.command,
             cwd=cwd,
+            env=utf8_subprocess_env(),
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -71,6 +81,8 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             status="error",
             exit_code=None,
             duration_ms=elapsed_ms(started),
+            stdout=stdout,
+            stderr=stderr,
             stdout_tail=tail_text(stdout),
             stderr_tail=tail_text(stderr),
             message=f"Check timed out after {spec.timeout_seconds} seconds.",
@@ -86,6 +98,8 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
         status=status,
         exit_code=completed.returncode,
         duration_ms=elapsed_ms(started),
+        stdout=completed.stdout,
+        stderr=completed.stderr,
         stdout_tail=tail_text(completed.stdout),
         stderr_tail=tail_text(completed.stderr),
     )

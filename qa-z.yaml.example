@@ -2,6 +2,7 @@ project:
   name: qa-z
   languages:
     - python
+    - typescript
   roots:
     - src
     - tests
@@ -30,6 +31,23 @@ fast:
   output_dir: ".qa-z/runs"
   strict_no_tests: false
   fail_on_missing_tool: true
+  selection:
+    default_mode: "full"
+    full_run_threshold: 40
+    high_risk_paths:
+      - package.json
+      - package-lock.json
+      - pnpm-lock.yaml
+      - yarn.lock
+      - tsconfig.json
+      - tsconfig.base.json
+      - vitest.config.ts
+      - vitest.config.js
+      - vite.config.ts
+      - vite.config.js
+      - eslint.config.js
+      - eslint.config.mjs
+      - .eslintrc.json
 
   checks:
     - id: py_lint
@@ -53,12 +71,50 @@ fast:
       kind: "test"
       no_tests: "warn"
 
+    - id: ts_lint
+      enabled: true
+      run: ["eslint", "."]
+      kind: "lint"
+
+    - id: ts_type
+      enabled: true
+      run: ["tsc", "--noEmit"]
+      kind: "typecheck"
+
+    - id: ts_test
+      enabled: true
+      run: ["vitest", "run"]
+      kind: "test"
+      no_tests: "warn"
+
+deep:
+  fail_on_missing_tool: true
+  selection:
+    default_mode: "full"
+    full_run_threshold: 15
+    exclude_paths:
+      - dist/**
+      - build/**
+      - coverage/**
+      - "**/*.generated.*"
+    high_risk_paths:
+      - qa-z.yaml
+      - pyproject.toml
+      - package.json
+      - tsconfig.json
+      - eslint.config.js
+  checks:
+    - id: sg_scan
+      enabled: true
+      run: ["semgrep", "--json"]
+      kind: "static-analysis"
+      semgrep:
+        config: "auto"
+        fail_on_severity:
+          - ERROR
+        ignore_rules: []
+
 checks:
-  deep:
-    - property
-    - mutation
-    - security
-    - e2e_smoke
   selection:
     mode: diff-aware
     max_changed_files: 40
@@ -77,9 +133,9 @@ gates:
 reporters:
   markdown: true
   json: true
-  sarif: false
+  sarif: true
   github_annotations: false
-  repair_packet: false
+  repair_packet: true
 
 adapters:
   codex:

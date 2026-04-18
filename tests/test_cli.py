@@ -67,6 +67,66 @@ def write_contract(
     )
 
 
+def write_fast_summary_artifact(
+    tmp_path,
+    run_id: str,
+    *,
+    check_id: str,
+    status: str,
+    exit_code: int | None,
+) -> None:
+    """Write a minimal fast summary artifact for CLI verification tests."""
+    run_dir = tmp_path / ".qa-z" / "runs" / run_id
+    fast_dir = run_dir / "fast"
+    fast_dir.mkdir(parents=True, exist_ok=True)
+    summary = {
+        "schema_version": 2,
+        "mode": "fast",
+        "contract_path": "qa/contracts/contract.md",
+        "project_root": str(tmp_path),
+        "status": "failed" if status in {"failed", "error"} else "passed",
+        "started_at": "2026-04-14T00:00:00Z",
+        "finished_at": "2026-04-14T00:00:01Z",
+        "artifact_dir": f".qa-z/runs/{run_id}/fast",
+        "checks": [
+            {
+                "id": check_id,
+                "tool": check_id,
+                "command": [check_id],
+                "kind": "test",
+                "status": status,
+                "exit_code": exit_code,
+                "duration_ms": 1,
+                "stdout_tail": "",
+                "stderr_tail": "",
+            }
+        ],
+    }
+    (fast_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def write_deep_summary_artifact(tmp_path, run_id: str) -> None:
+    """Write a minimal deep summary artifact for verification tests."""
+    deep_dir = tmp_path / ".qa-z" / "runs" / run_id / "deep"
+    deep_dir.mkdir(parents=True, exist_ok=True)
+    summary = {
+        "schema_version": 2,
+        "mode": "deep",
+        "contract_path": "qa/contracts/contract.md",
+        "project_root": str(tmp_path),
+        "status": "passed",
+        "started_at": "2026-04-14T00:00:00Z",
+        "finished_at": "2026-04-14T00:00:01Z",
+        "artifact_dir": f".qa-z/runs/{run_id}/deep",
+        "checks": [],
+    }
+    (deep_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
 def test_parser_registers_core_subcommands() -> None:
     parser = build_parser()
     assert {
@@ -76,6 +136,7 @@ def test_parser_registers_core_subcommands() -> None:
         "deep",
         "review",
         "repair-prompt",
+        "verify",
     } <= get_subcommands(parser)
 
 
@@ -357,6 +418,34 @@ def test_fast_runs_configured_checks_and_writes_json_artifacts(
     assert json.loads(summary_path.read_text(encoding="utf-8"))["status"] == "passed"
 
 
+def test_fast_writes_latest_run_manifest(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    checks = [{"id": "py_test", "kind": "test", "run": python_command("")}]
+    write_fast_config(tmp_path, checks)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "runs" / "ci"
+
+    exit_code = main(
+        [
+            "fast",
+            "--path",
+            str(tmp_path),
+            "--output-dir",
+            str(output_dir),
+            "--json",
+        ]
+    )
+    capsys.readouterr()
+    manifest_path = tmp_path / ".qa-z" / "runs" / "latest-run.json"
+
+    assert exit_code == 0
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == {
+        "run_dir": ".qa-z/runs/ci"
+    }
+
+
 def test_fast_defaults_to_latest_contract_and_prints_human_summary(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
@@ -558,14 +647,101 @@ def test_fast_returns_config_error_for_broken_yaml(
     assert "qa-z fast: configuration error:" in output
 
 
-@pytest.mark.parametrize("command", ["deep"])
-def test_placeholder_commands_emit_guidance(
-    command: str,
+def test_verify_cli_compares_existing_runs_and_writes_artifacts(
+    tmp_path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    exit_code = main([command])
-    captured = capsys.readouterr()
+    write_fast_config(tmp_path, [])
+    write_contract(tmp_path)
+    write_fast_summary_artifact(
+        tmp_path, "baseline", check_id="py_test", status="failed", exit_code=1
+    )
+    write_fast_summary_artifact(
+        tmp_path, "candidate", check_id="py_test", status="passed", exit_code=0
+    )
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert f"qa-z {command}" in captured.out
-    assert "scaffolded" in captured.out
+    assert output["kind"] == "qa_z.verify_compare"
+    assert output["verdict"] == "improved"
+    verify_dir = tmp_path / ".qa-z" / "runs" / "candidate" / "verify"
+    assert (verify_dir / "summary.json").exists()
+    assert (verify_dir / "compare.json").exists()
+    assert (verify_dir / "report.md").exists()
+
+
+def test_verify_cli_rerun_creates_candidate_before_comparing(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(
+        tmp_path,
+        [{"id": "py_test", "kind": "test", "run": python_command("")}],
+    )
+    write_contract(tmp_path)
+    write_fast_summary_artifact(
+        tmp_path, "baseline", check_id="py_test", status="failed", exit_code=1
+    )
+    write_deep_summary_artifact(tmp_path, "baseline")
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--rerun",
+            "--rerun-output-dir",
+            ".qa-z/runs/candidate-rerun",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["candidate_run_id"] == "candidate-rerun"
+    assert output["verdict"] == "improved"
+    assert (tmp_path / ".qa-z" / "runs" / "candidate-rerun" / "fast").exists()
+    assert (tmp_path / ".qa-z" / "runs" / "candidate-rerun" / "deep").exists()
+    assert (tmp_path / ".qa-z" / "runs" / "candidate-rerun" / "review").exists()
+    assert (tmp_path / ".qa-z" / "runs" / "candidate-rerun" / "verify").exists()
+
+
+def test_verify_cli_returns_source_not_found_for_missing_run(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+    write_fast_summary_artifact(
+        tmp_path, "candidate", check_id="py_test", status="passed", exit_code=0
+    )
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/missing",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 4
+    assert "qa-z verify: source not found:" in output

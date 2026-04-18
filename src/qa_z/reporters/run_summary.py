@@ -34,24 +34,44 @@ def write_run_summary_artifacts(summary: RunSummary, artifact_dir: Path) -> Path
 
 def render_summary_markdown(summary: RunSummary) -> str:
     """Render a compact human-readable run summary."""
+    mode_title = summary.mode.capitalize() if summary.mode else "Run"
     lines = [
-        "# QA-Z Fast Summary",
+        f"# QA-Z {mode_title} Summary",
         "",
         f"- Status: {summary.status}",
         f"- Contract: {summary.contract_path or 'none'}",
         f"- Started: {summary.started_at}",
         f"- Finished: {summary.finished_at}",
         "",
-        "## Totals",
-        "",
-        f"- Passed: {summary.totals['passed']}",
-        f"- Failed: {summary.totals['failed']}",
-        f"- Skipped: {summary.totals['skipped']}",
-        f"- Warning: {summary.totals['warning']}",
-        "",
-        "## Checks",
-        "",
     ]
+    if summary.selection is not None:
+        lines.extend(
+            [
+                "## Selection",
+                "",
+                f"- Mode: {summary.selection.mode}",
+                f"- Input source: {summary.selection.input_source}",
+                f"- Changed files: {len(summary.selection.changed_files)}",
+                f"- Full checks: {format_list(summary.selection.full_checks)}",
+                f"- Targeted checks: {format_list(summary.selection.targeted_checks)}",
+                f"- Skipped checks: {format_list(summary.selection.skipped_checks)}",
+                f"- High-risk reasons: {format_list(summary.selection.high_risk_reasons)}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Totals",
+            "",
+            f"- Passed: {summary.totals['passed']}",
+            f"- Failed: {summary.totals['failed']}",
+            f"- Skipped: {summary.totals['skipped']}",
+            f"- Warning: {summary.totals['warning']}",
+            "",
+            "## Checks",
+            "",
+        ]
+    )
 
     if not summary.checks:
         lines.append("- No checks were executed.")
@@ -65,3 +85,8 @@ def render_summary_markdown(summary: RunSummary) -> str:
             lines.append(detail)
 
     return "\n".join(lines).strip() + "\n"
+
+
+def format_list(items: list[str]) -> str:
+    """Render a compact list for Markdown summaries."""
+    return ", ".join(items) if items else "none"

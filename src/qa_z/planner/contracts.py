@@ -6,7 +6,11 @@ import re
 from pathlib import Path
 from typing import Iterable
 
+import yaml
+
 from qa_z.config import get_nested
+from qa_z.diffing.models import ChangeSet
+from qa_z.diffing.parser import parse_unified_diff
 
 
 def slugify(value: str) -> str:
@@ -29,6 +33,47 @@ def load_source_text(path: Path | None) -> str | None:
     if path is None:
         return None
     return path.read_text(encoding="utf-8").strip() or None
+
+
+def extract_document_title(text: str | None) -> str | None:
+    """Extract a title from Markdown-ish text."""
+    if not text:
+        return None
+    first_content_line: str | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if first_content_line is None:
+            first_content_line = stripped
+        match = re.match(r"^#\s+(?P<title>.+)$", stripped)
+        if match:
+            return match.group("title").strip() or None
+    return first_content_line
+
+
+def fallback_title_from_changes(change_set: ChangeSet | None) -> str | None:
+    """Build a fallback title from the first changed file."""
+    if change_set is None or change_set.is_empty:
+        return None
+    return f"Contract for changes in {change_set.files[0].path}"
+
+
+def resolve_plan_title(
+    explicit_title: str | None,
+    issue_text: str | None,
+    spec_text: str | None,
+    change_set: ChangeSet | None,
+) -> str:
+    """Resolve the contract title using CLI, docs, diff, then default fallback."""
+    if explicit_title and explicit_title.strip():
+        return explicit_title.strip()
+    return (
+        extract_document_title(issue_text)
+        or extract_document_title(spec_text)
+        or fallback_title_from_changes(change_set)
+        or "QA-Z Contract"
+    )
 
 
 def excerpt_text(text: str | None, max_lines: int = 6) -> str:
@@ -251,10 +296,34 @@ def render_contract(
     return "\n".join(lines).strip() + "\n"
 
 
+def render_contract_front_matter(
+    *,
+    title: str,
+    issue_path: str | None,
+    spec_path: str | None,
+    diff_path: str | None,
+    change_set: ChangeSet | None,
+) -> str:
+    """Render contract metadata as YAML front matter."""
+    metadata: dict[str, object] = {
+        "qa_z_contract_version": 1,
+        "title": title,
+        "inputs": {
+            "issue_path": issue_path,
+            "spec_path": spec_path,
+            "diff_path": diff_path,
+        },
+    }
+    if change_set is not None:
+        metadata["changes"] = change_set.to_dict()
+    rendered = yaml.safe_dump(metadata, sort_keys=False, allow_unicode=True).strip()
+    return f"---\n{rendered}\n---\n"
+
+
 def plan_contract(
     root: Path,
     config: dict,
-    title: str,
+    title: str | None,
     slug: str | None = None,
     issue_path: Path | None = None,
     spec_path: Path | None = None,
@@ -268,17 +337,45 @@ def plan_contract(
     if not output_dir.is_absolute():
         output_dir = root / output_dir
 
-    contract_path = output_dir / f"{slug or slugify(title)}.md"
+    issue_text = load_source_text(issue_path)
+    spec_text = load_source_text(spec_path)
+    diff_text = load_source_text(diff_path)
+    change_set = parse_unified_diff(diff_text) if diff_path else None
+    resolved_title = resolve_plan_title(title, issue_text, spec_text, change_set)
+
+    contract_path = output_dir / f"{slug or slugify(resolved_title)}.md"
     contract_path.parent.mkdir(parents=True, exist_ok=True)
 
     if contract_path.exists() and not overwrite:
         return contract_path, False
 
-    issue_text = load_source_text(issue_path)
-    spec_text = load_source_text(spec_path)
-    diff_text = load_source_text(diff_path)
-    content = render_contract(
-        title, config, issue_text=issue_text, spec_text=spec_text, diff_text=diff_text
+    contract_markdown = render_contract(
+        resolved_title,
+        config,
+        issue_text=issue_text,
+        spec_text=spec_text,
+        diff_text=diff_text,
+    )
+    content = (
+        render_contract_front_matter(
+            title=resolved_title,
+            issue_path=format_source_path(issue_path, root),
+            spec_path=format_source_path(spec_path, root),
+            diff_path=format_source_path(diff_path, root),
+            change_set=change_set,
+        )
+        + "\n"
+        + contract_markdown
     )
     contract_path.write_text(content, encoding="utf-8")
     return contract_path, True
+
+
+def format_source_path(path: Path | None, root: Path) -> str | None:
+    """Format a source path relative to the root when possible."""
+    if path is None:
+        return None
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
