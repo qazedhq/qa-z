@@ -14,7 +14,7 @@
 
 Verified on 2026-04-18 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `337 passed`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `338 passed`
 - `python -m ruff format --check .`: passed, `126 files already formatted`
 - `python -m ruff check .`: passed
 - `python -m mypy src tests`: passed, `82 source files`
@@ -308,7 +308,7 @@ python -m pytest tests/test_current_truth.py tests/test_examples.py tests/test_g
 - Create: `.github/pull_request_template.md`
 - Optional create: `SECURITY.md`
 
-- [ ] **Step 1: Add contribution workflow**
+- [x] **Step 1: Add contribution workflow**
 
 Document:
 
@@ -317,7 +317,7 @@ Document:
 - QA-Z validation: `python -m qa_z fast --selection smart --json`, `python -m qa_z deep --selection smart --json`, `python -m qa_z benchmark --json`
 - generated artifact policy: root `.qa-z/**` and benchmark result workspaces stay local
 
-- [ ] **Step 2: Add issue and PR templates**
+- [x] **Step 2: Add issue and PR templates**
 
 Keep templates short and contract-oriented:
 
@@ -327,7 +327,7 @@ Keep templates short and contract-oriented:
 - artifact paths
 - environment
 
-- [ ] **Step 3: Validate docs are linked**
+- [x] **Step 3: Validate docs are linked**
 
 Run:
 

@@ -111,6 +111,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
         encoding="utf-8"
     )
+    release_plan = (
+        ROOT
+        / "docs"
+        / "superpowers"
+        / "plans"
+        / "2026-04-18-github-repository-release.md"
+    ).read_text(encoding="utf-8")
+    release_notes = (ROOT / "docs" / "releases" / "v0.9.8-alpha.md").read_text(
+        encoding="utf-8"
+    )
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )
@@ -121,7 +131,12 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "337 passed" in commit_plan
+    assert "338 passed" in commit_plan
+    assert "338 passed" in release_plan
+    assert "`python -m pytest`: 338 passed" in release_notes
+    assert "337 passed" not in commit_plan
+    assert "337 passed" not in release_plan
+    assert "337 passed" not in release_notes
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "50/50 fixtures" in commit_plan
     assert "benchmark summary `snapshot` field" in commit_plan
