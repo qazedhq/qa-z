@@ -39,6 +39,21 @@ python -m qa_z github-summary --from-session session-one
 
 Verification compares the session baseline with the returned candidate run, writes nested `verify/` artifacts, updates `session.json`, and writes session-level `summary.json` plus `outcome.md`.
 
+## Executor Bridge
+
+```bash
+python -m qa_z executor-bridge --from-session session-one
+python -m qa_z executor-bridge --from-loop loop-one
+```
+
+The bridge copies the session manifest and handoff JSON into `.qa-z/executor/<bridge-id>/inputs/`, then writes `bridge.json`, `executor_guide.md`, `codex.md`, and `claude.md`. When created from a loop outcome that already contains a `repair_session` action, it also copies that loop outcome into the bridge inputs.
+
+The bridge is still local packaging. Its return contract points back to:
+
+```bash
+python -m qa_z repair-session verify --session .qa-z/sessions/<session-id> --candidate-run <candidate-run>
+```
+
 The exit code follows the deterministic verification verdict:
 
 - `0` for `improved`

@@ -296,6 +296,49 @@ The session-level `summary.json` has:
 
 Repair sessions only package local artifacts and record the deterministic return path. They do not dispatch remote workers or call live models.
 
+## Executor Bridge Artifacts
+
+`qa-z executor-bridge --from-session <session>` writes:
+
+```text
+.qa-z/executor/<bridge-id>/bridge.json
+.qa-z/executor/<bridge-id>/executor_guide.md
+.qa-z/executor/<bridge-id>/codex.md
+.qa-z/executor/<bridge-id>/claude.md
+.qa-z/executor/<bridge-id>/inputs/session.json
+.qa-z/executor/<bridge-id>/inputs/handoff.json
+```
+
+When the bridge is created from a loop outcome with a `repair_session` action, it also copies:
+
+```text
+.qa-z/executor/<bridge-id>/inputs/autonomy_outcome.json
+```
+
+`bridge.json` has:
+
+- `kind`: `qa_z.executor_bridge`
+- `schema_version`: `1`
+- `bridge_id`
+- `created_at`
+- `status`: `ready_for_external_executor`
+- `source_loop_id`
+- `source_session_id`
+- `selected_task_ids`
+- `baseline_run`
+- `session_dir`
+- `handoff_dir`
+- `bridge_dir`
+- `inputs`
+- `handoff_paths`
+- `validation_commands`
+- `safety_constraints`
+- `non_goals`
+- `return_contract`
+- `evidence_summary`
+
+Executor bridge artifacts package local evidence for an outside human or coding agent. They do not call Codex or Claude, mutate code, schedule work, commit, push, or post GitHub comments.
+
 ## Verification Publish Summary
 
 `qa-z github-summary` can render local run, verify, or repair-session evidence for GitHub Actions job summaries:

@@ -204,4 +204,6 @@ def test_artifact_schema_documents_repair_session_and_publish_summary() -> None:
     assert "qa_z.repair_session" in schema
     assert "qa_z.repair_session_summary" in schema
     assert "qa_z.verification_publish_summary" in schema
+    assert "qa_z.executor_bridge" in schema
+    assert "executor-bridge" in schema
     assert "github-summary" in schema

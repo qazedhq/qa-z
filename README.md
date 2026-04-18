@@ -14,6 +14,7 @@ Today, QA-Z can:
 - emit run-aware review packets that include fast check results, selection context, and sibling deep findings
 - generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
 - create local repair sessions that package handoff artifacts, a return path, and post-repair verification outcomes
+- package repair sessions and optional autonomy outcomes into external executor bridge directories
 - compare baseline and candidate runs with `qa-z verify`
 - render local QA-Z evidence into GitHub Actions job summaries without calling the GitHub API
 - write SARIF 2.1.0 from normalized deep findings
@@ -64,6 +65,7 @@ The current implementation includes:
 - a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
 - normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
 - a working `qa-z repair-session` workflow for local handoff, status, and candidate verification artifacts
+- a working `qa-z executor-bridge` package generator for external human, Codex, or Claude repair handoff
 - a working `qa-z verify` comparison command for baseline and candidate run evidence
 - a working `qa-z github-summary` renderer for local run, verify, and repair-session evidence in GitHub Actions job summaries
 - a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures`n- working `qa-z self-inspect`, `qa-z backlog`, and `qa-z select-next` commands that turn existing artifacts into a local improvement backlog and loop plan`n- a working `qa-z autonomy` command that records per-loop outcomes, latest status, and runtime-budget progress without editing code
@@ -97,6 +99,7 @@ qa-z verify
 qa-z benchmark
 qa-z repair-session
 qa-z github-summary
+qa-z executor-bridge
 ```
 
 All implemented commands operate on local files and deterministic subprocess output. They do not call live model APIs.
@@ -187,11 +190,12 @@ Create a local repair session and verify the returned candidate evidence:
 python -m qa_z repair-session start --baseline-run .qa-z/runs/baseline
 python -m qa_z repair-session status --session session-one
 python -m qa_z repair-session verify --session session-one --candidate-run .qa-z/runs/candidate
+python -m qa_z executor-bridge --from-session session-one
 python -m qa_z github-summary --from-session session-one
 python -m qa_z github-summary --from-run latest
 ```
 
-`repair-session` writes `.qa-z/sessions/<session-id>/session.json`, a handoff directory, an executor guide, verification artifacts, and an outcome summary. `github-summary` renders local Markdown or JSON for GitHub Actions job summaries; it does not create comments, labels, checks, or other GitHub API mutations.
+`repair-session` writes `.qa-z/sessions/<session-id>/session.json`, a handoff directory, an executor guide, verification artifacts, and an outcome summary. `executor-bridge` copies the session manifest and handoff JSON into `.qa-z/executor/<bridge-id>/inputs/`, then writes `bridge.json`, `executor_guide.md`, `codex.md`, and `claude.md` with an explicit return contract. `github-summary` renders local Markdown or JSON for GitHub Actions job summaries. These commands do not create comments, labels, checks, branches, commits, or other GitHub API mutations.
 
 Run the local benchmark corpus:
 

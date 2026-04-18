@@ -157,3 +157,9 @@ Excluded until later milestones:
 - Goal: render QA-Z run and verification evidence into GitHub Actions job summaries without adding GitHub API mutation surfaces.
 - Acceptance: `qa-z github-summary` renders Markdown and JSON from run, verify, or repair-session artifacts, and workflow examples append the Markdown to `$GITHUB_STEP_SUMMARY`.
 - Status: local summary rendering is implemented; comments, labels, Checks API annotations, and hosted status mutations remain out of scope.
+
+## Issue 18: Executor bridge packaging
+
+- Goal: package repair-session evidence for an external human, Codex, or Claude repair executor without adding a live execution loop.
+- Acceptance: `qa-z executor-bridge` writes a bridge manifest, copied local inputs, executor guides, validation commands, non-goals, and an explicit return contract back to `repair-session verify`.
+- Status: local bridge packaging is implemented for repair sessions and loop outcomes that already reference a repair session. Live model execution, queues, commits, pushes, and GitHub bot behavior remain out of scope.

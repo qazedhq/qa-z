@@ -144,6 +144,7 @@ def test_parser_registers_core_subcommands() -> None:
         "autonomy",
         "repair-session",
         "github-summary",
+        "executor-bridge",
     } <= get_subcommands(parser)
 
 
