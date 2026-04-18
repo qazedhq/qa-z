@@ -288,6 +288,8 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
         release_handoff
     )
     assert "git remote add origin <repository-url>" in release_handoff
+    assert "git ls-remote --heads <repository-url>" in release_handoff
+    assert "Do not add `origin` until this command succeeds" in release_handoff
     assert "git push -u origin codex/qa-z-bootstrap" in release_handoff
     assert "Release QA-Z v0.9.8-alpha" in release_handoff
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_handoff
