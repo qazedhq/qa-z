@@ -13,7 +13,9 @@ Today, QA-Z can:
 - run Semgrep-backed deep checks and normalize findings, grouped findings, severity counts, and policy decisions
 - emit run-aware review packets that include fast check results, selection context, and sibling deep findings
 - generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
+- create local repair sessions that package handoff artifacts, a return path, and post-repair verification outcomes
 - compare baseline and candidate runs with `qa-z verify`
+- render local QA-Z evidence into GitHub Actions job summaries without calling the GitHub API
 - write SARIF 2.1.0 from normalized deep findings
 - run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior`n- inspect local QA-Z artifacts into a self-improvement backlog and selected next-task plan`n- run local autonomy planning loops that repeatedly inspect, select, write loop outcomes, and track runtime budgets
 
@@ -44,7 +46,7 @@ The project is intentionally:
 This repository is in an alpha foundation stage. The current reproducible loop is:
 
 ```text
-init -> plan -> fast -> deep -> review --from-run -> repair-prompt -> verify
+init -> plan -> fast -> deep -> review --from-run -> repair-prompt -> repair-session -> verify
 ```
 
 The current implementation includes:
@@ -61,7 +63,9 @@ The current implementation includes:
 - a working `qa-z review` review-packet generator with run and deep context
 - a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
 - normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
+- a working `qa-z repair-session` workflow for local handoff, status, and candidate verification artifacts
 - a working `qa-z verify` comparison command for baseline and candidate run evidence
+- a working `qa-z github-summary` renderer for local run, verify, and repair-session evidence in GitHub Actions job summaries
 - a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures`n- working `qa-z self-inspect`, `qa-z backlog`, and `qa-z select-next` commands that turn existing artifacts into a local improvement backlog and loop plan`n- a working `qa-z autonomy` command that records per-loop outcomes, latest status, and runtime-budget progress without editing code
 - Codex and Claude integration templates
 - workflow examples for local deterministic QA gates
@@ -91,6 +95,8 @@ The foundation implementation also includes:
 ```text
 qa-z verify
 qa-z benchmark
+qa-z repair-session
+qa-z github-summary
 ```
 
 All implemented commands operate on local files and deterministic subprocess output. They do not call live model APIs.
@@ -174,6 +180,18 @@ python -m qa_z verify --baseline-run .qa-z/runs/baseline --rerun --rerun-output-
 ```
 
 `verify` compares fast check changes and blocking deep findings, writes `summary.json`, `compare.json`, and `report.md`, and returns a deterministic verdict.
+
+Create a local repair session and verify the returned candidate evidence:
+
+```bash
+python -m qa_z repair-session start --baseline-run .qa-z/runs/baseline
+python -m qa_z repair-session status --session session-one
+python -m qa_z repair-session verify --session session-one --candidate-run .qa-z/runs/candidate
+python -m qa_z github-summary --from-session session-one
+python -m qa_z github-summary --from-run latest
+```
+
+`repair-session` writes `.qa-z/sessions/<session-id>/session.json`, a handoff directory, an executor guide, verification artifacts, and an outcome summary. `github-summary` renders local Markdown or JSON for GitHub Actions job summaries; it does not create comments, labels, checks, or other GitHub API mutations.
 
 Run the local benchmark corpus:
 

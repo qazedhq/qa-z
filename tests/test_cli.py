@@ -142,6 +142,8 @@ def test_parser_registers_core_subcommands() -> None:
         "select-next",
         "backlog",
         "autonomy",
+        "repair-session",
+        "github-summary",
     } <= get_subcommands(parser)
 
 

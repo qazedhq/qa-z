@@ -232,6 +232,97 @@ Handoff artifacts are local files. They package evidence and validation commands
 
 Verification compares deterministic artifacts only. It does not infer repair success from style or LLM judgment.
 
+## Repair Session Artifacts
+
+`qa-z repair-session start --baseline-run <run>` writes:
+
+```text
+.qa-z/sessions/<session-id>/session.json
+.qa-z/sessions/<session-id>/executor_guide.md
+.qa-z/sessions/<session-id>/handoff/packet.json
+.qa-z/sessions/<session-id>/handoff/prompt.md
+.qa-z/sessions/<session-id>/handoff/handoff.json
+.qa-z/sessions/<session-id>/handoff/codex.md
+.qa-z/sessions/<session-id>/handoff/claude.md
+```
+
+`session.json` has:
+
+- `kind`: `qa_z.repair_session`
+- `schema_version`: `1`
+- `session_id`
+- `state`
+- `baseline_run`
+- `candidate_run`
+- `session_dir`
+- `handoff_dir`
+- `executor_guide_path`
+- `verify_summary_path`
+- `verify_compare_path`
+- `verify_report_path`
+- `outcome_path`
+- `verdict`
+- `created_at`
+- `updated_at`
+
+`qa-z repair-session verify --session <session> --candidate-run <run>` writes:
+
+```text
+.qa-z/sessions/<session-id>/verify/summary.json
+.qa-z/sessions/<session-id>/verify/compare.json
+.qa-z/sessions/<session-id>/verify/report.md
+.qa-z/sessions/<session-id>/summary.json
+.qa-z/sessions/<session-id>/outcome.md
+```
+
+The session-level `summary.json` has:
+
+- `kind`: `qa_z.repair_session_summary`
+- `schema_version`: `1`
+- `session_id`
+- `state`
+- `baseline_run`
+- `candidate_run`
+- `verdict`
+- `repair_improved`
+- `blocking_before`
+- `blocking_after`
+- `resolved_count`
+- `remaining_issue_count`
+- `new_issue_count`
+- `regression_count`
+- `not_comparable_count`
+- paths to the nested verification artifacts
+
+Repair sessions only package local artifacts and record the deterministic return path. They do not dispatch remote workers or call live models.
+
+## Verification Publish Summary
+
+`qa-z github-summary` can render local run, verify, or repair-session evidence for GitHub Actions job summaries:
+
+```text
+qa-z github-summary --from-run latest
+qa-z github-summary --from-verify .qa-z/runs/<run-id>/verify/summary.json
+qa-z github-summary --from-session <session-id>
+```
+
+When rendering verification evidence as JSON, the output has:
+
+- `kind`: `qa_z.verification_publish_summary`
+- `schema_version`: `1`
+- `source_type`: `verify` or `repair_session`
+- `source_path`
+- `session_id`, when available
+- `verdict`
+- `repair_improved`
+- `resolved_count`
+- `remaining_issue_count`
+- `new_issue_count`
+- `regression_count`
+- `not_comparable_count`
+- `recommendation`
+
+`github-summary` is a local renderer for `$GITHUB_STEP_SUMMARY`. It does not post comments, labels, checks, or annotations through the GitHub API.
 
 ## Benchmark Summary
 

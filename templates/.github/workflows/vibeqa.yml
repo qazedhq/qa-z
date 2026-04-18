@@ -26,6 +26,10 @@ jobs:
       - name: Run fast checks
         run: qa-z fast
 
+      - name: Write QA-Z summary
+        if: always()
+        run: qa-z github-summary --from-run latest >> "$GITHUB_STEP_SUMMARY"
+
   deep-gate:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest

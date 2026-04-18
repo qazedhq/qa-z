@@ -145,3 +145,15 @@ Excluded until later milestones:
 - Goal: make QA-Z repeat the local self-inspection and task-selection workflow while preserving loop outcomes, status, and runtime-budget evidence.
 - Acceptance: `qa-z autonomy` writes per-loop outcome artifacts, mirrors latest loop state, records runtime progress, and `qa-z autonomy status --json` exposes the latest planning state.
 - Status: local artifact-only autonomy planning loops are implemented without live model execution, remote orchestration, external repair dispatch, or autonomous code editing.
+
+## Issue 16: Repair sessions
+
+- Goal: package repair handoff evidence into a named local session with an explicit return path for candidate verification.
+- Acceptance: `qa-z repair-session start`, `status`, and `verify` write session manifests, handoff artifacts, verification artifacts, and outcome summaries from deterministic local evidence.
+- Status: local repair sessions are implemented without live model execution, remote dispatch, or hidden network dependencies.
+
+## Issue 17: GitHub summary publishing
+
+- Goal: render QA-Z run and verification evidence into GitHub Actions job summaries without adding GitHub API mutation surfaces.
+- Acceptance: `qa-z github-summary` renders Markdown and JSON from run, verify, or repair-session artifacts, and workflow examples append the Markdown to `$GITHUB_STEP_SUMMARY`.
+- Status: local summary rendering is implemented; comments, labels, Checks API annotations, and hosted status mutations remain out of scope.

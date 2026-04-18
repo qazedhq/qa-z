@@ -42,3 +42,7 @@ jobs:
 
       - name: Run QA-Z fast gate
         run: python -m qa_z fast --output-dir .qa-z/runs/ci
+
+      - name: Write QA-Z GitHub summary
+        if: always()
+        run: python -m qa_z github-summary --from-run .qa-z/runs/ci >> "$GITHUB_STEP_SUMMARY"

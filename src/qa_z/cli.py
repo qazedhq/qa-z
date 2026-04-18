@@ -52,7 +52,16 @@ from .repair_handoff import (
     repair_handoff_json,
     write_repair_handoff_artifact,
 )
+from .repair_session import (
+    create_repair_session,
+    load_repair_session,
+    render_session_status,
+    repair_session_exit_code,
+    session_status_json,
+    verify_repair_session,
+)
 from .reporters.deep_context import load_sibling_deep_summary
+from .reporters.github_summary import github_summary_json, render_github_summary
 from .reporters.repair_prompt import (
     build_repair_packet,
     repair_packet_json,
@@ -361,6 +370,128 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
         print(f"qa-z repair-prompt: source not found: {exc}")
         return 4
+
+
+def handle_repair_session_start(args: argparse.Namespace) -> int:
+    """Create a repair session from baseline run evidence."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "repair-session start")
+    if config is None:
+        return 2
+
+    try:
+        result = create_repair_session(
+            root=root,
+            config=config,
+            baseline_run=args.baseline_run,
+            session_id=args.session_id,
+        )
+        if args.json:
+            print(session_status_json(result.session), end="")
+        else:
+            print(render_session_status(result.session))
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session start: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z repair-session start: source not found: {exc}")
+        return 4
+
+
+def handle_repair_session_status(args: argparse.Namespace) -> int:
+    """Print repair-session status."""
+    root = Path(args.path).expanduser().resolve()
+
+    try:
+        session = load_repair_session(root, args.session)
+        if args.json:
+            print(session_status_json(session), end="")
+        else:
+            print(render_session_status(session))
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session status: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z repair-session status: source not found: {exc}")
+        return 4
+
+
+def handle_repair_session_verify(args: argparse.Namespace) -> int:
+    """Verify a repair session candidate run."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "repair-session verify")
+    if config is None:
+        return 2
+
+    try:
+        result = verify_repair_session(
+            root=root,
+            config=config,
+            session_ref=args.session,
+            candidate_run=args.candidate_run,
+        )
+        summary_json_text = result.summary_path.read_text(encoding="utf-8")
+        if args.json:
+            print(summary_json_text, end="")
+        else:
+            print(result.outcome_path.read_text(encoding="utf-8"), end="")
+        return repair_session_exit_code(str(result.comparison.verdict))
+    except ArtifactLoadError as exc:
+        print(f"qa-z repair-session verify: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z repair-session verify: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z repair-session verify: configuration error: {exc}")
+        return 2
+
+
+def handle_github_summary(args: argparse.Namespace) -> int:
+    """Render compact Markdown or JSON for GitHub Actions summaries."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    config = load_cli_config(root, args, "github-summary")
+    if config is None:
+        return 2
+
+    try:
+        if args.json:
+            print(
+                github_summary_json(
+                    root=root,
+                    config=config,
+                    from_run=args.from_run,
+                    from_verify=args.from_verify,
+                    from_session=args.from_session,
+                ),
+                end="",
+            )
+        else:
+            print(
+                render_github_summary(
+                    root=root,
+                    config=config,
+                    from_run=args.from_run,
+                    from_verify=args.from_verify,
+                    from_session=args.from_session,
+                ),
+                end="",
+            )
+        return 0
+    except ArtifactLoadError as exc:
+        print(f"qa-z github-summary: artifact error: {exc}")
+        return 2
+    except (ArtifactSourceNotFound, FileNotFoundError) as exc:
+        print(f"qa-z github-summary: source not found: {exc}")
+        return 4
+    except ValueError as exc:
+        print(f"qa-z github-summary: configuration error: {exc}")
+        return 2
 
 
 def create_verify_candidate_run(
@@ -955,6 +1086,126 @@ def build_parser() -> argparse.ArgumentParser:
         help="stdout renderer for Markdown output; artifacts always include all adapters",
     )
     repair_parser.set_defaults(handler=handle_repair_prompt)
+
+    repair_session_parser = subparsers.add_parser(
+        "repair-session",
+        help="create and verify local repair-session artifacts",
+    )
+    repair_session_subparsers = repair_session_parser.add_subparsers(
+        dest="repair_session_command"
+    )
+
+    repair_session_start = repair_session_subparsers.add_parser(
+        "start",
+        help="create a repair session from a baseline run",
+    )
+    repair_session_start.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains qa-z.yaml and run artifacts",
+    )
+    repair_session_start.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    repair_session_start.add_argument(
+        "--baseline-run",
+        required=True,
+        help="baseline run root, fast directory, summary.json, or latest",
+    )
+    repair_session_start.add_argument(
+        "--session-id",
+        help="optional stable id for the session directory",
+    )
+    repair_session_start.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable repair-session manifest to stdout",
+    )
+    repair_session_start.set_defaults(handler=handle_repair_session_start)
+
+    repair_session_status = repair_session_subparsers.add_parser(
+        "status",
+        help="print a repair-session manifest",
+    )
+    repair_session_status.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z session artifacts",
+    )
+    repair_session_status.add_argument(
+        "--session",
+        required=True,
+        help="session id, directory, or session.json path",
+    )
+    repair_session_status.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable repair-session manifest to stdout",
+    )
+    repair_session_status.set_defaults(handler=handle_repair_session_status)
+
+    repair_session_verify = repair_session_subparsers.add_parser(
+        "verify",
+        help="verify a candidate run for a repair session",
+    )
+    repair_session_verify.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains qa-z.yaml and run artifacts",
+    )
+    repair_session_verify.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    repair_session_verify.add_argument(
+        "--session",
+        required=True,
+        help="session id, directory, or session.json path",
+    )
+    repair_session_verify.add_argument(
+        "--candidate-run",
+        required=True,
+        help="candidate run root, fast directory, summary.json, or latest",
+    )
+    repair_session_verify.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable repair-session summary to stdout",
+    )
+    repair_session_verify.set_defaults(handler=handle_repair_session_verify)
+
+    github_summary_parser = subparsers.add_parser(
+        "github-summary",
+        help="render local QA-Z evidence for GitHub Actions summaries",
+    )
+    github_summary_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    github_summary_parser.add_argument(
+        "--config",
+        help="optional explicit path to a qa-z config file",
+    )
+    github_summary_parser.add_argument(
+        "--from-run",
+        help="run root, fast directory, summary.json, or latest",
+    )
+    github_summary_parser.add_argument(
+        "--from-verify",
+        help="verification summary.json path",
+    )
+    github_summary_parser.add_argument(
+        "--from-session",
+        help="repair session id, directory, or summary.json path",
+    )
+    github_summary_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable publish summary to stdout",
+    )
+    github_summary_parser.set_defaults(handler=handle_github_summary)
 
     verify_parser = subparsers.add_parser(
         "verify",

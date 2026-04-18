@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from qa_z.diffing.models import ChangedFile
 from qa_z.reporters.repair_prompt import FailureContext, RepairPacket
 from qa_z.runners.models import CheckResult, RunSummary, SelectionSummary
@@ -194,3 +196,12 @@ def test_repair_packet_schema_v1_required_fields_are_stable() -> None:
         "stderr_tail",
         "candidate_files",
     } <= payload["failures"][0].keys()
+
+
+def test_artifact_schema_documents_repair_session_and_publish_summary() -> None:
+    schema = Path("docs/artifact-schema-v1.md").read_text(encoding="utf-8")
+
+    assert "qa_z.repair_session" in schema
+    assert "qa_z.repair_session_summary" in schema
+    assert "qa_z.verification_publish_summary" in schema
+    assert "github-summary" in schema
