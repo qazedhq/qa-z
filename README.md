@@ -15,7 +15,7 @@ Today, QA-Z can:
 - generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
 - compare baseline and candidate runs with `qa-z verify`
 - write SARIF 2.1.0 from normalized deep findings
-- run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior`n- inspect local QA-Z artifacts into a self-improvement backlog and selected next-task plan
+- run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior`n- inspect local QA-Z artifacts into a self-improvement backlog and selected next-task plan`n- run local autonomy planning loops that repeatedly inspect, select, write loop outcomes, and track runtime budgets
 
 QA-Z does not yet implement:
 
@@ -62,7 +62,7 @@ The current implementation includes:
 - a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
 - normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
 - a working `qa-z verify` comparison command for baseline and candidate run evidence
-- a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures`n- working `qa-z self-inspect`, `qa-z backlog`, and `qa-z select-next` commands that turn existing artifacts into a local improvement backlog and loop plan
+- a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures`n- working `qa-z self-inspect`, `qa-z backlog`, and `qa-z select-next` commands that turn existing artifacts into a local improvement backlog and loop plan`n- a working `qa-z autonomy` command that records per-loop outcomes, latest status, and runtime-budget progress without editing code
 - Codex and Claude integration templates
 - workflow examples for local deterministic QA gates
 
@@ -195,6 +195,16 @@ python -m qa_z select-next --count 3 --json
 ```
 
 `self-inspect` reads existing local artifacts such as benchmark and verification summaries, writes `.qa-z/loops/latest/self_inspect.json`, and updates `.qa-z/improvement/backlog.json`. `select-next` writes `.qa-z/loops/latest/selected_tasks.json`, `.qa-z/loops/latest/loop_plan.md`, and appends `.qa-z/loops/history.jsonl`. These commands do not call live models and do not edit source code.
+Run a local planning loop and inspect the latest status:
+
+```bash
+python -m qa_z autonomy --loops 1
+python -m qa_z autonomy --loops 1 --min-runtime-hours 4 --min-loop-seconds 60 --json
+python -m qa_z autonomy status
+python -m qa_z autonomy status --json
+```
+
+`autonomy` runs the local `self-inspect` and `select-next` flow, writes per-loop artifacts under `.qa-z/loops/<loop-id>/`, mirrors the latest outcome under `.qa-z/loops/latest/`, and records runtime progress in `autonomy_summary.json` and `outcome.json`. It prepares local next actions only; it does not call live models, start remote work, or edit source code.
 
 Run the local verification suite:
 
@@ -246,7 +256,7 @@ The long-term design is for QA-Z to combine:
 - explicit QA contracts
 - deterministic fast and deep runner outputs
 - repair handoffs that preserve exact evidence and validation commands
-- verification comparisons after a repair attempt`n- artifact-derived self-improvement backlog entries and selected next-task loop plans
+- verification comparisons after a repair attempt`n- artifact-derived self-improvement backlog entries, selected next-task loop plans, and autonomy loop outcomes
 
 See `docs/artifact-schema-v1.md` for the required `summary.json`, repair packet, handoff, SARIF, and verification artifact fields.
 

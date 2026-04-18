@@ -141,6 +141,7 @@ def test_parser_registers_core_subcommands() -> None:
         "self-inspect",
         "select-next",
         "backlog",
+        "autonomy",
     } <= get_subcommands(parser)
 
 

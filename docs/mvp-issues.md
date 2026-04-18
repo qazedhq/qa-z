@@ -21,7 +21,7 @@ Included:
 - run-aware review packets
 - repair packet and normalized handoff artifacts
 - post-repair verification comparison
-- seeded benchmark corpus for fast, deep, handoff, and verification behavior`n- artifact-driven self-inspection, improvement backlog, and selected next-task planning
+- seeded benchmark corpus for fast, deep, handoff, and verification behavior`n- artifact-driven self-inspection, improvement backlog, selected next-task planning, and local autonomy loop artifacts
 - tests and local CI examples
 
 Excluded until later milestones:
@@ -140,3 +140,8 @@ Excluded until later milestones:
 - Goal: turn existing QA-Z artifacts back into a prioritized improvement queue for future local improvement loops.
 - Acceptance: `qa-z self-inspect` writes a self-inspection report and backlog, `qa-z select-next` writes selected-task and loop-plan artifacts, and `qa-z backlog --json` prints the current queue.
 - Status: artifact-driven self-inspection, backlog scoring, task selection, and JSONL loop memory are implemented without live model execution, remote orchestration, or autonomous code editing.
+## Issue 15: Autonomy planning loops
+
+- Goal: make QA-Z repeat the local self-inspection and task-selection workflow while preserving loop outcomes, status, and runtime-budget evidence.
+- Acceptance: `qa-z autonomy` writes per-loop outcome artifacts, mirrors latest loop state, records runtime progress, and `qa-z autonomy status --json` exposes the latest planning state.
+- Status: local artifact-only autonomy planning loops are implemented without live model execution, remote orchestration, external repair dispatch, or autonomous code editing.

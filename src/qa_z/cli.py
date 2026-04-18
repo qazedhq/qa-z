@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .adapters.claude import render_claude_handoff
+from .autonomy import (
+    load_autonomy_status,
+    render_autonomy_status,
+    render_autonomy_summary,
+    run_autonomy,
+)
 from .benchmark import (
     DEFAULT_FIXTURES_DIR,
     DEFAULT_RESULTS_DIR,
@@ -610,6 +616,36 @@ def render_select_next_stdout(selected: dict[str, Any], paths: Any, root: Path) 
     return "\n".join(lines)
 
 
+def handle_autonomy(args: argparse.Namespace) -> int:
+    """Run deterministic self-improvement planning loops."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    min_runtime_seconds = float(args.min_runtime_hours) * 3600
+    summary = run_autonomy(
+        root=root,
+        loops=args.loops,
+        count=args.count,
+        min_runtime_seconds=min_runtime_seconds,
+        min_loop_seconds=args.min_loop_seconds,
+    )
+    if args.json:
+        print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_autonomy_summary(summary, root))
+    return 0
+
+
+def handle_autonomy_status(args: argparse.Namespace) -> int:
+    """Print the latest autonomy loop status."""
+    root = Path(args.path).expanduser().resolve()
+    status = load_autonomy_status(root)
+    if args.json:
+        print(json.dumps(status, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_autonomy_status(status))
+    return 0
+
+
 def resolve_cli_path(root: Path, value: str) -> Path:
     """Resolve a CLI path relative to the project root when it is not absolute."""
     path = Path(value).expanduser()
@@ -1051,6 +1087,61 @@ def build_parser() -> argparse.ArgumentParser:
         help="print the machine-readable selected-task artifact to stdout",
     )
     select_next_parser.set_defaults(handler=handle_select_next)
+    autonomy_parser = subparsers.add_parser(
+        "autonomy",
+        help="run deterministic self-improvement planning loops",
+    )
+    autonomy_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    autonomy_parser.add_argument(
+        "--loops",
+        type=int,
+        default=1,
+        help="minimum number of planning loops to run",
+    )
+    autonomy_parser.add_argument(
+        "--count",
+        type=int,
+        default=3,
+        help="number of backlog items to select per loop, clamped by select-next",
+    )
+    autonomy_parser.add_argument(
+        "--min-runtime-hours",
+        type=float,
+        default=0.0,
+        help="minimum wall-clock runtime budget in hours before stopping",
+    )
+    autonomy_parser.add_argument(
+        "--min-loop-seconds",
+        type=float,
+        default=0.0,
+        help="minimum elapsed seconds to account for each loop",
+    )
+    autonomy_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable autonomy summary to stdout",
+    )
+    autonomy_subparsers = autonomy_parser.add_subparsers(dest="autonomy_command")
+    autonomy_status_parser = autonomy_subparsers.add_parser(
+        "status",
+        help="print the latest autonomy loop status",
+    )
+    autonomy_status_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    autonomy_status_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable autonomy status to stdout",
+    )
+    autonomy_status_parser.set_defaults(handler=handle_autonomy_status)
+    autonomy_parser.set_defaults(handler=handle_autonomy)
 
     return parser
 

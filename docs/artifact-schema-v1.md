@@ -313,3 +313,44 @@ Backlog priority is deterministic. It combines impact, likelihood, confidence, r
 `loop_plan.md` is a human-readable local plan derived from selected tasks. `history.jsonl` appends one `qa_z.loop_history_entry` JSON object per selection with selected task ids, selected categories, evidence paths, and pointers to the latest selected-task and loop-plan artifacts.
 
 Self-improvement artifacts prepare local deterministic work. They do not call live model APIs, invoke remote orchestration, or edit source code.
+## Autonomy Loop Artifacts
+
+`qa-z autonomy` writes one directory per local planning loop and mirrors the latest loop:
+
+```text
+.qa-z/loops/<loop-id>/self_inspect.json
+.qa-z/loops/<loop-id>/selected_tasks.json
+.qa-z/loops/<loop-id>/loop_plan.md
+.qa-z/loops/<loop-id>/outcome.json
+.qa-z/loops/latest/autonomy_summary.json
+.qa-z/loops/latest/outcome.json
+```
+
+`autonomy_summary.json` has:
+
+- `kind`: `qa_z.autonomy_summary`
+- `schema_version`: integer schema marker, currently `1`
+- `generated_at`, `run_started_at`, and `finished_at`
+- `loops_requested` and `loops_completed`
+- `latest_loop_id`
+- `runtime_target_seconds`, `runtime_elapsed_seconds`, `runtime_remaining_seconds`, and `runtime_budget_met`
+- `min_loop_seconds`
+- `stop_reason`
+- `outcomes`: embedded per-loop outcome objects
+
+`outcome.json` has:
+
+- `kind`: `qa_z.autonomy_outcome`
+- `schema_version`: integer schema marker, currently `1`
+- `loop_id`
+- `generated_at`
+- `state`: `completed` or `blocked_no_candidates`
+- `state_transitions`
+- `selected_task_ids`
+- `evidence_used`
+- `actions_prepared`: deterministic local action packets with type, task id, next recommendation, and commands
+- `next_recommendations`
+- `artifacts`: paths for loop-local self-inspection, selected tasks, loop plan, and outcome
+- runtime fields after summary enrichment: `loop_elapsed_seconds`, `cumulative_elapsed_seconds`, `runtime_target_seconds`, `runtime_remaining_seconds`, `min_loop_seconds`, and `runtime_budget_met`
+
+`qa-z autonomy status` reports a compact `qa_z.autonomy_status` view derived from the latest summary, latest outcome, latest selected tasks, and current backlog. Autonomy loops are local planning artifacts only. They do not start live executors, call model APIs, mutate source files, or perform remote orchestration.
