@@ -136,16 +136,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "338 passed" in commit_plan
-    assert "338 passed" in release_plan
-    assert "`python -m pytest`: 338 passed" in release_notes
-    assert "`python -m pytest`: passed, `338 passed" in release_pr
-    assert "`python -m pytest`: passed, `338 passed`" in github_release
-    assert "337 passed" not in commit_plan
-    assert "337 passed" not in release_plan
-    assert "337 passed" not in release_notes
-    assert "337 passed" not in release_pr
-    assert "337 passed" not in github_release
+    assert "339 passed" in commit_plan
+    assert "339 passed" in release_plan
+    assert "`python -m pytest`: 339 passed" in release_notes
+    assert "`python -m pytest`: passed, `339 passed" in release_pr
+    assert "`python -m pytest`: passed, `339 passed`" in github_release
+    assert "338 passed" not in commit_plan
+    assert "338 passed" not in release_plan
+    assert "338 passed" not in release_notes
+    assert "338 passed" not in release_pr
+    assert "338 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
