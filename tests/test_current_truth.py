@@ -123,6 +123,9 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     release_pr = (ROOT / "docs" / "releases" / "v0.9.8-alpha-pr.md").read_text(
         encoding="utf-8"
     )
+    github_release = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-github-release.md"
+    ).read_text(encoding="utf-8")
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )
@@ -137,30 +140,38 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "338 passed" in release_plan
     assert "`python -m pytest`: 338 passed" in release_notes
     assert "`python -m pytest`: passed, `338 passed" in release_pr
+    assert "`python -m pytest`: passed, `338 passed`" in github_release
     assert "337 passed" not in commit_plan
     assert "337 passed" not in release_plan
     assert "337 passed" not in release_notes
     assert "337 passed" not in release_pr
+    assert "337 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
+    assert "python -m qa_z benchmark --json" in github_release
     assert "50/50 fixtures" in commit_plan
     assert "50/50 fixtures, overall_rate 1.0" in release_pr
+    assert "50/50 fixtures, overall_rate 1.0" in github_release
     assert "benchmark summary `snapshot` field" in commit_plan
     assert "python -m ruff check ." in commit_plan
     assert "`python -m ruff check .`: passed" in release_notes
     assert "`python -m ruff check .`: passed" in release_pr
+    assert "`python -m ruff check .`: passed" in github_release
     assert "python -m ruff format --check ." in commit_plan
     assert "`python -m ruff format --check .`: 126 files already formatted" in (
         release_notes
     )
     assert "`python -m ruff format --check .`: passed" in release_pr
+    assert "`python -m ruff format --check .`: passed" in github_release
     assert "126 files already formatted" in commit_plan
     assert "python -m mypy src tests" in commit_plan
     assert "`python -m mypy src tests`: 82 source files" in release_notes
     assert "`python -m mypy src tests`: passed" in release_pr
+    assert "`python -m mypy src tests`: passed" in github_release
     assert "82 source files" in commit_plan
     assert "CLI smoke checks: 17 help surfaces passed" in release_notes
     assert "CLI smoke checks: passed for 17 help surfaces" in release_pr
+    assert "CLI smoke checks: passed for 17 help surfaces" in github_release
     assert "Generated Output Policy" in commit_plan
     assert "split the worktree by this commit plan" in commit_plan
     assert "action basis:" in commit_plan
@@ -171,16 +182,33 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "benchmarks/results-*" in commit_plan
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_plan
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_notes
+    assert "docs/releases/v0.9.8-alpha-github-release.md" in release_plan
+    assert "docs/releases/v0.9.8-alpha-github-release.md" in release_notes
     assert "# Release QA-Z v0.9.8-alpha" in release_pr
+    assert "# QA-Z v0.9.8-alpha" in github_release
     assert "No live Codex or Claude execution." in release_pr
+    assert "No live Codex or Claude execution." in github_release
     assert "No autonomous code editing." in release_pr
+    assert "No autonomous code editing." in github_release
     assert "No remote orchestration" in release_pr
+    assert "No remote orchestration" in github_release
     assert "GitHub bot comments" in release_pr
+    assert "GitHub bot comments" in github_release
     assert "No LLM-only judgment" in release_pr
+    assert "No LLM-only judgment" in github_release
     assert "Generated Artifact Policy" in release_pr
+    assert "Generated Artifact Policy" in github_release
     assert "Benchmark Snapshot" in release_pr
+    assert "Benchmark corpus" in github_release
+    assert "Self-inspection" in github_release
+    assert "Executor bridge packaging" in github_release
+    assert "live-free executor dry-run" in github_release
     assert "no configured `origin` remote" in release_plan
     assert "no configured `origin` remote" in release_pr
+    assert "no configured `origin` remote" in github_release
+    assert "does not expose a `JustTyping` or `qa-z` repository target" in (
+        github_release
+    )
     assert "worktree is not releaseable as-is" not in release_plan
     assert "31 tracked modified files" not in release_plan
     assert "- [x] **Step 1: Run full deterministic validation**" in release_plan

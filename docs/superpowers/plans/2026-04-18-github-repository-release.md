@@ -433,6 +433,7 @@ PR body must include:
 Local draft prepared while publish is blocked:
 
 - `docs/releases/v0.9.8-alpha-pr.md`
+- `docs/releases/v0.9.8-alpha-github-release.md`
 
 - [ ] **Step 3: Merge after CI passes**
 
@@ -463,6 +464,10 @@ Use the PR validation evidence and keep the wording alpha-honest:
 - executor bridge and result ingest
 - live-free safety dry-run
 - explicit non-goals
+
+Local draft prepared while publish is blocked:
+
+- `docs/releases/v0.9.8-alpha-github-release.md`
 
 ## Task 7: Post-Release Follow-Up
 
