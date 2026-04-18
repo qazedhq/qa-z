@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a QA-Z improvement with explicit gates and boundaries.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What quality-control problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed contract
+      description: What inputs, outputs, artifacts, or command behavior should be explicit?
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Deterministic gates
+      description: Which deterministic gates, checks, fixtures, or artifact validations should prove the feature?
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should stay out of scope?
+      placeholder: No live Codex or Claude execution, no hidden network calls, no LLM-only pass/fail judgment.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundary checks
+      options:
+        - label: This request preserves deterministic QA evidence over LLM-only judgment.
+          required: true
+        - label: This request keeps agent-specific logic out of the core engine unless it belongs in an adapter.
+          required: true

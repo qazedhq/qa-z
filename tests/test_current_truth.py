@@ -161,6 +161,47 @@ def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:
         assert "intentional frozen evidence" in text
 
 
+def test_public_github_readiness_files_are_release_aligned() -> None:
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    pr_template = (ROOT / ".github" / "pull_request_template.md").read_text(
+        encoding="utf-8"
+    )
+    bug_template = (ROOT / ".github" / "ISSUE_TEMPLATE" / "bug_report.yml").read_text(
+        encoding="utf-8"
+    )
+    feature_template = (
+        ROOT / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml"
+    ).read_text(encoding="utf-8")
+
+    for text in (contributing, pr_template):
+        assert "python -m ruff format --check ." in text
+        assert "python -m ruff check ." in text
+        assert "python -m mypy src tests" in text
+        assert "python -m pytest" in text
+        assert "python -m qa_z fast --selection smart --json" in text
+        assert "python -m qa_z deep --selection smart --json" in text
+        assert "python -m qa_z benchmark --json" in text
+        assert "benchmarks/results/summary.json" in text
+        assert "benchmarks/fixtures/**/repo/.qa-z/**" in text
+
+    for text in (
+        contributing,
+        security,
+        pr_template,
+        bug_template,
+        feature_template,
+    ):
+        lowered = text.lower()
+        assert "live codex" in lowered
+        assert "claude" in lowered
+        assert "llm-only" in lowered
+
+    assert "v0.9.8-alpha" in security
+    assert "deterministic evidence" in bug_template
+    assert "deterministic gates" in feature_template
+
+
 def test_benchmark_summary_snapshot_is_documented_in_artifact_schema() -> None:
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
 
