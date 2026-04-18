@@ -288,6 +288,30 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     )
     assert "git tag -a v0.9.8-alpha -m" in release_handoff
     assert "python -m qa_z benchmark --json" in release_handoff
+    assert (
+        "Package-build validation commit: "
+        "`f009d14 chore: add release build validation tooling`"
+    ) in release_handoff
+    assert (
+        "git clone --branch codex/qa-z-bootstrap "
+        "dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle"
+    ) in release_handoff
+    for artifact, sha256 in (
+        (
+            "dist/qa_z-0.9.8a0.tar.gz",
+            "4C313F74B942C1AA1B0CB68419F4504D435BE2C2729D38998B2192E697503217",
+        ),
+        (
+            "dist/qa_z-0.9.8a0-py3-none-any.whl",
+            "5B96C1B5B2A346088E945D25ABAF1AA07A7EE70CE3E10F663ABACCAC7A51806E",
+        ),
+        (
+            "dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle",
+            "1E5D3FED1621B46361BDC1C63EB3A60131BDCC2BCF4C39C49668DEE2D68BB933",
+        ),
+    ):
+        assert artifact in release_handoff
+        assert sha256 in release_handoff
 
 
 def test_dev_extra_includes_release_build_tooling() -> None:
