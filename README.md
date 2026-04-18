@@ -15,7 +15,7 @@ Today, QA-Z can:
 - generate repair prompts plus normalized handoff artifacts and Codex/Claude Markdown renderers from local evidence
 - compare baseline and candidate runs with `qa-z verify`
 - write SARIF 2.1.0 from normalized deep findings
-- run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior
+- run a seeded local benchmark corpus for fast, deep, handoff, and verification behavior`n- inspect local QA-Z artifacts into a self-improvement backlog and selected next-task plan
 
 QA-Z does not yet implement:
 
@@ -62,7 +62,7 @@ The current implementation includes:
 - a working `qa-z repair-prompt` generator for failed fast checks and blocking deep findings
 - normalized `handoff.json`, `codex.md`, and `claude.md` repair artifacts
 - a working `qa-z verify` comparison command for baseline and candidate run evidence
-- a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures
+- a working `qa-z benchmark` runner with seeded Python fast, TypeScript fast, Semgrep deep policy, repair handoff, and verification fixtures`n- working `qa-z self-inspect`, `qa-z backlog`, and `qa-z select-next` commands that turn existing artifacts into a local improvement backlog and loop plan
 - Codex and Claude integration templates
 - workflow examples for local deterministic QA gates
 
@@ -71,7 +71,7 @@ Roadmap work that is intentionally not part of this foundation slice:
 - additional deep engines such as CodeQL, Trivy, property checks, mutation checks, and smoke E2E
 - live Codex or Claude runtime calls
 - remote comments, labels, or hosted status mutations
-- autonomous planning or external execution loops
+- autonomous code editing or external execution loops
 
 ## Command Surface
 
@@ -184,6 +184,17 @@ python -m qa_z benchmark --fixture ts_type_error
 ```
 
 `benchmark` copies seeded fixtures into `benchmarks/results/work/`, runs deterministic QA-Z flows, compares observed artifacts with `expected.json`, and writes `benchmarks/results/summary.json` plus `benchmarks/results/report.md`.
+Inspect local QA-Z artifacts and prepare the next improvement task:
+
+```bash
+python -m qa_z self-inspect
+python -m qa_z backlog
+python -m qa_z backlog --json
+python -m qa_z select-next --count 1
+python -m qa_z select-next --count 3 --json
+```
+
+`self-inspect` reads existing local artifacts such as benchmark and verification summaries, writes `.qa-z/loops/latest/self_inspect.json`, and updates `.qa-z/improvement/backlog.json`. `select-next` writes `.qa-z/loops/latest/selected_tasks.json`, `.qa-z/loops/latest/loop_plan.md`, and appends `.qa-z/loops/history.jsonl`. These commands do not call live models and do not edit source code.
 
 Run the local verification suite:
 
@@ -235,7 +246,7 @@ The long-term design is for QA-Z to combine:
 - explicit QA contracts
 - deterministic fast and deep runner outputs
 - repair handoffs that preserve exact evidence and validation commands
-- verification comparisons after a repair attempt
+- verification comparisons after a repair attempt`n- artifact-derived self-improvement backlog entries and selected next-task loop plans
 
 See `docs/artifact-schema-v1.md` for the required `summary.json`, repair packet, handoff, SARIF, and verification artifact fields.
 

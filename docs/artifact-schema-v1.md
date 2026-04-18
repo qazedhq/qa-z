@@ -257,3 +257,59 @@ Required `summary.json` fields:
 - `fixtures`: per-fixture results with `name`, `passed`, `failures`, `categories`, `actual`, and `artifacts`
 
 Benchmark artifacts are deterministic local evidence. `benchmarks/results/work/` is scratch output and should not be committed. `summary.json` and `report.md` are generated outputs; commit them only as intentional frozen evidence with surrounding context.
+## Self-Inspection And Backlog Artifacts
+
+`qa-z self-inspect` writes:
+
+```text
+.qa-z/loops/latest/self_inspect.json
+.qa-z/improvement/backlog.json
+```
+
+`self_inspect.json` has:
+
+- `kind`: `qa_z.self_inspection`
+- `schema_version`: integer schema marker, currently `1`
+- `generated_at`
+- `loop_id`
+- `artifact_only`: always `true` for this local planning surface
+- `candidates_total`
+- `candidates`: deterministic improvement candidates with ids, categories, recommendations, priority scores, signals, and evidence
+- `evidence_sources`: compact source/path pairs used during inspection
+- `backlog_path`
+- `summary.open_backlog_items`
+
+`backlog.json` has:
+
+- `kind`: `qa_z.improvement_backlog`
+- `schema_version`: integer schema marker, currently `1`
+- `generated_at`
+- `items`: backlog entries with stable ids, status, first/last seen timestamps, recurrence counts, priority scores, recommendations, signals, and evidence
+- `summary`: total, open, and closed item counts
+
+Backlog priority is deterministic. It combines impact, likelihood, confidence, repair cost, recurrence, and grounded artifact bonuses such as benchmark failures or verification regressions. Missing optional artifacts do not create fabricated evidence.
+
+## Selected Task And Loop Memory Artifacts
+
+`qa-z select-next` writes:
+
+```text
+.qa-z/loops/latest/selected_tasks.json
+.qa-z/loops/latest/loop_plan.md
+.qa-z/loops/history.jsonl
+```
+
+`selected_tasks.json` has:
+
+- `kind`: `qa_z.selected_tasks`
+- `schema_version`: integer schema marker, currently `1`
+- `generated_at`
+- `loop_id`
+- `selection_limit`: requested count clamped from `1` through `3`
+- `selected_count`
+- `selected_tasks`: selected backlog entries with rank, category, recommendation, priority score, evidence, action hint, validation command, and compact evidence
+- `artifact_only`: always `true`
+
+`loop_plan.md` is a human-readable local plan derived from selected tasks. `history.jsonl` appends one `qa_z.loop_history_entry` JSON object per selection with selected task ids, selected categories, evidence paths, and pointers to the latest selected-task and loop-plan artifacts.
+
+Self-improvement artifacts prepare local deterministic work. They do not call live model APIs, invoke remote orchestration, or edit source code.

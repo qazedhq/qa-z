@@ -138,6 +138,9 @@ def test_parser_registers_core_subcommands() -> None:
         "repair-prompt",
         "verify",
         "benchmark",
+        "self-inspect",
+        "select-next",
+        "backlog",
     } <= get_subcommands(parser)
 
 

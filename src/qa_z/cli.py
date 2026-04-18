@@ -34,6 +34,13 @@ from .config import (
     load_config,
 )
 from .planner.contracts import plan_contract
+from .self_improvement import (
+    compact_backlog_evidence_summary,
+    load_backlog,
+    open_backlog_items,
+    run_self_inspection,
+    select_next_tasks,
+)
 from .repair_handoff import (
     build_repair_handoff,
     repair_handoff_json,
@@ -522,6 +529,87 @@ def handle_benchmark(args: argparse.Namespace) -> int:
     return 0 if summary["fixtures_failed"] == 0 else 1
 
 
+def handle_self_inspect(args: argparse.Namespace) -> int:
+    """Inspect local QA-Z artifacts and update the improvement backlog."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    paths = run_self_inspection(root=root)
+    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_self_inspect_stdout(report, paths, root))
+    return 0
+
+
+def handle_backlog(args: argparse.Namespace) -> int:
+    """Print the current self-improvement backlog."""
+    root = Path(args.path).expanduser().resolve()
+    backlog = load_backlog(root)
+    if args.json:
+        print(json.dumps(backlog, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_backlog_stdout(backlog))
+    return 0
+
+
+def handle_select_next(args: argparse.Namespace) -> int:
+    """Select the next one to three self-improvement backlog tasks."""
+    root = Path(args.path).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    paths = select_next_tasks(root=root, count=args.count)
+    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    if args.json:
+        print(json.dumps(selected, indent=2, sort_keys=True), end="\n")
+    else:
+        print(render_select_next_stdout(selected, paths, root))
+    return 0
+
+
+def render_self_inspect_stdout(report: dict[str, Any], paths: Any, root: Path) -> str:
+    """Render human output for qa-z self-inspect."""
+    return "\n".join(
+        [
+            f"Self inspection: {report.get('candidates_total', 0)} candidate(s)",
+            f"Report: {format_relative_path(paths.self_inspection_path, root)}",
+            f"Backlog: {format_relative_path(paths.backlog_path, root)}",
+            "No code was edited; this command only inspected local artifacts.",
+        ]
+    )
+
+
+def render_backlog_stdout(backlog: dict[str, Any]) -> str:
+    """Render human output for qa-z backlog."""
+    open_items = open_backlog_items(backlog)
+    lines = [f"Open backlog items: {len(open_items)}"]
+    for item in open_items[:10]:
+        lines.append(
+            f"- {item.get('id')} [{item.get('category')}] "
+            f"score={item.get('priority_score')}: {item.get('title')}"
+        )
+        lines.append(f"  Evidence: {compact_backlog_evidence_summary(item)}")
+    return "\n".join(lines)
+
+
+def render_select_next_stdout(selected: dict[str, Any], paths: Any, root: Path) -> str:
+    """Render human output for qa-z select-next."""
+    lines = [
+        f"Selected tasks: {selected.get('selected_count', 0)}",
+        f"Selected: {format_relative_path(paths.selected_tasks_path, root)}",
+        f"Loop plan: {format_relative_path(paths.loop_plan_path, root)}",
+        f"History: {format_relative_path(paths.history_path, root)}",
+    ]
+    for task in selected.get("selected_tasks", []):
+        lines.append(
+            f"- {task.get('id')} [{task.get('category')}] "
+            f"score={task.get('priority_score')}: {task.get('title')}"
+        )
+        lines.append(f"  Action: {task.get('action_hint')}")
+        lines.append(f"  Validation: {task.get('validation_command')}")
+        lines.append(f"  Evidence: {task.get('compact_evidence')}")
+    return "\n".join(lines)
+
+
 def resolve_cli_path(root: Path, value: str) -> Path:
     """Resolve a CLI path relative to the project root when it is not absolute."""
     path = Path(value).expanduser()
@@ -910,6 +998,59 @@ def build_parser() -> argparse.ArgumentParser:
         help="print the machine-readable benchmark summary to stdout",
     )
     benchmark_parser.set_defaults(handler=handle_benchmark)
+    self_inspect_parser = subparsers.add_parser(
+        "self-inspect",
+        help="inspect local QA-Z artifacts and update the improvement backlog",
+    )
+    self_inspect_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    self_inspect_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable self-inspection report to stdout",
+    )
+    self_inspect_parser.set_defaults(handler=handle_self_inspect)
+
+    backlog_parser = subparsers.add_parser(
+        "backlog",
+        help="print the artifact-derived improvement backlog",
+    )
+    backlog_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    backlog_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable backlog to stdout",
+    )
+    backlog_parser.set_defaults(handler=handle_backlog)
+
+    select_next_parser = subparsers.add_parser(
+        "select-next",
+        help="select the next artifact-derived improvement tasks",
+    )
+    select_next_parser.add_argument(
+        "--path",
+        default=".",
+        help="repository root that contains QA-Z artifacts",
+    )
+    select_next_parser.add_argument(
+        "--count",
+        type=int,
+        default=1,
+        help="number of open backlog items to select, clamped to 1 through 3",
+    )
+    select_next_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable selected-task artifact to stdout",
+    )
+    select_next_parser.set_defaults(handler=handle_select_next)
 
     return parser
 

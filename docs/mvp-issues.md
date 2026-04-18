@@ -21,7 +21,7 @@ Included:
 - run-aware review packets
 - repair packet and normalized handoff artifacts
 - post-repair verification comparison
-- seeded benchmark corpus for fast, deep, handoff, and verification behavior
+- seeded benchmark corpus for fast, deep, handoff, and verification behavior`n- artifact-driven self-inspection, improvement backlog, and selected next-task planning
 - tests and local CI examples
 
 Excluded until later milestones:
@@ -30,7 +30,7 @@ Excluded until later milestones:
 - remote orchestration or automatic code repair
 - GitHub API mutation surfaces
 - deep engines beyond Semgrep
-- autonomous planning loops
+- autonomous code editing loops
 
 ## Alpha Issue Queue
 
@@ -135,3 +135,8 @@ Excluded until later milestones:
 - Goal: measure QA-Z behavior against deterministic fixture repositories.
 - Acceptance: `qa-z benchmark` discovers fixtures, runs selected local QA-Z flows, compares observed artifacts with `expected.json`, and writes summary/report artifacts.
 - Status: seeded corpus covers Python fast failures, TypeScript fast failures, Semgrep deep policy cases, repair handoff generation, and post-repair verification comparisons.
+## Issue 14: Self-improvement backlog
+
+- Goal: turn existing QA-Z artifacts back into a prioritized improvement queue for future local improvement loops.
+- Acceptance: `qa-z self-inspect` writes a self-inspection report and backlog, `qa-z select-next` writes selected-task and loop-plan artifacts, and `qa-z backlog --json` prints the current queue.
+- Status: artifact-driven self-inspection, backlog scoring, task selection, and JSONL loop memory are implemented without live model execution, remote orchestration, or autonomous code editing.
