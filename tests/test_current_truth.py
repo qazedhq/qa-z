@@ -220,9 +220,9 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "no configured `origin` remote" in release_plan
     assert "no configured `origin` remote" in release_pr
     assert "no configured `origin` remote" in github_release
-    assert "does not expose a `JustTyping` or `qa-z` repository target" in (
-        github_release
-    )
+    assert "qazedhq/qa-z" in release_pr
+    assert "qazedhq/qa-z" in github_release
+    assert "pending final create-screen availability confirmation" in github_release
     assert "worktree is not releaseable as-is" not in release_plan
     assert "31 tracked modified files" not in release_plan
     assert "- [x] **Step 1: Run full deterministic validation**" in release_plan
@@ -284,20 +284,21 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_plan
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_notes
     assert "no configured `origin` remote" in release_handoff
-    assert "does not expose a `JustTyping` or `qa-z` repository target" in (
-        release_handoff
-    )
+    assert "qazedhq/qa-z" in release_handoff
+    assert "pending final GitHub create-screen" in release_handoff
     assert "git remote add origin <repository-url>" in release_handoff
     assert "git ls-remote --heads <repository-url>" in release_handoff
     assert "Do not add `origin` until this command succeeds" in release_handoff
+    assert "git push -u origin HEAD:main" in release_handoff
     assert "git push -u origin codex/qa-z-bootstrap" in release_handoff
     assert "Release QA-Z v0.9.8-alpha" in release_handoff
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_handoff
     assert "docs/releases/v0.9.8-alpha-github-release.md" in release_handoff
-    assert "Do not tag before remote CI passes and the release PR is merged." in (
-        release_handoff
-    )
+    assert "Do not tag before the target repository exists" in release_handoff
+    assert "git tag -s v0.9.8-alpha -m" in release_handoff
+    assert "git tag -v v0.9.8-alpha" in release_handoff
     assert "git tag -a v0.9.8-alpha -m" in release_handoff
+    assert "title: `QA-Z v0.9.8-alpha`" in release_handoff
     assert "python -m qa_z benchmark --json" in release_handoff
     assert (
         "Package-build validation commit: "
