@@ -74,6 +74,15 @@ def test_release_target_is_frozen_across_public_surfaces() -> None:
     assert "`0.9.8a0`" in release_notes
 
 
+def test_runtime_package_version_matches_release_metadata() -> None:
+    package_init = (ROOT / "src" / "qa_z" / "__init__.py").read_text(encoding="utf-8")
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'version = "0.9.8a0"' in pyproject
+    assert '__version__ = "0.9.8a0"' in package_init
+    assert '__version__ = "0.1.0"' not in package_init
+
+
 def test_worktree_commit_plan_names_release_closure_boundary() -> None:
     commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
         encoding="utf-8"
@@ -136,16 +145,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "341 passed" in commit_plan
-    assert "341 passed" in release_plan
-    assert "`python -m pytest`: 341 passed" in release_notes
-    assert "`python -m pytest`: passed, `341 passed" in release_pr
-    assert "`python -m pytest`: passed, `341 passed`" in github_release
-    assert "340 passed" not in commit_plan
-    assert "340 passed" not in release_plan
-    assert "340 passed" not in release_notes
-    assert "340 passed" not in release_pr
-    assert "340 passed" not in github_release
+    assert "342 passed" in commit_plan
+    assert "342 passed" in release_plan
+    assert "`python -m pytest`: 342 passed" in release_notes
+    assert "`python -m pytest`: passed, `342 passed" in release_pr
+    assert "`python -m pytest`: passed, `342 passed`" in github_release
+    assert "341 passed" not in commit_plan
+    assert "341 passed" not in release_plan
+    assert "341 passed" not in release_notes
+    assert "341 passed" not in release_pr
+    assert "341 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
