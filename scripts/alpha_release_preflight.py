@@ -190,6 +190,7 @@ def run_preflight(
     expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
     skip_remote: bool = False,
+    allow_existing_refs: bool = False,
     allow_dirty: bool = False,
     runner: Runner = subprocess_runner,
     github_metadata_fetcher: GitHubMetadataFetcher = fetch_github_metadata,
@@ -291,13 +292,23 @@ def run_preflight(
         if exit_code == 0:
             checks.append(CheckResult("remote_reachable", "passed", repository_url))
             if refs:
-                checks.append(
-                    CheckResult(
-                        "remote_empty",
-                        "failed",
-                        f"remote already has refs: {refs.splitlines()[0]}",
+                first_ref = refs.splitlines()[0]
+                if allow_existing_refs:
+                    checks.append(
+                        CheckResult(
+                            "remote_empty",
+                            "passed",
+                            (f"existing refs allowed for release PR path: {first_ref}"),
+                        )
                     )
-                )
+                else:
+                    checks.append(
+                        CheckResult(
+                            "remote_empty",
+                            "failed",
+                            f"remote already has refs: {first_ref}",
+                        )
+                    )
             else:
                 checks.append(
                     CheckResult(
@@ -340,6 +351,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help="Skip git ls-remote. Use only before the GitHub repository exists.",
     )
     parser.add_argument(
+        "--allow-existing-refs",
+        action="store_true",
+        help=(
+            "Allow a reachable public repository that already has refs. "
+            "Use only for the existing-default-branch release PR path."
+        ),
+    )
+    parser.add_argument(
         "--allow-dirty",
         action="store_true",
         help="Allow local changes while developing the preflight itself.",
@@ -355,6 +374,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_branch=args.expected_branch,
         expected_tag=args.expected_tag,
         skip_remote=args.skip_remote,
+        allow_existing_refs=args.allow_existing_refs,
         allow_dirty=args.allow_dirty,
     )
     for check in result.checks:

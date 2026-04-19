@@ -152,7 +152,7 @@ Preflight confirms public GitHub metadata for the intended owner/repo. No authen
 Expected for an existing repository:
 
 ```text
-The command prints existing remote refs. Stop before adding origin; this launch path expects a brand-new empty public repository.
+The command prints existing remote refs. Stop before adding origin; if this is the intended default-branch or bootstrap-commit repository, rerun `python scripts/alpha_release_preflight.py --repository-url <repository-url> --allow-existing-refs` and then use the release PR path.
 ```
 
 - [ ] **Step 3: Add `origin` only after the URL is verified**
@@ -268,6 +268,8 @@ Hashes are recorded in the release operator notes if artifacts will be attached.
 If `qazedhq/qa-z` is a brand-new empty repository, a release PR is optional for the first public baseline. Prefer pushing the current release baseline to the default branch first so GitHub Actions, code scanning, artifacts, README rendering, and repository health checks can run against the branch GitHub treats as canonical.
 
 If the repository already has a default branch or a pre-launch bootstrap commit, use the PR path instead.
+Confirm that this path was selected intentionally by rerunning the remote
+preflight with `--allow-existing-refs` before adding `origin`.
 
 Expected:
 

@@ -145,6 +145,40 @@ def test_preflight_fails_when_remote_has_any_refs(tmp_path):
     assert "refs/heads/main" in result.by_name["remote_empty"].detail
 
 
+def test_preflight_allows_existing_refs_when_explicitly_requested(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        "1111111111111111111111111111111111111111\trefs/heads/main\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        allow_existing_refs=True,
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["remote_reachable"].status == "passed"
+    assert result.by_name["remote_empty"].status == "passed"
+    assert "existing refs allowed for release PR path" in (
+        result.by_name["remote_empty"].detail
+    )
+    assert "refs/heads/main" in result.by_name["remote_empty"].detail
+
+
+def test_preflight_cli_accepts_existing_ref_pr_path_flag():
+    module = load_preflight_module()
+
+    args = module.parse_args(["--allow-existing-refs"])
+
+    assert args.allow_existing_refs is True
+
+
 def test_preflight_fails_when_github_repository_is_not_public(tmp_path):
     module = load_preflight_module()
     responses = base_responses()

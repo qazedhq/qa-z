@@ -280,6 +280,13 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     release_handoff = (
         ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
     ).read_text(encoding="utf-8")
+    launch_plan = (
+        ROOT
+        / "docs"
+        / "superpowers"
+        / "plans"
+        / "2026-04-19-github-repository-launch.md"
+    ).read_text(encoding="utf-8")
 
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_plan
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_notes
@@ -298,6 +305,12 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
         "python scripts/alpha_release_preflight.py --repository-url <repository-url>"
         in release_handoff
     )
+    assert (
+        "python scripts/alpha_release_preflight.py --repository-url <repository-url> --allow-existing-refs"
+        in release_handoff
+    )
+    assert "--allow-existing-refs" in launch_plan
+    assert "release PR path" in launch_plan
     assert "Do not add `origin` until this command succeeds" in release_handoff
     assert "git push -u origin HEAD:main" in release_handoff
     assert "git push -u origin codex/qa-z-bootstrap" in release_handoff
