@@ -55,7 +55,7 @@ Observed results:
 ruff format: 128 files already formatted
 ruff check: All checks passed!
 mypy: Success: no issues found in 83 source files
-pytest: 347 passed
+pytest: 348 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 ```
 
@@ -79,7 +79,7 @@ Observed: no configured remote. The `qazedhq/qa-z` target also still needs a fin
 - `docs/releases/v0.9.8-alpha-pr.md`: PR body to use for the release PR.
 - `docs/releases/v0.9.8-alpha-github-release.md`: GitHub release body to use after tagging.
 - `docs/generated-vs-frozen-evidence-policy.md`: Artifact tracking policy for root `.qa-z/**` and benchmark results.
-- `scripts/alpha_release_preflight.py`: Non-mutating local and remote preflight before adding `origin`.
+- `scripts/alpha_release_preflight.py`: Non-mutating local, public GitHub metadata, and empty-remote preflight before adding `origin`.
 - `docs/reports/current-state-analysis.md`: Current capability and gap baseline.
 - `docs/reports/next-improvement-roadmap.md`: Post-alpha improvement roadmap.
 - `src/qa_z/**`: Product implementation.
@@ -146,7 +146,7 @@ git ls-remote --refs <repository-url>
 Expected for an empty but reachable repository:
 
 ```text
-No authentication or not-found error. Output is empty because no refs exist.
+Preflight confirms public GitHub metadata for the intended owner/repo. No authentication or not-found error. `git ls-remote --refs` output is empty because no refs exist.
 ```
 
 Expected for an existing repository:
@@ -205,7 +205,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 347 passed.
+All commands pass. The expected current pytest count is 348 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**

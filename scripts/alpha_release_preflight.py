@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
 from typing import Callable
 from typing import NamedTuple
 from typing import Sequence
+from urllib.error import HTTPError
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import Request
+from urllib.request import urlopen
 
 
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
@@ -28,6 +34,17 @@ class CheckResult(NamedTuple):
     name: str
     status: str
     detail: str
+
+
+class GitHubRepositoryTarget(NamedTuple):
+    full_name: str
+    api_url: str
+
+
+class GitHubMetadataResult(NamedTuple):
+    status_code: int
+    data: dict[str, object]
+    error: str
 
 
 class PreflightResult:
@@ -50,6 +67,7 @@ class PreflightResult:
 
 
 Runner = Callable[[Sequence[str], Path], tuple[int, str, str]]
+GitHubMetadataFetcher = Callable[[str], GitHubMetadataResult]
 
 
 def subprocess_runner(command: Sequence[str], cwd: Path) -> tuple[int, str, str]:
@@ -76,6 +94,95 @@ def check_git(
         return 127, "", str(exc)
 
 
+def parse_github_repository_target(
+    repository_url: str,
+) -> GitHubRepositoryTarget | None:
+    url = repository_url.strip().rstrip("/")
+    if url.startswith("git@github.com:"):
+        path = url.removeprefix("git@github.com:")
+    else:
+        parsed = urlparse(url)
+        if parsed.netloc.lower() != "github.com":
+            return None
+        path = parsed.path.lstrip("/")
+    if path.endswith(".git"):
+        path = path[:-4]
+    parts = [part for part in path.split("/") if part]
+    if len(parts) != 2:
+        return None
+    owner, repo = parts
+    full_name = f"{owner}/{repo}"
+    return GitHubRepositoryTarget(
+        full_name, f"https://api.github.com/repos/{full_name}"
+    )
+
+
+def fetch_github_metadata(api_url: str) -> GitHubMetadataResult:
+    request = Request(
+        api_url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "qa-z-release-preflight",
+        },
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            body = response.read().decode("utf-8")
+            data = json.loads(body)
+            if not isinstance(data, dict):
+                return GitHubMetadataResult(response.status, {}, "unexpected API body")
+            return GitHubMetadataResult(response.status, data, "")
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace").strip()
+        return GitHubMetadataResult(exc.code, {}, body or str(exc))
+    except (OSError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        return GitHubMetadataResult(0, {}, str(exc))
+
+
+def check_github_repository(
+    repository_url: str,
+    github_metadata_fetcher: GitHubMetadataFetcher,
+) -> CheckResult:
+    target = parse_github_repository_target(repository_url)
+    if target is None:
+        return CheckResult(
+            "github_repository",
+            "skipped",
+            "repository URL is not a github.com URL",
+        )
+
+    metadata = github_metadata_fetcher(target.api_url)
+    if metadata.status_code != 200:
+        detail = (
+            metadata.error or f"{target.api_url} returned HTTP {metadata.status_code}"
+        )
+        return CheckResult("github_repository", "failed", detail)
+
+    full_name = str(metadata.data.get("full_name", ""))
+    visibility = str(metadata.data.get("visibility", "")).lower()
+    is_private = metadata.data.get("private")
+    archived = metadata.data.get("archived")
+    if full_name.lower() != target.full_name.lower():
+        return CheckResult(
+            "github_repository",
+            "failed",
+            f"expected {target.full_name}, got {full_name or 'unknown repository'}",
+        )
+    if is_private is True or visibility != "public":
+        return CheckResult(
+            "github_repository",
+            "failed",
+            f"{target.full_name} is not public",
+        )
+    if archived is True:
+        return CheckResult(
+            "github_repository",
+            "failed",
+            f"{target.full_name} is archived",
+        )
+    return CheckResult("github_repository", "passed", f"{target.full_name} is public")
+
+
 def run_preflight(
     repo_root: Path,
     *,
@@ -85,6 +192,7 @@ def run_preflight(
     skip_remote: bool = False,
     allow_dirty: bool = False,
     runner: Runner = subprocess_runner,
+    github_metadata_fetcher: GitHubMetadataFetcher = fetch_github_metadata,
 ) -> PreflightResult:
     checks: list[CheckResult] = []
 
@@ -165,10 +273,14 @@ def run_preflight(
 
     if skip_remote:
         checks.append(
+            CheckResult("github_repository", "skipped", "remote check skipped")
+        )
+        checks.append(
             CheckResult("remote_reachable", "skipped", "remote check skipped")
         )
         checks.append(CheckResult("remote_empty", "skipped", "remote check skipped"))
     else:
+        checks.append(check_github_repository(repository_url, github_metadata_fetcher))
         exit_code, stdout, stderr = check_git(
             "remote_reachable",
             ("git", "ls-remote", "--refs", repository_url),

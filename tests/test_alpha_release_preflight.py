@@ -34,6 +34,20 @@ class FakeRunner:
         return response
 
 
+def public_github_metadata(_api_url):
+    module = load_preflight_module()
+    return module.GitHubMetadataResult(
+        200,
+        {
+            "full_name": "qazedhq/qa-z",
+            "private": False,
+            "visibility": "public",
+            "archived": False,
+        },
+        "",
+    )
+
+
 def base_responses():
     return {
         ("git", "branch", "--show-current"): (0, "codex/qa-z-bootstrap\n", ""),
@@ -71,10 +85,12 @@ def test_preflight_passes_when_local_clean_and_empty_remote_reachable(tmp_path):
         tmp_path,
         repository_url="https://github.com/qazedhq/qa-z.git",
         runner=runner,
+        github_metadata_fetcher=public_github_metadata,
     )
 
     assert result.exit_code == 0
     assert result.summary == "release preflight passed"
+    assert result.by_name["github_repository"].status == "passed"
     assert result.by_name["remote_reachable"].status == "passed"
     assert result.by_name["remote_empty"].status == "passed"
     assert ("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git") in (
@@ -95,6 +111,7 @@ def test_preflight_fails_when_remote_is_missing(tmp_path):
         tmp_path,
         repository_url="https://github.com/qazedhq/qa-z.git",
         runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
     )
 
     assert result.exit_code == 1
@@ -119,12 +136,46 @@ def test_preflight_fails_when_remote_has_any_refs(tmp_path):
         tmp_path,
         repository_url="https://github.com/qazedhq/qa-z.git",
         runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
     )
 
     assert result.exit_code == 1
     assert result.by_name["remote_reachable"].status == "passed"
     assert result.by_name["remote_empty"].status == "failed"
     assert "refs/heads/main" in result.by_name["remote_empty"].detail
+
+
+def test_preflight_fails_when_github_repository_is_not_public(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        "",
+        "",
+    )
+
+    def private_metadata(_api_url):
+        return module.GitHubMetadataResult(
+            200,
+            {
+                "full_name": "qazedhq/qa-z",
+                "private": True,
+                "visibility": "private",
+                "archived": False,
+            },
+            "",
+        )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=private_metadata,
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["github_repository"].status == "failed"
+    assert "not public" in result.by_name["github_repository"].detail
 
 
 def test_preflight_fails_on_existing_tag_and_tracked_generated_artifacts(tmp_path):
