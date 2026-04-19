@@ -167,10 +167,11 @@ def run_preflight(
         checks.append(
             CheckResult("remote_reachable", "skipped", "remote check skipped")
         )
+        checks.append(CheckResult("remote_empty", "skipped", "remote check skipped"))
     else:
         exit_code, stdout, stderr = check_git(
             "remote_reachable",
-            ("git", "ls-remote", "--heads", repository_url),
+            ("git", "ls-remote", "--refs", repository_url),
             repo_root,
             runner,
         )
@@ -179,12 +180,16 @@ def run_preflight(
             checks.append(CheckResult("remote_reachable", "passed", repository_url))
             if refs:
                 checks.append(
-                    CheckResult("remote_has_no_heads", "warning", refs.splitlines()[0])
+                    CheckResult(
+                        "remote_empty",
+                        "failed",
+                        f"remote already has refs: {refs.splitlines()[0]}",
+                    )
                 )
             else:
                 checks.append(
                     CheckResult(
-                        "remote_has_no_heads",
+                        "remote_empty",
                         "passed",
                         "reachable empty repository",
                     )

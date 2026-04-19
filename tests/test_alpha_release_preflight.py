@@ -60,9 +60,11 @@ def base_responses():
 def test_preflight_passes_when_local_clean_and_empty_remote_reachable(tmp_path):
     module = load_preflight_module()
     responses = base_responses()
-    responses[
-        ("git", "ls-remote", "--heads", "https://github.com/qazedhq/qa-z.git")
-    ] = (0, "", "")
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        "",
+        "",
+    )
     runner = FakeRunner(responses)
 
     result = module.run_preflight(
@@ -74,8 +76,8 @@ def test_preflight_passes_when_local_clean_and_empty_remote_reachable(tmp_path):
     assert result.exit_code == 0
     assert result.summary == "release preflight passed"
     assert result.by_name["remote_reachable"].status == "passed"
-    assert result.by_name["remote_has_no_heads"].status == "passed"
-    assert ("git", "ls-remote", "--heads", "https://github.com/qazedhq/qa-z.git") in (
+    assert result.by_name["remote_empty"].status == "passed"
+    assert ("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git") in (
         runner.commands
     )
 
@@ -83,9 +85,11 @@ def test_preflight_passes_when_local_clean_and_empty_remote_reachable(tmp_path):
 def test_preflight_fails_when_remote_is_missing(tmp_path):
     module = load_preflight_module()
     responses = base_responses()
-    responses[
-        ("git", "ls-remote", "--heads", "https://github.com/qazedhq/qa-z.git")
-    ] = (128, "", "remote: Repository not found.\n")
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        128,
+        "",
+        "remote: Repository not found.\n",
+    )
 
     result = module.run_preflight(
         tmp_path,
@@ -97,6 +101,30 @@ def test_preflight_fails_when_remote_is_missing(tmp_path):
     assert result.summary == "release preflight failed"
     assert result.by_name["remote_reachable"].status == "failed"
     assert "Repository not found" in result.by_name["remote_reachable"].detail
+
+
+def test_preflight_fails_when_remote_has_any_refs(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        (
+            "1111111111111111111111111111111111111111\trefs/heads/main\n"
+            "2222222222222222222222222222222222222222\trefs/tags/v0.9.8-alpha\n"
+        ),
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["remote_reachable"].status == "passed"
+    assert result.by_name["remote_empty"].status == "failed"
+    assert "refs/heads/main" in result.by_name["remote_empty"].detail
 
 
 def test_preflight_fails_on_existing_tag_and_tracked_generated_artifacts(tmp_path):

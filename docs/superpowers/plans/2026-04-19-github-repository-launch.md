@@ -55,7 +55,7 @@ Observed results:
 ruff format: 128 files already formatted
 ruff check: All checks passed!
 mypy: Success: no issues found in 83 source files
-pytest: 346 passed
+pytest: 347 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 ```
 
@@ -140,19 +140,19 @@ Run:
 
 ```powershell
 python scripts/alpha_release_preflight.py --repository-url <repository-url>
-git ls-remote --heads <repository-url>
+git ls-remote --refs <repository-url>
 ```
 
 Expected for an empty but reachable repository:
 
 ```text
-No authentication or not-found error. Output may be empty if no branches exist.
+No authentication or not-found error. Output is empty because no refs exist.
 ```
 
 Expected for an existing repository:
 
 ```text
-The command prints the existing remote refs. Confirm the target is the intended repository before continuing.
+The command prints existing remote refs. Stop before adding origin; this launch path expects a brand-new empty public repository.
 ```
 
 - [ ] **Step 3: Add `origin` only after the URL is verified**
@@ -205,7 +205,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 346 passed.
+All commands pass. The expected current pytest count is 347 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**

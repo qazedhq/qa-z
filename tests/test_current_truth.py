@@ -145,16 +145,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "346 passed" in commit_plan
-    assert "346 passed" in release_plan
-    assert "`python -m pytest`: 346 passed" in release_notes
-    assert "`python -m pytest`: passed, `346 passed" in release_pr
-    assert "`python -m pytest`: passed, `346 passed`" in github_release
-    assert "343 passed" not in commit_plan
-    assert "343 passed" not in release_plan
-    assert "343 passed" not in release_notes
-    assert "343 passed" not in release_pr
-    assert "343 passed" not in github_release
+    assert "347 passed" in commit_plan
+    assert "347 passed" in release_plan
+    assert "`python -m pytest`: 347 passed" in release_notes
+    assert "`python -m pytest`: passed, `347 passed" in release_pr
+    assert "`python -m pytest`: passed, `347 passed`" in github_release
+    assert "346 passed" not in commit_plan
+    assert "346 passed" not in release_plan
+    assert "346 passed" not in release_notes
+    assert "346 passed" not in release_pr
+    assert "346 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
@@ -288,7 +288,7 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "qazedhq/qa-z" in release_handoff
     assert "pending final GitHub create-screen" in release_handoff
     assert "git remote add origin <repository-url>" in release_handoff
-    assert "git ls-remote --heads <repository-url>" in release_handoff
+    assert "git ls-remote --refs <repository-url>" in release_handoff
     assert "python scripts/alpha_release_preflight.py --skip-remote" in release_handoff
     assert (
         "python scripts/alpha_release_preflight.py --repository-url <repository-url>"
