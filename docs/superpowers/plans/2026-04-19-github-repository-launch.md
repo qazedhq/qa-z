@@ -65,7 +65,7 @@ Release blockers:
 git remote -v
 ```
 
-Observed: no configured remote. The `qazedhq/qa-z` target also still needs a final GitHub create-screen availability check before mutating local Git config. Do not create a tag until the intended GitHub repository exists, the branch or default branch is pushed, and remote CI passes.
+Observed: no configured remote. A 2026-04-20 remote preflight reached GitHub for `https://github.com/qazedhq/qa-z.git` and returned `404 Not Found`, so the intended public repository still needs to be created or exposed before mutating local Git config. Do not create a tag until the intended GitHub repository exists, the branch or default branch is pushed, and remote CI passes.
 
 ## File Map
 
@@ -499,7 +499,7 @@ Ready now:
 
 Not ready until resolved:
 
-- `qazedhq/qa-z` has not been confirmed in GitHub's final create-screen flow.
+- `qazedhq/qa-z` has not been created or exposed as a reachable public GitHub repository; the 2026-04-20 remote preflight returned `404 Not Found`.
 - No `origin` remote is configured.
 - No `v0.9.8-alpha` tag exists.
 - Remote GitHub Actions evidence does not exist yet for the target repository.

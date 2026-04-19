@@ -287,6 +287,9 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "no configured `origin` remote" in release_handoff
     assert "qazedhq/qa-z" in release_handoff
     assert "pending final GitHub create-screen" in release_handoff
+    assert "2026-04-20 remote preflight reached GitHub" in release_handoff
+    assert "404 Not Found" in release_handoff
+    assert "https://github.com/qazedhq/qa-z.git" in release_handoff
     assert "git remote add origin <repository-url>" in release_handoff
     assert "git ls-remote --refs <repository-url>" in release_handoff
     assert "GitHub API metadata reports a public `qazedhq/qa-z`" in release_handoff
