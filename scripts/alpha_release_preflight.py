@@ -18,6 +18,7 @@ from urllib.request import urlopen
 
 
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
+DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"
 DEFAULT_TAG = "v0.9.8-alpha"
 
@@ -142,13 +143,21 @@ def fetch_github_metadata(api_url: str) -> GitHubMetadataResult:
 def check_github_repository(
     repository_url: str,
     github_metadata_fetcher: GitHubMetadataFetcher,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
 ) -> CheckResult:
     target = parse_github_repository_target(repository_url)
     if target is None:
         return CheckResult(
             "github_repository",
-            "skipped",
-            "repository URL is not a github.com URL",
+            "failed",
+            f"repository URL must point to github.com/{expected_repository}",
+        )
+
+    if target.full_name.lower() != expected_repository.lower():
+        return CheckResult(
+            "github_repository",
+            "failed",
+            f"expected {expected_repository}, got {target.full_name}",
         )
 
     metadata = github_metadata_fetcher(target.api_url)
@@ -166,7 +175,7 @@ def check_github_repository(
         return CheckResult(
             "github_repository",
             "failed",
-            f"expected {target.full_name}, got {full_name or 'unknown repository'}",
+            f"expected {expected_repository}, got {full_name or 'unknown repository'}",
         )
     if is_private is True or visibility != "public":
         return CheckResult(
@@ -192,6 +201,7 @@ def run_preflight(
     skip_remote: bool = False,
     allow_existing_refs: bool = False,
     allow_dirty: bool = False,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     runner: Runner = subprocess_runner,
     github_metadata_fetcher: GitHubMetadataFetcher = fetch_github_metadata,
 ) -> PreflightResult:
@@ -281,7 +291,13 @@ def run_preflight(
         )
         checks.append(CheckResult("remote_empty", "skipped", "remote check skipped"))
     else:
-        checks.append(check_github_repository(repository_url, github_metadata_fetcher))
+        checks.append(
+            check_github_repository(
+                repository_url,
+                github_metadata_fetcher,
+                expected_repository=expected_repository,
+            )
+        )
         exit_code, stdout, stderr = check_git(
             "remote_reachable",
             ("git", "ls-remote", "--refs", repository_url),
@@ -293,7 +309,24 @@ def run_preflight(
             checks.append(CheckResult("remote_reachable", "passed", repository_url))
             if refs:
                 first_ref = refs.splitlines()[0]
-                if allow_existing_refs:
+                release_tag_ref = f"refs/tags/{expected_tag}"
+                remote_tag_ref = next(
+                    (
+                        line
+                        for line in refs.splitlines()
+                        if line.split()[-1] == release_tag_ref
+                    ),
+                    "",
+                )
+                if remote_tag_ref:
+                    checks.append(
+                        CheckResult(
+                            "remote_empty",
+                            "failed",
+                            f"remote release tag already exists: {remote_tag_ref}",
+                        )
+                    )
+                elif allow_existing_refs:
                     checks.append(
                         CheckResult(
                             "remote_empty",
@@ -336,6 +369,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help=f"Git repository URL to test. Defaults to {DEFAULT_REPOSITORY_URL}.",
     )
     parser.add_argument(
+        "--expected-repository",
+        default=DEFAULT_REPOSITORY_FULL_NAME,
+        help=(
+            "Expected GitHub owner/repository full name. "
+            f"Defaults to {DEFAULT_REPOSITORY_FULL_NAME}."
+        ),
+    )
+    parser.add_argument(
         "--expected-branch",
         default=DEFAULT_BRANCH,
         help=f"Expected local branch. Defaults to {DEFAULT_BRANCH}.",
@@ -376,6 +417,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         skip_remote=args.skip_remote,
         allow_existing_refs=args.allow_existing_refs,
         allow_dirty=args.allow_dirty,
+        expected_repository=args.expected_repository,
     )
     for check in result.checks:
         print(f"[{check.status.upper()}] {check.name}: {check.detail}")

@@ -14,7 +14,7 @@
 
 Verified on 2026-04-19 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `348 passed`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `354 passed`
 - `python -m ruff format --check .`: passed, `128 files already formatted`
 - `python -m ruff check .`: passed
 - `python -m mypy src tests`: passed, `83 source files`

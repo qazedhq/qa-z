@@ -125,10 +125,7 @@ def test_preflight_fails_when_remote_has_any_refs(tmp_path):
     responses = base_responses()
     responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
         0,
-        (
-            "1111111111111111111111111111111111111111\trefs/heads/main\n"
-            "2222222222222222222222222222222222222222\trefs/tags/v0.9.8-alpha\n"
-        ),
+        "1111111111111111111111111111111111111111\trefs/heads/main\n",
         "",
     )
 
@@ -171,12 +168,91 @@ def test_preflight_allows_existing_refs_when_explicitly_requested(tmp_path):
     assert "refs/heads/main" in result.by_name["remote_empty"].detail
 
 
+def test_preflight_fails_when_existing_refs_include_release_tag_even_if_allowed(
+    tmp_path,
+):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        (
+            "1111111111111111111111111111111111111111\trefs/heads/main\n"
+            "2222222222222222222222222222222222222222\trefs/tags/v0.9.8-alpha\n"
+        ),
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        allow_existing_refs=True,
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["remote_reachable"].status == "passed"
+    assert result.by_name["remote_empty"].status == "failed"
+    assert "remote release tag already exists" in result.by_name["remote_empty"].detail
+    assert "refs/tags/v0.9.8-alpha" in result.by_name["remote_empty"].detail
+
+
+def test_preflight_fails_for_wrong_github_repository_target(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://github.com/other/qa-z.git")] = (
+        0,
+        "",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/other/qa-z.git",
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["github_repository"].status == "failed"
+    assert "expected qazedhq/qa-z" in result.by_name["github_repository"].detail
+
+
+def test_preflight_fails_for_non_github_repository_url(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "ls-remote", "--refs", "https://gitlab.com/qazedhq/qa-z.git")] = (
+        0,
+        "",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://gitlab.com/qazedhq/qa-z.git",
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["github_repository"].status == "failed"
+    assert "github.com/qazedhq/qa-z" in result.by_name["github_repository"].detail
+
+
 def test_preflight_cli_accepts_existing_ref_pr_path_flag():
     module = load_preflight_module()
 
     args = module.parse_args(["--allow-existing-refs"])
 
     assert args.allow_existing_refs is True
+
+
+def test_preflight_cli_accepts_expected_repository_override():
+    module = load_preflight_module()
+
+    args = module.parse_args(["--expected-repository", "example/qa-z"])
+
+    assert args.expected_repository == "example/qa-z"
 
 
 def test_preflight_fails_when_github_repository_is_not_public(tmp_path):

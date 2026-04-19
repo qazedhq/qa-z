@@ -497,7 +497,7 @@ batches.
 
 The latest full local gate pass for this accumulated alpha baseline is:
 
-- `python -m pytest`: 348 passed
+- `python -m pytest`: 354 passed
 - `python -m qa_z benchmark --json`: 50/50 fixtures, overall_rate 1.0
 - `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python -m ruff check .`: pass
