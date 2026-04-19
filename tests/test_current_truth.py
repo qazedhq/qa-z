@@ -145,16 +145,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "343 passed" in commit_plan
-    assert "343 passed" in release_plan
-    assert "`python -m pytest`: 343 passed" in release_notes
-    assert "`python -m pytest`: passed, `343 passed" in release_pr
-    assert "`python -m pytest`: passed, `343 passed`" in github_release
-    assert "342 passed" not in commit_plan
-    assert "342 passed" not in release_plan
-    assert "342 passed" not in release_notes
-    assert "342 passed" not in release_pr
-    assert "342 passed" not in github_release
+    assert "346 passed" in commit_plan
+    assert "346 passed" in release_plan
+    assert "`python -m pytest`: 346 passed" in release_notes
+    assert "`python -m pytest`: passed, `346 passed" in release_pr
+    assert "`python -m pytest`: passed, `346 passed`" in github_release
+    assert "343 passed" not in commit_plan
+    assert "343 passed" not in release_plan
+    assert "343 passed" not in release_notes
+    assert "343 passed" not in release_pr
+    assert "343 passed" not in github_release
     assert "python -m qa_z benchmark --json" in commit_plan
     assert "python -m qa_z benchmark --json" in release_pr
     assert "python -m qa_z benchmark --json" in github_release
@@ -172,17 +172,17 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "`python -m ruff check .`: passed" in release_pr
     assert "`python -m ruff check .`: passed" in github_release
     assert "python -m ruff format --check ." in commit_plan
-    assert "`python -m ruff format --check .`: 126 files already formatted" in (
+    assert "`python -m ruff format --check .`: 128 files already formatted" in (
         release_notes
     )
     assert "`python -m ruff format --check .`: passed" in release_pr
     assert "`python -m ruff format --check .`: passed" in github_release
-    assert "126 files already formatted" in commit_plan
+    assert "128 files already formatted" in commit_plan
     assert "python -m mypy src tests" in commit_plan
-    assert "`python -m mypy src tests`: 82 source files" in release_notes
+    assert "`python -m mypy src tests`: 83 source files" in release_notes
     assert "`python -m mypy src tests`: passed" in release_pr
     assert "`python -m mypy src tests`: passed" in github_release
-    assert "82 source files" in commit_plan
+    assert "83 source files" in commit_plan
     assert "CLI smoke checks: 17 help surfaces passed" in release_notes
     assert "CLI smoke checks: passed for 17 help surfaces" in release_pr
     assert "CLI smoke checks: passed for 17 help surfaces" in github_release
@@ -283,11 +283,17 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
 
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_plan
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_notes
+    assert "scripts/alpha_release_preflight.py" in release_notes
     assert "no configured `origin` remote" in release_handoff
     assert "qazedhq/qa-z" in release_handoff
     assert "pending final GitHub create-screen" in release_handoff
     assert "git remote add origin <repository-url>" in release_handoff
     assert "git ls-remote --heads <repository-url>" in release_handoff
+    assert "python scripts/alpha_release_preflight.py --skip-remote" in release_handoff
+    assert (
+        "python scripts/alpha_release_preflight.py --repository-url <repository-url>"
+        in release_handoff
+    )
     assert "Do not add `origin` until this command succeeds" in release_handoff
     assert "git push -u origin HEAD:main" in release_handoff
     assert "git push -u origin codex/qa-z-bootstrap" in release_handoff

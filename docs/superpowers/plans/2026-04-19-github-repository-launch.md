@@ -52,10 +52,10 @@ python -m build --sdist --wheel
 Observed results:
 
 ```text
-ruff format: 126 files already formatted
+ruff format: 128 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 82 source files
-pytest: 343 passed
+mypy: Success: no issues found in 83 source files
+pytest: 346 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 ```
 
@@ -79,6 +79,7 @@ Observed: no configured remote. The `qazedhq/qa-z` target also still needs a fin
 - `docs/releases/v0.9.8-alpha-pr.md`: PR body to use for the release PR.
 - `docs/releases/v0.9.8-alpha-github-release.md`: GitHub release body to use after tagging.
 - `docs/generated-vs-frozen-evidence-policy.md`: Artifact tracking policy for root `.qa-z/**` and benchmark results.
+- `scripts/alpha_release_preflight.py`: Non-mutating local and remote preflight before adding `origin`.
 - `docs/reports/current-state-analysis.md`: Current capability and gap baseline.
 - `docs/reports/next-improvement-roadmap.md`: Post-alpha improvement roadmap.
 - `src/qa_z/**`: Product implementation.
@@ -138,6 +139,7 @@ Required repository settings:
 Run:
 
 ```powershell
+python scripts/alpha_release_preflight.py --repository-url <repository-url>
 git ls-remote --heads <repository-url>
 ```
 
@@ -177,6 +179,7 @@ Working tree remains clean except ignored local build or runtime artifacts.
 Run:
 
 ```powershell
+python scripts/alpha_release_preflight.py --skip-remote
 git status --short --ignored
 git ls-files | Where-Object { $_ -like '.qa-z/*' -or $_ -like 'benchmarks/results/*' -or $_ -like '*.pyc' -or $_ -like '.pytest_cache/*' -or $_ -like '.mypy_cache/*' -or $_ -like '.ruff_cache/*' -or $_ -like 'src/qa_z.egg-info/*' }
 ```
@@ -185,6 +188,7 @@ Expected:
 
 ```text
 No tracked root .qa-z artifacts, benchmark result snapshots, caches, pyc files, or egg-info files.
+Preflight confirms the release branch, missing origin, absent release tag, clean worktree, and generated artifact hygiene before remote mutation.
 ```
 
 - [ ] **Step 2: Run the static and unit-test baseline**
@@ -201,7 +205,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 343 passed.
+All commands pass. The expected current pytest count is 346 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**
