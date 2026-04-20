@@ -348,6 +348,18 @@ Run the local verification suite:
 python -m pytest
 ```
 
+Run the one-shot local alpha release gate before publishing or attaching local
+artifacts:
+
+```bash
+python scripts/alpha_release_gate.py --json
+```
+
+That release gate keeps the publish checklist deterministic by running local
+preflight, static checks, tests, CLI help smoke checks, QA-Z
+fast/deep/benchmark, package build, artifact install smoke, and bundle manifest
+verification with one JSON result and one exit code.
+
 Try the TypeScript demo:
 
 ```bash

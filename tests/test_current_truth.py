@@ -51,6 +51,7 @@ def test_release_target_is_frozen_across_public_surfaces() -> None:
         / "plans"
         / "2026-04-18-github-repository-release.md"
     ).read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
         encoding="utf-8"
     )
@@ -126,6 +127,7 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
         / "plans"
         / "2026-04-18-github-repository-release.md"
     ).read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     release_notes = (ROOT / "docs" / "releases" / "v0.9.8-alpha.md").read_text(
         encoding="utf-8"
     )
@@ -159,14 +161,28 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-19" not in release_plan
     assert "Audit date: 2026-04-20 KST." in launch_plan
     assert "Audit date: 2026-04-19 KST." not in launch_plan
-    assert "362 passed" in commit_plan
-    assert "362 passed" in release_plan
-    assert "362 passed" in release_handoff
-    assert "pytest: 362 passed" in launch_plan
-    assert "expected current pytest count is 362 passed" in launch_plan
-    assert "`python -m pytest`: 362 passed" in release_notes
-    assert "`python -m pytest`: passed, `362 passed" in release_pr
-    assert "`python -m pytest`: passed, `362 passed`" in github_release
+    assert "367 passed" in commit_plan
+    assert "367 passed" in release_plan
+    assert "367 passed" in release_handoff
+    assert "pytest: 367 passed" in launch_plan
+    assert "expected current pytest count is 367 passed" in launch_plan
+    assert "`python -m pytest`: 367 passed" in release_notes
+    assert "`python -m pytest`: passed, `367 passed" in release_pr
+    assert "`python -m pytest`: passed, `367 passed`" in github_release
+    assert "366 passed" not in commit_plan
+    assert "366 passed" not in release_plan
+    assert "366 passed" not in release_handoff
+    assert "366 passed" not in launch_plan
+    assert "366 passed" not in release_notes
+    assert "366 passed" not in release_pr
+    assert "366 passed" not in github_release
+    assert "362 passed" not in commit_plan
+    assert "362 passed" not in release_plan
+    assert "362 passed" not in release_handoff
+    assert "362 passed" not in launch_plan
+    assert "362 passed" not in release_notes
+    assert "362 passed" not in release_pr
+    assert "362 passed" not in github_release
     assert "359 passed" not in commit_plan
     assert "359 passed" not in release_plan
     assert "359 passed" not in release_handoff
@@ -215,6 +231,14 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_notes
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_pr
     assert "python scripts/alpha_release_artifact_smoke.py --json" in github_release
+    assert "python scripts/alpha_release_gate.py --json" in release_notes
+    assert "python scripts/alpha_release_gate.py --json" in release_pr
+    assert "python scripts/alpha_release_gate.py --json" in github_release
+    assert "python scripts/alpha_release_gate.py --json" in release_handoff
+    assert "python scripts/alpha_release_gate.py --json" in launch_plan
+    assert "CLI help smoke checks" in readme
+    assert "CLI help smoke checks" in release_handoff
+    assert "CLI help smoke" in launch_plan
     assert "python scripts/alpha_release_bundle_manifest.py --json" in release_handoff
     assert "python scripts/alpha_release_bundle_manifest.py --json" in launch_plan
     assert "wheel and sdist metadata install smoke" in release_handoff
@@ -229,12 +253,16 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "`python -m ruff check .`: passed" in release_pr
     assert "`python -m ruff check .`: passed" in github_release
     assert "python -m ruff format --check ." in commit_plan
-    assert "`python -m ruff format --check .`: 132 files already formatted" in (
+    assert "`python -m ruff format --check .`: 134 files already formatted" in (
         release_notes
     )
     assert "`python -m ruff format --check .`: passed" in release_pr
     assert "`python -m ruff format --check .`: passed" in github_release
-    assert "132 files already formatted" in commit_plan
+    assert "134 files already formatted" in commit_plan
+    assert "132 files already formatted" not in commit_plan
+    assert "132 files already formatted" not in release_notes
+    assert "132 files already formatted" not in release_pr
+    assert "132 files already formatted" not in github_release
     assert "130 files already formatted" not in commit_plan
     assert "130 files already formatted" not in release_notes
     assert "130 files already formatted" not in release_pr
@@ -244,10 +272,14 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "128 files already formatted" not in release_pr
     assert "128 files already formatted" not in github_release
     assert "python -m mypy src tests" in commit_plan
-    assert "`python -m mypy src tests`: 85 source files" in release_notes
+    assert "`python -m mypy src tests`: 86 source files" in release_notes
     assert "`python -m mypy src tests`: passed" in release_pr
     assert "`python -m mypy src tests`: passed" in github_release
-    assert "85 source files" in commit_plan
+    assert "86 source files" in commit_plan
+    assert "85 source files" not in commit_plan
+    assert "85 source files" not in release_notes
+    assert "85 source files" not in release_pr
+    assert "85 source files" not in github_release
     assert "84 source files" not in commit_plan
     assert "84 source files" not in release_notes
     assert "84 source files" not in release_pr
@@ -376,6 +408,8 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "--expected-repository <owner/repo>" in release_handoff
     assert "existing remote `v0.9.8-alpha` tag" in release_handoff
     assert "python scripts/alpha_release_preflight.py --skip-remote" in release_handoff
+    assert "python scripts/alpha_release_gate.py --json" in release_handoff
+    assert "one-shot local alpha release gate" in release_handoff
     assert (
         "python scripts/alpha_release_preflight.py --skip-remote --json"
         in release_handoff

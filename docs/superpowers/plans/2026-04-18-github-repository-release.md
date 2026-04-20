@@ -14,10 +14,10 @@
 
 Verified on 2026-04-20 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `362 passed`
-- `python -m ruff format --check .`: passed, `132 files already formatted`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `367 passed`
+- `python -m ruff format --check .`: passed, `134 files already formatted`
 - `python -m ruff check .`: passed
-- `python -m mypy src tests`: passed, `85 source files`
+- `python -m mypy src tests`: passed, `86 source files`
 - `python -m qa_z fast --selection smart --json`: passed with Python-only root checks
 - `python -m qa_z deep --selection smart --json`: passed after installing Semgrep locally; root scan is scoped to `src` and `tests`
 - `python -m qa_z benchmark --json`: passed, `50/50 fixtures, overall_rate 1.0`

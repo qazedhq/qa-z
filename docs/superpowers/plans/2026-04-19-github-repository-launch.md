@@ -49,18 +49,20 @@ python -m pytest
 python -m build --sdist --wheel
 python scripts/alpha_release_artifact_smoke.py --json
 python scripts/alpha_release_bundle_manifest.py --json
+python scripts/alpha_release_gate.py --json
 ```
 
 Observed results:
 
 ```text
-ruff format: 132 files already formatted
+ruff format: 134 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 85 source files
-pytest: 362 passed
+mypy: Success: no issues found in 86 source files
+pytest: 367 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 artifact smoke: wheel and sdist metadata install smoke passed
 bundle manifest: bundle head and SHA256 artifact manifest generated
+alpha release gate: one-shot local gate passed
 ```
 
 Release blockers:
@@ -84,6 +86,7 @@ Observed: no configured remote. A 2026-04-20 remote preflight reached GitHub for
 - `docs/releases/v0.9.8-alpha-github-release.md`: GitHub release body to use after tagging.
 - `docs/generated-vs-frozen-evidence-policy.md`: Artifact tracking policy for root `.qa-z/**` and benchmark results.
 - `scripts/alpha_release_preflight.py`: Non-mutating local, public GitHub metadata, and empty-remote preflight before adding `origin`.
+- `scripts/alpha_release_gate.py`: One-shot local alpha release gate that runs preflight, static checks, tests, CLI help smoke, QA-Z gates, build, artifact smoke, and bundle manifest evidence.
 - `docs/reports/current-state-analysis.md`: Current capability and gap baseline.
 - `docs/reports/next-improvement-roadmap.md`: Post-alpha improvement roadmap.
 - `src/qa_z/**`: Product implementation.
@@ -178,6 +181,22 @@ Working tree remains clean except ignored local build or runtime artifacts.
 
 ## Phase 2: Final Local Release Evidence Refresh
 
+- [ ] **Step 0: Run the one-shot local alpha release gate**
+
+Run:
+
+```powershell
+python scripts/alpha_release_gate.py --json
+```
+
+Expected:
+
+```text
+The local preflight, static checks, tests, CLI help smoke, QA-Z
+fast/deep/benchmark, package build, artifact smoke, and bundle manifest phases
+all pass with one JSON result and one exit code.
+```
+
 - [ ] **Step 1: Confirm generated artifacts are still ignored**
 
 Run:
@@ -209,7 +228,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 362 passed.
+All commands pass. The expected current pytest count is 367 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**

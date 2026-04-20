@@ -497,13 +497,13 @@ batches.
 
 The latest full local gate pass for this accumulated alpha baseline is:
 
-- `python -m pytest`: 362 passed
+- `python -m pytest`: 367 passed
 - `python -m qa_z benchmark --json`: 50/50 fixtures, overall_rate 1.0
 - `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python scripts/alpha_release_artifact_smoke.py --json`: passed, wheel and sdist metadata install smoke
 - `python -m ruff check .`: pass
-- `python -m ruff format --check .`: 132 files already formatted
-- `python -m mypy src tests`: success across 85 source files
+- `python -m ruff format --check .`: 134 files already formatted
+- `python -m mypy src tests`: success across 86 source files
 
 Human planning surfaces now keep this snapshot as the primary compact
 commit-isolation evidence and append an `action basis:` suffix when area-bearing
