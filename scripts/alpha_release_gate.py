@@ -13,6 +13,8 @@ from typing import Sequence
 
 
 TAIL_LIMIT = 4000
+DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
+DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"
 
 
 class GateCommand(NamedTuple):
@@ -85,16 +87,45 @@ def default_gate_commands(
     *,
     with_deps: bool = False,
     allow_dirty: bool = False,
+    include_remote: bool = False,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
+    expected_origin_url: str | None = None,
+    allow_existing_refs: bool = False,
 ) -> list[GateCommand]:
-    preflight_args = [
-        "scripts/alpha_release_preflight.py",
-        "--skip-remote",
-    ]
-    preflight_label_parts = [
-        "python",
-        "scripts/alpha_release_preflight.py",
-        "--skip-remote",
-    ]
+    remote_options_requested = (
+        repository_url != DEFAULT_REPOSITORY_URL
+        or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
+        or expected_origin_url is not None
+        or allow_existing_refs
+    )
+    effective_include_remote = include_remote or remote_options_requested
+    effective_expected_origin_url = (
+        repository_url
+        if effective_include_remote and expected_origin_url is None
+        else expected_origin_url
+    )
+    preflight_args = ["scripts/alpha_release_preflight.py"]
+    preflight_label_parts = ["python", "scripts/alpha_release_preflight.py"]
+    if effective_include_remote:
+        preflight_args.extend(["--repository-url", repository_url])
+        preflight_label_parts.extend(["--repository-url", repository_url])
+        if expected_repository != DEFAULT_REPOSITORY_FULL_NAME:
+            preflight_args.extend(["--expected-repository", expected_repository])
+            preflight_label_parts.extend(["--expected-repository", expected_repository])
+        if effective_expected_origin_url is not None:
+            preflight_args.extend(
+                ["--expected-origin-url", effective_expected_origin_url]
+            )
+            preflight_label_parts.extend(
+                ["--expected-origin-url", effective_expected_origin_url]
+            )
+        if allow_existing_refs:
+            preflight_args.append("--allow-existing-refs")
+            preflight_label_parts.append("--allow-existing-refs")
+    else:
+        preflight_args.append("--skip-remote")
+        preflight_label_parts.append("--skip-remote")
     if allow_dirty:
         preflight_args.append("--allow-dirty")
         preflight_label_parts.append("--allow-dirty")
@@ -187,9 +218,34 @@ def run_alpha_release_gate(
     *,
     with_deps: bool = False,
     allow_dirty: bool = False,
+    include_remote: bool = False,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
+    expected_origin_url: str | None = None,
+    allow_existing_refs: bool = False,
     runner: Runner = subprocess_runner,
 ) -> AlphaReleaseGateResult:
-    commands = default_gate_commands(with_deps=with_deps, allow_dirty=allow_dirty)
+    remote_options_requested = (
+        repository_url != DEFAULT_REPOSITORY_URL
+        or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
+        or expected_origin_url is not None
+        or allow_existing_refs
+    )
+    effective_include_remote = include_remote or remote_options_requested
+    effective_expected_origin_url = (
+        repository_url
+        if effective_include_remote and expected_origin_url is None
+        else expected_origin_url
+    )
+    commands = default_gate_commands(
+        with_deps=with_deps,
+        allow_dirty=allow_dirty,
+        include_remote=effective_include_remote,
+        repository_url=repository_url,
+        expected_repository=expected_repository,
+        expected_origin_url=effective_expected_origin_url,
+        allow_existing_refs=allow_existing_refs,
+    )
     checks: list[dict[str, object]] = []
     executed_commands: list[Sequence[str]] = []
 
@@ -214,6 +270,17 @@ def run_alpha_release_gate(
         "exit_code": exit_code,
         "with_deps": with_deps,
         "allow_dirty": allow_dirty,
+        "include_remote": effective_include_remote,
+        "repository_url": repository_url if effective_include_remote else None,
+        "expected_repository": (
+            expected_repository if effective_include_remote else None
+        ),
+        "expected_origin_url": effective_expected_origin_url
+        if effective_include_remote
+        else None,
+        "allow_existing_refs": allow_existing_refs
+        if effective_include_remote
+        else False,
         "checks": checks,
     }
     return AlphaReleaseGateResult(
@@ -245,6 +312,42 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--include-remote",
+        action="store_true",
+        help=(
+            "Include GitHub metadata and git ls-remote preflight checks. "
+            "Use after the public repository exists."
+        ),
+    )
+    parser.add_argument(
+        "--repository-url",
+        default=DEFAULT_REPOSITORY_URL,
+        help=f"Git repository URL for --include-remote. Defaults to {DEFAULT_REPOSITORY_URL}.",
+    )
+    parser.add_argument(
+        "--expected-repository",
+        default=DEFAULT_REPOSITORY_FULL_NAME,
+        help=(
+            "Expected GitHub owner/repository full name for --include-remote. "
+            f"Defaults to {DEFAULT_REPOSITORY_FULL_NAME}."
+        ),
+    )
+    parser.add_argument(
+        "--expected-origin-url",
+        default=None,
+        help=(
+            "Require local origin to match this URL during --include-remote preflight."
+        ),
+    )
+    parser.add_argument(
+        "--allow-existing-refs",
+        action="store_true",
+        help=(
+            "With --include-remote, allow a reachable repository that already "
+            "has refs while still rejecting an existing release tag."
+        ),
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print machine-readable gate evidence as JSON.",
@@ -264,6 +367,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         Path.cwd(),
         with_deps=args.with_deps,
         allow_dirty=args.allow_dirty,
+        include_remote=args.include_remote,
+        repository_url=args.repository_url,
+        expected_repository=args.expected_repository,
+        expected_origin_url=args.expected_origin_url,
+        allow_existing_refs=args.allow_existing_refs,
     )
     payload_json = json.dumps(result.payload, indent=2)
 

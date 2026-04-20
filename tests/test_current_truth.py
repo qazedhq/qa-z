@@ -161,14 +161,21 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-19" not in release_plan
     assert "Audit date: 2026-04-20 KST." in launch_plan
     assert "Audit date: 2026-04-19 KST." not in launch_plan
-    assert "367 passed" in commit_plan
-    assert "367 passed" in release_plan
-    assert "367 passed" in release_handoff
-    assert "pytest: 367 passed" in launch_plan
-    assert "expected current pytest count is 367 passed" in launch_plan
-    assert "`python -m pytest`: 367 passed" in release_notes
-    assert "`python -m pytest`: passed, `367 passed" in release_pr
-    assert "`python -m pytest`: passed, `367 passed`" in github_release
+    assert "377 passed" in commit_plan
+    assert "377 passed" in release_plan
+    assert "377 passed" in release_handoff
+    assert "pytest: 377 passed" in launch_plan
+    assert "expected current pytest count is 377 passed" in launch_plan
+    assert "`python -m pytest`: 377 passed" in release_notes
+    assert "`python -m pytest`: passed, `377 passed" in release_pr
+    assert "`python -m pytest`: passed, `377 passed`" in github_release
+    assert "367 passed" not in commit_plan
+    assert "367 passed" not in release_plan
+    assert "367 passed" not in release_handoff
+    assert "367 passed" not in launch_plan
+    assert "367 passed" not in release_notes
+    assert "367 passed" not in release_pr
+    assert "367 passed" not in github_release
     assert "366 passed" not in commit_plan
     assert "366 passed" not in release_plan
     assert "366 passed" not in release_handoff
@@ -236,6 +243,8 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "python scripts/alpha_release_gate.py --json" in github_release
     assert "python scripts/alpha_release_gate.py --json" in release_handoff
     assert "python scripts/alpha_release_gate.py --json" in launch_plan
+    assert "python scripts/alpha_release_gate.py --include-remote" in readme
+    assert "--expected-origin-url" in readme
     assert "CLI help smoke checks" in readme
     assert "CLI help smoke checks" in release_handoff
     assert "CLI help smoke" in launch_plan
@@ -406,6 +415,11 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "git ls-remote --refs <repository-url>" in release_handoff
     assert "GitHub API metadata reports a public `qazedhq/qa-z`" in release_handoff
     assert "--expected-repository <owner/repo>" in release_handoff
+    assert "--expected-origin-url <repository-url>" in release_handoff
+    assert "python scripts/alpha_release_gate.py --include-remote" in release_handoff
+    assert "HTTPS and SSH GitHub URL forms for the same repository are accepted" in (
+        release_handoff
+    )
     assert "existing remote `v0.9.8-alpha` tag" in release_handoff
     assert "python scripts/alpha_release_preflight.py --skip-remote" in release_handoff
     assert "python scripts/alpha_release_gate.py --json" in release_handoff
@@ -420,6 +434,10 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     )
     assert (
         "python scripts/alpha_release_preflight.py --repository-url <repository-url> --json"
+        in release_handoff
+    )
+    assert (
+        "python scripts/alpha_release_preflight.py --repository-url <repository-url> --expected-origin-url <repository-url>"
         in release_handoff
     )
     assert (

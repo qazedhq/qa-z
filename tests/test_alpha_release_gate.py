@@ -131,6 +131,71 @@ def test_alpha_release_gate_can_allow_dirty_worktree_for_development(tmp_path):
     assert "--allow-dirty" in runner.commands[0]
 
 
+def test_alpha_release_gate_can_include_remote_preflight(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        include_remote=True,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        allow_existing_refs=True,
+        runner=runner,
+    )
+
+    assert result.exit_code == 0
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py "
+        "--repository-url https://github.com/qazedhq/qa-z.git "
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git "
+        "--allow-existing-refs --json"
+    )
+    assert "--skip-remote" not in runner.commands[0]
+    assert "--allow-existing-refs" in runner.commands[0]
+    assert "--expected-origin-url" in runner.commands[0]
+
+
+def test_alpha_release_gate_include_remote_defaults_origin_to_repository_url(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        include_remote=True,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        runner=runner,
+    )
+
+    assert result.exit_code == 0
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py "
+        "--repository-url https://github.com/qazedhq/qa-z.git "
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
+    )
+    assert "--expected-origin-url" in runner.commands[0]
+
+
+def test_alpha_release_gate_remote_options_imply_remote_preflight(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        runner=runner,
+    )
+
+    assert result.exit_code == 0
+    assert result.payload["include_remote"] is True
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py "
+        "--repository-url https://github.com/qazedhq/qa-z.git "
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
+    )
+    assert "--skip-remote" not in runner.commands[0]
+
+
 def test_alpha_release_gate_cli_can_emit_json_and_write_output(
     monkeypatch, tmp_path, capsys
 ):
@@ -140,6 +205,10 @@ def test_alpha_release_gate_cli_can_emit_json_and_write_output(
     def fake_run_alpha_release_gate(_repo_root, **kwargs):
         assert kwargs["with_deps"] is True
         assert kwargs["allow_dirty"] is True
+        assert kwargs["include_remote"] is True
+        assert kwargs["repository_url"] == "https://github.com/qazedhq/qa-z.git"
+        assert kwargs["expected_origin_url"] == "https://github.com/qazedhq/qa-z.git"
+        assert kwargs["allow_existing_refs"] is True
         return module.AlphaReleaseGateResult(
             summary="alpha release gate passed",
             exit_code=0,
@@ -154,7 +223,19 @@ def test_alpha_release_gate_cli_can_emit_json_and_write_output(
     monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
 
     exit_code = module.main(
-        ["--with-deps", "--allow-dirty", "--json", "--output", str(output_path)]
+        [
+            "--with-deps",
+            "--allow-dirty",
+            "--include-remote",
+            "--repository-url",
+            "https://github.com/qazedhq/qa-z.git",
+            "--expected-origin-url",
+            "https://github.com/qazedhq/qa-z.git",
+            "--allow-existing-refs",
+            "--json",
+            "--output",
+            str(output_path),
+        ]
     )
 
     captured = capsys.readouterr()

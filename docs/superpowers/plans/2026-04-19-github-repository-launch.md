@@ -58,7 +58,7 @@ Observed results:
 ruff format: 134 files already formatted
 ruff check: All checks passed!
 mypy: Success: no issues found in 86 source files
-pytest: 367 passed
+pytest: 377 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 artifact smoke: wheel and sdist metadata install smoke passed
 bundle manifest: bundle head and SHA256 artifact manifest generated
@@ -228,7 +228,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 367 passed.
+All commands pass. The expected current pytest count is 377 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**

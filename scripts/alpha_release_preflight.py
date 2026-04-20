@@ -118,7 +118,11 @@ def parse_github_repository_target(
         path = url.removeprefix("git@github.com:")
     else:
         parsed = urlparse(url)
-        if parsed.netloc.lower() != "github.com":
+        host = parsed.hostname
+        if host is None:
+            host = parsed.netloc.rsplit("@", 1)[-1].split(":", 1)[0]
+        host = host.lower()
+        if host != "github.com":
             return None
         path = parsed.path.lstrip("/")
     if path.endswith(".git"):
@@ -131,6 +135,14 @@ def parse_github_repository_target(
     return GitHubRepositoryTarget(
         full_name, f"https://api.github.com/repos/{full_name}"
     )
+
+
+def repository_urls_match(actual_url: str, expected_url: str) -> bool:
+    actual_target = parse_github_repository_target(actual_url)
+    expected_target = parse_github_repository_target(expected_url)
+    if actual_target is None or expected_target is None:
+        return actual_url.strip().rstrip("/") == expected_url.strip().rstrip("/")
+    return actual_target.full_name.lower() == expected_target.full_name.lower()
 
 
 def fetch_github_metadata(api_url: str) -> GitHubMetadataResult:
@@ -211,6 +223,7 @@ def run_preflight(
     repo_root: Path,
     *,
     repository_url: str = DEFAULT_REPOSITORY_URL,
+    expected_origin_url: str | None = None,
     expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
     skip_remote: bool = False,
@@ -247,13 +260,28 @@ def run_preflight(
     exit_code, stdout, stderr = check_git(
         "origin_absent", ("git", "remote", "get-url", "origin"), repo_root, runner
     )
-    if exit_code != 0:
+    origin_url = stdout.strip()
+    if exit_code != 0 and expected_origin_url is None:
         checks.append(
             CheckResult("origin_absent", "passed", "origin is not configured")
         )
-    else:
-        detail = stdout.strip() or stderr.strip() or "origin exists"
+    elif exit_code != 0:
+        detail = stderr.strip() or "origin is not configured"
+        checks.append(
+            CheckResult(
+                "origin_matches_expected",
+                "failed",
+                f"expected origin {expected_origin_url}, got {detail}",
+            )
+        )
+    elif expected_origin_url is None:
+        detail = origin_url or stderr.strip() or "origin exists"
         checks.append(CheckResult("origin_absent", "failed", detail))
+    elif repository_urls_match(origin_url, expected_origin_url):
+        checks.append(CheckResult("origin_matches_expected", "passed", origin_url))
+    else:
+        detail = f"expected origin {expected_origin_url}, got {origin_url}"
+        checks.append(CheckResult("origin_matches_expected", "failed", detail))
 
     exit_code, stdout, stderr = check_git(
         "release_tag_absent",
@@ -296,6 +324,37 @@ def run_preflight(
     else:
         detail = stderr.strip() or "HEAD did not resolve"
         checks.append(CheckResult("head_resolves", "failed", detail))
+
+    if expected_origin_url is not None:
+        repository_target = parse_github_repository_target(repository_url)
+        origin_target = parse_github_repository_target(expected_origin_url)
+        if repository_target is None or origin_target is None:
+            checks.append(
+                CheckResult(
+                    "origin_target_matches_repository",
+                    "failed",
+                    "expected origin URL and repository URL must both target GitHub",
+                )
+            )
+        elif repository_target.full_name.lower() == origin_target.full_name.lower():
+            checks.append(
+                CheckResult(
+                    "origin_target_matches_repository",
+                    "passed",
+                    repository_target.full_name,
+                )
+            )
+        else:
+            checks.append(
+                CheckResult(
+                    "origin_target_matches_repository",
+                    "failed",
+                    (
+                        f"expected origin target {origin_target.full_name} does not "
+                        f"match repository target {repository_target.full_name}"
+                    ),
+                )
+            )
 
     if skip_remote:
         checks.append(
@@ -392,6 +451,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--expected-origin-url",
+        default=None,
+        help=(
+            "Require a configured origin remote matching this URL. "
+            "Omit before the GitHub repository exists."
+        ),
+    )
+    parser.add_argument(
         "--expected-branch",
         default=DEFAULT_BRANCH,
         help=f"Expected local branch. Defaults to {DEFAULT_BRANCH}.",
@@ -435,6 +502,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     result = run_preflight(
         Path.cwd(),
         repository_url=args.repository_url,
+        expected_origin_url=args.expected_origin_url,
         expected_branch=args.expected_branch,
         expected_tag=args.expected_tag,
         skip_remote=args.skip_remote,

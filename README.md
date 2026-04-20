@@ -360,6 +360,16 @@ preflight, static checks, tests, CLI help smoke checks, QA-Z
 fast/deep/benchmark, package build, artifact install smoke, and bundle manifest
 verification with one JSON result and one exit code.
 
+After the public GitHub repository exists, include remote release checks in the
+same gate:
+
+```bash
+python scripts/alpha_release_gate.py --include-remote --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --json
+```
+
+`--include-remote` defaults `--expected-origin-url` to the repository URL, so an
+equivalent HTTPS or SSH GitHub `origin` for `qazedhq/qa-z` is accepted.
+
 Try the TypeScript demo:
 
 ```bash

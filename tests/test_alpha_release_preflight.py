@@ -123,6 +123,151 @@ def test_preflight_fails_when_remote_is_missing(tmp_path):
     assert "Repository not found" in result.by_name["remote_reachable"].detail
 
 
+def test_preflight_allows_configured_origin_when_expected_url_matches(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "https://github.com/qazedhq/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["origin_matches_expected"].status == "passed"
+    assert result.by_name["origin_matches_expected"].detail == (
+        "https://github.com/qazedhq/qa-z.git"
+    )
+
+
+def test_preflight_allows_equivalent_origin_url_forms(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "git@github.com:qazedhq/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["origin_matches_expected"].status == "passed"
+    assert result.by_name["origin_matches_expected"].detail == (
+        "git@github.com:qazedhq/qa-z.git"
+    )
+
+
+def test_preflight_allows_ssh_url_origin_form(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "ssh://git@github.com/qazedhq/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["origin_matches_expected"].status == "passed"
+    assert result.by_name["origin_matches_expected"].detail == (
+        "ssh://git@github.com/qazedhq/qa-z.git"
+    )
+
+
+def test_preflight_allows_ssh_url_origin_form_with_explicit_port(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "ssh://git@github.com:22/qazedhq/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["origin_matches_expected"].status == "passed"
+    assert result.by_name["origin_matches_expected"].detail == (
+        "ssh://git@github.com:22/qazedhq/qa-z.git"
+    )
+
+
+def test_preflight_fails_when_expected_origin_targets_different_repository(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "https://github.com/other/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/other/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["origin_target_matches_repository"].status == "failed"
+    assert result.by_name["origin_target_matches_repository"].detail == (
+        "expected origin target other/qa-z does not match repository target qazedhq/qa-z"
+    )
+
+
+def test_preflight_fails_when_configured_origin_does_not_match_expected_url(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "https://github.com/other/qa-z.git\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 1
+    assert result.by_name["origin_matches_expected"].status == "failed"
+    assert result.by_name["origin_matches_expected"].detail == (
+        "expected origin https://github.com/qazedhq/qa-z.git, "
+        "got https://github.com/other/qa-z.git"
+    )
+
+
 def test_preflight_fails_when_remote_has_any_refs(tmp_path):
     module = load_preflight_module()
     responses = base_responses()
@@ -265,11 +410,22 @@ def test_preflight_cli_accepts_expected_repository_override():
     assert args.expected_repository == "example/qa-z"
 
 
+def test_preflight_cli_accepts_expected_origin_url_override():
+    module = load_preflight_module()
+
+    args = module.parse_args(
+        ["--expected-origin-url", "https://github.com/qazedhq/qa-z.git"]
+    )
+
+    assert args.expected_origin_url == "https://github.com/qazedhq/qa-z.git"
+
+
 def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
     module = load_preflight_module()
 
     def fake_run_preflight(_repo_root, **kwargs):
         assert kwargs["expected_repository"] == "qazedhq/qa-z"
+        assert kwargs["expected_origin_url"] is None
         return module.PreflightResult(
             [
                 module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap"),
