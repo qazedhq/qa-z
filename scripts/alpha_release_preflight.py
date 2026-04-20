@@ -79,9 +79,18 @@ def result_payload(
     allow_existing_refs: bool = False,
     allow_dirty: bool = False,
 ) -> dict[str, object]:
+    failed_checks = [check.name for check in result.checks if check.status == "failed"]
+    passed_count = sum(1 for check in result.checks if check.status == "passed")
+    failed_count = len(failed_checks)
+    skipped_count = sum(1 for check in result.checks if check.status == "skipped")
     return {
         "summary": result.summary,
         "exit_code": result.exit_code,
+        "check_count": len(result.checks),
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "skipped_count": skipped_count,
+        "failed_checks": failed_checks,
         "repository_url": repository_url,
         "expected_repository": expected_repository,
         "expected_origin_url": expected_origin_url,

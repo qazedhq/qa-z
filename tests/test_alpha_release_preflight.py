@@ -443,6 +443,11 @@ def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
     assert payload == {
         "summary": "release preflight passed",
         "exit_code": 0,
+        "check_count": 2,
+        "passed_count": 1,
+        "failed_count": 0,
+        "skipped_count": 1,
+        "failed_checks": [],
         "repository_url": "https://github.com/qazedhq/qa-z.git",
         "expected_repository": "qazedhq/qa-z",
         "expected_origin_url": None,
@@ -531,7 +536,47 @@ def test_preflight_cli_json_preserves_failed_exit_code(monkeypatch, capsys):
     assert exit_code == 1
     assert payload["summary"] == "release preflight failed"
     assert payload["exit_code"] == 1
+    assert payload["check_count"] == 1
+    assert payload["passed_count"] == 0
+    assert payload["failed_count"] == 1
+    assert payload["skipped_count"] == 0
+    assert payload["failed_checks"] == ["remote_reachable"]
     assert payload["checks"][0]["status"] == "failed"
+
+
+def test_preflight_cli_writes_failed_output_with_counters(
+    monkeypatch, tmp_path, capsys
+):
+    module = load_preflight_module()
+    output_path = tmp_path / "failed" / "preflight.json"
+
+    def fake_run_preflight(_repo_root, **_kwargs):
+        return module.PreflightResult(
+            [
+                module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap"),
+                module.CheckResult("github_repository", "failed", "404 Not Found"),
+                module.CheckResult(
+                    "remote_reachable", "failed", "Repository not found"
+                ),
+            ]
+        )
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+
+    exit_code = module.main(["--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    stdout_payload = json.loads(captured.out)
+    file_payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 1
+    assert file_payload == stdout_payload
+    assert file_payload["check_count"] == 3
+    assert file_payload["passed_count"] == 1
+    assert file_payload["failed_count"] == 2
+    assert file_payload["failed_checks"] == [
+        "github_repository",
+        "remote_reachable",
+    ]
 
 
 def test_preflight_fails_when_github_repository_is_not_public(tmp_path):

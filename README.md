@@ -361,6 +361,7 @@ fast/deep/benchmark, package build, artifact install smoke, and bundle manifest
 verification with one JSON result and one exit code. When `--output` is used,
 the nested preflight also writes `dist/alpha-release-gate.preflight.json`, and
 the gate JSON records check counts plus failed check names for release triage.
+The nested preflight JSON includes check_count, passed_count, failed_count, skipped_count, and failed_checks alongside the repository, origin, branch, tag, and mode inputs.
 
 After the public GitHub repository exists, include remote release checks in the
 same gate:

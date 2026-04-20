@@ -161,14 +161,21 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-19" not in release_plan
     assert "Audit date: 2026-04-20 KST." in launch_plan
     assert "Audit date: 2026-04-19 KST." not in launch_plan
-    assert "380 passed" in commit_plan
-    assert "380 passed" in release_plan
-    assert "380 passed" in release_handoff
-    assert "pytest: 380 passed" in launch_plan
-    assert "expected current pytest count is 380 passed" in launch_plan
-    assert "`python -m pytest`: 380 passed" in release_notes
-    assert "`python -m pytest`: passed, `380 passed" in release_pr
-    assert "`python -m pytest`: passed, `380 passed`" in github_release
+    assert "381 passed" in commit_plan
+    assert "381 passed" in release_plan
+    assert "381 passed" in release_handoff
+    assert "pytest: 381 passed" in launch_plan
+    assert "expected current pytest count is 381 passed" in launch_plan
+    assert "`python -m pytest`: 381 passed" in release_notes
+    assert "`python -m pytest`: passed, `381 passed" in release_pr
+    assert "`python -m pytest`: passed, `381 passed`" in github_release
+    assert "380 passed" not in commit_plan
+    assert "380 passed" not in release_plan
+    assert "380 passed" not in release_handoff
+    assert "380 passed" not in launch_plan
+    assert "380 passed" not in release_notes
+    assert "380 passed" not in release_pr
+    assert "380 passed" not in github_release
     assert "377 passed" not in commit_plan
     assert "377 passed" not in release_plan
     assert "377 passed" not in release_handoff
@@ -258,6 +265,10 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
         "gate JSON records check_count, passed_count, failed_count, and failed_checks"
         in release_handoff
     )
+    assert (
+        "preflight JSON records check_count, passed_count, failed_count, skipped_count, and failed_checks"
+        in release_handoff
+    )
     assert "python scripts/alpha_release_gate.py --json" in launch_plan
     assert "python scripts/alpha_release_gate.py --include-remote" in readme
     assert (
@@ -265,6 +276,10 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
         in readme
     )
     assert "dist/alpha-release-gate.preflight.json" in readme
+    assert (
+        "preflight JSON includes check_count, passed_count, failed_count, skipped_count, and failed_checks"
+        in readme
+    )
     assert "--expected-origin-url" in readme
     assert (
         "python scripts/alpha_release_preflight.py --skip-remote --json --output"
