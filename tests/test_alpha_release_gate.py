@@ -106,6 +106,55 @@ def test_alpha_release_gate_records_failures_but_continues_running(tmp_path):
     ]
 
 
+def test_alpha_release_gate_promotes_preflight_next_actions(tmp_path):
+    module = load_gate_module()
+    preflight_command = module.default_gate_commands()[0].command
+    preflight_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["github_repository", "remote_reachable"],
+        "next_actions": [
+            (
+                "Create or expose the public GitHub repository qazedhq/qa-z, "
+                "then rerun remote preflight for https://github.com/qazedhq/qa-z.git."
+            )
+        ],
+    }
+    runner = RecordingRunner(
+        {tuple(preflight_command): (1, json.dumps(preflight_payload), "")}
+    )
+
+    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+
+    assert result.exit_code == 1
+    assert result.payload["failed_checks"] == ["local_preflight"]
+    assert result.payload["preflight_failed_checks"] == [
+        "github_repository",
+        "remote_reachable",
+    ]
+    assert result.payload["next_actions"] == preflight_payload["next_actions"]
+
+
+def test_alpha_release_gate_preserves_empty_preflight_next_actions(tmp_path):
+    module = load_gate_module()
+    preflight_command = module.default_gate_commands()[0].command
+    preflight_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["current_branch"],
+        "next_actions": [],
+    }
+    runner = RecordingRunner(
+        {tuple(preflight_command): (1, json.dumps(preflight_payload), "")}
+    )
+
+    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+
+    assert result.exit_code == 1
+    assert result.payload["preflight_failed_checks"] == ["current_branch"]
+    assert result.payload["next_actions"] == []
+
+
 def test_alpha_release_gate_can_include_dependency_smoke(tmp_path):
     module = load_gate_module()
     runner = RecordingRunner()
@@ -269,3 +318,45 @@ def test_alpha_release_gate_cli_can_emit_json_and_write_output(
     assert exit_code == 0
     assert payload["summary"] == "alpha release gate passed"
     assert json.loads(output_path.read_text()) == payload
+
+
+def test_alpha_release_gate_cli_prints_next_actions(monkeypatch, capsys):
+    module = load_gate_module()
+
+    def fake_run_alpha_release_gate(_repo_root, **_kwargs):
+        return module.AlphaReleaseGateResult(
+            summary="alpha release gate failed",
+            exit_code=1,
+            commands=[],
+            payload={
+                "summary": "alpha release gate failed",
+                "exit_code": 1,
+                "checks": [
+                    {
+                        "name": "local_preflight",
+                        "label": "python scripts/alpha_release_preflight.py --json",
+                        "status": "failed",
+                        "stderr_tail": "",
+                        "stdout_tail": "release preflight failed",
+                    }
+                ],
+                "next_actions": [
+                    (
+                        "Create or expose the public GitHub repository qazedhq/qa-z, "
+                        "then rerun remote preflight."
+                    )
+                ],
+            },
+        )
+
+    monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
+
+    exit_code = module.main([])
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "Next actions:" in captured.out
+    assert (
+        "- Create or expose the public GitHub repository qazedhq/qa-z, "
+        "then rerun remote preflight."
+    ) in captured.out

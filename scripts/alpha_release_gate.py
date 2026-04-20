@@ -217,6 +217,41 @@ def output_tail(output: str) -> str:
     return output.strip()[-TAIL_LIMIT:]
 
 
+def preflight_next_actions(stdout: str) -> list[str]:
+    payload = parse_json_object(stdout)
+    if payload is None:
+        return []
+    actions = payload.get("next_actions")
+    if not isinstance(actions, list):
+        return []
+    return [action for action in actions if isinstance(action, str)]
+
+
+def preflight_has_next_actions(stdout: str) -> bool:
+    payload = parse_json_object(stdout)
+    return payload is not None and "next_actions" in payload
+
+
+def preflight_failed_checks(stdout: str) -> list[str]:
+    payload = parse_json_object(stdout)
+    if payload is None:
+        return []
+    failed_checks = payload.get("failed_checks")
+    if not isinstance(failed_checks, list):
+        return []
+    return [check for check in failed_checks if isinstance(check, str)]
+
+
+def parse_json_object(stdout: str) -> dict[str, object] | None:
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
 def run_alpha_release_gate(
     repo_root: Path,
     *,
@@ -254,10 +289,17 @@ def run_alpha_release_gate(
     )
     checks: list[dict[str, object]] = []
     executed_commands: list[Sequence[str]] = []
+    next_actions: list[str] = []
+    has_preflight_next_actions = False
+    preflight_failures: list[str] = []
 
     for gate_command in commands:
         executed_commands.append(gate_command.command)
         exit_code, stdout, stderr = runner(gate_command.command, repo_root)
+        if gate_command.name == "local_preflight" and exit_code != 0:
+            has_preflight_next_actions = preflight_has_next_actions(stdout)
+            next_actions.extend(preflight_next_actions(stdout))
+            preflight_failures.extend(preflight_failed_checks(stdout))
         checks.append(
             {
                 "name": gate_command.name,
@@ -302,6 +344,10 @@ def run_alpha_release_gate(
         else None,
         "checks": checks,
     }
+    if preflight_failures:
+        payload["preflight_failed_checks"] = preflight_failures
+    if has_preflight_next_actions:
+        payload["next_actions"] = next_actions
     return AlphaReleaseGateResult(
         summary=summary,
         exit_code=exit_code,
@@ -422,6 +468,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             if check["status"] != "passed":
                 detail = check["stderr_tail"] or check["stdout_tail"]
                 print(f"  {detail}")
+        next_actions = result.payload.get("next_actions")
+        if isinstance(next_actions, list) and next_actions:
+            print("Next actions:")
+            for action in next_actions:
+                if isinstance(action, str):
+                    print(f"- {action}")
         print(result.summary)
 
     return result.exit_code
