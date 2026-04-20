@@ -217,8 +217,7 @@ def output_tail(output: str) -> str:
     return output.strip()[-TAIL_LIMIT:]
 
 
-def preflight_next_actions(stdout: str) -> list[str]:
-    payload = parse_json_object(stdout)
+def preflight_next_actions(payload: dict[str, object] | None) -> list[str]:
     if payload is None:
         return []
     actions = payload.get("next_actions")
@@ -227,19 +226,31 @@ def preflight_next_actions(stdout: str) -> list[str]:
     return [action for action in actions if isinstance(action, str)]
 
 
-def preflight_has_next_actions(stdout: str) -> bool:
-    payload = parse_json_object(stdout)
+def preflight_has_next_actions(payload: dict[str, object] | None) -> bool:
     return payload is not None and "next_actions" in payload
 
 
-def preflight_failed_checks(stdout: str) -> list[str]:
-    payload = parse_json_object(stdout)
+def preflight_failed_checks(payload: dict[str, object] | None) -> list[str]:
     if payload is None:
         return []
     failed_checks = payload.get("failed_checks")
     if not isinstance(failed_checks, list):
         return []
     return [check for check in failed_checks if isinstance(check, str)]
+
+
+def preflight_payload(
+    stdout: str, output_path: Path | None
+) -> dict[str, object] | None:
+    payload = parse_json_object(stdout)
+    if payload is not None:
+        return payload
+    if output_path is None or not output_path.exists():
+        return None
+    try:
+        return parse_json_object(output_path.read_text(encoding="utf-8"))
+    except OSError:
+        return None
 
 
 def parse_json_object(stdout: str) -> dict[str, object] | None:
@@ -297,9 +308,12 @@ def run_alpha_release_gate(
         executed_commands.append(gate_command.command)
         exit_code, stdout, stderr = runner(gate_command.command, repo_root)
         if gate_command.name == "local_preflight" and exit_code != 0:
-            has_preflight_next_actions = preflight_has_next_actions(stdout)
-            next_actions.extend(preflight_next_actions(stdout))
-            preflight_failures.extend(preflight_failed_checks(stdout))
+            nested_preflight_payload = preflight_payload(stdout, preflight_output)
+            has_preflight_next_actions = preflight_has_next_actions(
+                nested_preflight_payload
+            )
+            next_actions.extend(preflight_next_actions(nested_preflight_payload))
+            preflight_failures.extend(preflight_failed_checks(nested_preflight_payload))
         checks.append(
             {
                 "name": gate_command.name,

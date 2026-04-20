@@ -362,6 +362,7 @@ verification with one JSON result and one exit code. When `--output` is used,
 the nested preflight also writes `dist/alpha-release-gate.preflight.json`, and
 the gate JSON records check counts plus failed check names for release triage.
 When the nested preflight fails, the gate JSON promotes preflight_failed_checks and next_actions so the operator can see the blocked preflight checks and repair steps without scraping command output.
+The gate reads nested preflight output file when stdout is not JSON, so file-backed preflight evidence still surfaces the same failed checks and repair guidance.
 The human-readable gate output prints Next actions from the same preflight payload when repair guidance is available.
 The nested preflight JSON includes check_count, passed_count, failed_count, skipped_count, and failed_checks alongside the repository, origin, branch, tag, and mode inputs.
 Remote preflight failures also include `next_actions` with the next concrete
