@@ -86,6 +86,10 @@ def test_alpha_release_gate_records_failures_but_continues_running(tmp_path):
 
     assert result.exit_code == 1
     assert result.summary == "alpha release gate failed"
+    assert result.payload["check_count"] == len(module.default_gate_commands())
+    assert result.payload["passed_count"] == len(module.default_gate_commands()) - 1
+    assert result.payload["failed_count"] == 1
+    assert result.payload["failed_checks"] == ["pytest"]
     assert len(runner.commands) == len(module.default_gate_commands())
     failed_checks = [
         check for check in result.payload["checks"] if check["status"] == "failed"
@@ -196,6 +200,27 @@ def test_alpha_release_gate_remote_options_imply_remote_preflight(tmp_path):
     assert "--skip-remote" not in runner.commands[0]
 
 
+def test_alpha_release_gate_can_request_preflight_output_artifact(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+    preflight_output = tmp_path / "evidence" / "preflight.json"
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        preflight_output=preflight_output,
+        runner=runner,
+    )
+
+    assert result.exit_code == 0
+    assert result.payload["preflight_output"] == str(preflight_output)
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote "
+        f"--output {preflight_output} --json"
+    )
+    assert "--output" in runner.commands[0]
+    assert str(preflight_output) in runner.commands[0]
+
+
 def test_alpha_release_gate_cli_can_emit_json_and_write_output(
     monkeypatch, tmp_path, capsys
 ):
@@ -209,6 +234,7 @@ def test_alpha_release_gate_cli_can_emit_json_and_write_output(
         assert kwargs["repository_url"] == "https://github.com/qazedhq/qa-z.git"
         assert kwargs["expected_origin_url"] == "https://github.com/qazedhq/qa-z.git"
         assert kwargs["allow_existing_refs"] is True
+        assert kwargs["preflight_output"] == output_path.with_suffix(".preflight.json")
         return module.AlphaReleaseGateResult(
             summary="alpha release gate passed",
             exit_code=0,

@@ -67,10 +67,29 @@ class PreflightResult:
         return {check.name: check for check in self.checks}
 
 
-def result_payload(result: PreflightResult) -> dict[str, object]:
+def result_payload(
+    result: PreflightResult,
+    *,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
+    expected_origin_url: str | None = None,
+    expected_branch: str = DEFAULT_BRANCH,
+    expected_tag: str = DEFAULT_TAG,
+    skip_remote: bool = False,
+    allow_existing_refs: bool = False,
+    allow_dirty: bool = False,
+) -> dict[str, object]:
     return {
         "summary": result.summary,
         "exit_code": result.exit_code,
+        "repository_url": repository_url,
+        "expected_repository": expected_repository,
+        "expected_origin_url": expected_origin_url,
+        "expected_branch": expected_branch,
+        "expected_tag": expected_tag,
+        "skip_remote": skip_remote,
+        "allow_existing_refs": allow_existing_refs,
+        "allow_dirty": allow_dirty,
         "checks": [
             {
                 "name": check.name,
@@ -494,6 +513,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="Print machine-readable preflight evidence as JSON.",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional path where the JSON evidence payload should be written.",
+    )
     return parser.parse_args(argv)
 
 
@@ -510,8 +535,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         allow_dirty=args.allow_dirty,
         expected_repository=args.expected_repository,
     )
+    payload = result_payload(
+        result,
+        repository_url=args.repository_url,
+        expected_repository=args.expected_repository,
+        expected_origin_url=args.expected_origin_url,
+        expected_branch=args.expected_branch,
+        expected_tag=args.expected_tag,
+        skip_remote=args.skip_remote,
+        allow_existing_refs=args.allow_existing_refs,
+        allow_dirty=args.allow_dirty,
+    )
+    payload_json = json.dumps(payload, indent=2)
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(f"{payload_json}\n", encoding="utf-8")
+
     if args.json:
-        print(json.dumps(result_payload(result), indent=2))
+        print(payload_json)
     else:
         for check in result.checks:
             print(f"[{check.status.upper()}] {check.name}: {check.detail}")

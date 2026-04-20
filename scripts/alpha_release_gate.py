@@ -92,6 +92,7 @@ def default_gate_commands(
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
     allow_existing_refs: bool = False,
+    preflight_output: Path | None = None,
 ) -> list[GateCommand]:
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
@@ -129,6 +130,9 @@ def default_gate_commands(
     if allow_dirty:
         preflight_args.append("--allow-dirty")
         preflight_label_parts.append("--allow-dirty")
+    if preflight_output is not None:
+        preflight_args.extend(["--output", str(preflight_output)])
+        preflight_label_parts.extend(["--output", str(preflight_output)])
     preflight_args.append("--json")
     preflight_label_parts.append("--json")
 
@@ -223,6 +227,7 @@ def run_alpha_release_gate(
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
     allow_existing_refs: bool = False,
+    preflight_output: Path | None = None,
     runner: Runner = subprocess_runner,
 ) -> AlphaReleaseGateResult:
     remote_options_requested = (
@@ -245,6 +250,7 @@ def run_alpha_release_gate(
         expected_repository=expected_repository,
         expected_origin_url=effective_expected_origin_url,
         allow_existing_refs=allow_existing_refs,
+        preflight_output=preflight_output,
     )
     checks: list[dict[str, object]] = []
     executed_commands: list[Sequence[str]] = []
@@ -263,11 +269,21 @@ def run_alpha_release_gate(
             }
         )
 
-    exit_code = 1 if any(check["status"] == "failed" for check in checks) else 0
+    failed_checks = [
+        str(check["name"]) for check in checks if check["status"] == "failed"
+    ]
+    passed_count = sum(1 for check in checks if check["status"] == "passed")
+    failed_count = len(failed_checks)
+    check_count = len(checks)
+    exit_code = 1 if failed_checks else 0
     summary = "alpha release gate failed" if exit_code else "alpha release gate passed"
     payload: dict[str, object] = {
         "summary": summary,
         "exit_code": exit_code,
+        "check_count": check_count,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "failed_checks": failed_checks,
         "with_deps": with_deps,
         "allow_dirty": allow_dirty,
         "include_remote": effective_include_remote,
@@ -281,6 +297,9 @@ def run_alpha_release_gate(
         "allow_existing_refs": allow_existing_refs
         if effective_include_remote
         else False,
+        "preflight_output": str(preflight_output)
+        if preflight_output is not None
+        else None,
         "checks": checks,
     }
     return AlphaReleaseGateResult(
@@ -358,11 +377,23 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         default=None,
         help="Optional path where the JSON evidence payload should be written.",
     )
+    parser.add_argument(
+        "--preflight-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path where the nested preflight JSON evidence should be "
+            "written. Defaults to <output>.preflight.json when --output is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    preflight_output = args.preflight_output
+    if preflight_output is None and args.output is not None:
+        preflight_output = args.output.with_suffix(".preflight.json")
     result = run_alpha_release_gate(
         Path.cwd(),
         with_deps=args.with_deps,
@@ -372,6 +403,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_repository=args.expected_repository,
         expected_origin_url=args.expected_origin_url,
         allow_existing_refs=args.allow_existing_refs,
+        preflight_output=preflight_output,
     )
     payload_json = json.dumps(result.payload, indent=2)
 

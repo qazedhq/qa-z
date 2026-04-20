@@ -443,6 +443,14 @@ def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
     assert payload == {
         "summary": "release preflight passed",
         "exit_code": 0,
+        "repository_url": "https://github.com/qazedhq/qa-z.git",
+        "expected_repository": "qazedhq/qa-z",
+        "expected_origin_url": None,
+        "expected_branch": "codex/qa-z-bootstrap",
+        "expected_tag": "v0.9.8-alpha",
+        "skip_remote": True,
+        "allow_existing_refs": False,
+        "allow_dirty": False,
         "checks": [
             {
                 "name": "current_branch",
@@ -456,6 +464,53 @@ def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
             },
         ],
     }
+    assert captured.err == ""
+
+
+def test_preflight_cli_can_write_json_output(monkeypatch, tmp_path, capsys):
+    module = load_preflight_module()
+    output_path = tmp_path / "preflight" / "evidence.json"
+
+    def fake_run_preflight(_repo_root, **kwargs):
+        assert kwargs["skip_remote"] is True
+        return module.PreflightResult(
+            [module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap")]
+        )
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+
+    exit_code = module.main(["--skip-remote", "--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert output_path.exists()
+    assert json.loads(output_path.read_text(encoding="utf-8")) == payload
+
+
+def test_preflight_cli_can_write_output_without_printing_json(
+    monkeypatch, tmp_path, capsys
+):
+    module = load_preflight_module()
+    output_path = tmp_path / "nested" / "preflight" / "evidence.json"
+
+    def fake_run_preflight(_repo_root, **kwargs):
+        assert kwargs["skip_remote"] is True
+        return module.PreflightResult(
+            [module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap")]
+        )
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+
+    exit_code = module.main(["--skip-remote", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert output_path.exists()
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["summary"] == "release preflight passed"
+    assert payload["checks"][0]["name"] == "current_branch"
+    assert "release preflight passed" in captured.out
     assert captured.err == ""
 
 

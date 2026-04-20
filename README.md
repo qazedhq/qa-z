@@ -352,13 +352,15 @@ Run the one-shot local alpha release gate before publishing or attaching local
 artifacts:
 
 ```bash
-python scripts/alpha_release_gate.py --json
+python scripts/alpha_release_gate.py --json --output dist/alpha-release-gate.json
 ```
 
 That release gate keeps the publish checklist deterministic by running local
 preflight, static checks, tests, CLI help smoke checks, QA-Z
 fast/deep/benchmark, package build, artifact install smoke, and bundle manifest
-verification with one JSON result and one exit code.
+verification with one JSON result and one exit code. When `--output` is used,
+the nested preflight also writes `dist/alpha-release-gate.preflight.json`, and
+the gate JSON records check counts plus failed check names for release triage.
 
 After the public GitHub repository exists, include remote release checks in the
 same gate:
