@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -239,12 +242,19 @@ def test_preflight_fails_for_non_github_repository_url(tmp_path):
     assert "github.com/qazedhq/qa-z" in result.by_name["github_repository"].detail
 
 
-def test_preflight_cli_accepts_existing_ref_pr_path_flag():
+def test_preflight_cli_accepts_existing_ref_pr_path_flag(capsys):
     module = load_preflight_module()
 
     args = module.parse_args(["--allow-existing-refs"])
 
     assert args.allow_existing_refs is True
+
+    with pytest.raises(SystemExit) as excinfo:
+        module.parse_args(["--help"])
+
+    captured = capsys.readouterr()
+    assert excinfo.value.code == 0
+    assert "Skip GitHub metadata and git ls-remote checks" in captured.out
 
 
 def test_preflight_cli_accepts_expected_repository_override():
@@ -253,6 +263,64 @@ def test_preflight_cli_accepts_expected_repository_override():
     args = module.parse_args(["--expected-repository", "example/qa-z"])
 
     assert args.expected_repository == "example/qa-z"
+
+
+def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
+    module = load_preflight_module()
+
+    def fake_run_preflight(_repo_root, **kwargs):
+        assert kwargs["expected_repository"] == "qazedhq/qa-z"
+        return module.PreflightResult(
+            [
+                module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap"),
+                module.CheckResult("remote_empty", "skipped", "remote check skipped"),
+            ]
+        )
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+
+    exit_code = module.main(["--skip-remote", "--json"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload == {
+        "summary": "release preflight passed",
+        "exit_code": 0,
+        "checks": [
+            {
+                "name": "current_branch",
+                "status": "passed",
+                "detail": "codex/qa-z-bootstrap",
+            },
+            {
+                "name": "remote_empty",
+                "status": "skipped",
+                "detail": "remote check skipped",
+            },
+        ],
+    }
+    assert captured.err == ""
+
+
+def test_preflight_cli_json_preserves_failed_exit_code(monkeypatch, capsys):
+    module = load_preflight_module()
+
+    def fake_run_preflight(_repo_root, **_kwargs):
+        return module.PreflightResult(
+            [module.CheckResult("remote_reachable", "failed", "Repository not found")]
+        )
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+
+    exit_code = module.main(["--json"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 1
+    assert payload["summary"] == "release preflight failed"
+    assert payload["exit_code"] == 1
+    assert payload["checks"][0]["status"] == "failed"
 
 
 def test_preflight_fails_when_github_repository_is_not_public(tmp_path):

@@ -155,14 +155,25 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "## Alpha Closure Readiness Snapshot" in commit_plan
     assert "latest full local gate pass" in commit_plan
     assert "python -m pytest" in commit_plan
-    assert "354 passed" in commit_plan
-    assert "354 passed" in release_plan
-    assert "354 passed" in release_handoff
-    assert "pytest: 354 passed" in launch_plan
-    assert "expected current pytest count is 354 passed" in launch_plan
-    assert "`python -m pytest`: 354 passed" in release_notes
-    assert "`python -m pytest`: passed, `354 passed" in release_pr
-    assert "`python -m pytest`: passed, `354 passed`" in github_release
+    assert "Verified on 2026-04-20" in release_plan
+    assert "Verified on 2026-04-19" not in release_plan
+    assert "Audit date: 2026-04-20 KST." in launch_plan
+    assert "Audit date: 2026-04-19 KST." not in launch_plan
+    assert "356 passed" in commit_plan
+    assert "356 passed" in release_plan
+    assert "356 passed" in release_handoff
+    assert "pytest: 356 passed" in launch_plan
+    assert "expected current pytest count is 356 passed" in launch_plan
+    assert "`python -m pytest`: 356 passed" in release_notes
+    assert "`python -m pytest`: passed, `356 passed" in release_pr
+    assert "`python -m pytest`: passed, `356 passed`" in github_release
+    assert "354 passed" not in commit_plan
+    assert "354 passed" not in release_plan
+    assert "354 passed" not in release_handoff
+    assert "354 passed" not in launch_plan
+    assert "354 passed" not in release_notes
+    assert "354 passed" not in release_pr
+    assert "354 passed" not in github_release
     assert "348 passed" not in commit_plan
     assert "348 passed" not in release_plan
     assert "348 passed" not in release_handoff
@@ -324,13 +335,28 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "existing remote `v0.9.8-alpha` tag" in release_handoff
     assert "python scripts/alpha_release_preflight.py --skip-remote" in release_handoff
     assert (
+        "python scripts/alpha_release_preflight.py --skip-remote --json"
+        in release_handoff
+    )
+    assert (
         "python scripts/alpha_release_preflight.py --repository-url <repository-url>"
+        in release_handoff
+    )
+    assert (
+        "python scripts/alpha_release_preflight.py --repository-url <repository-url> --json"
         in release_handoff
     )
     assert (
         "python scripts/alpha_release_preflight.py --repository-url <repository-url> --allow-existing-refs"
         in release_handoff
     )
+    assert (
+        "python scripts/alpha_release_preflight.py --repository-url <repository-url> --allow-existing-refs --json"
+        in release_handoff
+    )
+    assert "machine-readable" in release_handoff
+    assert "operator evidence" in release_handoff
+    assert "returns the same exit code" in release_handoff
     assert "--allow-existing-refs" in launch_plan
     assert "release PR path" in launch_plan
     assert "Do not add `origin` until this command succeeds" in release_handoff
@@ -639,6 +665,8 @@ def test_mixed_fast_deep_benchmark_breadth_is_documented() -> None:
     assert "bridge-local action context copying" in benchmarking
     assert "missing action-context guide and stdout diagnostics" in readme
     assert "guide/stdout missing-context diagnostics" in benchmarking
+    assert "three executed mixed fast plus deep handoff fixtures" in readme
+    assert "two executed mixed fast plus deep handoff fixtures" not in readme
     assert "first mixed fast plus deep executed fixture" in roadmap
     assert "second mixed fast plus deep executed fixture" in roadmap
     assert "third mixed fast plus deep executed fixture" in roadmap

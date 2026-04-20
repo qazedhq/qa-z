@@ -67,6 +67,21 @@ class PreflightResult:
         return {check.name: check for check in self.checks}
 
 
+def result_payload(result: PreflightResult) -> dict[str, object]:
+    return {
+        "summary": result.summary,
+        "exit_code": result.exit_code,
+        "checks": [
+            {
+                "name": check.name,
+                "status": check.status,
+                "detail": check.detail,
+            }
+            for check in result.checks
+        ],
+    }
+
+
 Runner = Callable[[Sequence[str], Path], tuple[int, str, str]]
 GitHubMetadataFetcher = Callable[[str], GitHubMetadataResult]
 
@@ -389,7 +404,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--skip-remote",
         action="store_true",
-        help="Skip git ls-remote. Use only before the GitHub repository exists.",
+        help=(
+            "Skip GitHub metadata and git ls-remote checks. "
+            "Use only before the GitHub repository exists."
+        ),
     )
     parser.add_argument(
         "--allow-existing-refs",
@@ -403,6 +421,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--allow-dirty",
         action="store_true",
         help="Allow local changes while developing the preflight itself.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print machine-readable preflight evidence as JSON.",
     )
     return parser.parse_args(argv)
 
@@ -419,9 +442,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         allow_dirty=args.allow_dirty,
         expected_repository=args.expected_repository,
     )
-    for check in result.checks:
-        print(f"[{check.status.upper()}] {check.name}: {check.detail}")
-    print(result.summary)
+    if args.json:
+        print(json.dumps(result_payload(result), indent=2))
+    else:
+        for check in result.checks:
+            print(f"[{check.status.upper()}] {check.name}: {check.detail}")
+        print(result.summary)
     return result.exit_code
 
 
