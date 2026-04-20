@@ -243,14 +243,19 @@ def preflight_payload(
     stdout: str, output_path: Path | None
 ) -> dict[str, object] | None:
     payload = parse_json_object(stdout)
-    if payload is not None:
-        return payload
     if output_path is None or not output_path.exists():
-        return None
+        return payload
     try:
-        return parse_json_object(output_path.read_text(encoding="utf-8"))
+        file_payload = parse_json_object(output_path.read_text(encoding="utf-8"))
     except OSError:
-        return None
+        return payload
+    if payload is None:
+        return file_payload
+    if file_payload is None:
+        return payload
+    merged_payload = dict(file_payload)
+    merged_payload.update(payload)
+    return merged_payload
 
 
 def parse_json_object(stdout: str) -> dict[str, object] | None:

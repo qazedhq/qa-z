@@ -161,14 +161,21 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-19" not in release_plan
     assert "Audit date: 2026-04-20 KST." in launch_plan
     assert "Audit date: 2026-04-19 KST." not in launch_plan
-    assert "385 passed" in commit_plan
-    assert "385 passed" in release_plan
-    assert "385 passed" in release_handoff
-    assert "pytest: 385 passed" in launch_plan
-    assert "expected current pytest count is 385 passed" in launch_plan
-    assert "`python -m pytest`: 385 passed" in release_notes
-    assert "`python -m pytest`: passed, `385 passed" in release_pr
-    assert "`python -m pytest`: passed, `385 passed`" in github_release
+    assert "386 passed" in commit_plan
+    assert "386 passed" in release_plan
+    assert "386 passed" in release_handoff
+    assert "pytest: 386 passed" in launch_plan
+    assert "expected current pytest count is 386 passed" in launch_plan
+    assert "`python -m pytest`: 386 passed" in release_notes
+    assert "`python -m pytest`: passed, `386 passed" in release_pr
+    assert "`python -m pytest`: passed, `386 passed`" in github_release
+    assert "385 passed" not in commit_plan
+    assert "385 passed" not in release_plan
+    assert "385 passed" not in release_handoff
+    assert "385 passed" not in launch_plan
+    assert "385 passed" not in release_notes
+    assert "385 passed" not in release_pr
+    assert "385 passed" not in github_release
     assert "384 passed" not in commit_plan
     assert "384 passed" not in release_plan
     assert "384 passed" not in release_handoff
@@ -286,6 +293,11 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "gate reads nested preflight output file when stdout is not JSON" in readme
     assert (
         "gate reads nested preflight output file when stdout is not JSON"
+        in release_handoff
+    )
+    assert "gate supplements partial preflight stdout from the output file" in readme
+    assert (
+        "gate supplements partial preflight stdout from the output file"
         in release_handoff
     )
     assert "human-readable gate output prints Next actions" in readme

@@ -196,6 +196,46 @@ def test_alpha_release_gate_reads_preflight_repair_fields_from_output_file(tmp_p
     assert result.payload["next_actions"] == preflight_payload["next_actions"]
 
 
+def test_alpha_release_gate_supplements_partial_stdout_with_output_file(tmp_path):
+    module = load_gate_module()
+    preflight_output = tmp_path / "evidence" / "preflight.json"
+    stdout_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+    }
+    file_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["origin_matches_expected", "github_repository"],
+        "next_actions": [
+            "Set origin to the intended repository URL, then rerun preflight.",
+        ],
+    }
+
+    class PartialStdoutRunner(RecordingRunner):
+        def __call__(self, command, cwd):
+            self.commands.append(tuple(command))
+            if any(
+                str(argument).endswith("alpha_release_preflight.py")
+                for argument in command
+            ):
+                preflight_output.parent.mkdir(parents=True, exist_ok=True)
+                preflight_output.write_text(json.dumps(file_payload), encoding="utf-8")
+                return 1, json.dumps(stdout_payload), ""
+            return 0, "ok\n", ""
+
+    result = module.run_alpha_release_gate(
+        tmp_path, preflight_output=preflight_output, runner=PartialStdoutRunner()
+    )
+
+    assert result.exit_code == 1
+    assert result.payload["preflight_failed_checks"] == [
+        "origin_matches_expected",
+        "github_repository",
+    ]
+    assert result.payload["next_actions"] == file_payload["next_actions"]
+
+
 def test_alpha_release_gate_can_include_dependency_smoke(tmp_path):
     module = load_gate_module()
     runner = RecordingRunner()
