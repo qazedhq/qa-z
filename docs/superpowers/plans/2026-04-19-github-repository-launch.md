@@ -47,16 +47,18 @@ python -m ruff check .
 python -m mypy src tests
 python -m pytest
 python -m build --sdist --wheel
+python scripts/alpha_release_artifact_smoke.py --json
 ```
 
 Observed results:
 
 ```text
-ruff format: 128 files already formatted
+ruff format: 130 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 83 source files
-pytest: 356 passed
+mypy: Success: no issues found in 84 source files
+pytest: 359 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
+artifact smoke: wheel and sdist metadata install smoke passed
 ```
 
 Release blockers:
@@ -205,7 +207,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 356 passed.
+All commands pass. The expected current pytest count is 359 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**
@@ -232,6 +234,7 @@ Run:
 
 ```powershell
 python -m build --sdist --wheel
+python scripts/alpha_release_artifact_smoke.py --json
 ```
 
 Expected:
@@ -239,6 +242,7 @@ Expected:
 ```text
 dist/qa_z-0.9.8a0.tar.gz
 dist/qa_z-0.9.8a0-py3-none-any.whl
+artifact smoke passes for wheel and sdist metadata install checks
 ```
 
 - [ ] **Step 5: Regenerate and verify a local Git bundle for handoff**

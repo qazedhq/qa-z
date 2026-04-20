@@ -14,14 +14,15 @@
 
 Verified on 2026-04-20 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `356 passed`
-- `python -m ruff format --check .`: passed, `128 files already formatted`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `359 passed`
+- `python -m ruff format --check .`: passed, `130 files already formatted`
 - `python -m ruff check .`: passed
-- `python -m mypy src tests`: passed, `83 source files`
+- `python -m mypy src tests`: passed, `84 source files`
 - `python -m qa_z fast --selection smart --json`: passed with Python-only root checks
 - `python -m qa_z deep --selection smart --json`: passed after installing Semgrep locally; root scan is scoped to `src` and `tests`
 - `python -m qa_z benchmark --json`: passed, `50/50 fixtures, overall_rate 1.0`
 - `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
+- `python scripts/alpha_release_artifact_smoke.py --json`: passed, wheel and sdist metadata install smoke
 - `python -m qa_z --help`: command surface renders all current alpha commands
 
 Known release blockers:
