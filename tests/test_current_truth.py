@@ -159,14 +159,21 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-19" not in release_plan
     assert "Audit date: 2026-04-20 KST." in launch_plan
     assert "Audit date: 2026-04-19 KST." not in launch_plan
-    assert "359 passed" in commit_plan
-    assert "359 passed" in release_plan
-    assert "359 passed" in release_handoff
-    assert "pytest: 359 passed" in launch_plan
-    assert "expected current pytest count is 359 passed" in launch_plan
-    assert "`python -m pytest`: 359 passed" in release_notes
-    assert "`python -m pytest`: passed, `359 passed" in release_pr
-    assert "`python -m pytest`: passed, `359 passed`" in github_release
+    assert "362 passed" in commit_plan
+    assert "362 passed" in release_plan
+    assert "362 passed" in release_handoff
+    assert "pytest: 362 passed" in launch_plan
+    assert "expected current pytest count is 362 passed" in launch_plan
+    assert "`python -m pytest`: 362 passed" in release_notes
+    assert "`python -m pytest`: passed, `362 passed" in release_pr
+    assert "`python -m pytest`: passed, `362 passed`" in github_release
+    assert "359 passed" not in commit_plan
+    assert "359 passed" not in release_plan
+    assert "359 passed" not in release_handoff
+    assert "359 passed" not in launch_plan
+    assert "359 passed" not in release_notes
+    assert "359 passed" not in release_pr
+    assert "359 passed" not in github_release
     assert "356 passed" not in commit_plan
     assert "356 passed" not in release_plan
     assert "356 passed" not in release_handoff
@@ -208,6 +215,8 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_notes
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_pr
     assert "python scripts/alpha_release_artifact_smoke.py --json" in github_release
+    assert "python scripts/alpha_release_bundle_manifest.py --json" in release_handoff
+    assert "python scripts/alpha_release_bundle_manifest.py --json" in launch_plan
     assert "wheel and sdist metadata install smoke" in release_handoff
     assert "wheel and sdist metadata install smoke" in release_pr
     assert "wheel and sdist metadata install smoke" in github_release
@@ -220,21 +229,29 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "`python -m ruff check .`: passed" in release_pr
     assert "`python -m ruff check .`: passed" in github_release
     assert "python -m ruff format --check ." in commit_plan
-    assert "`python -m ruff format --check .`: 130 files already formatted" in (
+    assert "`python -m ruff format --check .`: 132 files already formatted" in (
         release_notes
     )
     assert "`python -m ruff format --check .`: passed" in release_pr
     assert "`python -m ruff format --check .`: passed" in github_release
-    assert "130 files already formatted" in commit_plan
+    assert "132 files already formatted" in commit_plan
+    assert "130 files already formatted" not in commit_plan
+    assert "130 files already formatted" not in release_notes
+    assert "130 files already formatted" not in release_pr
+    assert "130 files already formatted" not in github_release
     assert "128 files already formatted" not in commit_plan
     assert "128 files already formatted" not in release_notes
     assert "128 files already formatted" not in release_pr
     assert "128 files already formatted" not in github_release
     assert "python -m mypy src tests" in commit_plan
-    assert "`python -m mypy src tests`: 84 source files" in release_notes
+    assert "`python -m mypy src tests`: 85 source files" in release_notes
     assert "`python -m mypy src tests`: passed" in release_pr
     assert "`python -m mypy src tests`: passed" in github_release
-    assert "84 source files" in commit_plan
+    assert "85 source files" in commit_plan
+    assert "84 source files" not in commit_plan
+    assert "84 source files" not in release_notes
+    assert "84 source files" not in release_pr
+    assert "84 source files" not in github_release
     assert "83 source files" not in commit_plan
     assert "83 source files" not in release_notes
     assert "83 source files" not in release_pr
@@ -396,6 +413,7 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "git tag -a v0.9.8-alpha -m" in release_handoff
     assert "title: `QA-Z v0.9.8-alpha`" in release_handoff
     assert "python -m qa_z benchmark --json" in release_handoff
+    assert "python scripts/alpha_release_bundle_manifest.py --json" in release_handoff
     assert (
         "Package-build validation commit: "
         "`f009d14 chore: add release build validation tooling`"
@@ -405,6 +423,8 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
         "`b2cdc07 ci: verify package build before alpha release`"
     ) in release_handoff
     assert "Build package artifacts" in release_handoff
+    assert "Smoke test built package artifacts" in release_handoff
+    assert "artifact install smoke step passes inside the `test` job" in release_handoff
     assert (
         "git clone --branch codex/qa-z-bootstrap "
         "dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle"

@@ -34,6 +34,9 @@ jobs:
       - name: Build package artifacts
         run: python -m build --sdist --wheel
 
+      - name: Smoke test built package artifacts
+        run: python scripts/alpha_release_artifact_smoke.py --json
+
   qa-z:
     runs-on: ubuntu-latest
     permissions:

@@ -48,17 +48,19 @@ python -m mypy src tests
 python -m pytest
 python -m build --sdist --wheel
 python scripts/alpha_release_artifact_smoke.py --json
+python scripts/alpha_release_bundle_manifest.py --json
 ```
 
 Observed results:
 
 ```text
-ruff format: 130 files already formatted
+ruff format: 132 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 84 source files
-pytest: 359 passed
+mypy: Success: no issues found in 85 source files
+pytest: 362 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 artifact smoke: wheel and sdist metadata install smoke passed
+bundle manifest: bundle head and SHA256 artifact manifest generated
 ```
 
 Release blockers:
@@ -207,7 +209,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 359 passed.
+All commands pass. The expected current pytest count is 362 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**
@@ -255,6 +257,7 @@ git bundle verify dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle
 git bundle list-heads dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle
 git rev-parse HEAD
 Get-FileHash -Algorithm SHA256 dist\qa_z-0.9.8a0.tar.gz,dist\qa_z-0.9.8a0-py3-none-any.whl,dist\qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle
+python scripts/alpha_release_bundle_manifest.py --json
 ```
 
 Expected:
@@ -263,6 +266,7 @@ Expected:
 Bundle verifies successfully.
 Bundle head points at codex/qa-z-bootstrap.
 Hashes are recorded in the release operator notes if artifacts will be attached.
+The bundle manifest command emits the same head and SHA256 evidence as JSON.
 ```
 
 ## Phase 3: Push Default Branch Or Open Release PR
@@ -348,6 +352,7 @@ Required passing surfaces:
 
 - `python -m pytest`
 - `python -m build --sdist --wheel`
+- `python scripts/alpha_release_artifact_smoke.py --json`
 - `python -m qa_z fast --selection smart --json`
 - `python -m qa_z deep --selection smart --json`
 - final fast/deep verdict aggregation step

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_github_workflow_builds_package_artifacts_after_tests() -> None:
-    """Release CI should prove the package artifacts can be built."""
+    """Release CI should prove package artifacts build and install-smoke."""
     workflow = yaml.safe_load(
         (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     )
@@ -22,8 +22,9 @@ def test_github_workflow_builds_package_artifacts_after_tests() -> None:
     install_position = runs.index("python -m pip install -e .[dev]")
     test_position = runs.index("python -m pytest")
     build_position = runs.index("python -m build --sdist --wheel")
+    smoke_position = runs.index("python scripts/alpha_release_artifact_smoke.py --json")
 
-    assert install_position < test_position < build_position
+    assert install_position < test_position < build_position < smoke_position
 
 
 @pytest.mark.parametrize(
