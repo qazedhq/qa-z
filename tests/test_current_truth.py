@@ -269,6 +269,17 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
         "preflight JSON records check_count, passed_count, failed_count, skipped_count, and failed_checks"
         in release_handoff
     )
+    assert "next_actions" in release_handoff
+    assert (
+        "Create or expose the public GitHub repository qazedhq/qa-z" in release_handoff
+    )
+    assert "--allow-existing-refs or publish to an empty repository" in release_handoff
+    assert "Remote release tag v0.9.8-alpha already exists" in release_handoff
+    assert "Set origin to the intended repository URL" in release_handoff
+    assert (
+        "Set --repository-url to https://github.com/qazedhq/qa-z.git" in release_handoff
+    )
+    assert "Set --repository-url to https://github.com/qazedhq/qa-z.git" in readme
     assert "python scripts/alpha_release_gate.py --json" in launch_plan
     assert "python scripts/alpha_release_gate.py --include-remote" in readme
     assert (

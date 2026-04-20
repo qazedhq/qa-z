@@ -362,6 +362,12 @@ verification with one JSON result and one exit code. When `--output` is used,
 the nested preflight also writes `dist/alpha-release-gate.preflight.json`, and
 the gate JSON records check counts plus failed check names for release triage.
 The nested preflight JSON includes check_count, passed_count, failed_count, skipped_count, and failed_checks alongside the repository, origin, branch, tag, and mode inputs.
+Remote preflight failures also include `next_actions` with the next concrete
+operator step, such as creating or exposing the public `qazedhq/qa-z`
+repository, `Set --repository-url to https://github.com/qazedhq/qa-z.git`,
+setting `origin` with
+`--expected-origin-url`, choosing the release PR path with
+`--allow-existing-refs`, or inspecting an already-published `v0.9.8-alpha` tag.
 
 After the public GitHub repository exists, include remote release checks in the
 same gate:

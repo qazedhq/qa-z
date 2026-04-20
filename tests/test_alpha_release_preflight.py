@@ -241,6 +241,17 @@ def test_preflight_fails_when_expected_origin_targets_different_repository(tmp_p
     assert result.by_name["origin_target_matches_repository"].detail == (
         "expected origin target other/qa-z does not match repository target qazedhq/qa-z"
     )
+    payload = module.result_payload(
+        result,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/other/qa-z.git",
+    )
+    assert payload["next_actions"] == [
+        (
+            "Set origin to the intended repository URL, then rerun preflight "
+            "with --expected-origin-url."
+        )
+    ]
 
 
 def test_preflight_fails_when_configured_origin_does_not_match_expected_url(tmp_path):
@@ -288,6 +299,13 @@ def test_preflight_fails_when_remote_has_any_refs(tmp_path):
     assert result.by_name["remote_reachable"].status == "passed"
     assert result.by_name["remote_empty"].status == "failed"
     assert "refs/heads/main" in result.by_name["remote_empty"].detail
+    payload = module.result_payload(result)
+    assert payload["next_actions"] == [
+        (
+            "Remote already has refs; choose the release PR path with "
+            "--allow-existing-refs or publish to an empty repository."
+        )
+    ]
 
 
 def test_preflight_allows_existing_refs_when_explicitly_requested(tmp_path):
@@ -343,6 +361,13 @@ def test_preflight_fails_when_existing_refs_include_release_tag_even_if_allowed(
     assert result.by_name["remote_empty"].status == "failed"
     assert "remote release tag already exists" in result.by_name["remote_empty"].detail
     assert "refs/tags/v0.9.8-alpha" in result.by_name["remote_empty"].detail
+    payload = module.result_payload(result)
+    assert payload["next_actions"] == [
+        (
+            "Remote release tag v0.9.8-alpha already exists; inspect the existing "
+            "tag before publishing a new alpha tag."
+        )
+    ]
 
 
 def test_preflight_fails_for_wrong_github_repository_target(tmp_path):
@@ -364,6 +389,16 @@ def test_preflight_fails_for_wrong_github_repository_target(tmp_path):
     assert result.exit_code == 1
     assert result.by_name["github_repository"].status == "failed"
     assert "expected qazedhq/qa-z" in result.by_name["github_repository"].detail
+    payload = module.result_payload(
+        result, repository_url="https://github.com/other/qa-z.git"
+    )
+    assert payload["next_actions"] == [
+        (
+            "Set --repository-url to https://github.com/qazedhq/qa-z.git, "
+            "or update --expected-repository if a different public GitHub "
+            "repository is intentional."
+        )
+    ]
 
 
 def test_preflight_fails_for_non_github_repository_url(tmp_path):
@@ -385,6 +420,16 @@ def test_preflight_fails_for_non_github_repository_url(tmp_path):
     assert result.exit_code == 1
     assert result.by_name["github_repository"].status == "failed"
     assert "github.com/qazedhq/qa-z" in result.by_name["github_repository"].detail
+    payload = module.result_payload(
+        result, repository_url="https://gitlab.com/qazedhq/qa-z.git"
+    )
+    assert payload["next_actions"] == [
+        (
+            "Set --repository-url to https://github.com/qazedhq/qa-z.git, "
+            "or update --expected-repository if a different public GitHub "
+            "repository is intentional."
+        )
+    ]
 
 
 def test_preflight_cli_accepts_existing_ref_pr_path_flag(capsys):
@@ -576,6 +621,12 @@ def test_preflight_cli_writes_failed_output_with_counters(
     assert file_payload["failed_checks"] == [
         "github_repository",
         "remote_reachable",
+    ]
+    assert file_payload["next_actions"] == [
+        (
+            "Create or expose the public GitHub repository qazedhq/qa-z, "
+            "then rerun remote preflight for https://github.com/qazedhq/qa-z.git."
+        )
     ]
 
 

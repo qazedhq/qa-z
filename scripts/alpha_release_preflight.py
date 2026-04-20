@@ -67,6 +67,65 @@ class PreflightResult:
         return {check.name: check for check in self.checks}
 
 
+def next_actions_for_result(
+    result: PreflightResult,
+    *,
+    repository_url: str = DEFAULT_REPOSITORY_URL,
+    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
+    expected_tag: str = DEFAULT_TAG,
+) -> list[str]:
+    failed_checks = [check for check in result.checks if check.status == "failed"]
+    failed = {check.name for check in failed_checks}
+    actions: list[str] = []
+    repository_target = parse_github_repository_target(repository_url)
+    repository_targets_expected = (
+        repository_target is not None
+        and repository_target.full_name.lower() == expected_repository.lower()
+    )
+    if "github_repository" in failed and not repository_targets_expected:
+        actions.append(
+            (
+                f"Set --repository-url to https://github.com/{expected_repository}.git, "
+                "or update --expected-repository if a different public GitHub "
+                "repository is intentional."
+            )
+        )
+    elif {"github_repository", "remote_reachable"} & failed:
+        actions.append(
+            (
+                f"Create or expose the public GitHub repository {expected_repository}, "
+                f"then rerun remote preflight for {repository_url}."
+            )
+        )
+    if {"origin_matches_expected", "origin_target_matches_repository"} & failed:
+        actions.append(
+            (
+                "Set origin to the intended repository URL, then rerun preflight "
+                "with --expected-origin-url."
+            )
+        )
+    remote_empty = next(
+        (check for check in failed_checks if check.name == "remote_empty"), None
+    )
+    if remote_empty is not None and "remote release tag already exists" in (
+        remote_empty.detail
+    ):
+        actions.append(
+            (
+                f"Remote release tag {expected_tag} already exists; inspect the "
+                "existing tag before publishing a new alpha tag."
+            )
+        )
+    elif remote_empty is not None:
+        actions.append(
+            (
+                "Remote already has refs; choose the release PR path with "
+                "--allow-existing-refs or publish to an empty repository."
+            )
+        )
+    return actions
+
+
 def result_payload(
     result: PreflightResult,
     *,
@@ -107,6 +166,18 @@ def result_payload(
             }
             for check in result.checks
         ],
+        **(
+            {
+                "next_actions": next_actions_for_result(
+                    result,
+                    repository_url=repository_url,
+                    expected_repository=expected_repository,
+                    expected_tag=expected_tag,
+                )
+            }
+            if result.exit_code
+            else {}
+        ),
     }
 
 
