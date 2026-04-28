@@ -21,7 +21,7 @@
     "needs another repair loop"
   ],
   "schema_version": 1,
-  "source_loop_id": null,
+  "source_loop_id": "loop-partial",
   "source_session_id": "session-partial",
   "status": "partial",
   "summary": "Resolved the Python issue, but the TypeScript regression still needs follow-up.",

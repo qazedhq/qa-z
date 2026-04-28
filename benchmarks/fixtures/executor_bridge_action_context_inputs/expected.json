@@ -2,12 +2,14 @@
   "description": "Loop-sourced executor bridge should copy repair-session action context into bridge-local inputs.",
   "expect_executor_bridge": {
     "action_context_copied_paths": [
-      ".qa-z/executor/bridge-context/inputs/context/001-summary.json"
+      ".qa-z/executor/bridge-context/inputs/context/001-self_inspect.json",
+      ".qa-z/executor/bridge-context/inputs/context/002-summary.json"
     ],
-    "action_context_count": 1,
+    "action_context_count": 2,
     "action_context_files_exist": true,
     "action_context_missing_count": 0,
     "action_context_paths": [
+      ".qa-z/loops/loop-bridge-context/self_inspect.json",
       ".qa-z/runs/candidate/verify/summary.json"
     ],
     "bridge_id": "bridge-context",
@@ -15,8 +17,15 @@
     "kind": "qa_z.executor_bridge",
     "prepared_action_type": "repair_session",
     "schema_version": 1,
+    "source_self_inspection": ".qa-z/loops/loop-bridge-context/self_inspect.json",
+    "source_self_inspection_generated_at": "2026-04-16T00:00:00Z",
+    "source_self_inspection_loop_id": "loop-bridge-context",
     "source_loop_id": "loop-bridge-context",
     "source_session_id": "session-bridge-context",
+    "live_repository_modified_count": 2,
+    "live_repository_current_branch": "codex/qa-z-bootstrap",
+    "live_repository_current_head": "1234567890abcdef1234567890abcdef12345678",
+    "guide_mentions_live_repository": true,
     "stdout_mentions_action_context": true
   },
   "expect_verify": {
@@ -34,6 +43,7 @@
       "baseline_run": ".qa-z/runs/baseline",
       "bridge_id": "bridge-context",
       "context_paths": [
+        ".qa-z/loops/loop-bridge-context/self_inspect.json",
         ".qa-z/runs/candidate/verify/summary.json"
       ],
       "loop_id": "loop-bridge-context",

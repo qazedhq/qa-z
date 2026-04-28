@@ -6,4 +6,5 @@
 
 ## Acceptance Checks
 
-- Keep rejected executor-result history mapped to deterministic manual-review diagnostics.
+- Keep mixed partial plus rejected executor-result history mapped to deterministic manual-review diagnostics.
+- Prefer rejected-result inspection ahead of partial retry review.

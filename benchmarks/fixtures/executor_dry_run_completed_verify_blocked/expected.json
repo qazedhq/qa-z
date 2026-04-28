@@ -21,12 +21,13 @@
     "expected_source": "materialized",
     "expected_recommendation": "resolve verification blocking evidence before another completed attempt",
     "history_signals": [
-      "completed_verify_blocked"
+      "completed_verify_blocked",
+      "validation_conflict"
     ],
     "latest_ingest_status": "accepted_with_warning",
     "latest_result_status": "completed",
     "operator_decision": "resolve_verification_blockers",
-    "operator_summary": "A completed executor attempt is still blocked by verification evidence.",
+    "operator_summary": "A completed executor attempt is still blocked by verification evidence; validation conflicts still need review before another retry.",
     "recommended_action_ids": [
       "resolve_verification_blockers",
       "review_validation_conflict"

@@ -1,41 +1,52 @@
 {
-  "description": "Executor-result ingest should preserve partial completion realism while a separate seeded verify comparison still reports mixed cross-surface evidence.",
-  "expect_executor_result": {
-    "backlog_categories": [
-      "partial_completion_gap"
-    ],
-    "expected_ingest_status": "accepted_partial",
-    "expected_recommendation": "continue repair",
-    "schema_version": 1,
-    "session_id": "session-partial",
-    "session_state": "candidate_generated",
-    "verification_hint": "candidate_run",
-    "verification_triggered": false,
-    "verify_resume_status": "verify_blocked",
-    "warning_ids_absent": [
-      "no_op_without_explanation"
-    ]
-  },
-  "expect_verify": {
-    "blocking_after": 1,
-    "blocking_before": 1,
-    "new_issue_count": 1,
-    "regression_count": 1,
-    "resolved_count": 1,
-    "schema_version": 1,
-    "verdict": "mixed"
-  },
-  "name": "executor_result_partial_mixed_verify_candidate",
-  "run": {
-    "executor_result": {
-      "baseline_run": ".qa-z/runs/baseline",
-      "bridge_id": "bridge-partial",
-      "result_path": "external-result.json",
-      "session_id": "session-partial"
+    "description": "Executor-result ingest should preserve partial completion realism while a separate seeded verify comparison still reports mixed cross-surface evidence.",
+    "expect_executor_result": {
+        "backlog_categories": [
+            "partial_completion_gap"
+        ],
+        "expected_ingest_status": "accepted_partial",
+        "expected_recommendation": "continue repair",
+        "source_self_inspection": ".qa-z/loops/loop-partial/self_inspect.json",
+        "source_self_inspection_generated_at": "2026-04-16T00:00:00Z",
+        "source_self_inspection_loop_id": "loop-partial",
+        "backlog_implications_recorded": true,
+        "check_statuses_recorded": true,
+        "live_repository_context_recorded": true,
+        "live_repository_current_branch": "codex/qa-z-bootstrap",
+        "live_repository_current_head": "1234567890abcdef1234567890abcdef12345678",
+        "source_context_fields_recorded": true,
+        "live_repository_modified_count": 2,
+        "schema_version": 1,
+        "session_id": "session-partial",
+        "session_state": "candidate_generated",
+        "verification_hint": "candidate_run",
+        "verification_triggered": false,
+        "verify_resume_status": "verify_blocked",
+        "warning_ids_absent": [
+            "no_op_without_explanation"
+        ]
     },
-    "verify": {
-      "baseline_run": ".qa-z/runs/baseline",
-      "candidate_run": ".qa-z/runs/candidate"
+    "expect_verify": {
+        "blocking_after": 1,
+        "blocking_before": 1,
+        "new_issue_count": 1,
+        "regression_count": 1,
+        "resolved_count": 1,
+        "schema_version": 1,
+        "verdict": "mixed"
+    },
+    "name": "executor_result_partial_mixed_verify_candidate",
+    "run": {
+        "executor_result": {
+            "baseline_run": ".qa-z/runs/baseline",
+            "bridge_id": "bridge-partial",
+            "loop_id": "loop-partial",
+            "result_path": "external-result.json",
+            "session_id": "session-partial"
+        },
+        "verify": {
+            "baseline_run": ".qa-z/runs/baseline",
+            "candidate_run": ".qa-z/runs/candidate"
+        }
     }
-  }
 }

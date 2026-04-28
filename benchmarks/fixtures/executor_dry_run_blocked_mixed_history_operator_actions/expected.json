@@ -28,7 +28,7 @@
     "latest_ingest_status": "accepted_with_warning",
     "latest_result_status": "completed",
     "operator_decision": "resolve_verification_blockers",
-    "operator_summary": "A completed executor attempt is still blocked by verification evidence.",
+    "operator_summary": "A completed executor attempt is still blocked by verification evidence; validation conflicts and retry pressure still need review before another retry.",
     "recommended_action_ids": [
       "resolve_verification_blockers",
       "review_validation_conflict",

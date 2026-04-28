@@ -247,10 +247,10 @@ def next_recommendation(verdict: str, signals: list[str]) -> str:
         return "review executor validation conflict before another retry"
     if "missing_no_op_explanation" in signal_set:
         return "require no-op explanation before accepting executor result"
-    if "repeated_partial_attempts" in signal_set:
-        return "inspect repeated partial attempts before another retry"
     if "repeated_rejected_attempts" in signal_set:
         return "inspect repeated rejected executor results before another retry"
+    if "repeated_partial_attempts" in signal_set:
+        return "inspect repeated partial attempts before another retry"
     if "repeated_no_op_attempts" in signal_set:
         return "inspect repeated no-op outcomes before another retry"
     if "no_recorded_attempts" in signal_set:
@@ -292,6 +292,37 @@ def mixed_attention_summary(signals: list[str]) -> str | None:
     )
 
 
+def blocked_attention_residue_summary(signals: list[str]) -> str | None:
+    """Return extra blocked-summary context without changing blocked priority."""
+    signal_set = set(signals)
+    if "completed_verify_blocked" not in signal_set:
+        return None
+
+    labels: list[str] = []
+    if "validation_conflict" in signal_set:
+        labels.append("validation conflicts")
+    if "missing_no_op_explanation" in signal_set:
+        labels.append("no-op explanation gaps")
+    if {
+        "repeated_partial_attempts",
+        "repeated_rejected_attempts",
+        "repeated_no_op_attempts",
+    } & signal_set:
+        labels.append("retry pressure")
+    if not labels:
+        return None
+    if len(labels) == 1:
+        joined = labels[0]
+    elif len(labels) == 2:
+        joined = " and ".join(labels)
+    else:
+        joined = f"{', '.join(labels[:-1])}, and {labels[-1]}"
+    return (
+        "A completed executor attempt is still blocked by verification evidence; "
+        f"{joined} still need review before another retry."
+    )
+
+
 def operator_summary(verdict: str, signals: list[str]) -> str:
     """Return a stable one-line operator diagnostic for a dry-run result."""
     signal_set = set(signals)
@@ -301,6 +332,9 @@ def operator_summary(verdict: str, signals: list[str]) -> str:
             "before another attempt."
         )
     if "completed_verify_blocked" in signal_set:
+        blocked_summary = blocked_attention_residue_summary(signals)
+        if blocked_summary is not None:
+            return blocked_summary
         return "A completed executor attempt is still blocked by verification evidence."
     mixed_summary = mixed_attention_summary(signals)
     if mixed_summary is not None:
@@ -309,10 +343,10 @@ def operator_summary(verdict: str, signals: list[str]) -> str:
         return "Executor history has validation conflicts that need manual review."
     if "missing_no_op_explanation" in signal_set:
         return "A no-op style executor result needs an explanation before acceptance."
-    if "repeated_partial_attempts" in signal_set:
-        return "Repeated partial executor attempts need manual review before another retry."
     if "repeated_rejected_attempts" in signal_set:
         return "Repeated rejected executor results need manual review before another retry."
+    if "repeated_partial_attempts" in signal_set:
+        return "Repeated partial executor attempts need manual review before another retry."
     if "repeated_no_op_attempts" in signal_set:
         return (
             "Repeated no-op executor attempts need manual review before another retry."
@@ -367,19 +401,19 @@ def recommended_actions(verdict: str, signals: list[str]) -> list[dict[str, str]
             ),
         ),
         (
-            "repeated_partial_attempts",
-            "inspect_partial_attempts",
-            (
-                "Review unresolved repair targets across repeated partial attempts "
-                "before retrying."
-            ),
-        ),
-        (
             "repeated_rejected_attempts",
             "inspect_rejected_results",
             (
                 "Inspect rejected executor-result artifacts and fix freshness, "
                 "provenance, or schema errors before retrying."
+            ),
+        ),
+        (
+            "repeated_partial_attempts",
+            "inspect_partial_attempts",
+            (
+                "Review unresolved repair targets across repeated partial attempts "
+                "before retrying."
             ),
         ),
         (

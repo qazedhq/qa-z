@@ -18,6 +18,8 @@ from qa_z.executor_bridge import create_executor_bridge
 from qa_z.executor_ingest import (
     ExecutorResultIngestRejected,
     ingest_executor_result_artifact,
+    render_executor_result_ingest_stdout,
+    render_ingest_report,
 )
 
 
@@ -257,6 +259,20 @@ def start_loop_bridge(tmp_path: Path, capsys) -> tuple[str, str, Any]:
     )
     capsys.readouterr()
     loop_id = summary["latest_loop_id"]
+    outcome_path = tmp_path / ".qa-z" / "loops" / loop_id / "outcome.json"
+    outcome = read_json(outcome_path)
+    outcome["live_repository"] = {
+        "modified_count": 5,
+        "untracked_count": 1,
+        "staged_count": 0,
+        "runtime_artifact_count": 0,
+        "benchmark_result_count": 0,
+        "current_branch": "codex/qa-z-bootstrap",
+        "current_head": "1234567890abcdef1234567890abcdef12345678",
+        "generated_artifact_policy_explicit": True,
+        "dirty_area_summary": "source:3, tests:2, docs:1",
+    }
+    write_json(outcome_path, outcome)
     session_id = f"{loop_id}-verify_regression-candidate"
     bridge = create_executor_bridge(
         root=tmp_path,
@@ -345,6 +361,8 @@ def test_executor_result_ingest_reruns_verification_and_updates_session(
     assert output["freshness_check"]["status"] == "passed"
     assert output["provenance_check"]["status"] == "passed"
     assert output["verify_resume_status"] == "ready_for_verify"
+    assert "source_self_inspection" not in output
+    assert "live_repository" not in output
     assert output["verification_triggered"] is True
     assert output["verification_verdict"] == "improved"
     assert output["session_id"] == "session-one"
@@ -452,6 +470,17 @@ def test_executor_result_ingest_updates_loop_history_without_verifying(
     assert output["ingest_status"] == "accepted_partial"
     assert output["verification_triggered"] is False
     assert output["result_status"] == "partial"
+    assert (
+        output["source_self_inspection"] == f".qa-z/loops/{loop_id}/self_inspect.json"
+    )
+    assert output["source_self_inspection_loop_id"] == loop_id
+    assert output["source_self_inspection_generated_at"] == "2026-04-15T00:00:00Z"
+    assert output["live_repository"]["modified_count"] == 5
+    assert output["live_repository"]["current_branch"] == "codex/qa-z-bootstrap"
+    assert (
+        output["live_repository"]["current_head"]
+        == "1234567890abcdef1234567890abcdef12345678"
+    )
     assert output["session_state"] == "candidate_generated"
     assert output["verify_resume_status"] == "verify_blocked"
     assert output["backlog_implications"][0]["category"] == "partial_completion_gap"
@@ -469,6 +498,185 @@ def test_executor_result_ingest_updates_loop_history_without_verifying(
     assert history["executor_result_path"] == (
         f".qa-z/sessions/{session_id}/executor_result.json"
     )
+    session_history = read_history(session_dir / "executor_results" / "history.json")
+    attempt = session_history["attempts"][0]
+    assert (
+        attempt["source_self_inspection"] == f".qa-z/loops/{loop_id}/self_inspect.json"
+    )
+    assert attempt["source_self_inspection_loop_id"] == loop_id
+    assert attempt["source_self_inspection_generated_at"] == "2026-04-15T00:00:00Z"
+    assert attempt["live_repository"]["dirty_area_summary"] == (
+        "source:3, tests:2, docs:1"
+    )
+    assert attempt["live_repository"]["current_branch"] == "codex/qa-z-bootstrap"
+    assert (
+        attempt["live_repository"]["current_head"]
+        == "1234567890abcdef1234567890abcdef12345678"
+    )
+    ingest_report = (tmp_path / output["ingest_report_path"]).read_text(
+        encoding="utf-8"
+    )
+    assert "Live Repository Context" in ingest_report
+    assert f"Source self-inspection: `.qa-z/loops/{loop_id}/self_inspect.json`" in (
+        ingest_report
+    )
+    assert f"Source loop: `{loop_id}`" in ingest_report
+    assert "Source generated at: `2026-04-15T00:00:00Z`" in ingest_report
+    assert (
+        "modified=5; untracked=1; staged=0; runtime_artifacts=0; "
+        "benchmark_results=0; dirty_benchmark_results=0; release_evidence=0; "
+        "generated_policy=true; "
+        "branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=source:3, tests:2, docs:1" in ingest_report
+    )
+
+
+def test_executor_result_ingest_stdout_reports_source_context(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    loop_id, session_id, _bridge = start_loop_bridge(tmp_path, capsys)
+
+    result_path = tmp_path / "partial-result.json"
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-loop",
+            "source_session_id": session_id,
+            "source_loop_id": loop_id,
+            "created_at": NOW,
+            "status": "partial",
+            "summary": "Scoped edits were started, but deterministic validation still fails.",
+            "verification_hint": "skip",
+            "candidate_run_dir": None,
+            "changed_files": [
+                {
+                    "path": "src/qa_z/executor_result.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Started ingest support.",
+                }
+            ],
+            "validation": {
+                "status": "failed",
+                "commands": [["python", "-m", "pytest"]],
+                "results": [
+                    {
+                        "command": ["python", "-m", "pytest"],
+                        "status": "failed",
+                        "exit_code": 1,
+                        "summary": "pytest still fails",
+                    }
+                ],
+            },
+            "notes": ["needs another repair loop"],
+        },
+    )
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(result_path),
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Ingest report: .qa-z/executor-results/" in output
+    assert "ingest_report.md" in output
+    assert f"Source self-inspection: .qa-z/loops/{loop_id}/self_inspect.json" in output
+    assert f"Source loop: {loop_id}" in output
+    assert "Source generated at: 2026-04-15T00:00:00Z" in output
+    assert (
+        "Live repository: modified=5; untracked=1; staged=0; runtime_artifacts=0; "
+        "benchmark_results=0; dirty_benchmark_results=0; release_evidence=0; "
+        "generated_policy=true; "
+        "branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=source:3, tests:2, docs:1" in output
+    )
+    assert "Freshness: passed" in output
+    assert "Provenance: passed" in output
+    assert "Backlog implications: partial_completion_gap" in output
+
+
+def test_executor_result_ingest_human_surfaces_keep_partial_source_context() -> None:
+    summary: dict[str, Any] = {
+        "result_id": "partial-source",
+        "bridge_id": "bridge-partial-source",
+        "session_id": "session-partial-source",
+        "result_status": "partial",
+        "ingest_status": "accepted_partial",
+        "stored_result_path": None,
+        "ingest_report_path": ".qa-z/executor-results/partial-source/ingest_report.md",
+        "verify_resume_status": "verify_blocked",
+        "verification_verdict": None,
+        "source_self_inspection": ".qa-z/loops/loop-source/self_inspect.json",
+        "source_self_inspection_loop_id": "loop-source",
+        "source_self_inspection_generated_at": "2026-04-16T00:00:00Z",
+        "freshness_check": {"status": "passed", "details": []},
+        "provenance_check": {"status": "passed", "details": []},
+        "warnings": [],
+        "backlog_implications": [],
+        "next_recommendation": "continue repair",
+    }
+
+    stdout = render_executor_result_ingest_stdout(summary)
+    report = render_ingest_report(summary)
+
+    assert "Source self-inspection: .qa-z/loops/loop-source/self_inspect.json" in stdout
+    assert "Source loop: loop-source" in stdout
+    assert "Source generated at: 2026-04-16T00:00:00Z" in stdout
+    assert "Live repository:" not in stdout
+    assert "## Source Context" in report
+    assert "Source self-inspection: `.qa-z/loops/loop-source/self_inspect.json`" in (
+        report
+    )
+    assert "Source loop: `loop-source`" in report
+    assert "Source generated at: `2026-04-16T00:00:00Z`" in report
+    assert "## Live Repository Context" not in report
+
+
+def test_executor_result_ingest_human_uses_unknown_for_missing_source_path() -> None:
+    summary: dict[str, Any] = {
+        "result_id": "partial-source-path",
+        "bridge_id": "bridge-partial-source-path",
+        "session_id": "session-partial-source-path",
+        "result_status": "partial",
+        "ingest_status": "accepted_partial",
+        "stored_result_path": None,
+        "ingest_report_path": (
+            ".qa-z/executor-results/partial-source-path/ingest_report.md"
+        ),
+        "verify_resume_status": "verify_blocked",
+        "verification_verdict": None,
+        "source_self_inspection_loop_id": "loop-source-only",
+        "freshness_check": {"status": "passed", "details": []},
+        "provenance_check": {"status": "passed", "details": []},
+        "warnings": [],
+        "backlog_implications": [],
+        "next_recommendation": "continue repair",
+    }
+
+    stdout = render_executor_result_ingest_stdout(summary)
+    report = render_ingest_report(summary)
+
+    assert "Source self-inspection: unknown" in stdout
+    assert "Source loop: loop-source-only" in stdout
+    assert "Source generated at: unknown" in stdout
+    assert "Source self-inspection: `unknown`" in report
+    assert "Source loop: `loop-source-only`" in report
+    assert "Source generated at: `unknown`" in report
+    assert "`None`" not in report
 
 
 def test_executor_result_ingest_rejects_unrelated_changed_files(
@@ -1009,306 +1217,3 @@ def test_executor_result_ingest_warns_when_bridge_timestamp_is_missing(
     assert output["verify_resume_status"] == "ingested_with_warning"
     assert output["verification_triggered"] is True
     assert read_json(session_dir / "session.json")["state"] == "completed"
-
-
-def test_executor_result_dry_run_reports_clear_for_verified_completed_history(
-    tmp_path: Path, capsys
-) -> None:
-    write_config(
-        tmp_path,
-        checks=[{"id": "py_test", "run": python_command(""), "kind": "test"}],
-    )
-    write_contract(tmp_path)
-    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
-    write_deep_summary(tmp_path, "baseline")
-    start_session_and_bridge(tmp_path, capsys)
-
-    result_path = tmp_path / "dry-run-clear.json"
-    write_executor_result(
-        result_path,
-        {
-            "kind": "qa_z.executor_result",
-            "schema_version": 1,
-            "bridge_id": "bridge-session",
-            "source_session_id": "session-one",
-            "source_loop_id": None,
-            "created_at": NOW,
-            "status": "completed",
-            "summary": "Applied the scoped repair cleanly.",
-            "verification_hint": "rerun",
-            "candidate_run_dir": None,
-            "changed_files": [
-                {
-                    "path": "src/qa_z/executor_result.py",
-                    "status": "modified",
-                    "old_path": None,
-                    "summary": "Updated ingest behavior.",
-                }
-            ],
-            "validation": {"status": "passed", "commands": [], "results": []},
-            "notes": ["verification rerun is expected"],
-        },
-    )
-    ingest_exit = main(
-        [
-            "executor-result",
-            "ingest",
-            "--path",
-            str(tmp_path),
-            "--result",
-            str(result_path),
-        ]
-    )
-    capsys.readouterr()
-
-    dry_run_exit = main(
-        [
-            "executor-result",
-            "dry-run",
-            "--path",
-            str(tmp_path),
-            "--session",
-            "session-one",
-            "--json",
-        ]
-    )
-    output = json.loads(capsys.readouterr().out)
-    persisted = read_json(
-        tmp_path
-        / ".qa-z"
-        / "sessions"
-        / "session-one"
-        / "executor_results"
-        / "dry_run_summary.json"
-    )
-    report = (
-        tmp_path
-        / ".qa-z"
-        / "sessions"
-        / "session-one"
-        / "executor_results"
-        / "dry_run_report.md"
-    ).read_text(encoding="utf-8")
-
-    assert ingest_exit == 0
-    assert dry_run_exit == 0
-    assert output["kind"] == "qa_z.executor_result_dry_run"
-    assert output["session_id"] == "session-one"
-    assert output["summary_source"] == "materialized"
-    assert output["verdict"] == "clear"
-    assert output["verdict_reason"] == "history_clear"
-    assert output["evaluated_attempt_count"] == 1
-    assert output["history_signals"] == []
-    assert output["operator_decision"] == "continue_standard_verification"
-    assert output["operator_summary"] == (
-        "Executor history is clear under the pre-live safety rules."
-    )
-    assert output["recommended_actions"] == [
-        {
-            "id": "continue_standard_verification",
-            "summary": (
-                "Continue normal verification and review; no immediate dry-run "
-                "safety concern is recorded."
-            ),
-        }
-    ]
-    assert output["rule_status_counts"] == {"attention": 0, "blocked": 0, "clear": 7}
-    assert persisted["summary_source"] == "materialized"
-    assert persisted["operator_decision"] == "continue_standard_verification"
-    assert "- Source: `materialized`" in report
-    assert "- Operator decision: `continue_standard_verification`" in report
-    assert (
-        "- Operator summary: Executor history is clear under the pre-live safety rules."
-        in report
-    )
-    assert "## Recommended Actions" in report
-    assert (
-        "- `continue_standard_verification`: Continue normal verification and review; "
-        "no immediate dry-run safety concern is recorded." in report
-    )
-
-
-def test_executor_result_dry_run_reports_attention_for_repeated_partial_history(
-    tmp_path: Path, capsys
-) -> None:
-    write_config(tmp_path)
-    write_contract(tmp_path)
-    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
-    start_session_and_bridge(tmp_path, capsys)
-
-    for index in (1, 2):
-        result_path = tmp_path / f"partial-{index}.json"
-        write_executor_result(
-            result_path,
-            {
-                "kind": "qa_z.executor_result",
-                "schema_version": 1,
-                "bridge_id": "bridge-session",
-                "source_session_id": "session-one",
-                "source_loop_id": None,
-                "created_at": f"2026-04-16T00:00:0{index}Z",
-                "status": "partial",
-                "summary": f"Partial attempt {index}",
-                "verification_hint": "skip",
-                "candidate_run_dir": None,
-                "changed_files": [
-                    {
-                        "path": "src/qa_z/executor_result.py",
-                        "status": "modified",
-                        "old_path": None,
-                        "summary": "Started a repair.",
-                    }
-                ],
-                "validation": {"status": "failed", "commands": [], "results": []},
-                "notes": [f"needs follow-up {index}"],
-            },
-        )
-        assert (
-            main(
-                [
-                    "executor-result",
-                    "ingest",
-                    "--path",
-                    str(tmp_path),
-                    "--result",
-                    str(result_path),
-                ]
-            )
-            == 0
-        )
-        capsys.readouterr()
-
-    dry_run_exit = main(
-        [
-            "executor-result",
-            "dry-run",
-            "--path",
-            str(tmp_path),
-            "--session",
-            "session-one",
-            "--json",
-        ]
-    )
-    output = json.loads(capsys.readouterr().out)
-
-    assert dry_run_exit == 0
-    assert output["verdict"] == "attention_required"
-    assert output["verdict_reason"] == "manual_retry_review_required"
-    assert "repeated_partial_attempts" in output["history_signals"]
-    assert output["operator_decision"] == "inspect_partial_attempts"
-    assert output["evaluated_attempt_count"] == 2
-    assert output["latest_result_status"] == "partial"
-    assert output["operator_summary"] == (
-        "Repeated partial executor attempts need manual review before another retry."
-    )
-    assert output["recommended_actions"][0]["id"] == "inspect_partial_attempts"
-    assert output["rule_status_counts"] == {"attention": 1, "blocked": 0, "clear": 6}
-
-    dry_run_text_exit = main(
-        [
-            "executor-result",
-            "dry-run",
-            "--path",
-            str(tmp_path),
-            "--session",
-            "session-one",
-        ]
-    )
-    text_output = capsys.readouterr().out
-
-    assert dry_run_text_exit == 0
-    assert (
-        "Diagnostic: Repeated partial executor attempts need manual review before "
-        "another retry." in text_output
-    )
-    assert "Decision: inspect_partial_attempts" in text_output
-    assert (
-        "Action: Review unresolved repair targets across repeated partial attempts "
-        "before retrying." in text_output
-    )
-
-
-def test_executor_result_dry_run_reports_blocked_for_completed_verify_blocked_history(
-    tmp_path: Path, capsys
-) -> None:
-    write_config(tmp_path)
-    write_contract(tmp_path)
-    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
-    start_session_and_bridge(tmp_path, capsys)
-
-    result_path = tmp_path / "completed-warning.json"
-    write_executor_result(
-        result_path,
-        {
-            "kind": "qa_z.executor_result",
-            "schema_version": 1,
-            "bridge_id": "bridge-session",
-            "source_session_id": "session-one",
-            "source_loop_id": None,
-            "created_at": NOW,
-            "status": "completed",
-            "summary": "Claims completion but validation evidence conflicts.",
-            "verification_hint": "rerun",
-            "candidate_run_dir": None,
-            "changed_files": [
-                {
-                    "path": "src/qa_z/executor_result.py",
-                    "status": "modified",
-                    "old_path": None,
-                    "summary": "Touched ingest handling.",
-                }
-            ],
-            "validation": {
-                "status": "passed",
-                "commands": [["python", "-m", "pytest"]],
-                "results": [
-                    {
-                        "command": ["python", "-m", "pytest"],
-                        "status": "failed",
-                        "exit_code": 1,
-                        "summary": "pytest still fails",
-                    }
-                ],
-            },
-            "notes": ["needs manual review"],
-        },
-    )
-    assert (
-        main(
-            [
-                "executor-result",
-                "ingest",
-                "--path",
-                str(tmp_path),
-                "--result",
-                str(result_path),
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-
-    dry_run_exit = main(
-        [
-            "executor-result",
-            "dry-run",
-            "--path",
-            str(tmp_path),
-            "--session",
-            "session-one",
-            "--json",
-        ]
-    )
-    output = json.loads(capsys.readouterr().out)
-
-    assert dry_run_exit == 0
-    assert output["verdict"] == "blocked"
-    assert output["verdict_reason"] == "completed_attempt_not_verification_clean"
-    assert "completed_verify_blocked" in output["history_signals"]
-    assert output["operator_decision"] == "resolve_verification_blockers"
-    assert output["latest_ingest_status"] == "accepted_with_warning"
-    assert output["operator_summary"] == (
-        "A completed executor attempt is still blocked by verification evidence."
-    )
-    assert output["recommended_actions"][0]["id"] == "resolve_verification_blockers"
-    assert output["rule_status_counts"] == {"attention": 1, "blocked": 1, "clear": 5}

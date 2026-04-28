@@ -2,26 +2,33 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from qa_z.artifacts import format_path, resolve_path
-from qa_z.executor_history import (
-    ensure_session_executor_history,
+from qa_z.artifacts import resolve_path
+from qa_z.executor_dry_run_render import (
+    normalize_recommended_actions,
+    render_dry_run_report,
+)
+from qa_z.executor_dry_run_summary import dry_run_summary, load_safety_package
+from qa_z.executor_history import ensure_session_executor_history
+from qa_z.executor_history_paths import (
     executor_result_dry_run_report_path,
     executor_result_dry_run_summary_path,
-    executor_result_history_path,
-    write_json,
 )
-from qa_z.executor_dry_run_logic import build_dry_run_summary
-from qa_z.executor_safety import executor_safety_package
-from qa_z.repair_session import (
-    RepairSession,
-    ensure_session_safety_artifacts,
-    load_repair_session,
-)
+from qa_z.executor_history_support import write_json
+from qa_z.repair_session import load_repair_session
+from qa_z.repair_session_support import ensure_session_safety_artifacts
+
+__all__ = [
+    "ExecutorDryRunOutcome",
+    "run_executor_result_dry_run",
+    "load_safety_package",
+    "dry_run_summary",
+    "render_dry_run_report",
+    "normalize_recommended_actions",
+]
 
 
 @dataclass(frozen=True)
@@ -65,109 +72,3 @@ def run_executor_result_dry_run(
         report_path=report_path,
         summary=summary,
     )
-
-
-def load_safety_package(root: Path, session: RepairSession) -> dict[str, Any]:
-    """Load the session-local safety package or fall back to the static package."""
-    path_text = session.safety_artifacts.get("policy_json")
-    if not path_text:
-        return executor_safety_package()
-    path = resolve_path(root, path_text)
-    if not path.is_file():
-        return executor_safety_package()
-    loaded = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(loaded, dict):
-        return executor_safety_package()
-    return loaded
-
-
-def dry_run_summary(
-    *,
-    root: Path,
-    session: RepairSession,
-    history: dict[str, Any],
-    safety: dict[str, Any],
-) -> dict[str, Any]:
-    """Build the dry-run summary payload."""
-    attempts = [item for item in history.get("attempts", []) if isinstance(item, dict)]
-    return {
-        **build_dry_run_summary(
-            session_id=session.session_id,
-            history_path=format_path(
-                executor_result_history_path(resolve_path(root, session.session_dir)),
-                root,
-            ),
-            report_path=format_path(
-                executor_result_dry_run_report_path(
-                    resolve_path(root, session.session_dir)
-                ),
-                root,
-            ),
-            safety_package_id=str(safety.get("package_id") or "").strip() or None,
-            attempts=attempts,
-        ),
-        "summary_source": "materialized",
-    }
-
-
-def render_dry_run_report(summary: dict[str, Any]) -> str:
-    """Render the operator-facing dry-run report."""
-    lines = [
-        "# QA-Z Executor Result Dry-Run",
-        "",
-        f"- Session: `{summary['session_id']}`",
-        f"- Source: `{summary.get('summary_source') or 'unknown'}`",
-        f"- Verdict: `{summary['verdict']}`",
-        f"- Why: `{summary.get('verdict_reason') or 'history_clear'}`",
-        f"- Attempts: `{summary['evaluated_attempt_count']}`",
-        f"- Latest attempt: `{summary.get('latest_attempt_id') or 'none'}`",
-        f"- Safety package: `{summary.get('safety_package_id') or 'unknown'}`",
-        f"- Operator decision: `{summary.get('operator_decision') or 'not recorded'}`",
-        f"- Operator summary: {summary.get('operator_summary') or 'not recorded'}",
-        f"- Next: {summary['next_recommendation']}",
-        (
-            "- Rule counts: "
-            f"clear={summary.get('rule_status_counts', {}).get('clear', 0)}, "
-            f"attention={summary.get('rule_status_counts', {}).get('attention', 0)}, "
-            f"blocked={summary.get('rule_status_counts', {}).get('blocked', 0)}"
-        ),
-        "",
-        "## History Signals",
-        "",
-    ]
-    signals = summary.get("history_signals", [])
-    if not signals:
-        lines.append("- none")
-    else:
-        for signal in signals:
-            lines.append(f"- `{signal}`")
-    lines.extend(["", "## Recommended Actions", ""])
-    actions = normalize_recommended_actions(summary.get("recommended_actions"))
-    if not actions:
-        lines.append("- none")
-    else:
-        for action in actions:
-            lines.append(f"- `{action['id']}`: {action['summary']}")
-    lines.extend(["", "## Rule Evaluations", ""])
-    for rule in summary.get("rule_evaluations", []):
-        if not isinstance(rule, dict):
-            continue
-        lines.append(
-            f"- `{rule.get('id', 'unknown')}` -> `{rule.get('status', 'clear')}`: {rule.get('summary', '').strip()}"
-        )
-    return "\n".join(lines).strip() + "\n"
-
-
-def normalize_recommended_actions(value: object) -> list[dict[str, str]]:
-    """Return recommended action objects from optional dry-run payload data."""
-    if not isinstance(value, list):
-        return []
-    actions: list[dict[str, str]] = []
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        action_id = str(item.get("id") or "").strip()
-        summary = str(item.get("summary") or "").strip()
-        if action_id and summary:
-            actions.append({"id": action_id, "summary": summary})
-    return actions

@@ -82,6 +82,52 @@ def test_build_dry_run_summary_flags_repeated_partial_attempts() -> None:
     assert summary["rule_status_counts"] == {"clear": 6, "attention": 1, "blocked": 0}
 
 
+def test_build_dry_run_summary_prioritizes_rejected_results_over_partial_retry_review() -> (
+    None
+):
+    summary = build_summary(
+        [
+            {
+                "attempt_id": "attempt-1",
+                "result_status": "partial",
+                "ingest_status": "rejected_stale",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": [],
+                "provenance_reason": None,
+            },
+            {
+                "attempt_id": "attempt-2",
+                "result_status": "partial",
+                "ingest_status": "rejected_mismatch",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": [],
+                "provenance_reason": None,
+            },
+        ]
+    )
+
+    assert summary["verdict"] == "attention_required"
+    assert summary["verdict_reason"] == "manual_retry_review_required"
+    assert summary["history_signals"] == [
+        "repeated_partial_attempts",
+        "repeated_rejected_attempts",
+    ]
+    assert summary["operator_decision"] == "inspect_rejected_results"
+    assert summary["next_recommendation"] == (
+        "inspect repeated rejected executor results before another retry"
+    )
+    assert summary["operator_summary"] == (
+        "Repeated rejected executor results need manual review before another retry."
+    )
+    assert [action["id"] for action in summary["recommended_actions"]] == [
+        "inspect_rejected_results",
+        "inspect_partial_attempts",
+    ]
+    assert summary["rule_status_counts"] == {"clear": 6, "attention": 1, "blocked": 0}
+
+
 def test_build_dry_run_summary_blocks_scope_validation_failures() -> None:
     summary = build_summary(
         [
@@ -281,6 +327,55 @@ def test_build_dry_run_summary_explains_mixed_attention_signals() -> None:
     assert summary["rule_status_counts"] == {"clear": 4, "attention": 3, "blocked": 0}
 
 
+def test_build_dry_run_summary_prioritizes_validation_conflict_over_rejected_retry_pressure() -> (
+    None
+):
+    summary = build_summary(
+        [
+            {
+                "attempt_id": "attempt-1",
+                "result_status": "partial",
+                "ingest_status": "rejected_stale",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": [],
+                "provenance_reason": None,
+            },
+            {
+                "attempt_id": "attempt-2",
+                "result_status": "partial",
+                "ingest_status": "rejected_mismatch",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": ["validation_summary_conflicts_with_results"],
+                "provenance_reason": None,
+            },
+        ]
+    )
+
+    assert summary["verdict"] == "attention_required"
+    assert summary["verdict_reason"] == "classification_conflict_requires_review"
+    assert summary["history_signals"] == [
+        "repeated_partial_attempts",
+        "repeated_rejected_attempts",
+        "validation_conflict",
+    ]
+    assert summary["operator_decision"] == "review_validation_conflict"
+    assert summary["next_recommendation"] == (
+        "review executor validation conflict before another retry"
+    )
+    assert summary["operator_summary"] == (
+        "Executor history has validation conflicts and retry pressure; review both "
+        "recommended actions before another retry."
+    )
+    assert [action["id"] for action in summary["recommended_actions"]] == [
+        "review_validation_conflict",
+        "inspect_rejected_results",
+        "inspect_partial_attempts",
+    ]
+    assert summary["rule_status_counts"] == {"clear": 5, "attention": 2, "blocked": 0}
+
+
 def test_build_dry_run_summary_blocks_completed_attempts_without_clean_verify() -> None:
     summary = build_summary(
         [
@@ -316,6 +411,65 @@ def test_build_dry_run_summary_blocks_completed_attempts_without_clean_verify() 
         }
     ]
     assert summary["rule_status_counts"] == {"clear": 6, "attention": 0, "blocked": 1}
+
+
+def test_build_dry_run_summary_keeps_blocked_priority_while_explaining_attention_residue() -> (
+    None
+):
+    summary = build_summary(
+        [
+            {
+                "attempt_id": "attempt-1",
+                "result_status": "partial",
+                "ingest_status": "accepted_partial",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": [],
+                "provenance_reason": None,
+            },
+            {
+                "attempt_id": "attempt-2",
+                "result_status": "partial",
+                "ingest_status": "accepted_partial",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": None,
+                "warning_ids": [],
+                "provenance_reason": None,
+            },
+            {
+                "attempt_id": "attempt-3",
+                "result_status": "completed",
+                "ingest_status": "accepted_with_warning",
+                "verify_resume_status": "verify_blocked",
+                "verification_verdict": "mixed",
+                "warning_ids": ["completed_validation_failed"],
+                "provenance_reason": None,
+            },
+        ]
+    )
+
+    assert summary["verdict"] == "blocked"
+    assert summary["verdict_reason"] == "completed_attempt_not_verification_clean"
+    assert summary["history_signals"] == [
+        "repeated_partial_attempts",
+        "completed_verify_blocked",
+        "validation_conflict",
+    ]
+    assert summary["operator_decision"] == "resolve_verification_blockers"
+    assert summary["next_recommendation"] == (
+        "resolve verification blocking evidence before another completed attempt"
+    )
+    assert summary["operator_summary"] == (
+        "A completed executor attempt is still blocked by verification evidence; "
+        "validation conflicts and retry pressure still need review before another "
+        "retry."
+    )
+    assert [action["id"] for action in summary["recommended_actions"]] == [
+        "resolve_verification_blockers",
+        "review_validation_conflict",
+        "inspect_partial_attempts",
+    ]
+    assert summary["rule_status_counts"] == {"clear": 4, "attention": 2, "blocked": 1}
 
 
 def test_build_dry_run_summary_guides_operators_when_history_is_empty() -> None:

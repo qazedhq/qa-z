@@ -1,5 +1,5 @@
 {
-  "description": "Executor-result dry-run should require manual review after repeated rejected executor results and preserve the rejected-result operator action.",
+  "description": "Executor-result dry-run should prioritize rejected-result inspection ahead of partial retry review when mixed partial and rejected history repeats.",
   "expect_executor_dry_run": {
     "attention_rule_ids": [
       "retry_boundary_is_manual"
@@ -20,17 +20,20 @@
     "expected_source": "materialized",
     "expected_recommendation": "inspect repeated rejected executor results before another retry",
     "history_signals": [
+      "repeated_partial_attempts",
       "repeated_rejected_attempts"
     ],
     "latest_ingest_status": "rejected_mismatch",
-    "latest_result_status": "completed",
+    "latest_result_status": "partial",
     "operator_decision": "inspect_rejected_results",
     "operator_summary": "Repeated rejected executor results need manual review before another retry.",
     "recommended_action_ids": [
-      "inspect_rejected_results"
+      "inspect_rejected_results",
+      "inspect_partial_attempts"
     ],
     "recommended_action_summaries": [
-      "Inspect rejected executor-result artifacts and fix freshness, provenance, or schema errors before retrying."
+      "Inspect rejected executor-result artifacts and fix freshness, provenance, or schema errors before retrying.",
+      "Review unresolved repair targets across repeated partial attempts before retrying."
     ],
     "schema_version": 1,
     "session_id": "session-rejected",

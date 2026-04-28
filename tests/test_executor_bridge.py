@@ -172,6 +172,20 @@ def prepare_autonomy_session(tmp_path: Path) -> tuple[str, str]:
     run_autonomy(root=tmp_path, config=load_config(tmp_path), loops=1, count=1, now=NOW)
     loop_id = "loop-20260415-000000-01"
     session_id = f"{loop_id}-verify_regression-candidate"
+    outcome_path = tmp_path / ".qa-z" / "loops" / loop_id / "outcome.json"
+    outcome = json.loads(outcome_path.read_text(encoding="utf-8"))
+    outcome["live_repository"] = {
+        "modified_count": 5,
+        "untracked_count": 1,
+        "staged_count": 0,
+        "runtime_artifact_count": 0,
+        "benchmark_result_count": 0,
+        "current_branch": "codex/qa-z-bootstrap",
+        "current_head": "1234567890abcdef1234567890abcdef12345678",
+        "generated_artifact_policy_explicit": True,
+        "dirty_area_summary": "source:3, tests:2, docs:1",
+    }
+    write_json(outcome_path, outcome)
     return loop_id, session_id
 
 
@@ -209,6 +223,17 @@ def test_executor_bridge_from_loop_packages_manifest_guides_and_inputs(
     assert manifest["status"] == "ready_for_external_executor"
     assert manifest["source_loop_id"] == loop_id
     assert manifest["source_session_id"] == session_id
+    assert (
+        manifest["source_self_inspection"] == f".qa-z/loops/{loop_id}/self_inspect.json"
+    )
+    assert manifest["source_self_inspection_loop_id"] == loop_id
+    assert manifest["source_self_inspection_generated_at"] == NOW
+    assert manifest["live_repository"]["modified_count"] == 5
+    assert manifest["live_repository"]["current_branch"] == "codex/qa-z-bootstrap"
+    assert (
+        manifest["live_repository"]["current_head"]
+        == "1234567890abcdef1234567890abcdef12345678"
+    )
     assert manifest["prepared_action_type"] == "repair_session"
     assert manifest["baseline_run_dir"] == ".qa-z/runs/baseline"
     assert manifest["session_dir"] == f".qa-z/sessions/{session_id}"
@@ -268,15 +293,26 @@ def test_executor_bridge_from_loop_packages_manifest_guides_and_inputs(
     assert result_template["verification_hint"] == "rerun"
     assert "changed_files" in result_template
     assert "Why This Work Was Selected" in guide
+    assert "Live Repository Context" in guide
+    assert (
+        "modified=5; untracked=1; staged=0; runtime_artifacts=0; "
+        "benchmark_results=0; dirty_benchmark_results=0; release_evidence=0; "
+        "generated_policy=true; "
+        "branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=source:3, tests:2, docs:1" in guide
+    )
     assert "Safety Package" in guide
     assert "Return Contract" in guide
     assert "result_template.json" in guide
     assert "python -m qa_z repair-session verify" in guide
     assert "QA-Z Executor Bridge for Codex" in codex
     assert "Bridge id: `bridge-one`" in codex
+    assert "Live repository:" in codex
     assert "executor_safety.md" in codex
     assert "QA-Z Executor Bridge for Claude" in claude
     assert "Do not call Codex or Claude APIs from QA-Z" in claude
+    assert "Live repository:" in claude
     assert "executor_safety.md" in claude
     assert f"Safety rule count: `{expected_rule_count}`" in guide
     assert f"Safety rule count: `{expected_rule_count}`" in codex
@@ -289,6 +325,59 @@ def test_executor_bridge_from_loop_packages_manifest_guides_and_inputs(
     assert placeholder_guidance in claude
     assert safety_json["kind"] == "qa_z.executor_safety"
     assert safety_markdown.startswith("# QA-Z Pre-Live Executor Safety Package")
+
+
+def test_executor_bridge_from_older_loop_keeps_loop_local_self_inspection(
+    tmp_path: Path,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    write_fast_summary(tmp_path, "candidate", status="passed", exit_code=0)
+    write_regressed_verify_artifacts(tmp_path)
+
+    first = run_autonomy(
+        root=tmp_path,
+        config=load_config(tmp_path),
+        loops=1,
+        count=1,
+        now="2026-04-15T00:00:00Z",
+    )
+    first_loop_id = first["latest_loop_id"]
+    run_autonomy(
+        root=tmp_path,
+        config=load_config(tmp_path),
+        loops=1,
+        count=1,
+        now="2026-04-15T00:01:00Z",
+    )
+
+    result = create_executor_bridge(
+        root=tmp_path,
+        from_loop=first_loop_id,
+        bridge_id="bridge-old-loop",
+        now=NOW,
+    )
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    copied_outcome = json.loads(
+        (
+            tmp_path
+            / ".qa-z"
+            / "executor"
+            / "bridge-old-loop"
+            / "inputs"
+            / "autonomy_outcome.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert manifest["source_loop_id"] == first_loop_id
+    assert manifest["source_self_inspection"] == (
+        f".qa-z/loops/{first_loop_id}/self_inspect.json"
+    )
+    assert manifest["source_self_inspection"] != ".qa-z/loops/latest/self_inspect.json"
+    assert (
+        copied_outcome["source_self_inspection"] == manifest["source_self_inspection"]
+    )
 
 
 def test_executor_bridge_from_session_without_loop_uses_session_inputs(
@@ -324,6 +413,8 @@ def test_executor_bridge_from_session_without_loop_uses_session_inputs(
     assert start_exit == 0
     assert manifest["source_loop_id"] is None
     assert manifest["source_session_id"] == "session-one"
+    assert "source_self_inspection" not in manifest
+    assert "live_repository" not in manifest
     assert manifest["selected_task_ids"] == []
     assert manifest["prepared_action_type"] == "repair_session"
     assert manifest["inputs"]["autonomy_outcome"] is None
@@ -348,24 +439,37 @@ def test_executor_bridge_copies_repair_action_context_inputs(
     manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
     guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
     codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
-    copied_context = bridge_dir / "inputs" / "context" / "001-summary.json"
+    copied_self_inspection = bridge_dir / "inputs" / "context" / "001-self_inspect.json"
+    copied_summary = bridge_dir / "inputs" / "context" / "002-summary.json"
 
     assert manifest["inputs"]["action_context"] == [
         {
+            "source_path": ".qa-z/loops/loop-20260415-000000-01/self_inspect.json",
+            "copied_path": (
+                ".qa-z/executor/bridge-context/inputs/context/001-self_inspect.json"
+            ),
+        },
+        {
             "source_path": ".qa-z/runs/candidate/verify/summary.json",
             "copied_path": (
-                ".qa-z/executor/bridge-context/inputs/context/001-summary.json"
+                ".qa-z/executor/bridge-context/inputs/context/002-summary.json"
             ),
-        }
+        },
     ]
     assert manifest["inputs"]["action_context_missing"] == []
-    assert copied_context.exists()
-    assert json.loads(copied_context.read_text(encoding="utf-8"))["verdict"] == (
+    assert copied_self_inspection.exists()
+    assert copied_summary.exists()
+    assert json.loads(copied_self_inspection.read_text(encoding="utf-8"))[
+        "loop_id"
+    ] == (loop_id)
+    assert json.loads(copied_summary.read_text(encoding="utf-8"))["verdict"] == (
         "regressed"
     )
     assert "Action context" in guide
-    assert ".qa-z/executor/bridge-context/inputs/context/001-summary.json" in guide
-    assert ".qa-z/executor/bridge-context/inputs/context/001-summary.json" in codex
+    assert ".qa-z/executor/bridge-context/inputs/context/001-self_inspect.json" in guide
+    assert ".qa-z/executor/bridge-context/inputs/context/002-summary.json" in guide
+    assert ".qa-z/executor/bridge-context/inputs/context/001-self_inspect.json" in codex
+    assert ".qa-z/executor/bridge-context/inputs/context/002-summary.json" in codex
 
 
 def test_executor_bridge_guides_show_missing_action_context_inputs(
@@ -557,6 +661,14 @@ def test_executor_bridge_cli_stdout_points_to_return_and_safety_entrypoints(
         in output
     )
     assert f"Safety rule count: {len(EXECUTOR_SAFETY_RULE_IDS)}" in output
+    assert (
+        "Live repository: modified=5; untracked=1; staged=0; "
+        "runtime_artifacts=0; benchmark_results=0; dirty_benchmark_results=0; "
+        "release_evidence=0; "
+        "generated_policy=true; branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=source:3, tests:2, docs:1" in output
+    )
     assert (
         "Verify command: python -m qa_z repair-session verify --session "
         f".qa-z/sessions/{session_id} --rerun"

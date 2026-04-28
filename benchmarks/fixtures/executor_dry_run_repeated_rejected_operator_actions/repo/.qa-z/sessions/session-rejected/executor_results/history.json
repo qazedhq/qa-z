@@ -5,6 +5,7 @@
       "attempt_id": "attempt-rejected-1",
       "attempt_path": ".qa-z/sessions/session-rejected/executor_results/attempts/attempt-rejected-1.json",
       "backlog_categories": [
+        "partial_completion_gap",
         "evidence_freshness_gap"
       ],
       "bridge_id": "bridge-rejected",
@@ -18,19 +19,20 @@
       "provenance_reason": null,
       "provenance_status": "passed",
       "recorded_at": "2026-04-18T01:00:00Z",
-      "result_status": "completed",
+      "result_status": "partial",
       "source_loop_id": null,
       "validation_status": "passed",
-      "verification_hint": "rerun",
+      "verification_hint": "skip",
       "verification_triggered": false,
       "verification_verdict": null,
-      "verify_resume_status": "stale_result",
+      "verify_resume_status": "verify_blocked",
       "warning_ids": []
     },
     {
       "attempt_id": "attempt-rejected-2",
       "attempt_path": ".qa-z/sessions/session-rejected/executor_results/attempts/attempt-rejected-2.json",
       "backlog_categories": [
+        "partial_completion_gap",
         "provenance_gap"
       ],
       "bridge_id": "bridge-rejected-other",
@@ -44,13 +46,13 @@
       "provenance_reason": "bridge_id_mismatch",
       "provenance_status": "failed",
       "recorded_at": "2026-04-18T01:05:00Z",
-      "result_status": "completed",
+      "result_status": "partial",
       "source_loop_id": null,
       "validation_status": "passed",
-      "verification_hint": "rerun",
+      "verification_hint": "skip",
       "verification_triggered": false,
       "verification_verdict": null,
-      "verify_resume_status": "mismatch_detected",
+      "verify_resume_status": "verify_blocked",
       "warning_ids": []
     }
   ],
