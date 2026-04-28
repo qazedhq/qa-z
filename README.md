@@ -6,7 +6,7 @@
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
-![Release](https://img.shields.io/badge/release-v0.9.8--alpha-brightgreen)
+[![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha)
 
 AI coding agents can write code fast. QA-Z helps you decide whether that code is safe to merge.
 
@@ -43,6 +43,12 @@ Install QA-Z locally:
 
 ```bash
 python -m pip install -e .[dev]
+```
+
+Install Semgrep before running local deep checks:
+
+```bash
+python -m pip install semgrep
 ```
 
 Check the CLI:
@@ -94,6 +100,11 @@ QA-Z does not edit your code by itself. It creates the contracts, evidence, prom
 | `qa-z github-summary` | Render GitHub Actions summary Markdown |
 | `qa-z benchmark` | Run seeded QA-Z benchmark fixtures |
 | `qa-z self-inspect` | Inspect QA-Z artifacts and surface improvement tasks |
+| `qa-z select-next` | Select the next self-improvement backlog tasks |
+| `qa-z backlog` | Print the current QA-Z improvement backlog |
+| `qa-z autonomy` | Run deterministic self-improvement planning loops |
+| `qa-z executor-bridge` | Package a repair session for an external executor |
+| `qa-z executor-result` | Ingest an external executor result for verification |
 
 ## Artifacts
 
@@ -126,7 +137,7 @@ python -m qa_z repair-prompt --from-run latest --adapter codex
 python -m qa_z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
 
-For a fuller transcript, see [docs/demo-script.md](docs/demo-script.md). A runnable TypeScript fast-gate example lives under [examples/typescript-demo/](examples/typescript-demo/).
+`verify` expects existing baseline and candidate run directories; use it after an external repair tool or human fix creates a candidate run. For a fuller transcript, see [docs/demo-script.md](docs/demo-script.md). A runnable TypeScript fast-gate example lives under [examples/typescript-demo/](examples/typescript-demo/).
 
 ## What QA-Z Is Not
 
@@ -149,11 +160,7 @@ Deep QA automation currently centers on Semgrep-backed checks and deterministic 
 
 ## Roadmap
 
-- Broader TypeScript deep QA automation
-- Multi-engine security checks
-- Property, mutation, smoke, and e2e integrations
-- Richer GitHub Checks and annotations
-- Stronger mixed Python and TypeScript benchmark realism
+Next up: broader TypeScript deep QA, multi-engine checks, richer GitHub annotations, and stronger mixed Python/TypeScript benchmark realism.
 
 ## Docs
 
