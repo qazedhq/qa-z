@@ -12,7 +12,7 @@
 
 ## Current Progress Snapshot
 
-Audit date: 2026-04-20 KST.
+Audit date: 2026-04-23 KST.
 
 Current branch:
 
@@ -55,10 +55,10 @@ python scripts/alpha_release_gate.py --json
 Observed results:
 
 ```text
-ruff format: 134 files already formatted
+ruff format: 1014 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 86 source files
-pytest: 386 passed
+mypy: Success: no issues found in 498 source files
+pytest: 1158 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 artifact smoke: wheel and sdist metadata install smoke passed
 bundle manifest: bundle head and SHA256 artifact manifest generated
@@ -71,7 +71,7 @@ Release blockers:
 git remote -v
 ```
 
-Observed: no configured remote. A 2026-04-20 remote preflight reached GitHub for `https://github.com/qazedhq/qa-z.git` and returned `404 Not Found`, so the intended public repository still needs to be created or exposed before mutating local Git config. Do not create a tag until the intended GitHub repository exists, the branch or default branch is pushed, and remote CI passes.
+Observed: `origin` is configured as `https://github.com/qazedhq/qa-z.git`. A 2026-04-23 remote preflight against that configured origin returned `404 Not Found`, so the intended public repository still needs to be created or exposed before any push or tag. Do not create a tag until the intended GitHub repository exists, the branch or default branch is pushed, and remote CI passes.
 
 ## File Map
 
@@ -228,7 +228,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 386 passed.
+All commands pass. The expected current pytest count is 1158 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**
@@ -246,7 +246,7 @@ Expected:
 ```text
 fast passes with Python checks.
 deep passes with Semgrep results normalized and no blocking findings for the release baseline.
-benchmark passes all committed fixtures; the latest recorded release handoff expects 50/50 fixtures and overall_rate 1.0.
+benchmark passes all committed fixtures; the latest recorded release handoff expects 54/54 fixtures and overall_rate 1.0.
 ```
 
 - [ ] **Step 4: Rebuild package artifacts**
@@ -309,7 +309,7 @@ The first remote validation path is explicit before any push.
 Run:
 
 ```powershell
-git push -u origin HEAD:main
+git push -u origin HEAD:<repository_default_branch>
 ```
 
 Expected:
@@ -529,8 +529,8 @@ Ready now:
 
 Not ready until resolved:
 
-- `qazedhq/qa-z` has not been created or exposed as a reachable public GitHub repository; the 2026-04-20 remote preflight returned `404 Not Found`.
-- No `origin` remote is configured.
+- `qazedhq/qa-z` has not been created or exposed as a reachable public GitHub repository; the 2026-04-23 remote preflight against the configured `origin` returned `404 Not Found`.
+- `origin` is configured as `https://github.com/qazedhq/qa-z.git`, but the remote target is still unreachable.
 - No `v0.9.8-alpha` tag exists.
 - Remote GitHub Actions evidence does not exist yet for the target repository.
 - Code scanning/SARIF publication needs repository-side confirmation.
@@ -540,3 +540,4 @@ Decision:
 ```text
 QA-Z is locally release-ready for a public v0.9.8-alpha repository launch after the GitHub repository target is configured and remote CI passes.
 ```
+

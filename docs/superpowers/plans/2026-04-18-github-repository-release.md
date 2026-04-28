@@ -12,15 +12,15 @@
 
 ## Current Readiness Snapshot
 
-Verified on 2026-04-20 from `F:\JustTyping`:
+Verified on 2026-04-23 from `F:\JustTyping`:
 
-- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `386 passed`
-- `python -m ruff format --check .`: passed, `134 files already formatted`
+- `python -m pytest`: passed through `python -m qa_z fast --selection smart --json`, `1158 passed`
+- `python -m ruff format --check .`: passed, `1014 files already formatted`
 - `python -m ruff check .`: passed
-- `python -m mypy src tests`: passed, `86 source files`
+- `python -m mypy src tests`: passed, `498 source files`
 - `python -m qa_z fast --selection smart --json`: passed with Python-only root checks
 - `python -m qa_z deep --selection smart --json`: passed after installing Semgrep locally; root scan is scoped to `src` and `tests`
-- `python -m qa_z benchmark --json`: passed, `50/50 fixtures, overall_rate 1.0`
+- `python -m qa_z benchmark --json`: passed, `54/54 fixtures, overall_rate 1.0`
 - `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python scripts/alpha_release_artifact_smoke.py --json`: passed, wheel and sdist metadata install smoke
 - `python -m qa_z --help`: command surface renders all current alpha commands
@@ -30,7 +30,7 @@ Known release blockers:
 - The root `qa-z.yaml` gate mismatch is repaired: root fast no longer requires `eslint`, `tsc`, or `vitest`, and root deep no longer scans intentionally vulnerable benchmark fixtures.
 - The tracked worktree is clean after the release-readiness commits. Ignored local caches, root `.qa-z/**`, and `benchmarks/results/**` remain local generated artifacts.
 - Release target frozen: Git tag `v0.9.8-alpha` and Python package `0.9.8a0`.
-- Publish blocker: local Git has no configured `origin` remote, so Task 6 cannot push or open the release PR until the intended GitHub repository target is configured.
+- Publish blocker: the configured `origin` remote now points to `https://github.com/qazedhq/qa-z.git`, but remote preflight still returns `404 Not Found` for `qazedhq/qa-z`, so Task 6 cannot push or open the release PR until the intended GitHub repository target exists or the target is explicitly changed.
 
 ## Files And Surfaces To Touch
 
@@ -381,7 +381,7 @@ Expected:
 - mypy passes
 - pytest reports all tests passing with the known skip
 - fast/deep pass under the release root config
-- benchmark reports `50/50 fixtures, overall_rate 1.0` or a deliberately updated snapshot with matching docs/tests
+- benchmark reports `54/54 fixtures, overall_rate 1.0` or a deliberately updated snapshot with matching docs/tests
 
 - [x] **Step 2: Run CLI smoke checks**
 
@@ -512,3 +512,4 @@ Recommended next priorities:
 - [ ] **Step 3: Keep live execution deferred**
 
 Do not begin live Codex/Claude execution until deterministic handoff, verification, publishing, bridge, ingest, and safety contracts remain stable on the release branch.
+
