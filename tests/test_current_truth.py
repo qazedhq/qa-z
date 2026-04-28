@@ -14,6 +14,51 @@ from qa_z.config import COMMAND_GUIDANCE
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_current_truth_anchors() -> str:
+    return (ROOT / "docs" / "current-truth-maintenance-anchors.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def read_readme() -> str:
+    return (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
+    readme = read_readme()
+
+    assert readme.startswith("# QA-Z\n\n> Deterministic QA gates for AI coding agents.")
+    assert "Should this change be merged — and if not" in readme
+    assert "## Quickstart" in readme
+    assert "| Command | What it does |" in readme
+    assert "| Path | Purpose |" in readme
+    assert "| `.qa-z/loops/` | Autonomy planning loop artifacts |" in readme
+    assert "v0.9.8-alpha" in readme
+    assert "v0.9.x-alpha" not in readme
+    assert "docs/current-truth-maintenance-anchors.md" in readme
+    assert "Detailed operator contract index" not in readme
+    assert len(readme.splitlines()) <= 230
+
+
+def test_pyproject_metadata_uses_public_launch_positioning() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert 'description = "Deterministic QA gates for AI coding agents."' in pyproject
+    for keyword in (
+        "qa",
+        "testing",
+        "ci",
+        "ai-agents",
+        "coding-agents",
+        "codex",
+        "claude",
+        "semgrep",
+        "sarif",
+        "quality-assurance",
+    ):
+        assert f'"{keyword}"' in pyproject
+
+
 def test_command_guidance_matches_landed_review_and_repair_prompt_surface() -> None:
     review = COMMAND_GUIDANCE["review"]
     repair_prompt = COMMAND_GUIDANCE["repair-prompt"]
@@ -27,7 +72,7 @@ def test_command_guidance_matches_landed_review_and_repair_prompt_surface() -> N
 
 
 def test_readme_github_summary_surface_mentions_session_candidate_resolution() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
 
     assert (
         "python -m qa_z github-summary --from-session .qa-z/sessions/<session-id>"
@@ -79,7 +124,7 @@ def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:
     policy = (ROOT / "docs" / "generated-vs-frozen-evidence-policy.md").read_text(
         encoding="utf-8"
     )
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
 
@@ -126,7 +171,7 @@ def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:
 
 
 def test_self_inspection_reseed_contract_is_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
 
     for text in (readme, schema):
@@ -270,7 +315,7 @@ def test_alpha_release_gate_evidence_is_documented_in_artifact_schema() -> None:
 
 
 def test_benchmark_results_dir_locking_is_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
 
     for text in (readme, benchmarking):
@@ -281,7 +326,7 @@ def test_benchmark_results_dir_locking_is_documented() -> None:
 
 
 def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
 
     assert (
@@ -587,7 +632,7 @@ def test_worktree_reports_document_expanded_untracked_paths_and_shared_command_s
 
 
 def test_docs_bind_reduce_integration_risk_to_worktree_commit_plan() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
 
     for text in (readme, schema):
@@ -599,7 +644,7 @@ def test_docs_bind_reduce_integration_risk_to_worktree_commit_plan() -> None:
 
 
 def test_reports_record_live_evidence_gating_for_cleanup_self_inspection() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )
@@ -653,7 +698,7 @@ def test_reports_record_live_evidence_gating_for_cleanup_self_inspection() -> No
 
 
 def test_release_preflight_docs_follow_generated_evidence_policy_split() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     release_handoff = (
         ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
     ).read_text(encoding="utf-8")
@@ -679,7 +724,7 @@ def test_release_preflight_docs_follow_generated_evidence_policy_split() -> None
 
 
 def test_readme_documents_deep_from_run_output_dir_boundary() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
 
@@ -694,7 +739,7 @@ def test_readme_documents_deep_from_run_output_dir_boundary() -> None:
 
 
 def test_semgrep_scan_warning_diagnostics_are_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
@@ -742,7 +787,7 @@ def test_deep_warning_benchmark_fixtures_pin_warning_check_ids() -> None:
 
 
 def test_mixed_fast_deep_benchmark_breadth_is_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
@@ -780,7 +825,7 @@ def test_mixed_fast_deep_benchmark_breadth_is_documented() -> None:
 
 
 def test_executor_dry_run_operator_benchmark_density_is_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
@@ -798,7 +843,7 @@ def test_executor_dry_run_operator_benchmark_density_is_documented() -> None:
 
 
 def test_executor_dry_run_retry_noop_benchmark_density_is_documented() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
@@ -877,7 +922,7 @@ def test_example_config_only_advertises_landed_deep_execution_surface() -> None:
 
 
 def test_root_release_config_keeps_repository_gate_python_only() -> None:
-    public_text = (ROOT / "README.md").read_text(encoding="utf-8")
+    public_text = read_current_truth_anchors()
     root_config_text = (ROOT / "qa-z.yaml").read_text(encoding="utf-8")
     root_config = yaml.safe_load(root_config_text)
 
@@ -922,7 +967,7 @@ def test_agent_templates_reflect_current_alpha_workflow_and_boundaries() -> None
 
 
 def test_readme_repository_map_marks_placeholder_examples_honestly() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
 
     assert (
         "examples/                 runnable Python and TypeScript demos plus placeholder examples"
@@ -933,7 +978,7 @@ def test_readme_repository_map_marks_placeholder_examples_honestly() -> None:
 def test_readme_example_policy_marks_public_example_as_authoritative_excerpt_source() -> (
     None
 ):
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
 
     assert (
         "`qa-z.yaml.example` is the authoritative full public example config." in readme
@@ -994,7 +1039,7 @@ def test_reports_document_workflow_template_non_goals_beyond_live_executor_calls
 
 
 def test_readme_near_term_roadmap_matches_post_sync_priorities() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
 
     assert (
         "1. Preserve generated versus frozen evidence policy as artifact surfaces evolve."
@@ -1048,7 +1093,7 @@ def test_reports_record_executor_operator_diagnostics_first_pass() -> None:
 
 
 def test_reports_record_workflow_template_live_free_gate_sync() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )

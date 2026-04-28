@@ -5,12 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "qa-z"
 version = "0.9.8a0"
-description = "A Codex-first QA control plane for coding agents."
+description = "Deterministic QA gates for AI coding agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "QA-Z Contributors" }]
-keywords = ["qa", "agents", "codex", "claude", "testing", "ci"]
+keywords = [
+  "qa",
+  "testing",
+  "ci",
+  "ai-agents",
+  "coding-agents",
+  "codex",
+  "claude",
+  "semgrep",
+  "sarif",
+  "quality-assurance",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

@@ -10,9 +10,13 @@ def read_text(*parts: str) -> str:
     return ROOT.joinpath(*parts).read_text(encoding="utf-8")
 
 
+def read_current_truth_anchors() -> str:
+    return read_text("docs", "current-truth-maintenance-anchors.md")
+
+
 def test_release_target_is_frozen_across_public_surfaces() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     release_plan = (
         ROOT
         / "docs"
@@ -95,7 +99,7 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
         / "plans"
         / "2026-04-18-github-repository-release.md"
     ).read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     release_notes = (ROOT / "docs" / "releases" / "v0.9.8-alpha.md").read_text(
         encoding="utf-8"
     )
@@ -260,7 +264,7 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
 
 
 def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
-    readme = read_text("README.md")
+    readme = read_current_truth_anchors()
     commit_plan = read_text("docs", "reports", "worktree-commit-plan.md")
     release_plan = read_text(
         "docs", "superpowers", "plans", "2026-04-18-github-repository-release.md"

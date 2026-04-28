@@ -19,7 +19,7 @@ def test_release_continuity_docs_cover_loop_local_prepared_action_context() -> N
     ).lower()
 
     assert "cleanup and workflow packets now also carry loop-local self-inspection" in (
-        read_text("README.md")
+        read_text("docs", "current-truth-maintenance-anchors.md")
     )
     assert (
         "cleanup and workflow prepared actions also carry loop-local self-inspection"

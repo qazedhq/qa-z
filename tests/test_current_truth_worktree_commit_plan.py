@@ -6,8 +6,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_current_truth_anchors() -> str:
+    return (ROOT / "docs" / "current-truth-maintenance-anchors.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_docs_document_worktree_commit_plan_helper() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
         encoding="utf-8"
@@ -84,7 +90,7 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
 
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = read_current_truth_anchors()
 
     assert "## Runtime Artifact Cleanup Evidence" in schema
     assert "`kind`: `qa_z.runtime_artifact_cleanup`" in schema
