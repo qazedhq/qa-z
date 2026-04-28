@@ -2,36 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
-from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = ROOT / "scripts" / "alpha_release_gate.py"
-
-
-def load_gate_module():
-    spec = importlib.util.spec_from_file_location("alpha_release_gate", SCRIPT_PATH)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-class RecordingRunner:
-    def __init__(self, responses=None):
-        self.responses = responses or {}
-        self.commands = []
-
-    def __call__(self, command, cwd):
-        self.commands.append(tuple(command))
-        return self.responses.get(tuple(command), (0, "ok\n", ""))
-
-
-def labels_from_result(result):
-    return [check["label"] for check in result.payload["checks"]]
+from tests.alpha_release_gate_test_support import (
+    RecordingRunner,
+    labels_from_result,
+    load_gate_module,
+)
 
 
 def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
@@ -42,8 +19,10 @@ def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
 
     assert result.exit_code == 0
     assert result.summary == "alpha release gate passed"
+    assert str(result.payload["generated_at"]).endswith("Z")
     assert labels_from_result(result) == [
         "python scripts/alpha_release_preflight.py --skip-remote --json",
+        "python scripts/worktree_commit_plan.py --include-ignored --json",
         "python -m ruff format --check .",
         "python -m ruff check .",
         "python -m mypy src tests",
@@ -77,7 +56,11 @@ def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
 
 def test_alpha_release_gate_records_failures_but_continues_running(tmp_path):
     module = load_gate_module()
-    failing_command = module.default_gate_commands()[4].command
+    failing_command = next(
+        command.command
+        for command in module.default_gate_commands()
+        if command.name == "pytest"
+    )
     runner = RecordingRunner(
         {tuple(failing_command): (1, "", "pytest failed with one regression\n")}
     )
@@ -102,138 +85,281 @@ def test_alpha_release_gate_records_failures_but_continues_running(tmp_path):
             "exit_code": 1,
             "stdout_tail": "",
             "stderr_tail": "pytest failed with one regression",
+            "failure_scope": "product",
         }
     ]
 
 
-def test_alpha_release_gate_promotes_preflight_next_actions(tmp_path):
+def test_alpha_release_gate_classifies_environment_failures(tmp_path):
     module = load_gate_module()
-    preflight_command = module.default_gate_commands()[0].command
-    preflight_payload = {
-        "summary": "release preflight failed",
+    commands_by_name = {
+        command.name: command.command for command in module.default_gate_commands()
+    }
+    fast_failure_payload = {
+        "status": "failed",
+        "checks": [
+            {
+                "id": "py_type",
+                "tool": "mypy",
+                "status": "failed",
+                "exit_code": 3221225477,
+                "stdout_tail": "",
+                "stderr_tail": "",
+            }
+        ],
+        "totals": {"passed": 3, "failed": 1, "warning": 0, "skipped": 0},
+    }
+    deep_failure_payload = {
+        "status": "failed",
+        "checks": [
+            {
+                "id": "sg_scan",
+                "tool": "semgrep",
+                "status": "failed",
+                "exit_code": 2,
+                "message": "Semgrep failed before producing valid JSON.",
+                "stderr_tail": (
+                    'Fatal error: exception Failure("Failed to create system store '
+                    "X509 authenticator: ca_certs_iter_on_anchors: "
+                    'CertOpenSystemStore returned NULL")'
+                ),
+                "stdout_tail": "",
+            }
+        ],
+        "totals": {"passed": 0, "failed": 1, "warning": 0, "skipped": 0},
+    }
+    artifact_smoke_payload = {
+        "summary": "artifact smoke failed",
         "exit_code": 1,
-        "failed_checks": ["github_repository", "remote_reachable"],
-        "next_actions": [
-            (
-                "Create or expose the public GitHub repository qazedhq/qa-z, "
-                "then rerun remote preflight for https://github.com/qazedhq/qa-z.git."
-            )
+        "checks": [
+            {
+                "name": "wheel_install_smoke",
+                "status": "passed",
+                "detail": "dist\\qa_z-0.9.8a0-py3-none-any.whl installed",
+            },
+            {
+                "name": "sdist_install_smoke",
+                "status": "failed",
+                "detail": (
+                    "artifact install failed with exit 1: "
+                    "ERROR: Could not find a version that satisfies the requirement "
+                    "setuptools>=68"
+                ),
+            },
         ],
     }
     runner = RecordingRunner(
-        {tuple(preflight_command): (1, json.dumps(preflight_payload), "")}
+        {
+            tuple(commands_by_name["mypy"]): (3221225477, "", ""),
+            tuple(commands_by_name["qa_z_fast"]): (
+                1,
+                json.dumps(fast_failure_payload),
+                "",
+            ),
+            tuple(commands_by_name["qa_z_deep"]): (
+                1,
+                json.dumps(deep_failure_payload),
+                "",
+            ),
+            tuple(commands_by_name["qa_z_benchmark"]): (
+                2,
+                (
+                    "qa-z benchmark: benchmark error: Benchmark results directory "
+                    "is already in use: F:\\JustTyping\\benchmarks\\results. "
+                    "Remove stale lock F:\\JustTyping\\benchmarks\\results\\.benchmark.lock "
+                    "only after confirming no benchmark is running."
+                ),
+                "",
+            ),
+            tuple(commands_by_name["build"]): (
+                1,
+                "",
+                (
+                    "ERROR: Could not find a version that satisfies the requirement "
+                    "setuptools>=68\n"
+                    "ERROR: No matching distribution found for setuptools>=68"
+                ),
+            ),
+            tuple(commands_by_name["artifact_smoke"]): (
+                1,
+                json.dumps(artifact_smoke_payload),
+                "",
+            ),
+            tuple(commands_by_name["bundle_manifest"]): (
+                1,
+                "",
+                (
+                    "Traceback (most recent call last):\n"
+                    "PermissionError: [WinError 5] Access is denied: "
+                    "'F:\\JustTyping\\dist\\qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle'"
+                ),
+            ),
+        }
     )
 
     result = module.run_alpha_release_gate(tmp_path, runner=runner)
 
-    assert result.exit_code == 1
-    assert result.payload["failed_checks"] == ["local_preflight"]
-    assert result.payload["preflight_failed_checks"] == [
-        "github_repository",
-        "remote_reachable",
-    ]
-    assert result.payload["next_actions"] == preflight_payload["next_actions"]
+    assert result.payload["environment_failure_count"] == 7
+    assert result.payload["product_failure_count"] == 0
+    assert result.payload["evidence"]["gate_failures"] == {
+        "mypy": {
+            "kind": "mypy_internal_error",
+            "summary": "mypy exited with Windows access violation (3221225477)",
+        },
+        "qa_z_fast": {
+            "kind": "fast_typecheck_internal_error",
+            "summary": "qa-z fast failed because the nested mypy step crashed",
+        },
+        "qa_z_deep": {
+            "kind": "semgrep_x509_store_failure",
+            "summary": "Semgrep could not initialize the Windows X509 authenticator",
+        },
+        "qa_z_benchmark": {
+            "kind": "benchmark_results_lock",
+            "summary": "benchmark results directory is locked by another run",
+        },
+        "build": {
+            "kind": "offline_build_dependency_failure",
+            "summary": "build could not install setuptools>=68 in the isolated env",
+        },
+        "artifact_smoke": {
+            "kind": "offline_build_dependency_failure",
+            "summary": "artifact smoke could not install sdist build dependencies",
+        },
+        "bundle_manifest": {
+            "kind": "bundle_path_locked",
+            "summary": "release bundle path could not be replaced because the file is locked",
+        },
+    }
 
 
-def test_alpha_release_gate_preserves_empty_preflight_next_actions(tmp_path):
+def test_alpha_release_gate_adds_known_failure_next_actions(tmp_path):
     module = load_gate_module()
-    preflight_command = module.default_gate_commands()[0].command
-    preflight_payload = {
-        "summary": "release preflight failed",
-        "exit_code": 1,
-        "failed_checks": ["current_branch"],
-        "next_actions": [],
+    commands_by_name = {
+        command.name: command.command for command in module.default_gate_commands()
+    }
+    deep_failure_payload = {
+        "status": "failed",
+        "checks": [
+            {
+                "id": "sg_scan",
+                "tool": "semgrep",
+                "status": "failed",
+                "exit_code": 2,
+                "message": "Semgrep failed before producing valid JSON.",
+                "stderr_tail": (
+                    'Fatal error: exception Failure("Failed to create system store '
+                    "X509 authenticator: ca_certs_iter_on_anchors: "
+                    'CertOpenSystemStore returned NULL")'
+                ),
+                "stdout_tail": "",
+            }
+        ],
+        "totals": {"passed": 0, "failed": 1, "warning": 0, "skipped": 0},
     }
     runner = RecordingRunner(
-        {tuple(preflight_command): (1, json.dumps(preflight_payload), "")}
+        {
+            tuple(commands_by_name["mypy"]): (3221225477, "", ""),
+            tuple(commands_by_name["qa_z_deep"]): (
+                1,
+                json.dumps(deep_failure_payload),
+                "",
+            ),
+            tuple(commands_by_name["qa_z_benchmark"]): (
+                2,
+                (
+                    "qa-z benchmark: benchmark error: Benchmark results directory "
+                    "is already in use: F:\\JustTyping\\benchmarks\\results. "
+                    "Remove stale lock F:\\JustTyping\\benchmarks\\results\\.benchmark.lock "
+                    "only after confirming no benchmark is running."
+                ),
+                "",
+            ),
+            tuple(commands_by_name["build"]): (
+                1,
+                "",
+                (
+                    "ERROR: Could not find a version that satisfies the requirement "
+                    "setuptools>=68\n"
+                    "ERROR: No matching distribution found for setuptools>=68"
+                ),
+            ),
+            tuple(commands_by_name["bundle_manifest"]): (
+                1,
+                "",
+                (
+                    "Traceback (most recent call last):\n"
+                    "PermissionError: [WinError 5] Access is denied: "
+                    "'F:\\JustTyping\\dist\\qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle'"
+                ),
+            ),
+        }
     )
 
     result = module.run_alpha_release_gate(tmp_path, runner=runner)
 
-    assert result.exit_code == 1
-    assert result.payload["preflight_failed_checks"] == ["current_branch"]
-    assert result.payload["next_actions"] == []
+    assert result.payload["next_actions"] == [
+        (
+            "Rerun `python -m mypy src tests`; if Windows access violation "
+            "3221225477 persists, treat it as a local toolchain/runtime blocker "
+            "before triaging code changes."
+        ),
+        (
+            "Repair the local Semgrep trust-store / Windows certificate setup, "
+            "then rerun `python -m qa_z deep --selection smart --json`."
+        ),
+        (
+            "Confirm no benchmark is active, remove the stale "
+            "`benchmarks/results/.benchmark.lock` only after that check, or use "
+            "a different `--results-dir`."
+        ),
+        (
+            "Restore access to build dependencies such as `setuptools>=68`, then "
+            "rerun the package build and artifact smoke checks."
+        ),
+        (
+            "Close any process holding the release bundle file, or choose a new "
+            "bundle destination, before rerunning the bundle manifest step."
+        ),
+    ]
+    assert result.payload["next_commands"] == [
+        "python -m mypy src tests",
+        "python -m qa_z deep --selection smart --json",
+        "python -m qa_z benchmark --json",
+        "python -m build --sdist --wheel",
+        "python scripts/alpha_release_artifact_smoke.py --json",
+        "python scripts/alpha_release_bundle_manifest.py --json",
+    ]
 
 
-def test_alpha_release_gate_reads_preflight_repair_fields_from_output_file(tmp_path):
+def test_alpha_release_gate_attaches_failure_scope_to_failed_checks(tmp_path):
     module = load_gate_module()
-    preflight_output = tmp_path / "evidence" / "preflight.json"
-    preflight_payload = {
-        "summary": "release preflight failed",
-        "exit_code": 1,
-        "failed_checks": ["github_repository", "remote_reachable"],
-        "next_actions": [
-            (
-                "Create or expose the public GitHub repository qazedhq/qa-z, "
-                "then rerun remote preflight."
-            )
-        ],
+    commands_by_name = {
+        command.name: command.command for command in module.default_gate_commands()
     }
-
-    class FileWritingRunner(RecordingRunner):
-        def __call__(self, command, cwd):
-            self.commands.append(tuple(command))
-            if any(
-                str(argument).endswith("alpha_release_preflight.py")
-                for argument in command
-            ):
-                preflight_output.parent.mkdir(parents=True, exist_ok=True)
-                preflight_output.write_text(
-                    json.dumps(preflight_payload), encoding="utf-8"
-                )
-                return 1, "release preflight failed\n", ""
-            return 0, "ok\n", ""
-
-    result = module.run_alpha_release_gate(
-        tmp_path, preflight_output=preflight_output, runner=FileWritingRunner()
+    runner = RecordingRunner(
+        {
+            tuple(commands_by_name["mypy"]): (3221225477, "", ""),
+            tuple(commands_by_name["pytest"]): (
+                1,
+                "",
+                "pytest failed with one regression\n",
+            ),
+        }
     )
 
-    assert result.exit_code == 1
-    assert result.payload["preflight_failed_checks"] == [
-        "github_repository",
-        "remote_reachable",
-    ]
-    assert result.payload["next_actions"] == preflight_payload["next_actions"]
+    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+    checks_by_name = {check["name"]: check for check in result.payload["checks"]}
 
-
-def test_alpha_release_gate_supplements_partial_stdout_with_output_file(tmp_path):
-    module = load_gate_module()
-    preflight_output = tmp_path / "evidence" / "preflight.json"
-    stdout_payload = {
-        "summary": "release preflight failed",
-        "exit_code": 1,
-    }
-    file_payload = {
-        "summary": "release preflight failed",
-        "exit_code": 1,
-        "failed_checks": ["origin_matches_expected", "github_repository"],
-        "next_actions": [
-            "Set origin to the intended repository URL, then rerun preflight.",
-        ],
-    }
-
-    class PartialStdoutRunner(RecordingRunner):
-        def __call__(self, command, cwd):
-            self.commands.append(tuple(command))
-            if any(
-                str(argument).endswith("alpha_release_preflight.py")
-                for argument in command
-            ):
-                preflight_output.parent.mkdir(parents=True, exist_ok=True)
-                preflight_output.write_text(json.dumps(file_payload), encoding="utf-8")
-                return 1, json.dumps(stdout_payload), ""
-            return 0, "ok\n", ""
-
-    result = module.run_alpha_release_gate(
-        tmp_path, preflight_output=preflight_output, runner=PartialStdoutRunner()
+    assert checks_by_name["mypy"]["failure_scope"] == "environment"
+    assert checks_by_name["mypy"]["failure_kind"] == "mypy_internal_error"
+    assert (
+        checks_by_name["mypy"]["failure_summary"]
+        == "mypy exited with Windows access violation (3221225477)"
     )
-
-    assert result.exit_code == 1
-    assert result.payload["preflight_failed_checks"] == [
-        "origin_matches_expected",
-        "github_repository",
-    ]
-    assert result.payload["next_actions"] == file_payload["next_actions"]
+    assert checks_by_name["pytest"]["failure_scope"] == "product"
+    assert "failure_kind" not in checks_by_name["pytest"]
+    assert "failure_summary" not in checks_by_name["pytest"]
 
 
 def test_alpha_release_gate_can_include_dependency_smoke(tmp_path):
@@ -262,182 +388,140 @@ def test_alpha_release_gate_can_allow_dirty_worktree_for_development(tmp_path):
     assert labels_from_result(result)[0] == (
         "python scripts/alpha_release_preflight.py --skip-remote --allow-dirty --json"
     )
-    assert "--allow-dirty" in runner.commands[0]
 
 
-def test_alpha_release_gate_can_include_remote_preflight(tmp_path):
-    module = load_gate_module()
-    runner = RecordingRunner()
-
-    result = module.run_alpha_release_gate(
-        tmp_path,
-        include_remote=True,
-        repository_url="https://github.com/qazedhq/qa-z.git",
-        expected_origin_url="https://github.com/qazedhq/qa-z.git",
-        allow_existing_refs=True,
-        runner=runner,
-    )
-
-    assert result.exit_code == 0
-    assert labels_from_result(result)[0] == (
-        "python scripts/alpha_release_preflight.py "
-        "--repository-url https://github.com/qazedhq/qa-z.git "
-        "--expected-origin-url https://github.com/qazedhq/qa-z.git "
-        "--allow-existing-refs --json"
-    )
-    assert "--skip-remote" not in runner.commands[0]
-    assert "--allow-existing-refs" in runner.commands[0]
-    assert "--expected-origin-url" in runner.commands[0]
-
-
-def test_alpha_release_gate_include_remote_defaults_origin_to_repository_url(tmp_path):
-    module = load_gate_module()
-    runner = RecordingRunner()
-
-    result = module.run_alpha_release_gate(
-        tmp_path,
-        include_remote=True,
-        repository_url="https://github.com/qazedhq/qa-z.git",
-        runner=runner,
-    )
-
-    assert result.exit_code == 0
-    assert labels_from_result(result)[0] == (
-        "python scripts/alpha_release_preflight.py "
-        "--repository-url https://github.com/qazedhq/qa-z.git "
-        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
-    )
-    assert "--expected-origin-url" in runner.commands[0]
-
-
-def test_alpha_release_gate_remote_options_imply_remote_preflight(tmp_path):
-    module = load_gate_module()
-    runner = RecordingRunner()
-
-    result = module.run_alpha_release_gate(
-        tmp_path,
-        expected_origin_url="https://github.com/qazedhq/qa-z.git",
-        runner=runner,
-    )
-
-    assert result.exit_code == 0
-    assert result.payload["include_remote"] is True
-    assert labels_from_result(result)[0] == (
-        "python scripts/alpha_release_preflight.py "
-        "--repository-url https://github.com/qazedhq/qa-z.git "
-        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
-    )
-    assert "--skip-remote" not in runner.commands[0]
-
-
-def test_alpha_release_gate_can_request_preflight_output_artifact(tmp_path):
-    module = load_gate_module()
-    runner = RecordingRunner()
-    preflight_output = tmp_path / "evidence" / "preflight.json"
-
-    result = module.run_alpha_release_gate(
-        tmp_path,
-        preflight_output=preflight_output,
-        runner=runner,
-    )
-
-    assert result.exit_code == 0
-    assert result.payload["preflight_output"] == str(preflight_output)
-    assert labels_from_result(result)[0] == (
-        "python scripts/alpha_release_preflight.py --skip-remote "
-        f"--output {preflight_output} --json"
-    )
-    assert "--output" in runner.commands[0]
-    assert str(preflight_output) in runner.commands[0]
-
-
-def test_alpha_release_gate_cli_can_emit_json_and_write_output(
-    monkeypatch, tmp_path, capsys
+def test_alpha_release_gate_carries_expected_origin_when_origin_is_configured(
+    tmp_path, monkeypatch
 ):
     module = load_gate_module()
-    output_path = tmp_path / "evidence.json"
-
-    def fake_run_alpha_release_gate(_repo_root, **kwargs):
-        assert kwargs["with_deps"] is True
-        assert kwargs["allow_dirty"] is True
-        assert kwargs["include_remote"] is True
-        assert kwargs["repository_url"] == "https://github.com/qazedhq/qa-z.git"
-        assert kwargs["expected_origin_url"] == "https://github.com/qazedhq/qa-z.git"
-        assert kwargs["allow_existing_refs"] is True
-        assert kwargs["preflight_output"] == output_path.with_suffix(".preflight.json")
-        return module.AlphaReleaseGateResult(
-            summary="alpha release gate passed",
-            exit_code=0,
-            commands=[],
-            payload={
-                "summary": "alpha release gate passed",
-                "exit_code": 0,
-                "checks": [],
-            },
-        )
-
-    monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
-
-    exit_code = module.main(
-        [
-            "--with-deps",
-            "--allow-dirty",
-            "--include-remote",
-            "--repository-url",
-            "https://github.com/qazedhq/qa-z.git",
-            "--expected-origin-url",
-            "https://github.com/qazedhq/qa-z.git",
-            "--allow-existing-refs",
-            "--json",
-            "--output",
-            str(output_path),
-        ]
+    runner = RecordingRunner()
+    monkeypatch.setattr(
+        module,
+        "configured_origin_url_for_gate",
+        lambda _repo_root: "https://github.com/qazedhq/qa-z.git",
     )
 
-    captured = capsys.readouterr()
-    payload = json.loads(captured.out)
-    assert exit_code == 0
-    assert payload["summary"] == "alpha release gate passed"
-    assert json.loads(output_path.read_text()) == payload
+    result = module.run_alpha_release_gate(tmp_path, allow_dirty=True, runner=runner)
+
+    assert result.exit_code == 0
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote "
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git "
+        "--allow-dirty --json"
+    )
 
 
-def test_alpha_release_gate_cli_prints_next_actions(monkeypatch, capsys):
+def test_alpha_release_gate_can_request_strict_worktree_commit_plan(tmp_path):
     module = load_gate_module()
+    runner = RecordingRunner()
 
-    def fake_run_alpha_release_gate(_repo_root, **_kwargs):
-        return module.AlphaReleaseGateResult(
-            summary="alpha release gate failed",
-            exit_code=1,
-            commands=[],
-            payload={
-                "summary": "alpha release gate failed",
-                "exit_code": 1,
-                "checks": [
-                    {
-                        "name": "local_preflight",
-                        "label": "python scripts/alpha_release_preflight.py --json",
-                        "status": "failed",
-                        "stderr_tail": "",
-                        "stdout_tail": "release preflight failed",
-                    }
-                ],
-                "next_actions": [
-                    (
-                        "Create or expose the public GitHub repository qazedhq/qa-z, "
-                        "then rerun remote preflight."
-                    )
-                ],
-            },
-        )
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        strict_worktree_plan=True,
+        runner=runner,
+    )
 
-    monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
+    assert result.exit_code == 0
+    assert labels_from_result(result)[1] == (
+        "python scripts/worktree_commit_plan.py --include-ignored "
+        "--fail-on-generated --fail-on-cross-cutting --json"
+    )
 
-    exit_code = module.main([])
 
-    captured = capsys.readouterr()
-    assert exit_code == 1
-    assert "Next actions:" in captured.out
-    assert (
-        "- Create or expose the public GitHub repository qazedhq/qa-z, "
-        "then rerun remote preflight."
-    ) in captured.out
+def test_alpha_release_gate_promotes_worktree_commit_plan_attention(tmp_path):
+    module = load_gate_module()
+    worktree_command = next(
+        command.command
+        for command in module.default_gate_commands(strict_worktree_plan=True)
+        if command.name == "worktree_commit_plan"
+    )
+    worktree_payload = {
+        "kind": "qa_z.worktree_commit_plan",
+        "status": "attention_required",
+        "strict_mode": {
+            "fail_on_generated": True,
+            "fail_on_cross_cutting": True,
+        },
+        "attention_reasons": ["generated_artifacts_present"],
+        "summary": {
+            "changed_batch_count": 2,
+            "generated_artifact_count": 3,
+            "cross_cutting_count": 1,
+            "unassigned_source_path_count": 0,
+            "multi_batch_path_count": 0,
+        },
+        "next_actions": [
+            "Remove or ignore generated local artifacts before source staging."
+        ],
+    }
+    runner = RecordingRunner(
+        {tuple(worktree_command): (1, json.dumps(worktree_payload), "")}
+    )
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        strict_worktree_plan=True,
+        runner=runner,
+    )
+
+    assert result.exit_code == 1
+    assert result.payload["failed_checks"] == ["worktree_commit_plan"]
+    assert result.payload["worktree_plan_attention_reasons"] == [
+        "generated_artifacts_present"
+    ]
+    evidence = result.payload["evidence"]["worktree_commit_plan"]
+    assert evidence["status"] == "attention_required"
+    assert evidence["strict_mode"] == {
+        "fail_on_generated": True,
+        "fail_on_cross_cutting": True,
+    }
+    assert evidence["attention_reasons"] == ["generated_artifacts_present"]
+    assert evidence["attention_reason_count"] == 1
+    assert result.payload["next_actions"] == [
+        "Remove or ignore generated local artifacts before source staging."
+    ]
+    rendered = module.render_alpha_release_gate_human(result.payload)
+    assert "attention=generated_artifacts_present" in rendered
+    assert "Remove or ignore generated local artifacts" in rendered
+
+
+def test_alpha_release_gate_deduplicates_promoted_worktree_guidance(tmp_path):
+    module = load_gate_module()
+    worktree_command = next(
+        command.command
+        for command in module.default_gate_commands(strict_worktree_plan=True)
+        if command.name == "worktree_commit_plan"
+    )
+    worktree_payload = {
+        "kind": "qa_z.worktree_commit_plan",
+        "status": "attention_required",
+        "attention_reasons": [
+            "generated_artifacts_present",
+            "generated_artifacts_present",
+            "cross_cutting_paths_present",
+        ],
+        "summary": {},
+        "next_actions": [
+            "Review generated artifacts before staging.",
+            "Review generated artifacts before staging.",
+            "Patch-add cross-cutting docs with the owning batch.",
+        ],
+    }
+    runner = RecordingRunner(
+        {tuple(worktree_command): (1, json.dumps(worktree_payload), "")}
+    )
+
+    result = module.run_alpha_release_gate(
+        tmp_path,
+        strict_worktree_plan=True,
+        runner=runner,
+    )
+
+    assert result.payload["worktree_plan_attention_reasons"] == [
+        "generated_artifacts_present",
+        "cross_cutting_paths_present",
+    ]
+    assert result.payload["next_actions"] == [
+        "Review generated artifacts before staging.",
+        "Patch-add cross-cutting docs with the owning batch.",
+    ]

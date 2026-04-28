@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 from typing import NamedTuple
 from typing import Sequence
 
+from qa_z.subprocess_env import build_tool_subprocess_env
 
-TAIL_LIMIT = 4000
+
 DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"
 
@@ -37,16 +40,40 @@ def subprocess_runner(command: Sequence[str], cwd: Path) -> tuple[int, str, str]
     completed = subprocess.run(
         list(command),
         cwd=cwd,
+        env=build_tool_subprocess_env(),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
     )
-    return completed.returncode, completed.stdout, completed.stderr
+    return completed.returncode, completed.stdout or "", completed.stderr or ""
+
+
+def configured_origin_url_for_gate(repo_root: Path) -> str | None:
+    """Return the configured origin URL when the repository already has one."""
+    exit_code, stdout, _stderr = subprocess_runner(
+        ("git", "remote", "get-url", "origin"), repo_root
+    )
+    if exit_code != 0:
+        return None
+    origin_url = stdout.strip()
+    return origin_url or None
 
 
 def python_command(*args: str) -> tuple[str, ...]:
     return (sys.executable, *args)
+
+
+def utc_timestamp() -> str:
+    """Return a compact UTC timestamp for generated release evidence."""
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def cli_help_commands() -> list[GateCommand]:
@@ -91,8 +118,11 @@ def default_gate_commands(
     repository_url: str = DEFAULT_REPOSITORY_URL,
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
+    local_expected_origin_url: str | None = None,
     allow_existing_refs: bool = False,
     preflight_output: Path | None = None,
+    worktree_plan_output: Path | None = None,
+    strict_worktree_plan: bool = False,
 ) -> list[GateCommand]:
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
@@ -127,6 +157,11 @@ def default_gate_commands(
     else:
         preflight_args.append("--skip-remote")
         preflight_label_parts.append("--skip-remote")
+        if local_expected_origin_url is not None:
+            preflight_args.extend(["--expected-origin-url", local_expected_origin_url])
+            preflight_label_parts.extend(
+                ["--expected-origin-url", local_expected_origin_url]
+            )
     if allow_dirty:
         preflight_args.append("--allow-dirty")
         preflight_label_parts.append("--allow-dirty")
@@ -136,11 +171,36 @@ def default_gate_commands(
     preflight_args.append("--json")
     preflight_label_parts.append("--json")
 
+    worktree_plan_args = [
+        "scripts/worktree_commit_plan.py",
+        "--include-ignored",
+    ]
+    worktree_plan_label_parts = [
+        "python",
+        "scripts/worktree_commit_plan.py",
+        "--include-ignored",
+    ]
+    if strict_worktree_plan:
+        worktree_plan_args.append("--fail-on-generated")
+        worktree_plan_label_parts.append("--fail-on-generated")
+        worktree_plan_args.append("--fail-on-cross-cutting")
+        worktree_plan_label_parts.append("--fail-on-cross-cutting")
+    if worktree_plan_output is not None:
+        worktree_plan_args.extend(["--output", str(worktree_plan_output)])
+        worktree_plan_label_parts.extend(["--output", str(worktree_plan_output)])
+    worktree_plan_args.append("--json")
+    worktree_plan_label_parts.append("--json")
+
     commands = [
         GateCommand(
             "local_preflight",
             " ".join(preflight_label_parts),
             python_command(*preflight_args),
+        ),
+        GateCommand(
+            "worktree_commit_plan",
+            " ".join(worktree_plan_label_parts),
+            python_command(*worktree_plan_args),
         ),
         GateCommand(
             "ruff_format",
@@ -213,59 +273,88 @@ def default_gate_commands(
     return commands
 
 
-def output_tail(output: str) -> str:
-    return output.strip()[-TAIL_LIMIT:]
+def _load_alpha_release_gate_evidence_module():
+    module_path = Path(__file__).with_name("alpha_release_gate_evidence.py")
+    cached = sys.modules.get("alpha_release_gate_evidence")
+    if cached is not None:
+        cached_path = getattr(cached, "__file__", None)
+        if (
+            isinstance(cached_path, str)
+            and Path(cached_path).resolve() == module_path.resolve()
+        ):
+            return cached
+    spec = importlib.util.spec_from_file_location(
+        "alpha_release_gate_evidence", module_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Unable to load alpha release gate evidence module: {module_path}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-def preflight_next_actions(payload: dict[str, object] | None) -> list[str]:
-    if payload is None:
-        return []
-    actions = payload.get("next_actions")
-    if not isinstance(actions, list):
-        return []
-    return [action for action in actions if isinstance(action, str)]
-
-
-def preflight_has_next_actions(payload: dict[str, object] | None) -> bool:
-    return payload is not None and "next_actions" in payload
-
-
-def preflight_failed_checks(payload: dict[str, object] | None) -> list[str]:
-    if payload is None:
-        return []
-    failed_checks = payload.get("failed_checks")
-    if not isinstance(failed_checks, list):
-        return []
-    return [check for check in failed_checks if isinstance(check, str)]
-
-
-def preflight_payload(
-    stdout: str, output_path: Path | None
-) -> dict[str, object] | None:
-    payload = parse_json_object(stdout)
-    if output_path is None or not output_path.exists():
-        return payload
-    try:
-        file_payload = parse_json_object(output_path.read_text(encoding="utf-8"))
-    except OSError:
-        return payload
-    if payload is None:
-        return file_payload
-    if file_payload is None:
-        return payload
-    merged_payload = dict(file_payload)
-    merged_payload.update(payload)
-    return merged_payload
-
-
-def parse_json_object(stdout: str) -> dict[str, object] | None:
-    try:
-        payload = json.loads(stdout)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, dict):
-        return None
-    return payload
+_ALPHA_RELEASE_GATE_EVIDENCE = _load_alpha_release_gate_evidence_module()
+output_tail = _ALPHA_RELEASE_GATE_EVIDENCE.output_tail
+human_repository_branch = _ALPHA_RELEASE_GATE_EVIDENCE.human_repository_branch
+preflight_next_actions = _ALPHA_RELEASE_GATE_EVIDENCE.preflight_next_actions
+preflight_next_commands = _ALPHA_RELEASE_GATE_EVIDENCE.preflight_next_commands
+string_list = _ALPHA_RELEASE_GATE_EVIDENCE.string_list
+unique_strings = _ALPHA_RELEASE_GATE_EVIDENCE.unique_strings
+preflight_has_next_actions = _ALPHA_RELEASE_GATE_EVIDENCE.preflight_has_next_actions
+preflight_failed_checks = _ALPHA_RELEASE_GATE_EVIDENCE.preflight_failed_checks
+synthesized_preflight_next_actions = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.synthesized_preflight_next_actions
+)
+preflight_payload = _ALPHA_RELEASE_GATE_EVIDENCE.preflight_payload
+payload_from_stdout_or_file = _ALPHA_RELEASE_GATE_EVIDENCE.payload_from_stdout_or_file
+release_path_state_from_preflight_evidence = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.release_path_state_from_preflight_evidence
+)
+repository_http_status_from_preflight_evidence = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.repository_http_status_from_preflight_evidence
+)
+repository_probe_state_from_preflight_evidence = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.repository_probe_state_from_preflight_evidence
+)
+repository_probe_basis_from_preflight_evidence = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.repository_probe_basis_from_preflight_evidence
+)
+parse_json_object = _ALPHA_RELEASE_GATE_EVIDENCE.parse_json_object
+first_failed_nested_check = _ALPHA_RELEASE_GATE_EVIDENCE.first_failed_nested_check
+output_contains_offline_build_dependency_failure = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.output_contains_offline_build_dependency_failure
+)
+classify_gate_failure = _ALPHA_RELEASE_GATE_EVIDENCE.classify_gate_failure
+classify_gate_failures = _ALPHA_RELEASE_GATE_EVIDENCE.classify_gate_failures
+next_actions_for_gate_failures = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.next_actions_for_gate_failures
+)
+next_commands_for_gate_failures = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.next_commands_for_gate_failures
+)
+release_evidence_for_command = _ALPHA_RELEASE_GATE_EVIDENCE.release_evidence_for_command
+benchmark_snapshot_from_counts = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.benchmark_snapshot_from_counts
+)
+release_evidence_consistency_errors = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.release_evidence_consistency_errors
+)
+release_evidence_consistency_next_actions = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.release_evidence_consistency_next_actions
+)
+render_alpha_release_gate_human = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.render_alpha_release_gate_human
+)
+render_worktree_plan_attention_lines = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.render_worktree_plan_attention_lines
+)
+render_nested_artifact_lines = _ALPHA_RELEASE_GATE_EVIDENCE.render_nested_artifact_lines
+render_release_evidence_lines = (
+    _ALPHA_RELEASE_GATE_EVIDENCE.render_release_evidence_lines
+)
 
 
 def run_alpha_release_gate(
@@ -279,8 +368,11 @@ def run_alpha_release_gate(
     expected_origin_url: str | None = None,
     allow_existing_refs: bool = False,
     preflight_output: Path | None = None,
+    worktree_plan_output: Path | None = None,
+    strict_worktree_plan: bool = False,
     runner: Runner = subprocess_runner,
 ) -> AlphaReleaseGateResult:
+    detected_origin_url = configured_origin_url_for_gate(repo_root)
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
         or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
@@ -293,6 +385,13 @@ def run_alpha_release_gate(
         if effective_include_remote and expected_origin_url is None
         else expected_origin_url
     )
+    local_expected_origin_url = (
+        repository_url
+        if effective_expected_origin_url is None
+        and not effective_include_remote
+        and detected_origin_url is not None
+        else None
+    )
     commands = default_gate_commands(
         with_deps=with_deps,
         allow_dirty=allow_dirty,
@@ -300,25 +399,76 @@ def run_alpha_release_gate(
         repository_url=repository_url,
         expected_repository=expected_repository,
         expected_origin_url=effective_expected_origin_url,
+        local_expected_origin_url=local_expected_origin_url,
         allow_existing_refs=allow_existing_refs,
         preflight_output=preflight_output,
+        worktree_plan_output=worktree_plan_output,
+        strict_worktree_plan=strict_worktree_plan,
     )
     checks: list[dict[str, object]] = []
     executed_commands: list[Sequence[str]] = []
     next_actions: list[str] = []
-    has_preflight_next_actions = False
+    next_commands: list[str] = []
+    has_next_actions = False
+    has_next_commands = False
     preflight_failures: list[str] = []
+    worktree_plan_attention_reasons: list[str] = []
+    evidence: dict[str, object] = {}
 
     for gate_command in commands:
         executed_commands.append(gate_command.command)
         exit_code, stdout, stderr = runner(gate_command.command, repo_root)
-        if gate_command.name == "local_preflight" and exit_code != 0:
+        command_output_path = (
+            worktree_plan_output
+            if gate_command.name == "worktree_commit_plan"
+            else preflight_output
+            if gate_command.name == "local_preflight"
+            else None
+        )
+        command_evidence = release_evidence_for_command(
+            gate_command.name, stdout, command_output_path
+        )
+        if command_evidence:
+            evidence[gate_command.name.removeprefix("qa_z_")] = command_evidence
+        if gate_command.name == "local_preflight":
             nested_preflight_payload = preflight_payload(stdout, preflight_output)
-            has_preflight_next_actions = preflight_has_next_actions(
+            explicit_preflight_next_actions = preflight_has_next_actions(
                 nested_preflight_payload
             )
-            next_actions.extend(preflight_next_actions(nested_preflight_payload))
-            preflight_failures.extend(preflight_failed_checks(nested_preflight_payload))
+            promoted_actions = preflight_next_actions(nested_preflight_payload)
+            if explicit_preflight_next_actions:
+                has_next_actions = True
+            if promoted_actions:
+                next_actions.extend(promoted_actions)
+                has_next_actions = True
+            promoted_commands = preflight_next_commands(nested_preflight_payload)
+            if promoted_commands:
+                next_commands.extend(promoted_commands)
+                has_next_commands = True
+            if exit_code != 0:
+                preflight_failures.extend(
+                    preflight_failed_checks(nested_preflight_payload)
+                )
+                if not explicit_preflight_next_actions:
+                    synthesized_actions = synthesized_preflight_next_actions(
+                        preflight_failures
+                    )
+                    next_actions.extend(synthesized_actions)
+                    has_next_actions = bool(synthesized_actions) or has_next_actions
+        if gate_command.name == "worktree_commit_plan" and exit_code != 0:
+            worktree_plan_payload = payload_from_stdout_or_file(
+                stdout, worktree_plan_output
+            )
+            if worktree_plan_payload is not None:
+                worktree_plan_attention_reasons.extend(
+                    string_list(worktree_plan_payload, "attention_reasons")
+                )
+                worktree_plan_actions = string_list(
+                    worktree_plan_payload, "next_actions"
+                )
+                if worktree_plan_actions:
+                    next_actions.extend(worktree_plan_actions)
+                    has_next_actions = True
         checks.append(
             {
                 "name": gate_command.name,
@@ -330,9 +480,64 @@ def run_alpha_release_gate(
             }
         )
 
+    evidence_consistency_errors = release_evidence_consistency_errors(evidence)
+    cli_help_checks = [
+        check for check in checks if str(check.get("name", "")).startswith("cli_help")
+    ]
+    if cli_help_checks:
+        evidence["cli_help"] = {
+            "check_count": len(cli_help_checks),
+            "failed_count": sum(
+                1 for check in cli_help_checks if check.get("status") == "failed"
+            ),
+        }
+    if evidence_consistency_errors:
+        next_actions.extend(
+            release_evidence_consistency_next_actions(evidence_consistency_errors)
+        )
+        has_next_actions = True
+        checks.append(
+            {
+                "name": "release_evidence_consistency",
+                "label": "release evidence consistency",
+                "status": "failed",
+                "exit_code": 1,
+                "stdout_tail": output_tail("\n".join(evidence_consistency_errors)),
+                "stderr_tail": "",
+            }
+        )
+
     failed_checks = [
         str(check["name"]) for check in checks if check["status"] == "failed"
     ]
+    gate_failures, environment_failure_count, product_failure_count = (
+        classify_gate_failures(checks)
+    )
+    for check in checks:
+        if check.get("status") == "passed":
+            continue
+        name = str(check.get("name") or "")
+        classified_failure = gate_failures.get(name)
+        if classified_failure is None:
+            check["failure_scope"] = "product"
+            continue
+        check["failure_scope"] = "environment"
+        kind = classified_failure.get("kind")
+        if kind:
+            check["failure_kind"] = kind
+        summary = classified_failure.get("summary")
+        if summary:
+            check["failure_summary"] = summary
+    if gate_failures:
+        evidence["gate_failures"] = gate_failures
+        for action in next_actions_for_gate_failures(gate_failures):
+            if action not in next_actions:
+                next_actions.append(action)
+                has_next_actions = True
+        for command in next_commands_for_gate_failures(gate_failures):
+            if command not in next_commands:
+                next_commands.append(command)
+                has_next_commands = True
     passed_count = sum(1 for check in checks if check["status"] == "passed")
     failed_count = len(failed_checks)
     check_count = len(checks)
@@ -341,6 +546,7 @@ def run_alpha_release_gate(
     payload: dict[str, object] = {
         "summary": summary,
         "exit_code": exit_code,
+        "generated_at": utc_timestamp(),
         "check_count": check_count,
         "passed_count": passed_count,
         "failed_count": failed_count,
@@ -354,19 +560,37 @@ def run_alpha_release_gate(
         ),
         "expected_origin_url": effective_expected_origin_url
         if effective_include_remote
+        else local_expected_origin_url
+        if local_expected_origin_url is not None
         else None,
         "allow_existing_refs": allow_existing_refs
         if effective_include_remote
         else False,
+        "strict_worktree_plan": strict_worktree_plan,
         "preflight_output": str(preflight_output)
         if preflight_output is not None
         else None,
+        "worktree_plan_output": str(worktree_plan_output)
+        if worktree_plan_output is not None
+        else None,
         "checks": checks,
     }
+    if evidence:
+        payload["evidence"] = evidence
+    if evidence_consistency_errors:
+        payload["evidence_consistency_errors"] = evidence_consistency_errors
     if preflight_failures:
         payload["preflight_failed_checks"] = preflight_failures
-    if has_preflight_next_actions:
+    if worktree_plan_attention_reasons:
+        payload["worktree_plan_attention_reasons"] = worktree_plan_attention_reasons
+    if failed_checks or environment_failure_count > 0:
+        payload["environment_failure_count"] = environment_failure_count
+    if failed_checks or product_failure_count > 0:
+        payload["product_failure_count"] = product_failure_count
+    if has_next_actions:
         payload["next_actions"] = next_actions
+    if has_next_commands:
+        payload["next_commands"] = unique_strings(next_commands)
     return AlphaReleaseGateResult(
         summary=summary,
         exit_code=exit_code,
@@ -432,6 +656,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--strict-worktree-plan",
+        action="store_true",
+        help=(
+            "Run the worktree commit-plan helper with --fail-on-generated. "
+            "Use for final source staging audits."
+        ),
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print machine-readable gate evidence as JSON.",
@@ -451,6 +683,16 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
             "written. Defaults to <output>.preflight.json when --output is set."
         ),
     )
+    parser.add_argument(
+        "--worktree-plan-output",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path where the nested worktree commit-plan JSON evidence "
+            "should be written. Defaults to <output>.worktree-plan.json when "
+            "--output is set."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -459,6 +701,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     preflight_output = args.preflight_output
     if preflight_output is None and args.output is not None:
         preflight_output = args.output.with_suffix(".preflight.json")
+    worktree_plan_output = args.worktree_plan_output
+    if worktree_plan_output is None and args.output is not None:
+        worktree_plan_output = args.output.with_suffix(".worktree-plan.json")
     result = run_alpha_release_gate(
         Path.cwd(),
         with_deps=args.with_deps,
@@ -469,6 +714,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_origin_url=args.expected_origin_url,
         allow_existing_refs=args.allow_existing_refs,
         preflight_output=preflight_output,
+        worktree_plan_output=worktree_plan_output,
+        strict_worktree_plan=args.strict_worktree_plan,
     )
     payload_json = json.dumps(result.payload, indent=2)
 
@@ -479,21 +726,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.json:
         print(payload_json)
     else:
-        checks = result.payload["checks"]
-        assert isinstance(checks, list)
-        for check in checks:
-            assert isinstance(check, dict)
-            print(f"[{str(check['status']).upper()}] {check['name']}: {check['label']}")
-            if check["status"] != "passed":
-                detail = check["stderr_tail"] or check["stdout_tail"]
-                print(f"  {detail}")
-        next_actions = result.payload.get("next_actions")
-        if isinstance(next_actions, list) and next_actions:
-            print("Next actions:")
-            for action in next_actions:
-                if isinstance(action, str):
-                    print(f"- {action}")
-        print(result.summary)
+        print(render_alpha_release_gate_human(result.payload), end="")
 
     return result.exit_code
 

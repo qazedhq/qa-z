@@ -2,46 +2,13 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = ROOT / "scripts" / "alpha_release_bundle_manifest.py"
-
-
-def load_manifest_module():
-    spec = importlib.util.spec_from_file_location(
-        "alpha_release_bundle_manifest", SCRIPT_PATH
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-class FakeRunner:
-    def __init__(self, branch_head: str = "abc123") -> None:
-        self.branch_head = branch_head
-        self.commands: list[tuple[str, ...]] = []
-
-    def __call__(self, command, cwd):
-        command_tuple = tuple(str(part) for part in command)
-        self.commands.append(command_tuple)
-        if command_tuple == ("git", "rev-parse", "HEAD"):
-            return 0, "abc123\n", ""
-        if command_tuple == ("git", "rev-parse", "codex/qa-z-bootstrap"):
-            return 0, f"{self.branch_head}\n", ""
-        if command_tuple[:3] == ("git", "bundle", "create"):
-            Path(command_tuple[3]).write_bytes(b"bundle")
-            return 0, "", ""
-        if command_tuple[:3] == ("git", "bundle", "verify"):
-            return 0, "bundle is okay\n", ""
-        if command_tuple[:3] == ("git", "bundle", "list-heads"):
-            return 0, f"{self.branch_head} refs/heads/codex/qa-z-bootstrap\n", ""
-        return 0, "", ""
+from tests.alpha_release_bundle_manifest_test_support import (
+    FakeBundleRunner,
+    load_manifest_module,
+)
 
 
 def write_artifacts(tmp_path: Path) -> tuple[Path, Path]:
@@ -57,7 +24,7 @@ def test_bundle_manifest_recreates_bundle_and_hashes_artifacts(tmp_path):
     module = load_manifest_module()
     sdist, wheel = write_artifacts(tmp_path)
     bundle = tmp_path / "dist" / "qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle"
-    runner = FakeRunner()
+    runner = FakeBundleRunner()
 
     result = module.run_bundle_manifest(
         tmp_path,
@@ -90,7 +57,7 @@ def test_bundle_manifest_fails_when_bundle_head_does_not_match_head(tmp_path):
         branch="codex/qa-z-bootstrap",
         bundle_path=bundle,
         artifacts=[sdist, wheel],
-        runner=FakeRunner(branch_head="def456"),
+        runner=FakeBundleRunner(branch_head="def456"),
     )
 
     assert result.exit_code == 1
@@ -105,6 +72,37 @@ def test_bundle_manifest_fails_when_bundle_head_does_not_match_head(tmp_path):
             "detail": "codex/qa-z-bootstrap resolves to def456, but HEAD is abc123",
         }
     ]
+
+
+def test_bundle_manifest_retries_existing_bundle_unlink_once(tmp_path, monkeypatch):
+    module = load_manifest_module()
+    sdist, wheel = write_artifacts(tmp_path)
+    bundle = tmp_path / "dist" / "qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle"
+    bundle.write_bytes(b"old-bundle")
+    path_type = type(bundle)
+    original_unlink = path_type.unlink
+    calls = {"count": 0}
+
+    def flaky_unlink(self):
+        if self == bundle and calls["count"] == 0:
+            calls["count"] += 1
+            raise PermissionError("locked")
+        return original_unlink(self)
+
+    monkeypatch.setattr(path_type, "unlink", flaky_unlink)
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+
+    result = module.run_bundle_manifest(
+        tmp_path,
+        branch="codex/qa-z-bootstrap",
+        bundle_path=bundle,
+        artifacts=[sdist, wheel],
+        runner=FakeBundleRunner(),
+    )
+
+    assert result.exit_code == 0
+    assert calls["count"] == 1
+    assert bundle.exists()
 
 
 def test_bundle_manifest_cli_can_emit_json(monkeypatch, capsys):

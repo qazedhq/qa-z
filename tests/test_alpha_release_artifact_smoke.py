@@ -2,47 +2,21 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = ROOT / "scripts" / "alpha_release_artifact_smoke.py"
-
-
-def load_smoke_module():
-    spec = importlib.util.spec_from_file_location(
-        "alpha_release_artifact_smoke", SCRIPT_PATH
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-class FakeRunner:
-    def __init__(self, failing_command_fragment: str = "") -> None:
-        self.commands: list[tuple[str, ...]] = []
-        self.failing_command_fragment = failing_command_fragment
-
-    def __call__(self, command, _cwd):
-        command_tuple = tuple(str(part) for part in command)
-        self.commands.append(command_tuple)
-        if self.failing_command_fragment and any(
-            self.failing_command_fragment in part for part in command_tuple
-        ):
-            return 1, "", f"{self.failing_command_fragment} failed"
-        return 0, "ok\n", ""
+from tests.alpha_release_artifact_smoke_test_support import (
+    FakeSmokeRunner,
+    load_smoke_module,
+)
 
 
 def test_artifact_smoke_installs_wheel_without_dependency_resolution(tmp_path):
     module = load_smoke_module()
     artifact = tmp_path / "qa_z-0.9.8a0-py3-none-any.whl"
     artifact.write_bytes(b"fake wheel")
-    runner = FakeRunner()
+    runner = FakeSmokeRunner()
 
     result = module.run_artifact_smoke(tmp_path, artifacts=[artifact], runner=runner)
 
@@ -68,7 +42,7 @@ def test_artifact_smoke_installs_wheel_without_dependency_resolution(tmp_path):
 
 def test_artifact_smoke_fails_without_artifact(tmp_path):
     module = load_smoke_module()
-    runner = FakeRunner()
+    runner = FakeSmokeRunner()
 
     result = module.run_artifact_smoke(
         tmp_path,
@@ -81,6 +55,25 @@ def test_artifact_smoke_fails_without_artifact(tmp_path):
     assert result.checks[0].status == "failed"
     assert "missing artifact" in result.checks[0].detail
     assert runner.commands == []
+
+
+def test_artifact_smoke_with_deps_runs_onboarding_commands(tmp_path):
+    module = load_smoke_module()
+    artifact = tmp_path / "qa_z-0.9.8a0-py3-none-any.whl"
+    artifact.write_bytes(b"fake wheel")
+    runner = FakeSmokeRunner()
+
+    result = module.run_artifact_smoke(
+        tmp_path, artifacts=[artifact], runner=runner, with_deps=True
+    )
+
+    commands = [" ".join(command) for command in runner.commands]
+    assert result.exit_code == 0
+    assert any(" qa_z init " in f" {command} " for command in commands)
+    assert any("--with-agent-templates" in command for command in commands)
+    assert any(" qa_z doctor " in f" {command} " for command in commands)
+    assert any(" qa_z plan " in f" {command} " for command in commands)
+    assert any(" qa_z review " in f" {command} " for command in commands)
 
 
 def test_artifact_smoke_cli_can_emit_json(monkeypatch, capsys):

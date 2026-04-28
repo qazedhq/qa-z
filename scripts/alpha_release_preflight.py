@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import subprocess
 import sys
@@ -12,9 +13,10 @@ from typing import NamedTuple
 from typing import Sequence
 from urllib.error import HTTPError
 from urllib.error import URLError
-from urllib.parse import urlparse
 from urllib.request import Request
 from urllib.request import urlopen
+
+from qa_z.subprocess_env import build_tool_subprocess_env
 
 
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
@@ -24,11 +26,42 @@ DEFAULT_TAG = "v0.9.8-alpha"
 
 GENERATED_ARTIFACT_PATHS = (
     ".qa-z",
+    ".mypy_cache",
+    ".mypy_cache_safe",
+    ".ruff_cache",
+    ".ruff_cache_safe",
+    "%TEMP%",
     "benchmarks/results",
+    "benchmarks/results-*",
+    "benchmarks/minlock-*",
     "dist",
     "build",
+    "tmp_*",
     "src/qa_z.egg-info",
 )
+
+
+def _load_worktree_commit_plan_support_module():
+    module_path = Path(__file__).with_name("worktree_commit_plan_support.py")
+    cached = sys.modules.get("worktree_commit_plan_support")
+    if cached is not None:
+        cached_path = getattr(cached, "__file__", None)
+        if (
+            isinstance(cached_path, str)
+            and Path(cached_path).resolve() == module_path.resolve()
+        ):
+            return cached
+    spec = importlib.util.spec_from_file_location(
+        "worktree_commit_plan_support", module_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Unable to load worktree commit plan support module: {module_path}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 class CheckResult(NamedTuple):
@@ -46,6 +79,19 @@ class GitHubMetadataResult(NamedTuple):
     status_code: int
     data: dict[str, object]
     error: str
+
+
+class RemoteDecision(NamedTuple):
+    remote_path: str
+    remote_blocker: str | None
+
+
+class RemoteRefEvidence(NamedTuple):
+    ref_count: int
+    ref_sample: list[str]
+    head_count: int
+    tag_count: int
+    ref_kinds: list[str]
 
 
 class PreflightResult:
@@ -67,134 +113,197 @@ class PreflightResult:
         return {check.name: check for check in self.checks}
 
 
-def next_actions_for_result(
-    result: PreflightResult,
-    *,
-    repository_url: str = DEFAULT_REPOSITORY_URL,
-    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
-    expected_tag: str = DEFAULT_TAG,
-) -> list[str]:
-    failed_checks = [check for check in result.checks if check.status == "failed"]
-    failed = {check.name for check in failed_checks}
-    actions: list[str] = []
-    repository_target = parse_github_repository_target(repository_url)
-    repository_targets_expected = (
-        repository_target is not None
-        and repository_target.full_name.lower() == expected_repository.lower()
-    )
-    if "github_repository" in failed and not repository_targets_expected:
-        actions.append(
-            (
-                f"Set --repository-url to https://github.com/{expected_repository}.git, "
-                "or update --expected-repository if a different public GitHub "
-                "repository is intentional."
-            )
-        )
-    elif {"github_repository", "remote_reachable"} & failed:
-        actions.append(
-            (
-                f"Create or expose the public GitHub repository {expected_repository}, "
-                f"then rerun remote preflight for {repository_url}."
-            )
-        )
-    if {"origin_matches_expected", "origin_target_matches_repository"} & failed:
-        actions.append(
-            (
-                "Set origin to the intended repository URL, then rerun preflight "
-                "with --expected-origin-url."
-            )
-        )
-    remote_empty = next(
-        (check for check in failed_checks if check.name == "remote_empty"), None
-    )
-    if remote_empty is not None and "remote release tag already exists" in (
-        remote_empty.detail
-    ):
-        actions.append(
-            (
-                f"Remote release tag {expected_tag} already exists; inspect the "
-                "existing tag before publishing a new alpha tag."
-            )
-        )
-    elif remote_empty is not None:
-        actions.append(
-            (
-                "Remote already has refs; choose the release PR path with "
-                "--allow-existing-refs or publish to an empty repository."
-            )
-        )
-    return actions
+Runner = Callable[[Sequence[str], Path], tuple[int, str, str]]
+GitHubMetadataFetcher = Callable[[str], GitHubMetadataResult]
 
 
-def result_payload(
-    result: PreflightResult,
-    *,
-    repository_url: str = DEFAULT_REPOSITORY_URL,
-    expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
-    expected_origin_url: str | None = None,
-    expected_branch: str = DEFAULT_BRANCH,
-    expected_tag: str = DEFAULT_TAG,
-    skip_remote: bool = False,
-    allow_existing_refs: bool = False,
-    allow_dirty: bool = False,
-) -> dict[str, object]:
-    failed_checks = [check.name for check in result.checks if check.status == "failed"]
-    passed_count = sum(1 for check in result.checks if check.status == "passed")
-    failed_count = len(failed_checks)
-    skipped_count = sum(1 for check in result.checks if check.status == "skipped")
+def _load_alpha_release_preflight_evidence_module():
+    module_path = Path(__file__).with_name("alpha_release_preflight_evidence.py")
+    cached = sys.modules.get("alpha_release_preflight_evidence")
+    if cached is not None:
+        cached_path = getattr(cached, "__file__", None)
+        if (
+            isinstance(cached_path, str)
+            and Path(cached_path).resolve() == module_path.resolve()
+        ):
+            return cached
+    spec = importlib.util.spec_from_file_location(
+        "alpha_release_preflight_evidence", module_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Unable to load alpha release preflight evidence module: {module_path}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_ALPHA_RELEASE_PREFLIGHT_EVIDENCE = _load_alpha_release_preflight_evidence_module()
+_detail_field = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE._detail_field
+github_repository_metadata_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.github_repository_metadata_from_result
+)
+repository_default_branch_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.repository_default_branch_from_result
+)
+repository_probe_state_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.repository_probe_state_from_result
+)
+existing_preflight_payload = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.existing_preflight_payload
+)
+parse_utc_timestamp = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.parse_utc_timestamp
+parse_github_repository_target = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.parse_github_repository_target
+)
+repository_urls_match = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.repository_urls_match
+repository_identity_matches_payload = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.repository_identity_matches_payload
+)
+last_known_probe_snapshot = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.last_known_probe_snapshot
+probe_freshness_fields = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.probe_freshness_fields
+publish_strategy_for_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.publish_strategy_for_result
+)
+publish_checklist_for_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.publish_checklist_for_result
+)
+release_path_state_for_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.release_path_state_for_result
+)
+release_path_state_from_payload = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.release_path_state_from_payload
+)
+_status_code_from_detail = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE._status_code_from_detail
+repository_http_status_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.repository_http_status_from_result
+)
+remote_readiness_for_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.remote_readiness_for_result
+)
+origin_state_from_result = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.origin_state_from_result
+actual_origin_url_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.actual_origin_url_from_result
+)
+remote_ref_names = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.remote_ref_names
+remote_ref_kind_summary = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.remote_ref_kind_summary
+format_remote_ref_detail = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.format_remote_ref_detail
+remote_ref_evidence_from_result = (
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.remote_ref_evidence_from_result
+)
+origin_remote_is_missing = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.origin_remote_is_missing
+utc_timestamp = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.utc_timestamp
+next_actions_for_result = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.next_actions_for_result
+preflight_rerun_command = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.preflight_rerun_command
+next_commands_for_result = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.next_commands_for_result
+yes_no = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.yes_no
+
+_WORKTREE_COMMIT_PLAN_SUPPORT = _load_worktree_commit_plan_support_module()
+generated_artifact_bucket = _WORKTREE_COMMIT_PLAN_SUPPORT.generated_artifact_bucket
+is_local_only_generated_artifact = (
+    _WORKTREE_COMMIT_PLAN_SUPPORT.is_local_only_generated_artifact
+)
+is_local_by_default_generated_artifact = (
+    _WORKTREE_COMMIT_PLAN_SUPPORT.is_local_by_default_generated_artifact
+)
+
+
+def unique_strings(values: Sequence[str]) -> list[str]:
+    strings: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value and value not in seen:
+            strings.append(value)
+            seen.add(value)
+    return strings
+
+
+def tracked_generated_artifact_fields(tracked_output: str) -> dict[str, object]:
+    tracked_paths = unique_strings(
+        [
+            generated_artifact_bucket(line.strip())
+            for line in tracked_output.splitlines()
+            if line.strip()
+        ]
+    )
+    local_only_paths = [
+        path for path in tracked_paths if is_local_only_generated_artifact(path)
+    ]
+    local_by_default_paths = [
+        path for path in tracked_paths if is_local_by_default_generated_artifact(path)
+    ]
     return {
-        "summary": result.summary,
-        "exit_code": result.exit_code,
-        "check_count": len(result.checks),
-        "passed_count": passed_count,
-        "failed_count": failed_count,
-        "skipped_count": skipped_count,
-        "failed_checks": failed_checks,
-        "repository_url": repository_url,
-        "expected_repository": expected_repository,
-        "expected_origin_url": expected_origin_url,
-        "expected_branch": expected_branch,
-        "expected_tag": expected_tag,
-        "skip_remote": skip_remote,
-        "allow_existing_refs": allow_existing_refs,
-        "allow_dirty": allow_dirty,
-        "checks": [
-            {
-                "name": check.name,
-                "status": check.status,
-                "detail": check.detail,
-            }
-            for check in result.checks
-        ],
-        **(
-            {
-                "next_actions": next_actions_for_result(
-                    result,
-                    repository_url=repository_url,
-                    expected_repository=expected_repository,
-                    expected_tag=expected_tag,
-                )
-            }
-            if result.exit_code
-            else {}
-        ),
+        "tracked_generated_artifact_count": len(tracked_paths),
+        "tracked_generated_artifact_paths": tracked_paths,
+        "generated_local_only_tracked_count": len(local_only_paths),
+        "generated_local_only_tracked_paths": local_only_paths,
+        "generated_local_by_default_tracked_count": len(local_by_default_paths),
+        "generated_local_by_default_tracked_paths": local_by_default_paths,
     }
 
 
-Runner = Callable[[Sequence[str], Path], tuple[int, str, str]]
-GitHubMetadataFetcher = Callable[[str], GitHubMetadataResult]
+def tracked_generated_artifact_detail(tracked_output: str) -> str:
+    fields = tracked_generated_artifact_fields(tracked_output)
+    parts = [
+        f"tracked_generated_artifact_count={fields['tracked_generated_artifact_count']}",
+    ]
+    tracked_paths = fields["tracked_generated_artifact_paths"]
+    if tracked_paths:
+        parts.append(
+            "tracked_generated_artifact_paths=" + ",".join(tracked_paths)  # type: ignore[arg-type]
+        )
+    parts.append(
+        "generated_local_only_tracked_count="
+        f"{fields['generated_local_only_tracked_count']}"
+    )
+    local_only_paths = fields["generated_local_only_tracked_paths"]
+    if local_only_paths:
+        parts.append(
+            "generated_local_only_tracked_paths=" + ",".join(local_only_paths)  # type: ignore[arg-type]
+        )
+    parts.append(
+        "generated_local_by_default_tracked_count="
+        f"{fields['generated_local_by_default_tracked_count']}"
+    )
+    local_by_default_paths = fields["generated_local_by_default_tracked_paths"]
+    if local_by_default_paths:
+        parts.append(
+            "generated_local_by_default_tracked_paths="
+            + ",".join(local_by_default_paths)  # type: ignore[arg-type]
+        )
+    return "; ".join(parts)
+
+
+def _sync_preflight_evidence_module():
+    _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.utc_timestamp = utc_timestamp
+    return _ALPHA_RELEASE_PREFLIGHT_EVIDENCE
+
+
+def _result_payload(*args, **kwargs):
+    """Render a preflight payload after synchronizing timestamp helpers."""
+    return _sync_preflight_evidence_module().result_payload(*args, **kwargs)
+
+
+result_payload = _result_payload
+render_preflight_human = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.render_preflight_human
+classify_remote_decision = _ALPHA_RELEASE_PREFLIGHT_EVIDENCE.classify_remote_decision
 
 
 def subprocess_runner(command: Sequence[str], cwd: Path) -> tuple[int, str, str]:
     completed = subprocess.run(
         list(command),
         cwd=cwd,
+        env=build_tool_subprocess_env(),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
     )
-    return completed.returncode, completed.stdout, completed.stderr
+    return completed.returncode, completed.stdout or "", completed.stderr or ""
 
 
 def check_git(
@@ -207,41 +316,6 @@ def check_git(
         return runner(command, repo_root)
     except FileNotFoundError as exc:
         return 127, "", str(exc)
-
-
-def parse_github_repository_target(
-    repository_url: str,
-) -> GitHubRepositoryTarget | None:
-    url = repository_url.strip().rstrip("/")
-    if url.startswith("git@github.com:"):
-        path = url.removeprefix("git@github.com:")
-    else:
-        parsed = urlparse(url)
-        host = parsed.hostname
-        if host is None:
-            host = parsed.netloc.rsplit("@", 1)[-1].split(":", 1)[0]
-        host = host.lower()
-        if host != "github.com":
-            return None
-        path = parsed.path.lstrip("/")
-    if path.endswith(".git"):
-        path = path[:-4]
-    parts = [part for part in path.split("/") if part]
-    if len(parts) != 2:
-        return None
-    owner, repo = parts
-    full_name = f"{owner}/{repo}"
-    return GitHubRepositoryTarget(
-        full_name, f"https://api.github.com/repos/{full_name}"
-    )
-
-
-def repository_urls_match(actual_url: str, expected_url: str) -> bool:
-    actual_target = parse_github_repository_target(actual_url)
-    expected_target = parse_github_repository_target(expected_url)
-    if actual_target is None or expected_target is None:
-        return actual_url.strip().rstrip("/") == expected_url.strip().rstrip("/")
-    return actual_target.full_name.lower() == expected_target.full_name.lower()
 
 
 def fetch_github_metadata(api_url: str) -> GitHubMetadataResult:
@@ -287,35 +361,53 @@ def check_github_repository(
         )
 
     metadata = github_metadata_fetcher(target.api_url)
+    metadata_parts = [f"status_code={metadata.status_code}"]
+    visibility = str(metadata.data.get("visibility", "")).lower()
+    if visibility:
+        metadata_parts.append(f"visibility={visibility}")
+    archived = metadata.data.get("archived")
+    if isinstance(archived, bool):
+        metadata_parts.append(f"archived={'yes' if archived else 'no'}")
+    default_branch = str(metadata.data.get("default_branch", "")).strip()
+    if default_branch:
+        metadata_parts.append(f"default_branch={default_branch}")
     if metadata.status_code != 200:
         detail = (
             metadata.error or f"{target.api_url} returned HTTP {metadata.status_code}"
         )
+        detail = "; ".join([*metadata_parts, detail])
         return CheckResult("github_repository", "failed", detail)
 
     full_name = str(metadata.data.get("full_name", ""))
-    visibility = str(metadata.data.get("visibility", "")).lower()
     is_private = metadata.data.get("private")
-    archived = metadata.data.get("archived")
     if full_name.lower() != target.full_name.lower():
         return CheckResult(
             "github_repository",
             "failed",
-            f"expected {expected_repository}, got {full_name or 'unknown repository'}",
+            "; ".join(
+                [
+                    *metadata_parts,
+                    f"expected {expected_repository}, got {full_name or 'unknown repository'}",
+                ]
+            ),
         )
     if is_private is True or visibility != "public":
         return CheckResult(
             "github_repository",
             "failed",
-            f"{target.full_name} is not public",
+            "; ".join([*metadata_parts, f"{target.full_name} is not public"]),
         )
     if archived is True:
         return CheckResult(
             "github_repository",
             "failed",
-            f"{target.full_name} is archived",
+            "; ".join([*metadata_parts, f"{target.full_name} is archived"]),
         )
-    return CheckResult("github_repository", "passed", f"{target.full_name} is public")
+    return CheckResult(
+        "github_repository",
+        "passed",
+        "; ".join([*metadata_parts, f"{target.full_name} is public"]),
+    )
 
 
 def run_preflight(
@@ -411,7 +503,9 @@ def run_preflight(
             )
         )
     else:
-        detail = tracked or stderr.strip() or "git ls-files failed"
+        detail = tracked_generated_artifact_detail(tracked)
+        if not tracked.strip():
+            detail = stderr.strip() or "git ls-files failed"
         checks.append(CheckResult("generated_artifacts_untracked", "failed", detail))
 
     exit_code, stdout, stderr = check_git(
@@ -481,22 +575,25 @@ def run_preflight(
         if exit_code == 0:
             checks.append(CheckResult("remote_reachable", "passed", repository_url))
             if refs:
-                first_ref = refs.splitlines()[0]
+                ref_names = remote_ref_names(refs)
                 release_tag_ref = f"refs/tags/{expected_tag}"
                 remote_tag_ref = next(
-                    (
-                        line
-                        for line in refs.splitlines()
-                        if line.split()[-1] == release_tag_ref
-                    ),
+                    (ref_name for ref_name in ref_names if ref_name == release_tag_ref),
                     "",
                 )
                 if remote_tag_ref:
+                    ref_sample = [
+                        remote_tag_ref,
+                        *[name for name in ref_names if name != remote_tag_ref],
+                    ]
                     checks.append(
                         CheckResult(
                             "remote_empty",
                             "failed",
-                            f"remote release tag already exists: {remote_tag_ref}",
+                            format_remote_ref_detail(
+                                "remote release tag already exists",
+                                ref_sample,
+                            ),
                         )
                     )
                 elif allow_existing_refs:
@@ -504,7 +601,10 @@ def run_preflight(
                         CheckResult(
                             "remote_empty",
                             "passed",
-                            (f"existing refs allowed for release PR path: {first_ref}"),
+                            format_remote_ref_detail(
+                                "existing refs allowed for release PR path",
+                                ref_names,
+                            ),
                         )
                     )
                 else:
@@ -512,7 +612,9 @@ def run_preflight(
                         CheckResult(
                             "remote_empty",
                             "failed",
-                            f"remote already has refs: {first_ref}",
+                            format_remote_ref_detail(
+                                "remote already has refs", ref_names
+                            ),
                         )
                     )
             else:
@@ -604,6 +706,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    prior_payload = existing_preflight_payload(args.output)
     result = run_preflight(
         Path.cwd(),
         repository_url=args.repository_url,
@@ -625,6 +728,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         skip_remote=args.skip_remote,
         allow_existing_refs=args.allow_existing_refs,
         allow_dirty=args.allow_dirty,
+        prior_payload=prior_payload,
     )
     payload_json = json.dumps(payload, indent=2)
     if args.output is not None:
@@ -634,9 +738,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.json:
         print(payload_json)
     else:
-        for check in result.checks:
-            print(f"[{check.status.upper()}] {check.name}: {check.detail}")
-        print(result.summary)
+        print(render_preflight_human(payload))
     return result.exit_code
 
 

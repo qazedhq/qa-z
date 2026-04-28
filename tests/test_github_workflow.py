@@ -52,6 +52,8 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     )
     assert "does not call live executors" in workflow_text
     assert "does not create branches, commits, pushes, or bot comments" in workflow_text
+    assert "does not ingest executor results" in workflow_text
+    assert "does not perform autonomous repair" in workflow_text
 
     expected_commands = [
         f"{runner_command} fast",
