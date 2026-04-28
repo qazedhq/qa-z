@@ -1,0 +1,34 @@
+{
+  "description": "Semgrep scan-quality warnings remain non-blocking while staying visible in deep benchmark artifacts.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "attached_to_fast_run": false,
+    "findings_count": 0,
+    "run_resolution_fast_summary_path": null,
+    "run_resolution_source": "output_dir",
+    "scan_quality_status": "warning",
+    "scan_quality_warning_count": 1,
+    "scan_quality_warning_paths_present": [
+      "src/app.py"
+    ],
+    "scan_quality_check_ids_present": [
+      "sg_scan"
+    ],
+    "scan_quality_warning_types_present": [
+      "Fixpoint timeout"
+    ],
+    "scan_warning_count": 1,
+    "scan_warning_paths_present": [
+      "src/app.py"
+    ],
+    "scan_warning_types_present": [
+      "Fixpoint timeout"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "name": "deep_scan_warning_diagnostics",
+  "run": {
+    "deep": true
+  }
+}

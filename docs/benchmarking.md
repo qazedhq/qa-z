@@ -20,9 +20,11 @@ benchmarks/results/report.md
 benchmarks/results/work/
 ```
 
-`summary.json` is the machine-readable source of truth and includes a compact `snapshot` string such as `50/50 fixtures, overall_rate 1.0`. `report.md` is the human-readable companion and repeats the same snapshot. `work/` contains isolated copies of fixture repositories and generated QA-Z artifacts; it is disposable generated output.
+`summary.json` is the machine-readable source of truth and includes a compact `snapshot` string such as `53/53 fixtures, overall_rate 1.0`. `report.md` is the human-readable companion and repeats the same snapshot while surfacing deep warning paths, warning checks, and per-fixture artifact paths when scan-quality diagnostics or generated artifact pointers are present. `work/` contains isolated copies of fixture repositories and generated QA-Z artifacts; it is disposable generated output.
 
 The generated-versus-frozen evidence policy lives in `docs/generated-vs-frozen-evidence-policy.md`. `benchmarks/results/summary.json` and `benchmarks/results/report.md` are local by default and should be committed only as intentional frozen evidence with surrounding context. `benchmarks/results/work/` remains local scratch output. The generated `report.md` repeats this policy and labels category rows as `covered` or `not covered`; selected-fixture runs can leave unrelated categories uncovered even when the selected fixtures pass.
+
+Benchmark runs place a short-lived `.benchmark.lock` file in the selected results directory before resetting `work/`. If another run is active, QA-Z fails before touching the work directory and prints the lock metadata (`pid`, `started_at`, and `results_dir`) so operators can choose between waiting, using another `--results-dir`, or removing a confirmed stale lock.
 
 Useful variants:
 
@@ -33,6 +35,13 @@ python -m qa_z benchmark --fixtures-dir benchmarks/fixtures --results-dir benchm
 ```
 
 The exit code is `0` only when every selected fixture passes its expected-result contract.
+
+Only one benchmark run should write to a given `--results-dir` at a time. QA-Z
+creates a short-lived `.benchmark.lock` file before resetting `work/`; if another
+run is already using that directory, choose a different `--results-dir` or wait
+for the active run to finish. Remove the lock by hand only after confirming it is
+stale. Lock failures are plain-text benchmark errors even when `--json` is set;
+automation should use exit code `2` for this usage failure.
 
 ## Fixture Layout
 
@@ -89,11 +98,11 @@ Example:
 Supported expectation sections:
 
 - `expect_fast`: fast run status, schema version, failed check ids, blocking failed check ids
-- `expect_deep`: deep run status, schema version, finding counts, blocking/filtered/grouped count thresholds, rule ids, filter reasons, policy metadata, and config-error surfacing
+- `expect_deep`: deep run status, schema version, finding counts, blocking/filtered/grouped count thresholds, rule ids, filter reasons, policy metadata, run-resolution metadata, and config-error surfacing
 - `expect_handoff`: repair-needed flag, target ids, target sources, affected files, validation command ids, schema version
 - `expect_verify`: verdict, schema version, blocking before/after, resolved count, remaining issue count, new issue count, regression count
 - `expect_executor_bridge`: bridge kind, schema version, source loop/session ids, prepared action type, action context source paths, copied bridge-local paths, missing context paths/count, copied-file existence, copied-context guide/stdout visibility, and missing-context guide/stdout visibility
-- `expect_executor_result`: result status, ingest status, session state, verification hint/trigger, recommendation, warning ids, backlog implication categories, and freshness or provenance reasons when needed
+- `expect_executor_result`: result status, ingest status, session state, verification hint/trigger, recommendation, warning ids, backlog implication categories, loop-local self-inspection provenance, live repository context, ingest stdout diagnostics, and freshness or provenance reasons when needed
 - `expect_executor_dry_run`: dry-run verdict, verdict reason, evaluated-attempt count, latest result/ingest status, dry-run summary provenance, history signals, rule-id buckets, rule-status counts, operator decision, operator summary, recommended action ids/summaries, and next recommendation aliases
 
 Numeric keys ending in `_min` or `_max` are threshold checks. Other scalar keys are exact checks.
@@ -101,10 +110,12 @@ Numeric keys ending in `_min` or `_max` are threshold checks. Other scalar keys 
 Mixed-surface realism fixtures also use a few additive aliases instead of introducing a second contract format:
 
 - `remaining_issue_count_min` asserts conservative unchanged or partial outcomes without relying only on `blocking_after`
+- `run_resolution_source`, `attached_to_fast_run`, and `run_resolution_fast_summary_path` let deep fixtures pin whether evidence attached to an existing fast run or wrote a standalone deep run
 - `expected_ingest_status` compares against the normalized executor-result ingest classification
 - `expected_recommendation` compares against the recorded next operator action
-- `warning_ids_absent`, `backlog_categories`, and `freshness_reason` let fixtures assert ingest realism without matching full ingest reports
-- `action_context_paths`, `action_context_copied_paths`, `action_context_count`, `action_context_missing`, `action_context_missing_count`, `action_context_files_exist`, `guide_mentions_action_context`, `guide_mentions_missing_action_context`, `stdout_mentions_action_context`, and `stdout_mentions_missing_action_context` let executor bridge fixtures pin bridge-local action context copying plus guide/stdout missing-context diagnostics without matching the entire bridge manifest
+- `warning_ids_absent`, `backlog_categories`, `freshness_reason`, `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, `live_repository_modified_count`, `source_context_fields_recorded`, `live_repository_context_recorded`, `check_statuses_recorded`, and `backlog_implications_recorded` let executor-result fixtures assert ingest realism and loop-context preservation from structured ingest artifacts without matching full ingest reports or brittle human stdout wording
+- Legacy stdout-derived executor-result observations may still appear in benchmark actuals for compatibility, but new fixture expectations should prefer the structured `*_recorded` fields.
+- `action_context_paths`, `action_context_copied_paths`, `action_context_count`, `action_context_missing`, `action_context_missing_count`, `action_context_files_exist`, `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, `live_repository_modified_count`, `guide_mentions_action_context`, `guide_mentions_live_repository`, `guide_mentions_missing_action_context`, `stdout_mentions_action_context`, and `stdout_mentions_missing_action_context` let executor bridge fixtures pin bridge-local action context copying, loop-local self-inspection provenance, live repository context, and guide/stdout missing-context diagnostics without matching the entire bridge manifest
 - `expected_source` compares against the materialized dry-run `summary_source` field without renaming the underlying artifact key
 - `attention_rule_ids`, `blocked_rule_ids`, `clear_rule_ids`, `attention_rule_count`, `blocked_rule_count`, `clear_rule_count`, `history_signals`, `operator_decision`, `operator_summary`, `recommended_action_ids`, and `recommended_action_summaries` let dry-run fixtures pin the important safety signals and operator guidance without copying whole reports
 
@@ -129,6 +140,7 @@ The corpus covers these high-signal cases:
 - `mixed_fast_deep_handoff_dual_surface`
 - `mixed_fast_deep_handoff_ts_lint_python_deep`
 - `mixed_fast_deep_handoff_py_lint_ts_test_dual_deep`
+- `mixed_fast_deep_scan_warning_fast_only`
 - `executor_bridge_action_context_inputs`
 - `executor_bridge_missing_action_context_inputs`
 - `mixed_docs_schema_sync_maintenance_candidate`
@@ -139,6 +151,7 @@ The corpus covers these high-signal cases:
 - `executor_dry_run_completed_verify_blocked`
 - `executor_dry_run_validation_noop_operator_actions`
 - `executor_dry_run_repeated_rejected_operator_actions`
+- `executor_dry_run_validation_conflict_repeated_rejected_operator_actions`
 - `executor_dry_run_repeated_noop_operator_actions`
 - `executor_dry_run_blocked_mixed_history_operator_actions`
 - `executor_dry_run_empty_history_operator_actions`
@@ -244,10 +257,11 @@ Mixed-surface realism fixtures extend the seeded verification set with more serv
 - executed mixed Python/TypeScript fast failures plus Semgrep-backed deep findings in one repair handoff: `mixed_fast_deep_handoff_dual_surface`
 - executed TypeScript lint evidence plus Python Semgrep-backed deep evidence in one repair handoff: `mixed_fast_deep_handoff_ts_lint_python_deep`
 - executed Python lint evidence plus TypeScript test evidence plus dual Python/TypeScript deep findings in one repair handoff: `mixed_fast_deep_handoff_py_lint_ts_test_dual_deep`
-- bridge-local action context copying from a loop-prepared repair session into `inputs/context/`: `executor_bridge_action_context_inputs`
+- executed TypeScript lint evidence plus non-blocking multi-source Semgrep scan warnings that preserve deep lineage while keeping repair handoff fast-only: `mixed_fast_deep_scan_warning_fast_only`
+- bridge-local action context copying from a loop-prepared repair session into `inputs/context/`, with loop-local self-inspection and live repository provenance pinned: `executor_bridge_action_context_inputs`
 - missing action-context guide and stdout diagnostics for optional context paths that cannot be copied: `executor_bridge_missing_action_context_inputs`
 - docs/schema maintenance that stays functionally `unchanged`
-- partial executor-result ingest that still points at mixed verify evidence
+- partial executor-result ingest that still points at mixed verify evidence and pins ingest stdout diagnostics
 - justified `no_op` executor returns that avoid the missing-explanation warning while remaining functionally `unchanged`
 - cleanup-only worktree risk reduction that does not masquerade as a functional repair
 - future-dated executor-result rejection that protects ingest-time freshness checks
@@ -265,9 +279,10 @@ The initial set covers:
 - `executor_dry_run_repeated_partial_attention`: repeated partial attempts that should surface manual retry attention
 - `executor_dry_run_completed_verify_blocked`: a completed attempt whose recorded history still blocks deterministic completion
 - `executor_dry_run_validation_noop_operator_actions`: validation-conflict plus missing no-op explanation history that pins operator summary and recommended action residue
-- `executor_dry_run_repeated_rejected_operator_actions`: repeated rejected ingest attempts that pin the rejected-result inspection action
+- `executor_dry_run_repeated_rejected_operator_actions`: repeated rejected ingest attempts plus repeated partial retry pressure that keep rejected-result inspection ahead of partial retry review
+- `executor_dry_run_validation_conflict_repeated_rejected_operator_actions`: non-blocked mixed history where validation-conflict review stays primary while repeated rejected-result pressure and partial retry review remain visible in operator actions
 - `executor_dry_run_repeated_noop_operator_actions`: repeated no-op outcomes that pin the repeated no-op pattern action and repeated no-op rule attention through `retry_boundary_is_manual`
-- `executor_dry_run_blocked_mixed_history_operator_actions`: blocked completion history combined with repeated partial attempts and validation conflict, proving the blocked verdict stays primary while secondary operator actions remain visible
+- `executor_dry_run_blocked_mixed_history_operator_actions`: blocked completion history combined with repeated partial attempts and validation conflict, proving the blocked verdict stays primary while secondary operator actions remain visible and validation conflicts and retry pressure still need review
 - `executor_dry_run_empty_history_operator_actions`: no recorded attempts yet, proving dry-run materializes empty history, marks `executor_history_recorded` as empty-history rule attention, and tells the operator to ingest an executor result before relying on safety evidence
 - `executor_dry_run_scope_validation_operator_actions`: scope-validation failure history that blocks mutation-scope safety and pins the scope-drift inspection action
 - `executor_dry_run_missing_noop_explanation_operator_actions`: missing no-op explanation history that pins the no-op explanation action and matching next recommendation
@@ -276,9 +291,14 @@ These fixtures are counted under the existing `policy` benchmark category becaus
 
 Together, all committed executor dry-run fixtures pin `operator_decision`,
 `operator_summary`, `recommended_action_ids`, and `recommended_action_summaries` in
-`expected.json`, so clear, attention, blocked, repeated rejected, repeated
-no-op, blocked mixed-history, empty-history, and scope-validation cases all
-protect operator guidance as well as verdict/rule-count behavior.
+`expected.json`, so clear, attention, blocked, repeated rejected,
+validation-conflict mixed retry, repeated no-op, blocked mixed-history,
+empty-history, and scope-validation cases all
+protect operator guidance as well as verdict/rule-count behavior. The repeated
+rejected fixture now also keeps rejected-result inspection ahead of partial
+retry review when mixed partial and rejected histories repeat, and the
+validation-conflict mixed retry fixture keeps validation-conflict review primary
+while preserving rejected-result inspection and partial retry review.
 Every committed executor dry-run fixture now also pins complete dry-run rule buckets through
 `clear_rule_ids`, `attention_rule_ids`, and `blocked_rule_ids`, so a missing,
 renamed, or re-bucketed rule cannot hide behind unchanged counts.
@@ -308,6 +328,7 @@ The current policy set covers:
 - grouping and dedupe: repeated findings with the same rule, path, and severity become one grouped handoff target
 - filtered vs blocking counts: raw, filtered, grouped, and blocking counts stay distinguishable
 - config errors: invalid Semgrep config is reported as `status: error` with `semgrep_config_error`
+- scan-quality warnings: `deep_scan_warning_diagnostics` proves non-blocking Semgrep warning diagnostics remain visible through `scan_warning_count`, `scan_warnings`, summary-level `scan_quality`, and warning check ids, while `deep_scan_warning_multi_source_diagnostics` proves distinct warning types and paths survive the same normalization path without becoming blocking findings
 
 A minimal policy expectation can stay additive inside `expect_deep`:
 
@@ -321,6 +342,7 @@ A minimal policy expectation can stay additive inside `expect_deep`:
     "status": "passed",
     "blocking_findings_count": 0,
     "filtered_findings_count_min": 1,
+    "scan_warning_count": 0,
     "rule_ids_absent": ["generic.secrets.security.detected-private-key"],
     "schema_version": 2
   }

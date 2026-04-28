@@ -1,0 +1,38 @@
+{
+  "description": "Multiple Semgrep scan-quality warning sources remain non-blocking while preserving distinct types and paths.",
+  "expect_deep": {
+    "blocking_findings_count": 0,
+    "attached_to_fast_run": false,
+    "findings_count": 0,
+    "run_resolution_fast_summary_path": null,
+    "run_resolution_source": "output_dir",
+    "scan_quality_status": "warning",
+    "scan_quality_warning_count": 2,
+    "scan_quality_warning_paths_present": [
+      "src/app.py",
+      "src/worker.py"
+    ],
+    "scan_quality_check_ids_present": [
+      "sg_scan"
+    ],
+    "scan_quality_warning_types_present": [
+      "Fixpoint timeout",
+      "Timeout"
+    ],
+    "scan_warning_count": 2,
+    "scan_warning_paths_present": [
+      "src/app.py",
+      "src/worker.py"
+    ],
+    "scan_warning_types_present": [
+      "Fixpoint timeout",
+      "Timeout"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "name": "deep_scan_warning_multi_source_diagnostics",
+  "run": {
+    "deep": true
+  }
+}

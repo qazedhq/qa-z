@@ -1,0 +1,20 @@
+{
+  "exit_code": 0,
+  "results": [],
+  "time": {
+    "fixpoint_timeouts": [
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis.",
+        "location": {
+          "path": "src/app.py",
+          "start": {
+            "line": 5,
+            "col": 4
+          }
+        }
+      }
+    ]
+  }
+}

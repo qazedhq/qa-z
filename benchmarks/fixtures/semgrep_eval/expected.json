@@ -2,6 +2,9 @@
   "description": "Semgrep eval finding should be normalized, blocking, and included in handoff.",
   "expect_deep": {
     "blocking_findings_min": 1,
+    "attached_to_fast_run": true,
+    "run_resolution_fast_summary_path": ".qa-z/runs/benchmark/fast/summary.json",
+    "run_resolution_source": "from_run",
     "rule_ids": [
       "python.lang.security.audit.eval"
     ],

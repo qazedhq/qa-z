@@ -1,0 +1,74 @@
+{
+  "description": "Executed TypeScript fast lint failure plus non-blocking multi-source Semgrep scan warnings should keep repair handoff fast-only while preserving deep warning lineage.",
+  "expect_deep": {
+    "attached_to_fast_run": true,
+    "blocking_findings_count": 0,
+    "findings_count": 0,
+    "run_resolution_fast_summary_path": ".qa-z/runs/benchmark/fast/summary.json",
+    "run_resolution_source": "from_run",
+    "scan_quality_status": "warning",
+    "scan_quality_warning_count": 2,
+    "scan_quality_warning_paths_present": [
+      "src/app.py",
+      "src/worker.py"
+    ],
+    "scan_quality_check_ids_present": [
+      "sg_scan"
+    ],
+    "scan_quality_warning_types_present": [
+      "Fixpoint timeout",
+      "Timeout"
+    ],
+    "scan_warning_count": 2,
+    "scan_warning_paths_present": [
+      "src/app.py",
+      "src/worker.py"
+    ],
+    "scan_warning_types_present": [
+      "Fixpoint timeout",
+      "Timeout"
+    ],
+    "schema_version": 2,
+    "status": "passed"
+  },
+  "expect_fast": {
+    "blocking_failed_checks": [
+      "ts_lint"
+    ],
+    "failed_checks": [
+      "ts_lint"
+    ],
+    "schema_version": 2,
+    "status": "failed"
+  },
+  "expect_handoff": {
+    "affected_files": [
+      "src/invoice.ts"
+    ],
+    "repair_needed": true,
+    "schema_version": 1,
+    "target_ids": [
+      "check:ts_lint"
+    ],
+    "target_sources": [
+      "fast_check"
+    ],
+    "validation_command_ids": [
+      "check:ts_lint",
+      "qa-z-fast"
+    ]
+  },
+  "expect_artifacts": {
+    "files": [
+      ".qa-z/runs/benchmark/deep/results.sarif",
+      ".qa-z/runs/benchmark/fast/summary.json",
+      ".qa-z/runs/benchmark/repair/handoff.json"
+    ]
+  },
+  "name": "mixed_fast_deep_scan_warning_fast_only",
+  "run": {
+    "deep": true,
+    "fast": true,
+    "repair_handoff": true
+  }
+}

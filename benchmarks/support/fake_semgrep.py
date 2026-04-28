@@ -17,7 +17,11 @@ def main() -> int:
     results = payload.get("results", []) if isinstance(payload, dict) else []
     errors = payload.get("errors", []) if isinstance(payload, dict) else []
     exit_code = payload.get("exit_code", 1 if results else 0)
-    print(json.dumps({"results": results, "errors": errors}))
+    output = dict(payload)
+    output["results"] = results
+    output["errors"] = errors
+    output.pop("exit_code", None)
+    print(json.dumps(output))
     try:
         return int(exit_code)
     except (TypeError, ValueError):

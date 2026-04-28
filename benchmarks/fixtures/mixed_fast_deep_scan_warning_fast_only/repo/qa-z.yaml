@@ -1,0 +1,49 @@
+{
+  "project": {
+    "name": "mixed-fast-deep-scan-warning-fast-only",
+    "languages": [
+      "python",
+      "typescript"
+    ]
+  },
+  "contracts": {
+    "output_dir": "qa/contracts"
+  },
+  "fast": {
+    "output_dir": ".qa-z/runs",
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "ts_lint",
+        "enabled": true,
+        "run": [
+          "python",
+          ".qa-z-benchmark/fast_check.py",
+          "fail",
+          "src/invoice.ts:1:7 error no-unused-vars"
+        ],
+        "kind": "lint"
+      }
+    ]
+  },
+  "deep": {
+    "fail_on_missing_tool": true,
+    "checks": [
+      {
+        "id": "sg_scan",
+        "enabled": true,
+        "run": [
+          "python",
+          ".qa-z-benchmark/fake_semgrep.py"
+        ],
+        "kind": "static-analysis",
+        "semgrep": {
+          "config": "auto",
+          "fail_on_severity": [
+            "ERROR"
+          ]
+        }
+      }
+    ]
+  }
+}

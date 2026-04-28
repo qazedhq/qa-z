@@ -1,0 +1,34 @@
+{
+  "exit_code": 0,
+  "results": [],
+  "errors": [
+    {
+      "error_type": "Timeout",
+      "severity": "warn",
+      "message": "Rule timed out while scanning worker.",
+      "location": {
+        "path": "src/worker.py",
+        "start": {
+          "line": 3,
+          "col": 2
+        }
+      }
+    }
+  ],
+  "time": {
+    "fixpoint_timeouts": [
+      {
+        "error_type": "Fixpoint timeout",
+        "severity": "warn",
+        "message": "Fixpoint timeout while performing taint analysis.",
+        "location": {
+          "path": "src/app.py",
+          "start": {
+            "line": 5,
+            "col": 4
+          }
+        }
+      }
+    ]
+  }
+}
