@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -11,59 +10,82 @@ from qa_z.artifacts import (
     ContractContext,
     RunSource,
     contract_output_dir as artifact_contract_output_dir,
-    extract_candidate_files,
     find_latest_contract as artifact_find_latest_contract,
     format_path,
     load_contract_context,
 )
-from qa_z.reporters.deep_context import (
-    DeepContext,
-    build_deep_context,
-    format_finding_location,
-    format_severity_summary,
+from qa_z.reporters.deep_context import build_deep_context
+from qa_z.reporters.review_packet_contract import (
+    contract_output_dir,
+    find_latest_contract,
+    load_contract_review_context,
 )
-from qa_z.reporters.repair_prompt import fix_priority
-from qa_z.runners.models import CheckResult, RunSummary
+from qa_z.reporters.review_packet_contract_markdown import (
+    bulletize,
+    extract_bullet_or_lines,
+    extract_section,
+    extract_subsection,
+)
+from qa_z.reporters.review_packet_render import (
+    render_review_packet,
+    render_run_review_packet,
+    review_packet_json,
+    run_review_packet_json,
+    write_review_artifacts,
+)
+from qa_z.reporters.review_packet_sections import (
+    check_summary,
+    evidence_tail,
+    failed_check_summary,
+    format_affected_files,
+    format_check_list,
+    format_deep_check_run_sentence,
+    format_grouped_finding,
+    ordered_failed_checks,
+    render_deep_findings_markdown,
+    render_failed_check,
+    render_selection_markdown,
+)
+from qa_z.runners.models import RunSummary
+
+__all__ = [
+    "bulletize",
+    "check_summary",
+    "contract_output_dir",
+    "evidence_tail",
+    "extract_bullet_or_lines",
+    "extract_section",
+    "extract_subsection",
+    "failed_check_summary",
+    "find_latest_contract",
+    "format_affected_files",
+    "format_check_list",
+    "format_deep_check_run_sentence",
+    "format_grouped_finding",
+    "load_contract_review_context",
+    "ordered_failed_checks",
+    "render_deep_findings_markdown",
+    "render_failed_check",
+    "render_review_packet",
+    "render_run_review_packet",
+    "render_selection_markdown",
+    "review_packet_json",
+    "run_review_packet_json",
+    "write_review_artifacts",
+]
 
 
-def contract_output_dir(root: Path, config: dict) -> Path:
+def _contract_output_dir_impl(root: Path, config: dict) -> Path:
     """Resolve the configured contract directory."""
     return artifact_contract_output_dir(root, config)
 
 
-def find_latest_contract(root: Path, config: dict) -> Path:
+def _find_latest_contract_impl(root: Path, config: dict) -> Path:
     """Find the newest contract in the configured output directory."""
     return artifact_find_latest_contract(root, config)
 
 
-def extract_section(document: str, heading: str) -> str:
-    """Extract a markdown section body by H2 heading."""
-    pattern = rf"^## {re.escape(heading)}\n(?P<body>.*?)(?=^## |\Z)"
-    match = re.search(pattern, document, flags=re.MULTILINE | re.DOTALL)
-    if not match:
-        return ""
-    return match.group("body").strip()
-
-
-def extract_subsection(document: str, heading: str) -> str:
-    """Extract a markdown subsection body by H3 heading."""
-    pattern = rf"^### {re.escape(heading)}\n(?P<body>.*?)(?=^### |^## |\Z)"
-    match = re.search(pattern, document, flags=re.MULTILINE | re.DOTALL)
-    if not match:
-        return ""
-    return match.group("body").strip()
-
-
-def bulletize(text: str, fallback: str) -> str:
-    """Normalize text blocks into bullet lists."""
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if not lines:
-        return f"- {fallback}"
-    bullets = [line if line.startswith("- ") else f"- {line}" for line in lines]
-    return "\n".join(bullets)
-
-
-def render_review_packet(contract_path: Path, root: Path) -> str:
+def _render_review_packet_impl(contract_path: Path, root: Path) -> str:
     """Render a review packet from a generated contract."""
     document = contract_path.read_text(encoding="utf-8")
     relative_contract = format_path(contract_path, root)
@@ -102,7 +124,7 @@ def render_review_packet(contract_path: Path, root: Path) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def review_packet_json(contract_path: Path, root: Path) -> str:
+def _review_packet_json_impl(contract_path: Path, root: Path) -> str:
     """Render the contract-only review packet as JSON."""
     document = contract_path.read_text(encoding="utf-8")
     packet = {
@@ -129,7 +151,7 @@ def review_packet_json(contract_path: Path, root: Path) -> str:
     return json.dumps(packet, indent=2, sort_keys=True) + "\n"
 
 
-def render_run_review_packet(
+def _render_run_review_packet_impl(
     *,
     summary: RunSummary,
     run_source: RunSource,
@@ -140,7 +162,7 @@ def render_run_review_packet(
     """Render a review packet enriched with fast run context."""
     deep_context = build_deep_context(deep_summary)
     lines = [
-        render_review_packet(Path(root / (contract.path or "")), root).rstrip(),
+        _render_review_packet_impl(Path(root / (contract.path or "")), root).rstrip(),
         "",
         "## Run Verdict",
         "",
@@ -176,7 +198,7 @@ def render_run_review_packet(
     return "\n".join(lines).strip() + "\n"
 
 
-def run_review_packet_json(
+def _run_review_packet_json_impl(
     *,
     summary: RunSummary,
     run_source: RunSource,
@@ -214,7 +236,7 @@ def run_review_packet_json(
     return json.dumps(packet, indent=2, sort_keys=True) + "\n"
 
 
-def write_review_artifacts(
+def _write_review_artifacts_impl(
     markdown: str, json_text: str | None, output_dir: Path
 ) -> tuple[Path, Path | None]:
     """Write review Markdown and optional JSON artifacts."""
@@ -228,179 +250,8 @@ def write_review_artifacts(
     return markdown_path, json_path
 
 
-def load_contract_review_context(contract_path: Path, root: Path) -> ContractContext:
+def _load_contract_review_context_impl(
+    contract_path: Path, root: Path
+) -> ContractContext:
     """Load contract context for callers that need a shared parser."""
     return load_contract_context(contract_path, root)
-
-
-def ordered_failed_checks(summary: RunSummary) -> list[CheckResult]:
-    """Return failed or errored checks in review priority order."""
-    failed = [check for check in summary.checks if check.status in {"failed", "error"}]
-    return [
-        check
-        for _index, check in sorted(
-            enumerate(failed), key=lambda item: (fix_priority(item[1]), item[0])
-        )
-    ]
-
-
-def render_failed_check(check: CheckResult) -> list[str]:
-    """Render one failed check with evidence tail."""
-    lines = [
-        f"### {check.id}",
-        "",
-        f"- Tool: {check.tool}",
-        f"- Kind: {check.kind}",
-        f"- Command: `{' '.join(check.command)}`",
-        f"- Exit code: `{check.exit_code}`",
-    ]
-    candidates = extract_candidate_files(
-        "\n".join(part for part in (check.stdout_tail, check.stderr_tail) if part)
-    )
-    if candidates:
-        lines.append("- Candidate files:")
-        lines.extend(f"  - `{path}`" for path in candidates)
-    lines.extend(["", "Evidence:", "```text", evidence_tail(check), "```", ""])
-    return lines
-
-
-def check_summary(check: CheckResult) -> dict[str, Any]:
-    """Render compact check metadata for review JSON."""
-    return {
-        "id": check.id,
-        "kind": check.kind,
-        "tool": check.tool,
-        "command": check.command,
-        "status": check.status,
-        "exit_code": check.exit_code,
-        "duration_ms": check.duration_ms,
-        "execution_mode": check.execution_mode,
-        "target_paths": check.target_paths,
-        "selection_reason": check.selection_reason,
-        "high_risk_reasons": check.high_risk_reasons,
-    }
-
-
-def failed_check_summary(check: CheckResult) -> dict[str, Any]:
-    """Render failed check metadata with evidence for review JSON."""
-    data = check_summary(check)
-    data["stdout_tail"] = check.stdout_tail
-    data["stderr_tail"] = check.stderr_tail
-    data["candidate_files"] = extract_candidate_files(
-        "\n".join(part for part in (check.stdout_tail, check.stderr_tail) if part)
-    )
-    return data
-
-
-def extract_bullet_or_lines(section: str) -> list[str]:
-    """Normalize a markdown section into a JSON list."""
-    items = []
-    for line in section.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith(("- ", "* ")):
-            stripped = stripped[2:].strip()
-        items.append(stripped)
-    return items
-
-
-def evidence_tail(check: CheckResult) -> str:
-    """Combine stdout and stderr tails for display."""
-    parts = []
-    if check.stdout_tail:
-        parts.append(check.stdout_tail.rstrip())
-    if check.stderr_tail:
-        parts.append(check.stderr_tail.rstrip())
-    return "\n".join(parts) if parts else "No stdout or stderr tail captured."
-
-
-def render_selection_markdown(summary: RunSummary) -> list[str]:
-    """Render v2 check-selection context when present."""
-    if summary.selection is None:
-        return []
-    selection = summary.selection
-    return [
-        "## Check Selection",
-        "",
-        f"- Mode: {selection.mode}",
-        f"- Input source: {selection.input_source}",
-        f"- Changed files: {len(selection.changed_files)}",
-        f"- Full checks: {format_check_list(selection.full_checks)}",
-        f"- Targeted checks: {format_check_list(selection.targeted_checks)}",
-        f"- Skipped checks: {format_check_list(selection.skipped_checks)}",
-        f"- High-risk reasons: {format_check_list(selection.high_risk_reasons)}",
-        "",
-    ]
-
-
-def format_check_list(items: list[str]) -> str:
-    """Render a compact comma-separated list for review output."""
-    return ", ".join(items) if items else "none"
-
-
-def render_deep_findings_markdown(deep: DeepContext | None) -> list[str]:
-    """Render optional deep findings for run-aware review packets."""
-    if deep is None:
-        return []
-    lines = [
-        "",
-        "## Deep Findings",
-        "",
-        f"- Status: {deep.summary.status}",
-        f"- Findings: {deep.findings_count}",
-        f"- Blocking findings: {deep.blocking_findings_count}",
-        f"- Filtered findings: {deep.filtered_findings_count}",
-        f"- Highest severity: {deep.highest_severity or 'none'}",
-        f"- Severity summary: {format_severity_summary(deep.severity_summary)}",
-        f"- Affected files: {format_affected_files(deep.affected_files)}",
-    ]
-    if deep.primary_check is not None:
-        lines.append(f"- {format_deep_check_run_sentence(deep)}")
-        if deep.primary_check.selection_reason:
-            lines.append(f"- Selection reason: {deep.primary_check.selection_reason}")
-
-    if deep.grouped_findings:
-        lines.extend(["", "Top grouped findings:"])
-        for finding in deep.grouped_findings[:5]:
-            lines.append(format_grouped_finding(finding))
-    elif deep.findings:
-        lines.extend(["", "Top findings:"])
-        for finding in deep.findings[:5]:
-            lines.append(
-                "- "
-                f"`{format_finding_location(finding)}` "
-                f"{finding['severity']} {finding['rule_id']} - {finding['message']}"
-            )
-    else:
-        lines.extend(["", "No Semgrep findings were reported."])
-    return lines
-
-
-def format_deep_check_run_sentence(deep: DeepContext) -> str:
-    """Render the primary deep check execution mode in one sentence."""
-    check_id = deep.primary_check.id if deep.primary_check else "deep check"
-    mode = deep.execution_mode
-    if deep.target_count:
-        noun = "file" if deep.target_count == 1 else "files"
-        return f"`{check_id}` ran in {mode} mode for {deep.target_count} {noun}"
-    return f"`{check_id}` ran in {mode} mode"
-
-
-def format_affected_files(paths: list[str]) -> str:
-    """Render affected files for Markdown."""
-    if not paths:
-        return "none"
-    return ", ".join(f"`{path}`" for path in paths)
-
-
-def format_grouped_finding(finding: dict[str, Any]) -> str:
-    """Render one grouped Semgrep finding for review packets."""
-    count = int(finding.get("count") or 1)
-    occurrence = "occurrence" if count == 1 else "occurrences"
-    location = format_finding_location(finding)
-    return (
-        "- "
-        f"`{finding.get('rule_id', 'unknown')}` in `{location}` "
-        f"({count} {occurrence}) - {finding.get('message', '')}"
-    )

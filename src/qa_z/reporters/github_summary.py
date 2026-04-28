@@ -5,23 +5,37 @@ from __future__ import annotations
 from pathlib import Path
 
 from qa_z.artifacts import RunSource, format_path
-from qa_z.reporters.deep_context import (
-    DeepContext,
-    build_deep_context,
-    format_finding_location,
+from qa_z.reporters.deep_context import build_deep_context
+from qa_z.reporters.github_summary_render import render_github_summary
+from qa_z.reporters.github_summary_sections import (
+    coerce_count,
+    format_code_list,
+    format_grouped_finding,
+    render_changed_files,
+    render_deep_qa,
+    render_failed_check,
+    render_selection,
 )
 from qa_z.reporters.verification_publish import (
     SessionPublishSummary,
     VerificationPublishSummary,
     render_publish_summary_markdown,
 )
-from qa_z.runners.models import CheckResult, RunSummary
+from qa_z.runners.models import RunSummary
+
+__all__ = [
+    "coerce_count",
+    "format_code_list",
+    "format_grouped_finding",
+    "render_changed_files",
+    "render_deep_qa",
+    "render_failed_check",
+    "render_github_summary",
+    "render_selection",
+]
 
 
-MAX_CHANGED_FILES = 12
-
-
-def render_github_summary(
+def _render_github_summary_impl(
     *,
     summary: RunSummary,
     run_source: RunSource,
@@ -82,102 +96,3 @@ def render_github_summary(
         ]
     )
     return "\n".join(lines).strip() + "\n"
-
-
-def render_failed_check(check: CheckResult) -> str:
-    """Render one failed check in one scan-friendly line."""
-    mode = check.execution_mode or "full"
-    reason = check.message or check.selection_reason or default_check_summary(check)
-    return f"- `{check.id}` - {mode} - {reason}"
-
-
-def default_check_summary(check: CheckResult) -> str:
-    """Return a short fallback summary for a failed check."""
-    if check.exit_code is None:
-        return f"{check.tool} did not complete successfully."
-    return f"{check.tool} exited with code {check.exit_code}."
-
-
-def render_changed_files(summary: RunSummary) -> list[str]:
-    """Render changed files from v2 selection metadata."""
-    if summary.selection is None or not summary.selection.changed_files:
-        return ["- No changed-file metadata was captured."]
-
-    changed_files = summary.selection.changed_files
-    lines = [f"- `{changed.path}`" for changed in changed_files[:MAX_CHANGED_FILES]]
-    remaining = len(changed_files) - MAX_CHANGED_FILES
-    if remaining > 0:
-        lines.append(f"- ...and {remaining} more")
-    return lines
-
-
-def render_selection(summary: RunSummary) -> list[str]:
-    """Render compact selection groups."""
-    if summary.selection is None:
-        return ["- Selection metadata was not captured."]
-    selection = summary.selection
-    return [
-        f"- Input source: {selection.input_source}",
-        f"- Full: {format_code_list(selection.full_checks)}",
-        f"- Targeted: {format_code_list(selection.targeted_checks)}",
-        f"- Skipped: {format_code_list(selection.skipped_checks)}",
-    ]
-
-
-def format_code_list(items: list[str]) -> str:
-    """Render check ids as inline code."""
-    if not items:
-        return "none"
-    return ", ".join(f"`{item}`" for item in items)
-
-
-def render_deep_qa(deep: DeepContext | None) -> list[str]:
-    """Render optional deep QA status for GitHub summaries."""
-    if deep is None:
-        return []
-    lines = [
-        "",
-        "## Deep QA",
-        "",
-        f"- Status: {deep.summary.status}",
-        f"- Findings: {deep.findings_count}",
-        f"- Blocking: {deep.blocking_findings_count}",
-        f"- Filtered: {deep.filtered_findings_count}",
-        f"- Highest severity: {deep.highest_severity or 'none'}",
-        f"- Mode: {deep.execution_mode}",
-        f"- Files affected: {len(deep.affected_files)}",
-    ]
-    if deep.grouped_findings:
-        lines.extend(["", "### Top Deep Findings"])
-        for finding in deep.grouped_findings[:3]:
-            lines.append(format_grouped_finding(finding))
-    elif deep.findings:
-        lines.append(
-            "- "
-            f"`{format_finding_location(deep.findings[0])}` "
-            f"{deep.findings[0]['severity']} - {deep.findings[0]['message']}"
-        )
-    else:
-        lines.append("- No Semgrep findings were reported.")
-    return lines
-
-
-def format_grouped_finding(finding: dict[str, object]) -> str:
-    """Render a grouped Semgrep finding for GitHub Job Summary."""
-    count = coerce_count(finding.get("count"))
-    noun = "hit" if count == 1 else "hits"
-    return (
-        "- "
-        f"`{finding.get('rule_id', 'unknown')}` - "
-        f"`{finding.get('path', 'unknown')}` - "
-        f"{count} {noun}"
-    )
-
-
-def coerce_count(value: object) -> int:
-    """Return a positive grouped finding count."""
-    try:
-        count = int(str(value)) if value is not None else 1
-    except (TypeError, ValueError):
-        return 1
-    return count if count > 0 else 1

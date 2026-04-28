@@ -4,31 +4,82 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from qa_z.artifacts import (
     ContractContext,
     RunSource,
-    extract_candidate_files,
-    extract_contract_candidate_files,
     format_path,
 )
-from qa_z.reporters.deep_context import (
-    DeepContext,
-    build_deep_context,
-    format_finding_location,
-    format_severity_summary,
+from qa_z.reporters.deep_context import build_deep_context
+from qa_z.reporters.repair_prompt_artifacts import (
+    repair_packet_json,
+    write_repair_artifacts,
 )
-from qa_z.runners.models import CheckResult, RunSummary
+from qa_z.reporters.repair_prompt_failures import (
+    default_failure_summary,
+    extract_candidate_files,
+    failure_context,
+    fix_priority,
+    ordered_candidate_files,
+    sorted_failures,
+)
+from qa_z.reporters.repair_prompt_packet import build_repair_packet
+from qa_z.reporters.repair_prompt_render import render_repair_prompt
+from qa_z.reporters.repair_prompt_sections import (
+    blocking_grouped_findings,
+    blocking_severities,
+    done_when_items,
+    evidence_tail,
+    format_command,
+    format_grouped_finding,
+    format_inline_code_list,
+    format_list,
+    format_severity_summary_dict,
+    has_blocking_deep_findings,
+    render_failure_markdown,
+    render_optional_list,
+    render_security_findings,
+    suggested_fix_order,
+    unique_preserve_order,
+    utc_now,
+)
+from qa_z.runners.models import RunSummary
 
-FIX_KIND_PRIORITY = {
-    "format": 0,
-    "lint": 1,
-    "typecheck": 2,
-    "test": 3,
-}
+__all__ = [
+    "DEFAULT_CONSTRAINTS",
+    "DEFAULT_DONE_WHEN",
+    "FailureContext",
+    "PASSING_DONE_WHEN",
+    "RepairPacket",
+    "blocking_grouped_findings",
+    "blocking_severities",
+    "build_repair_packet",
+    "default_failure_summary",
+    "done_when_items",
+    "evidence_tail",
+    "extract_candidate_files",
+    "failure_context",
+    "fix_priority",
+    "format_command",
+    "format_grouped_finding",
+    "format_inline_code_list",
+    "format_list",
+    "format_severity_summary_dict",
+    "has_blocking_deep_findings",
+    "ordered_candidate_files",
+    "repair_packet_json",
+    "render_failure_markdown",
+    "render_optional_list",
+    "render_repair_prompt",
+    "render_security_findings",
+    "sorted_failures",
+    "suggested_fix_order",
+    "unique_preserve_order",
+    "utc_now",
+    "write_repair_artifacts",
+]
 
 DEFAULT_CONSTRAINTS = [
     "Do not weaken tests.",
@@ -107,7 +158,7 @@ class RepairPacket:
         }
 
 
-def build_repair_packet(
+def _build_repair_packet_impl(
     *,
     summary: RunSummary,
     run_source: RunSource,
@@ -153,77 +204,7 @@ def build_repair_packet(
     return packet
 
 
-def sorted_failures(
-    summary: RunSummary, contract: ContractContext
-) -> list[FailureContext]:
-    """Return failed or errored checks in deterministic repair order."""
-    contract_candidates = extract_contract_candidate_files(contract)
-    failure_checks = [
-        check for check in summary.checks if check.status in {"failed", "error"}
-    ]
-    ordered_checks = sorted(
-        enumerate(failure_checks),
-        key=lambda item: (fix_priority(item[1]), item[0], item[1].id),
-    )
-    return [
-        failure_context(check, contract_candidates) for _index, check in ordered_checks
-    ]
-
-
-def failure_context(
-    check: CheckResult, contract_candidates: list[str]
-) -> FailureContext:
-    """Build repair context for one check result."""
-    evidence = "\n".join(
-        part for part in (check.stdout_tail, check.stderr_tail) if part
-    )
-    output_candidates = extract_candidate_files(evidence)
-    candidate_files = ordered_candidate_files(contract_candidates, output_candidates)
-    return FailureContext(
-        id=check.id,
-        kind=check.kind,
-        tool=check.tool,
-        command=check.command,
-        exit_code=check.exit_code,
-        duration_ms=check.duration_ms,
-        summary=check.message or default_failure_summary(check),
-        stdout_tail=check.stdout_tail,
-        stderr_tail=check.stderr_tail,
-        candidate_files=candidate_files,
-    )
-
-
-def ordered_candidate_files(
-    contract_candidates: list[str], output_candidates: list[str]
-) -> list[str]:
-    """Merge candidate files with contract hints first, capped at ten files."""
-    merged: list[str] = []
-    for path in [*contract_candidates, *output_candidates]:
-        if path not in merged:
-            merged.append(path)
-    return merged[:10]
-
-
-def default_failure_summary(check: CheckResult) -> str:
-    """Render a compact deterministic failure summary."""
-    if check.exit_code is None:
-        return f"{check.tool} did not complete successfully."
-    return f"{check.tool} exited with code {check.exit_code}."
-
-
-def fix_priority(check: CheckResult | FailureContext) -> int:
-    """Return deterministic repair priority for a check."""
-    kind_priority = FIX_KIND_PRIORITY.get(check.kind)
-    if kind_priority is not None:
-        return kind_priority
-    lowered = check.id.lower()
-    for kind, priority in FIX_KIND_PRIORITY.items():
-        if kind in lowered:
-            return priority
-    return len(FIX_KIND_PRIORITY)
-
-
-def render_repair_prompt(packet: RepairPacket) -> str:
+def _render_repair_prompt_impl(packet: RepairPacket) -> str:
     """Render a Markdown prompt that can be pasted into a coding agent."""
     lines = [
         "# QA-Z Repair Prompt",
@@ -297,103 +278,9 @@ def render_repair_prompt(packet: RepairPacket) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
-def render_optional_list(
-    heading: str, items: list[str], *, bullet: str = "-"
-) -> list[str]:
-    """Render a markdown heading and list when items exist."""
-    if not items:
-        return []
-    return [heading, "", *[f"{bullet} {item}" for item in items], ""]
-
-
-def render_failure_markdown(failure: FailureContext) -> list[str]:
-    """Render one failed check for the repair prompt."""
-    lines = [
-        f"### {failure.id}",
-        "",
-        f"- Tool: {failure.tool}",
-        f"- Command: `{format_command(failure.command)}`",
-        f"- Exit code: `{failure.exit_code}`",
-    ]
-    if failure.candidate_files:
-        lines.extend(["- Candidate files:"])
-        lines.extend(f"  - `{path}`" for path in failure.candidate_files)
-    lines.extend(["", "Evidence:", "```text", evidence_tail(failure), "```", ""])
-    return lines
-
-
-def render_security_findings(deep: dict[str, Any] | None) -> list[str]:
-    """Render Semgrep findings for repair prompts."""
-    if not isinstance(deep, dict):
-        return []
-
-    grouped_findings = blocking_grouped_findings(deep)
-    if grouped_findings:
-        lines = [
-            "## Deep QA Findings",
-            "",
-            "The following Semgrep findings must be addressed:",
-            "",
-        ]
-        for finding in grouped_findings:
-            lines.append(format_grouped_finding(finding))
-        lines.extend(
-            [
-                "",
-                "### Deep QA Completion Criteria",
-                "",
-                "- `qa-z deep` exits successfully",
-                "- no blocking findings remain",
-                "- fast checks remain green",
-                "",
-            ]
-        )
-        return lines
-
-    findings = deep.get("top_findings")
-    if not isinstance(findings, list) or not findings:
-        return []
-
-    lines = [
-        "## Security Findings (Semgrep)",
-        "",
-        f"- Findings: {deep.get('findings_count', 0)}",
-        f"- Highest severity: {deep.get('highest_severity') or 'none'}",
-        f"- Severity summary: {format_severity_summary_dict(deep.get('severity_summary'))}",
-        f"- Affected files: {format_inline_code_list(deep.get('affected_files'))}",
-        "",
-    ]
-    for finding in findings:
-        if not isinstance(finding, dict):
-            continue
-        lines.append(
-            "- "
-            f"`{format_finding_location(finding)}` "
-            f"{finding.get('severity', 'UNKNOWN')} "
-            f"{finding.get('rule_id', 'unknown')} - "
-            f"{finding.get('message', '')}"
-        )
-    lines.extend(
-        [
-            "",
-            "Repair these findings without weakening fast checks, tests, or documented behavior.",
-            "",
-        ]
-    )
-    return lines
-
-
-def evidence_tail(failure: FailureContext) -> str:
-    """Combine stdout and stderr tail for markdown evidence."""
-    parts = []
-    if failure.stdout_tail:
-        parts.append(failure.stdout_tail.rstrip())
-    if failure.stderr_tail:
-        parts.append(failure.stderr_tail.rstrip())
-    return "\n".join(parts) if parts else "No stdout or stderr tail captured."
-
-
-def write_repair_artifacts(packet: RepairPacket, output_dir: Path) -> tuple[Path, Path]:
+def _write_repair_artifacts_impl(
+    packet: RepairPacket, output_dir: Path
+) -> tuple[Path, Path]:
     """Write packet.json and prompt.md artifacts."""
     output_dir.mkdir(parents=True, exist_ok=True)
     packet_path = output_dir / "packet.json"
@@ -406,116 +293,6 @@ def write_repair_artifacts(packet: RepairPacket, output_dir: Path) -> tuple[Path
     return packet_path, prompt_path
 
 
-def repair_packet_json(packet: RepairPacket) -> str:
+def _repair_packet_json_impl(packet: RepairPacket) -> str:
     """Render a repair packet as JSON for stdout."""
     return json.dumps(packet.to_dict(), indent=2, sort_keys=True) + "\n"
-
-
-def format_command(command: list[str]) -> str:
-    """Render a subprocess command for human-readable markdown."""
-    return " ".join(command)
-
-
-def format_list(value: object) -> str:
-    """Render a compact list for human-readable prompts."""
-    if not isinstance(value, list) or not value:
-        return "none"
-    return ", ".join(str(item) for item in value)
-
-
-def format_inline_code_list(value: object) -> str:
-    """Render a list of strings as inline-code Markdown."""
-    if not isinstance(value, list) or not value:
-        return "none"
-    return ", ".join(f"`{item}`" for item in value)
-
-
-def format_severity_summary_dict(value: object) -> str:
-    """Render a serialized severity summary."""
-    if not isinstance(value, dict):
-        return "none"
-    return format_severity_summary({str(key): int(item) for key, item in value.items()})
-
-
-def suggested_fix_order(
-    failures: list[FailureContext], deep: DeepContext | None
-) -> list[str]:
-    """Return deterministic repair order including deep findings."""
-    order = [failure.id for failure in failures]
-    if has_blocking_deep_findings(deep) and "sg_scan" not in order:
-        order.append("sg_scan")
-    return order
-
-
-def done_when_items(repair_needed: bool, deep: DeepContext | None) -> list[str]:
-    """Return completion criteria with deep context when relevant."""
-    if not repair_needed:
-        return PASSING_DONE_WHEN
-    items = list(DEFAULT_DONE_WHEN)
-    if has_blocking_deep_findings(deep):
-        items.append("qa-z deep exits with code 0")
-        items.append("No blocking deep findings remain")
-    return items
-
-
-def has_blocking_deep_findings(deep: DeepContext | None) -> bool:
-    """Return whether deep context contains blocking findings."""
-    return bool(deep is not None and deep.blocking_findings_count > 0)
-
-
-def blocking_grouped_findings(deep: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return grouped findings whose severities are configured as blocking."""
-    grouped = deep.get("top_grouped_findings")
-    if not isinstance(grouped, list):
-        return []
-    blocking = blocking_severities(deep)
-    return [
-        finding
-        for finding in grouped
-        if isinstance(finding, dict)
-        and str(finding.get("severity", "")).upper() in blocking
-    ]
-
-
-def blocking_severities(deep: dict[str, Any]) -> set[str]:
-    """Return blocking severities from deep policy metadata."""
-    policy = deep.get("policy")
-    if not isinstance(policy, dict):
-        return {"ERROR"}
-    severities = policy.get("fail_on_severity")
-    if not isinstance(severities, list):
-        return {"ERROR"}
-    normalized = {str(item).upper() for item in severities if str(item).strip()}
-    return normalized or {"ERROR"}
-
-
-def format_grouped_finding(finding: dict[str, Any]) -> str:
-    """Render one grouped finding in repair-prompt style."""
-    count = int(finding.get("count") or 1)
-    occurrence = "occurrence" if count == 1 else "occurrences"
-    path = str(finding.get("path") or "unknown")
-    line = finding.get("representative_line")
-    location = f"{path}:{line}" if line else path
-    return (
-        "- "
-        f"`{finding.get('rule_id', 'unknown')}` in `{location}` "
-        f"({count} {occurrence}) - {finding.get('message', '')}"
-    )
-
-
-def unique_preserve_order(items: list[str]) -> list[str]:
-    """Return unique non-empty items in first-seen order."""
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        normalized = item.strip()
-        key = normalized.rstrip(".")
-        if normalized and key not in seen:
-            seen.add(key)
-            result.append(normalized)
-    return result
-
-
-def utc_now() -> str:
-    """Return an ISO-like UTC timestamp."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

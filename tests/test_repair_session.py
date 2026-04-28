@@ -664,9 +664,10 @@ def test_repair_session_verify_existing_candidate_writes_outcome(
         "Dry-run operator summary: A completed executor attempt is still blocked "
         "by verification evidence." in outcome
     )
+    assert "Dry-run recommended actions:" in outcome
     assert (
-        "Dry-run recommended actions: Review verify/summary.json and repair "
-        "remaining or regressed blockers before accepting completion." in outcome
+        "Action `resolve_verification_blockers`: Review verify/summary.json and "
+        "repair remaining or regressed blockers before accepting completion." in outcome
     )
 
 
@@ -777,9 +778,10 @@ def test_repair_session_verify_synthesizes_dry_run_from_history_when_missing(
     assert "Dry-run source: `history_fallback`" in outcome
     assert "Dry-run attempts: `2`" in outcome
     assert "Dry-run history signals: `repeated_partial_attempts`" in outcome
+    assert "Dry-run recommended actions:" in outcome
     assert (
-        "Dry-run recommended actions: Review unresolved repair targets across "
-        "repeated partial attempts before retrying." in outcome
+        "Action `inspect_partial_attempts`: Review unresolved repair targets "
+        "across repeated partial attempts before retrying." in outcome
     )
 
 

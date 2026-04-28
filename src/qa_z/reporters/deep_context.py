@@ -2,24 +2,54 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
 from qa_z.artifacts import ArtifactLoadError, RunSource, load_run_summary
+from qa_z.reporters.deep_context_findings import (
+    coerce_count,
+    normalize_finding,
+    normalize_grouped_finding,
+    unique_preserve_order,
+)
+from qa_z.reporters.deep_context_formatting import (
+    format_finding_location,
+    format_severity_summary,
+)
+from qa_z.reporters.deep_context_loading import (
+    build_deep_context,
+    load_sibling_deep_summary,
+)
+from qa_z.reporters.deep_context_summary import (
+    aggregate_filter_reasons,
+    aggregate_severities,
+    highest_severity,
+    infer_blocking_count,
+    primary_policy,
+    severity_sort_key,
+)
 from qa_z.runners.models import CheckResult, RunSummary
 
-SEVERITY_ORDER = {
-    "CRITICAL": 0,
-    "HIGH": 1,
-    "ERROR": 2,
-    "MEDIUM": 3,
-    "WARNING": 4,
-    "LOW": 5,
-    "INFO": 6,
-    "UNKNOWN": 7,
-}
 TOP_FINDINGS_LIMIT = 5
+
+__all__ = [
+    "DeepContext",
+    "TOP_FINDINGS_LIMIT",
+    "aggregate_filter_reasons",
+    "aggregate_severities",
+    "build_deep_context",
+    "coerce_count",
+    "format_finding_location",
+    "format_severity_summary",
+    "highest_severity",
+    "infer_blocking_count",
+    "load_sibling_deep_summary",
+    "normalize_finding",
+    "normalize_grouped_finding",
+    "primary_policy",
+    "severity_sort_key",
+    "unique_preserve_order",
+]
 
 
 @dataclass(frozen=True)
@@ -86,7 +116,7 @@ class DeepContext:
         }
 
 
-def load_sibling_deep_summary(run_source: RunSource) -> RunSummary | None:
+def _load_sibling_deep_summary_impl(run_source: RunSource) -> RunSummary | None:
     """Load ``deep/summary.json`` beside a fast run when it exists."""
     summary_path = run_source.run_dir / "deep" / "summary.json"
     if not summary_path.is_file():
@@ -97,7 +127,7 @@ def load_sibling_deep_summary(run_source: RunSource) -> RunSummary | None:
     return summary
 
 
-def build_deep_context(summary: RunSummary | None) -> DeepContext | None:
+def _build_deep_context_impl(summary: RunSummary | None) -> DeepContext | None:
     """Build a compact deep context, returning ``None`` when no deep run exists."""
     if summary is None:
         return None
@@ -156,88 +186,7 @@ def build_deep_context(summary: RunSummary | None) -> DeepContext | None:
     )
 
 
-def aggregate_severities(
-    checks: list[CheckResult], findings: list[dict[str, Any]]
-) -> dict[str, int]:
-    """Aggregate check severity summaries, falling back to finding data."""
-    counts: Counter[str] = Counter()
-    for check in checks:
-        counts.update(
-            {str(key): int(value) for key, value in check.severity_summary.items()}
-        )
-    if not counts:
-        counts.update(str(finding.get("severity") or "UNKNOWN") for finding in findings)
-    return dict(sorted(counts.items(), key=lambda item: severity_sort_key(item[0])))
-
-
-def normalize_finding(finding: dict[str, Any]) -> dict[str, Any]:
-    """Return a stable finding mapping for renderer consumption."""
-    return {
-        "rule_id": str(finding.get("rule_id") or "unknown"),
-        "severity": str(finding.get("severity") or "UNKNOWN"),
-        "path": str(finding.get("path") or ""),
-        "line": finding.get("line"),
-        "message": str(finding.get("message") or ""),
-    }
-
-
-def normalize_grouped_finding(finding: dict[str, Any]) -> dict[str, Any]:
-    """Return a stable grouped finding mapping for renderer consumption."""
-    return {
-        "rule_id": str(finding.get("rule_id") or "unknown"),
-        "severity": str(finding.get("severity") or "UNKNOWN"),
-        "path": str(finding.get("path") or ""),
-        "count": coerce_count(finding.get("count")),
-        "representative_line": finding.get("representative_line"),
-        "message": str(finding.get("message") or ""),
-    }
-
-
-def aggregate_filter_reasons(checks: list[CheckResult]) -> dict[str, int]:
-    """Aggregate per-check Semgrep filter reasons."""
-    counts: Counter[str] = Counter()
-    for check in checks:
-        counts.update(
-            {str(key): int(value) for key, value in check.filter_reasons.items()}
-        )
-    return dict(sorted(counts.items()))
-
-
-def infer_blocking_count(check: CheckResult) -> int:
-    """Return persisted blocking count, with legacy artifact fallback."""
-    if check.blocking_findings_count is not None:
-        return check.blocking_findings_count
-    if check.status == "failed":
-        if check.findings:
-            return len(check.findings)
-        return check.findings_count or 0
-    return 0
-
-
-def primary_policy(
-    summary: RunSummary, primary_check: CheckResult | None
-) -> dict[str, Any]:
-    """Return the primary Semgrep policy from check or summary metadata."""
-    if primary_check and primary_check.policy:
-        return dict(primary_check.policy)
-    return dict(summary.policy)
-
-
-def highest_severity(severity_summary: dict[str, int]) -> str | None:
-    """Return the highest severity present in the summary."""
-    present = [severity for severity, count in severity_summary.items() if count > 0]
-    if not present:
-        return None
-    return sorted(present, key=severity_sort_key)[0]
-
-
-def severity_sort_key(severity: str) -> tuple[int, str]:
-    """Sort known severities from highest to lowest risk."""
-    normalized = severity.upper()
-    return (SEVERITY_ORDER.get(normalized, len(SEVERITY_ORDER)), normalized)
-
-
-def format_severity_summary(severity_summary: dict[str, int]) -> str:
+def _format_severity_summary_impl(severity_summary: dict[str, int]) -> str:
     """Render severity counts in a compact deterministic order."""
     if not severity_summary:
         return "none"
@@ -246,28 +195,8 @@ def format_severity_summary(severity_summary: dict[str, int]) -> str:
     )
 
 
-def format_finding_location(finding: dict[str, Any]) -> str:
+def _format_finding_location_impl(finding: dict[str, Any]) -> str:
     """Render ``path`` or ``path:line`` for a finding."""
     path = str(finding.get("path") or "unknown")
     line = finding.get("line", finding.get("representative_line"))
     return f"{path}:{line}" if line else path
-
-
-def coerce_count(value: Any) -> int:
-    """Return a positive occurrence count for grouped findings."""
-    try:
-        count = int(value)
-    except (TypeError, ValueError):
-        return 1
-    return count if count > 0 else 1
-
-
-def unique_preserve_order(items: list[str]) -> list[str]:
-    """Return unique strings in first-seen order."""
-    seen: set[str] = set()
-    result: list[str] = []
-    for item in items:
-        if item and item not in seen:
-            seen.add(item)
-            result.append(item)
-    return result
