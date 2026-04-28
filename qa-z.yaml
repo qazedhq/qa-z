@@ -73,7 +73,8 @@ deep:
         config: "auto"
         fail_on_severity:
           - ERROR
-        ignore_rules: []
+        ignore_rules:
+          - python.lang.compatibility.python37.python37-compatibility-importlib2
 
 checks:
   selection:

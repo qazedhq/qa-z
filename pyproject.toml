@@ -39,5 +39,11 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+qa_z = ["templates/*.md"]
+
+[tool.ruff]
+cache-dir = "~/AppData/Local/Temp/qa-z-ruff-cache"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

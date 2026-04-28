@@ -62,11 +62,42 @@ def find_latest_contract(root: Path, config: dict[str, Any]) -> Path:
     """Find the newest contract in the configured output directory."""
     output_dir = contract_output_dir(root, config)
     candidates = sorted(
-        output_dir.glob("*.md"), key=lambda path: path.stat().st_mtime, reverse=True
+        (path for path in output_dir.glob("*.md") if is_contract_file(path)),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
     )
     if not candidates:
-        raise ArtifactSourceNotFound(f"No contract files found in {output_dir}")
+        raise ArtifactSourceNotFound(
+            f"No QA contract files found in {output_dir}. "
+            "Run `qa-z plan --title ...` first, or pass --contract PATH."
+        )
     return candidates[0]
+
+
+def is_contract_file(path: Path) -> bool:
+    """Return whether a markdown file is a generated or curated QA contract."""
+    if path.name.lower() == "readme.md":
+        return False
+    try:
+        return has_contract_marker(path.read_text(encoding="utf-8"))
+    except OSError:
+        return False
+
+
+def has_contract_marker(markdown: str) -> bool:
+    """Return whether markdown carries an explicit QA contract marker."""
+    metadata, body = split_front_matter(markdown)
+    if metadata.get("qa_z_contract_version"):
+        return True
+    title = first_metadata_string(metadata, "title")
+    if title and title.startswith("QA Contract:"):
+        return True
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        return stripped.startswith("# QA Contract:")
+    return False
 
 
 def resolve_run_source(

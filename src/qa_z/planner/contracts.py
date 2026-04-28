@@ -146,8 +146,14 @@ def collect_checks(config: dict) -> tuple[list[str], list[str]]:
         else get_nested(config, "checks", "fast", default=[])
     )
     fast = normalize_check_names(list(fast_source or []))
-    deep = list(get_nested(config, "checks", "deep", default=[]) or [])
-    return fast, [str(item) for item in deep]
+    explicit_deep = get_nested(config, "deep", "checks", default=None)
+    deep_source = (
+        explicit_deep
+        if explicit_deep is not None
+        else get_nested(config, "checks", "deep", default=[])
+    )
+    deep = normalize_check_names(list(deep_source or []))
+    return fast, deep
 
 
 def normalize_check_names(items: Iterable[object]) -> list[str]:
