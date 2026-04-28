@@ -20,11 +20,114 @@ commit would be broken. The corrected order is foundation first, benchmark secon
   unless the commit explicitly says it is freezing benchmark evidence.
 - Keep fixture-local `.qa-z` summaries under `benchmarks/fixtures/**/repo/.qa-z/**`
   when they are benchmark inputs.
-- Use `git add -p` for `src/qa_z/cli.py`, `README.md`,
-  `docs/artifact-schema-v1.md`, and `docs/mvp-issues.md`; those files span multiple
-  feature surfaces.
+- Use `git add -p` for `src/qa_z/cli.py`,
+  `src/qa_z/commands/command_registration.py`,
+  `src/qa_z/commands/command_registry.py`,
+  `src/qa_z/commands/execution.py`, `src/qa_z/commands/runtime.py`,
+  `tests/test_command_registry_architecture.py`,
+  `tests/test_execution_commands.py`, `tests/test_runtime_commands.py`,
+  `README.md`, `docs/artifact-schema-v1.md`, and continuity report files under
+  `docs/reports/`; those paths span multiple feature surfaces.
 - Run targeted tests for each commit, then run the full validation checklist before
   tagging.
+
+Before staging, run the deterministic dirty-path grouping helper:
+
+```bash
+python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json
+```
+
+The helper reads `git status --short --untracked-files=all`, reports per-batch
+changed paths, and keeps `generated_artifact_paths`,
+`generated_local_only_paths`, `generated_local_by_default_paths`,
+`cross_cutting_paths`, `shared_patch_add_paths`, `cross_cutting_groups`, report
+paths, and `unassigned_source_paths` visible so source batches are not mixed
+with generated release evidence by accident.
+Its summary now also records `generated_local_only_count` and
+`generated_local_by_default_count` plus `cross_cutting_group_count`, so the
+same helper artifact separates stage-never runtime output from
+local-by-default benchmark evidence and shared patch-add review groups that
+still need an intentional freeze-or-drop or patch-add decision.
+Known overlap paths now resolve more deterministically as well: executor fixture
+trees are owned by the executor-return batch, verification/reporter seams fall
+under the verification-and-publish batch, and only genuinely unmapped source
+surfaces should continue to appear as `unassigned_source_paths`.
+CLI, command-registry, live-repository, and report/runtime seams now also share
+their own planning-and-runtime foundation batch, so those core local planning
+surfaces can be staged together instead of leaking into the generic unassigned
+bucket.
+The alpha release closure batch now also absorbs artifact-smoke and
+bundle-manifest helpers, keeping those release-proof support surfaces aligned
+with the gate and preflight changes they validate.
+A dedicated deep-runner foundation batch now owns the split `deep.py`,
+`deep_policy.py`, `deep_runtime.py`, and `semgrep.py` surfaces plus their
+direct architecture tests, while `src/qa_z/runners/models.py` remains
+intentionally outside that batch because it is still a shared runner model
+spine across fast, deep, verification, and reporting paths.
+That shared spine now has its own `runner_contract_spine` batch so
+`src/qa_z/runners/models.py` and its direct contract tests can move together
+without being mislabeled as deep-only work, while `tests/test_fast_gate_environment.py`
+rides with the planning/runtime foundation batch because it guards repo-level
+pytest and mypy collection rather than runner behavior itself.
+The remaining shared subprocess/tooling surfaces now also resolve more
+deterministically: the current Ruff/tool-cache `pyproject.toml` delta plus
+`src/qa_z/subprocess_env.py` ride with the planning/runtime foundation batch,
+`src/qa_z/runners/subprocess.py` rides with the shared runner contract spine,
+and `tests/test_release_script_environment.py` rides with the alpha release
+closure batch because it guards the release/preflight/cleanup script lane.
+If a future `pyproject.toml` change is purely release-version metadata, still
+patch-add only the relevant hunks with the release-closure slice instead of
+blindly staging the whole file.
+For the stricter final staging audit, rerun it with
+`--include-ignored --fail-on-generated` so ignored generated evidence becomes an
+explicit `attention_required` reason instead of only an advisory count.
+The strict helper output now also prints `Generated policy:` plus local-only
+and local-by-default previews, which makes the remaining dirty generated roots
+actionable without reopening the full JSON.
+When you need to carry that strict audit forward as a local artifact, use
+`--output .qa-z/tmp/worktree-commit-plan.json`; the helper now writes the JSON
+payload before returning its non-zero `attention_required` exit code, so the
+saved evidence survives even when generated artifacts still need review.
+For long autonomy or release loops, add `--summary-only --json` when the next
+operator only needs compact evidence. That payload omits full per-file `batches`
+details while keeping `summary`, `attention_reasons`, `changed_batches`,
+generated-path previews, `cross_cutting_paths`, `shared_patch_add_paths`,
+`cross_cutting_groups`, and repository context.
+Group payloads in summary-only output keep path previews and use
+`paths_truncated_count` for oversized review groups instead of carrying full
+patch-command arrays.
+Current compact strict snapshot on `2026-04-24` is still
+`attention_required`, but now only because cross-cutting patch-add ownership is
+still required: `generated_artifact_count=0`, `generated_local_only_count=0`,
+`generated_local_by_default_count=0`, `cross_cutting_count=12`,
+`shared_patch_add_count=16`, `unassigned_source_path_count=0`, and
+`multi_batch_path_count=0`. The companion include-ignored policy snapshot keeps
+ignored generated output visible with `generated_artifact_count=17`,
+`generated_local_only_count=10`, and `generated_local_by_default_count=7`.
+`python scripts/runtime_artifact_cleanup.py` now mirrors that same split by
+deriving cleanup candidates from the strict helper's generated-policy buckets:
+apply mode clears all discovered local-only runtime roots, while benchmark roots
+stay review-only local-by-default evidence until an operator decides whether to
+keep them local or freeze them intentionally. The latest live cleanup
+application deleted `13` local-only roots, left `7` local-by-default benchmark
+roots in `review_local_by_default`, and reported `skipped_tracked=0`.
+The L24 helper refresh also closed two commit-safety gaps in the batch output:
+the runtime no longer trusts collapsed untracked directories, and the shared
+command spine now stays patch-add only. The current non-strict helper refresh
+shows `478` default porcelain entries versus `517` fully expanded changed
+paths, `cross_cutting_count=12`, and `shared_patch_add_count=16`. Those
+shared patch-add paths now include `src/qa_z/cli.py`,
+`src/qa_z/commands/command_registration.py`,
+`src/qa_z/commands/command_registry.py`, `src/qa_z/commands/execution.py`,
+`src/qa_z/commands/runtime.py`, `tests/test_command_registry_architecture.py`,
+`tests/test_execution_commands.py`, `tests/test_runtime_commands.py`, and the
+four continuity reports. Do not stage those shared command/runtime surfaces
+wholesale with `planning_runtime_foundation`; patch-add only the owning hunks.
+Those shared paths now roll up into `cross_cutting_groups`, including
+`public_docs_contract`, `command_router_spine`, `current_truth_guards`,
+`command_surface_tests`, and `status_reports`, so an operator can patch-add by
+review surface with a scoped `git add --patch` command instead of treating every
+cross-cutting path as one flat list.
 
 ## Preflight
 
@@ -359,8 +462,14 @@ Include:
 - `src/qa_z/reporters/github_summary.py`
 - CLI hunks for `repair-session` and `github-summary`
 - `tests/test_repair_session.py`
-- `tests/test_verification_publish.py`
-- `tests/test_github_summary.py`
+- `tests/test_verification_publish_summary.py`
+- `tests/test_verification_publish_session.py`
+- `tests/test_verification_publish_architecture.py`
+- `tests/test_verification_publish_helper_architecture.py`
+- `tests/test_github_summary_render.py`
+- `tests/test_github_summary_session.py`
+- `tests/test_github_summary_deep.py`
+- `tests/test_github_summary_architecture.py`
 - `tests/test_github_workflow.py`
 - relevant hunks from `tests/test_artifact_schema.py` and `tests/test_cli.py`
 - `docs/repair-sessions.md`
@@ -374,7 +483,7 @@ Validation:
 python -m ruff format --check .
 python -m ruff check .
 python -m mypy src tests
-python -m pytest tests/test_repair_session.py tests/test_verification_publish.py tests/test_github_summary.py tests/test_github_workflow.py -q
+python -m pytest tests/test_repair_session.py tests/test_verification_publish_summary.py tests/test_verification_publish_session.py tests/test_verification_publish_architecture.py tests/test_verification_publish_helper_architecture.py tests/test_github_summary_render.py tests/test_github_summary_session.py tests/test_github_summary_deep.py tests/test_github_summary_architecture.py tests/test_github_workflow.py -q
 ```
 
 ## Commit 6: Executor Bridge
@@ -497,13 +606,13 @@ batches.
 
 The latest full local gate pass for this accumulated alpha baseline is:
 
-- `python -m pytest`: 386 passed
-- `python -m qa_z benchmark --json`: 50/50 fixtures, overall_rate 1.0
+- `python -m pytest`: 1158 passed
+- `python -m qa_z benchmark --json`: 54/54 fixtures, overall_rate 1.0
 - `python -m build --sdist --wheel`: passed, built `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`
 - `python scripts/alpha_release_artifact_smoke.py --json`: passed, wheel and sdist metadata install smoke
 - `python -m ruff check .`: pass
-- `python -m ruff format --check .`: 134 files already formatted
-- `python -m mypy src tests`: success across 86 source files
+- `python -m ruff format --check .`: 1014 files already formatted
+- `python -m mypy src tests`: success across 498 source files
 
 Human planning surfaces now keep this snapshot as the primary compact
 commit-isolation evidence and append an `action basis:` suffix when area-bearing
@@ -569,3 +678,4 @@ Use `v0.9.8-alpha` for the current release candidate now that the baseline inclu
 self-improvement, autonomy, executor bridge packaging, executor-result ingest, and
 the live-free safety dry-run. Use `v0.10.0-alpha` only if the team wants a larger
 reset point.
+

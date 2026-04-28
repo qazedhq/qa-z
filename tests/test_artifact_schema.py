@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from qa_z.benchmark import BenchmarkFixtureResult, build_benchmark_summary
+from qa_z.reporters.run_summary import render_summary_markdown
 from qa_z.reporters.repair_prompt import FailureContext, RepairPacket
 from qa_z.executor_result import (
     ExecutorChangedFile,
@@ -18,6 +19,7 @@ from qa_z.executor_safety import EXECUTOR_SAFETY_RULE_IDS, executor_safety_packa
 from qa_z.repair_session import RepairSession
 from qa_z.diffing.models import ChangedFile
 from qa_z.runners.models import CheckResult, RunSummary, SelectionSummary
+from tests.runtime_artifact_cleanup_test_support import load_cleanup_module
 
 
 def test_run_summary_schema_v1_required_fields_are_stable() -> None:
@@ -70,6 +72,48 @@ def test_run_summary_schema_v1_required_fields_are_stable() -> None:
         "stderr_tail",
     } <= payload["checks"][0].keys()
     assert RunSummary.from_dict(payload).schema_version == 1
+
+
+def test_runtime_artifact_cleanup_schema_v1_required_fields_are_stable(
+    tmp_path: Path,
+) -> None:
+    module = load_cleanup_module()
+    (tmp_path / ".qa-z" / "runs").mkdir(parents=True)
+
+    def runner(command, _cwd):
+        if tuple(command) == (
+            "git",
+            "status",
+            "--short",
+            "--ignored",
+            "--untracked-files=all",
+        ):
+            return (0, "?? .qa-z/runs/summary.json\n", "")
+        return (0, "", "")
+
+    payload = module.collect_cleanup_plan(tmp_path, runner=runner)
+    candidate = payload["candidates"][0]
+
+    assert payload["kind"] == "qa_z.runtime_artifact_cleanup"
+    assert payload["schema_version"] == 1
+    assert {
+        "kind",
+        "schema_version",
+        "generated_at",
+        "repo_root",
+        "mode",
+        "candidates",
+        "counts",
+    } <= payload.keys()
+    assert {
+        "path",
+        "kind",
+        "policy_bucket",
+        "status",
+        "reason",
+        "tracked_paths",
+    } <= candidate.keys()
+    assert candidate["reason"]
 
 
 def test_run_summary_schema_v2_selection_fields_are_persisted() -> None:
@@ -125,6 +169,64 @@ def test_run_summary_schema_v2_selection_fields_are_persisted() -> None:
     assert loaded.checks[0].target_paths == ["src/qa_z/cli.py"]
 
 
+def test_run_summary_schema_v2_diagnostics_are_persisted() -> None:
+    summary = RunSummary(
+        mode="deep",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="passed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        diagnostics={
+            "scan_quality": {
+                "status": "warning",
+                "warning_count": 1,
+                "warning_types": ["Fixpoint timeout"],
+                "warning_paths": ["src/app.py"],
+                "check_ids": ["sg_scan"],
+            }
+        },
+        checks=[],
+    )
+
+    payload = summary.to_dict()
+    loaded = RunSummary.from_dict(payload)
+
+    assert payload["diagnostics"]["scan_quality"]["status"] == "warning"
+    assert payload["diagnostics"]["scan_quality"]["warning_count"] == 1
+    assert loaded.diagnostics["scan_quality"]["warning_types"] == ["Fixpoint timeout"]
+
+
+def test_run_summary_markdown_tolerates_malformed_diagnostics() -> None:
+    summary = RunSummary(
+        mode="deep",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="passed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        diagnostics={
+            "scan_quality": {
+                "status": "warning",
+                "warning_count": "many",
+                "warning_types": ["Fixpoint timeout", None],
+                "warning_paths": "src/app.py",
+                "check_ids": ["sg_scan"],
+            }
+        },
+        checks=[],
+    )
+
+    markdown = render_summary_markdown(summary)
+
+    assert "- Scan quality: warning (0 warnings)" in markdown
+    assert "- Warning types: Fixpoint timeout" in markdown
+    assert "- Warning paths: none" in markdown
+    assert "- Warning checks: sg_scan" in markdown
+
+
 def test_run_summary_loads_v1_without_schema_version_or_selection() -> None:
     loaded = RunSummary.from_dict(
         {
@@ -140,6 +242,7 @@ def test_run_summary_loads_v1_without_schema_version_or_selection() -> None:
 
     assert loaded.schema_version == 1
     assert loaded.selection is None
+    assert loaded.diagnostics == {}
 
 
 def test_repair_packet_schema_v1_required_fields_are_stable() -> None:
@@ -298,6 +401,34 @@ def test_benchmark_summary_schema_v1_snapshot_field_is_stable() -> None:
         "fixtures",
     } <= summary.keys()
     assert summary["snapshot"] == "1/2 fixtures, overall_rate 0.5"
+
+
+def test_worktree_commit_plan_schema_is_documented() -> None:
+    schema = (
+        Path(__file__).resolve().parents[1] / "docs" / "artifact-schema-v1.md"
+    ).read_text(encoding="utf-8")
+
+    assert "`kind`: `qa_z.worktree_commit_plan`" in schema
+    assert "`summary`" in schema
+    assert "`validation_commands`" in schema
+    assert "`generated_artifact_paths`" in schema
+    assert "`generated_local_only_paths`" in schema
+    assert "`generated_local_by_default_paths`" in schema
+    assert "`unassigned_source_paths`" in schema
+
+
+def test_alpha_release_preflight_generated_policy_split_is_documented() -> None:
+    schema = (
+        Path(__file__).resolve().parents[1] / "docs" / "artifact-schema-v1.md"
+    ).read_text(encoding="utf-8")
+
+    assert "`tracked_generated_artifact_count`" in schema
+    assert "`generated_local_only_tracked_count`" in schema
+    assert "`generated_local_by_default_tracked_count`" in schema
+    assert "`generated_local_only_tracked_paths`" in schema
+    assert "`generated_local_by_default_tracked_paths`" in schema
+    assert "local-only runtime artifacts" in schema
+    assert "local-by-default benchmark evidence" in schema
 
 
 def test_executor_safety_package_schema_v1_required_fields_are_stable() -> None:

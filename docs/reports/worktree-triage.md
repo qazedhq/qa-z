@@ -21,6 +21,48 @@ packaging, docs, schema, tests, examples, and generated benchmark output.
 
 This pass did not delete or commit any existing work.
 
+## 2026-04-23 Helper Refresh Addendum
+
+The summary counts above are the original 2026-04-15 triage snapshot, not the
+latest helper runtime. The current worktree commit-plan helper now asks Git for
+`--untracked-files=all`, because the default short status still collapses
+untracked directories and is no longer safe enough for batch staging guidance.
+
+Current helper evidence on `2026-04-23` after the L25 cleanup alignment:
+
+- `git status --short`: `478` entries
+- `git status --short --untracked-files=all`: `517` entries
+- `.qa-z/tmp/worktree-commit-plan-l24-postfix.json`: `changed_path_count=517`,
+  `cross_cutting_count=12`, `shared_patch_add_count=16`,
+  `unassigned_source_path_count=0`, `multi_batch_path_count=0`
+- latest no-output strict helper refresh: `generated_artifact_count=5`,
+  `generated_local_only_count=0`, `generated_local_by_default_count=5`,
+  `unassigned_source_path_count=0`, `multi_batch_path_count=0`
+
+The main staging risk is no longer unknown ownership. It is shared command
+spine staging. Treat these as patch-add only:
+
+- `src/qa_z/cli.py`
+- `src/qa_z/commands/command_registration.py`
+- `src/qa_z/commands/command_registry.py`
+- `src/qa_z/commands/execution.py`
+- `src/qa_z/commands/runtime.py`
+- `tests/test_command_registry_architecture.py`
+- `tests/test_execution_commands.py`
+- `tests/test_runtime_commands.py`
+- the continuity report files under `docs/reports/`
+
+The refreshed helper also narrowed `planning_runtime_foundation` to its owned
+surfaces, so planning/runtime command wrappers now route to their feature
+batches instead of leaking into the generic foundation slice.
+
+The L25 runtime cleanup pass closed the remaining cleanup/tooling mismatch:
+`scripts/runtime_artifact_cleanup.py` now discovers candidates from the same
+generated-policy buckets as the strict helper, so the post-gate apply mode
+deleted the `17` local-only roots that the alpha gate recreated while preserving the five
+local-by-default benchmark evidence roots for explicit keep-local or
+freeze-evidence review.
+
 ## Category Counts
 
 Tracked modified files:
@@ -57,7 +99,7 @@ Ignored generated/local state observed outside Git:
 | `benchmark/README.md` | Docs | Legacy benchmark docs | Review during docs sync |
 | `docs/artifact-schema-v1.md` | Schema docs | P3-P6 artifact surface | Keep with schema sync, or split with owning feature if easy |
 | `docs/mvp-issues.md` | Roadmap/status docs | Alpha status through v0.9.2 | Keep as roadmap/status sync |
-| `pyproject.toml` | Config / tooling | Test discovery | Keep with test/tooling commit or docs sync |
+| `pyproject.toml` | Config / tooling | Ruff cache/tooling hardening | Keep with planning/runtime foundation for the current tooling delta; patch-add only the relevant hunks if a future release-version change shares the file |
 | `qa-z.yaml.example` | Config surface | Fast/deep/TypeScript/Semgrep config | Keep with config surface changes |
 | `src/qa_z/adapters/claude/__init__.py` | Core adapter | Repair handoff adapter export | Keep with repair handoff batch |
 | `src/qa_z/adapters/codex/__init__.py` | Core adapter | Repair handoff adapter export | Keep with repair handoff batch |
@@ -70,7 +112,7 @@ Ignored generated/local state observed outside Git:
 | `src/qa_z/reporters/run_summary.py` | Core reporter | Run summary output | Keep with runner foundation |
 | `src/qa_z/runners/fast.py` | Core runner | Smart selection/check execution | Keep with runner foundation |
 | `src/qa_z/runners/models.py` | Core models | v2 run/check/selection models | Keep with runner foundation |
-| `src/qa_z/runners/subprocess.py` | Core runner | Subprocess output preservation | Keep with runner foundation |
+| `src/qa_z/runners/subprocess.py` | Core runner | Shared subprocess environment hookup | Keep with runner contract spine / subprocess hardening |
 | `templates/.github/workflows/vibeqa.yml` | Config / workflow template | CI QA-Z workflow | Keep with workflow/docs sync |
 | `tests/test_artifact_schema.py` | Tests | Schema coverage | Keep with schema/docs batch |
 | `tests/test_cli.py` | Tests | CLI behavior | Split by command group where practical |
@@ -94,6 +136,7 @@ Ignored generated/local state observed outside Git:
 | `src/qa_z/reporters/deep_context.py` | Deep reporter context | Keep with runner/repair reporter batch |
 | `src/qa_z/reporters/github_summary.py` | GitHub summary | Keep with publish/session batch |
 | `src/qa_z/reporters/sarif.py` | SARIF | Keep with deep/SARIF batch |
+| `src/qa_z/subprocess_env.py` | Shared tooling helper | Keep with planning/runtime foundation |
 | `src/qa_z/reporters/verification_publish.py` | Verification publish | Keep with verification/session batch |
 | `src/qa_z/runners/checks.py` | Runner foundation | Keep with runner foundation |
 | `src/qa_z/runners/deep.py` | Deep runner | Keep with deep runner batch |
@@ -117,18 +160,26 @@ Ignored generated/local state observed outside Git:
 | `tests/test_diffing.py` | Runner foundation | Keep with runner foundation |
 | `tests/test_executor_bridge.py` | P6-C executor bridge | Keep with executor bridge batch |
 | `tests/test_fast_config.py` | Fast/TypeScript config | Keep with runner foundation |
+| `tests/test_fast_gate_environment.py` | Local tooling / gate environment | Keep with planning/runtime foundation |
 | `tests/test_fast_selection.py` | Fast smart selection | Keep with runner foundation |
-| `tests/test_github_summary.py` | GitHub summary | Keep with publish/session batch |
+| `tests/test_github_summary_render.py` | GitHub summary render split | Keep with publish/session batch |
+| `tests/test_github_summary_session.py` | GitHub summary session split | Keep with publish/session batch |
+| `tests/test_github_summary_deep.py` | GitHub summary deep split | Keep with publish/session batch |
+| `tests/test_github_summary_architecture.py` | GitHub summary architecture guard | Keep with publish/session batch |
 | `tests/test_github_workflow.py` | Workflow template | Keep with workflow/docs sync |
 | `tests/test_plan_titles.py` | Planner contracts | Keep with runner foundation |
 | `tests/test_repair_handoff.py` | Repair handoff | Keep with repair handoff batch |
+| `tests/test_release_script_environment.py` | Release/preflight/cleanup subprocess environment | Keep with alpha release closure batch |
 | `tests/test_repair_session.py` | Repair session | Keep with repair session batch |
 | `tests/test_sarif_cli.py` | SARIF/deep CLI | Keep with deep/SARIF batch |
 | `tests/test_sarif_reporter.py` | SARIF reporter | Keep with deep/SARIF batch |
 | `tests/test_self_improvement.py` | P6-A self-improvement | Keep with self-improvement batch |
 | `tests/test_semgrep_normalization.py` | Semgrep normalization | Keep with deep runner batch |
 | `tests/test_verification.py` | Verification | Keep with verification batch |
-| `tests/test_verification_publish.py` | Verification publish | Keep with publish/session batch |
+| `tests/test_verification_publish_summary.py` | Verification publish summary split | Keep with publish/session batch |
+| `tests/test_verification_publish_session.py` | Verification publish session split | Keep with publish/session batch |
+| `tests/test_verification_publish_architecture.py` | Verification publish architecture guard | Keep with publish/session batch |
+| `tests/test_verification_publish_helper_architecture.py` | Verification publish helper guard | Keep with publish/session batch |
 
 ## Benchmark Corpus And Fixtures
 
@@ -204,8 +255,12 @@ baseline. Otherwise defer the entire `examples/typescript-demo/**` directory.
 | `.qa-z/loops/**` | Ignore/local only | Local self-improvement/autonomy state |
 | `.qa-z/executor/**` | Ignore/local only | Local executor bridge packages |
 | `benchmarks/results/work/**` | Ignore/local only | Benchmark scratch workspaces |
+| `build/**`, `dist/**`, `src/qa_z.egg-info/**` | Ignore/local only | Build/runtime byproducts, not source evidence |
+| cache trees such as `__pycache__/`, `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`, `.ruff_cache_safe/` | Ignore/local only | Local tool/runtime cache state |
+| `benchmarks/results/` | Local only by default | Generated benchmark evidence root; freeze only with command/date context |
 | `benchmarks/results/summary.json` | Local only by default | Generated benchmark summary; commit only as intentional frozen evidence |
 | `benchmarks/results/report.md` | Local only by default | Generated benchmark report; commit only as intentional frozen evidence |
+| `benchmarks/results-*` snapshot dirs | Local only by default | Generated benchmark snapshots; freeze only with command/date context |
 | `benchmarks/fixtures/**/repo/.qa-z/**` | Keep as fixture input | Seeded baseline/candidate summaries used by tests/benchmark |
 | `benchmarks/fixtures/**/repo/.qa-z-benchmark/**` | Keep as fixture input | Seeded fake Semgrep output for deterministic benchmark fixtures |
 | `benchmarks/support/**` | Keep as benchmark source | Shared fake tooling for deterministic benchmark execution |
@@ -214,6 +269,15 @@ The current `.gitignore` already ignores root `.qa-z/`, re-allows fixture-local
 `.qa-z` data under `benchmarks/fixtures/**/repo/.qa-z/**`, and ignores
 `benchmarks/results/work/`, `benchmarks/results/report.md`, and
 `benchmarks/results/summary.json`.
+The latest strict helper snapshot (`python scripts/worktree_commit_plan.py
+--include-ignored --fail-on-generated --json --output
+.qa-z/tmp/worktree-commit-plan-strict-l24.json`) shows `31` generated roots in
+the current dirty tree: `26` local-only runtime artifact roots and `5`
+local-by-default benchmark evidence roots. The only active attention reason is
+`generated_artifacts_present`, not missing batch ownership.
+The matching live cleanup dry-run now reports `planned=1` for `.qa-z/` and
+`review_local_by_default=5` for those benchmark evidence roots, so `--apply`
+is no longer allowed to delete the benchmark result directories automatically.
 
 ## Logical Implementation Batches
 
@@ -351,9 +415,10 @@ Targeted CLI smoke checks:
 1. Do not stage generated root `.qa-z/**` or `benchmarks/results/work/**`.
 2. Keep `benchmarks/results/summary.json` and `benchmarks/results/report.md`
    local by default unless intentionally freezing sample evidence.
-3. Format `tests/test_benchmark.py` before the benchmark commit. Because it is untracked, this is a benchmark-commit preflight step rather than a clean standalone format-only commit.
-4. Split current dirty work into the batches above before tagging an alpha baseline.
-5. Treat `v0.9.8-alpha` as the release candidate for the broader accumulated
+3. Use `python scripts/runtime_artifact_cleanup.py --json` to preview policy-managed local runtime artifacts before staging source changes; use `--apply --json` only after reviewing which local-only roots can be removed, because `benchmarks/results/**` and `benchmarks/results-*` now stay review-only local-by-default roots.
+4. Format `tests/test_benchmark.py` before the benchmark commit. Because it is untracked, this is a benchmark-commit preflight step rather than a clean standalone format-only commit.
+5. Split current dirty work into the batches above before tagging an alpha baseline.
+6. Treat `v0.9.8-alpha` as the release candidate for the broader accumulated
    runner, benchmark, autonomy, executor bridge, executor-result ingest, and
    live-free dry-run surface; use `v0.10.0-alpha` only if the team wants a larger
    reset point.

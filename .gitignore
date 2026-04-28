@@ -1,7 +1,11 @@
 __pycache__/
 .pytest_cache/
 .mypy_cache/
+.mypy_cache_safe/
 .ruff_cache/
+.ruff_cache_safe/
+/tmp_*
+/benchmarks/minlock-*
 .venv/
 venv/
 build/
@@ -10,9 +14,11 @@ dist/
 .coverage
 .coverage.*
 .qa-z/
+%TEMP%/
 !benchmarks/fixtures/**/repo/.qa-z/
 !benchmarks/fixtures/**/repo/.qa-z/**
 benchmarks/results/work/
+benchmarks/results-*
 benchmarks/results/summary.json
 benchmarks/results/report.md
 .worktrees/

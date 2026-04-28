@@ -3,6 +3,8 @@ name: CI
 # QA-Z workflow templates are deterministic CI gates.
 # This deterministic CI gate preserves local artifacts before applying the fast/deep verdict.
 # This workflow does not call live executors.
+# This workflow does not ingest executor results.
+# This workflow does not perform autonomous repair.
 # This workflow does not create branches, commits, pushes, or bot comments.
 
 on:
