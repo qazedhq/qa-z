@@ -76,6 +76,12 @@ def test_tool_subprocess_env_sets_utf8_and_safe_ruff_cache() -> None:
     assert env["RUFF_CACHE_DIR"] == r"F:\Temp\qa-z-ruff-cache"
 
 
+def test_tool_subprocess_env_preserves_posix_temp_path_style() -> None:
+    env = build_tool_subprocess_env({"TEMP": "/tmp"})
+
+    assert env["RUFF_CACHE_DIR"] == "/tmp/qa-z-ruff-cache"
+
+
 def test_tool_subprocess_env_preserves_explicit_ruff_cache_dir() -> None:
     env = build_tool_subprocess_env(
         {

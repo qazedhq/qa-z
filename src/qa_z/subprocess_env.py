@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Mapping
 
 RUFF_CACHE_SUBDIR = "qa-z-ruff-cache"
@@ -33,4 +33,12 @@ def resolve_ruff_cache_dir(base_env: Mapping[str, str]) -> str | None:
     )
     if not temp_root:
         return None
+    if _looks_like_windows_path(temp_root):
+        return str(PureWindowsPath(temp_root) / RUFF_CACHE_SUBDIR)
+    if temp_root.startswith("/"):
+        return str(PurePosixPath(temp_root) / RUFF_CACHE_SUBDIR)
     return str(Path(temp_root) / RUFF_CACHE_SUBDIR)
+
+
+def _looks_like_windows_path(path: str) -> bool:
+    return "\\" in path or (len(path) >= 2 and path[1] == ":")
