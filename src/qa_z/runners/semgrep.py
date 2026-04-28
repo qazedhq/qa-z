@@ -21,12 +21,28 @@ SEMGREP_DEFAULT = CheckSpec(
     id=SEMGREP_CHECK_ID,
     command=["semgrep", "--config", "auto", "--json"],
     kind="static-analysis",
+    timeout_seconds=600,
 )
 
 SEMGREP_ALIASES = {
     "sg_scan": SEMGREP_CHECK_ID,
     "semgrep": SEMGREP_CHECK_ID,
     "security": SEMGREP_CHECK_ID,
+}
+
+SEMGREP_OPTION_VALUE_FLAGS = {
+    "--baseline-commit",
+    "--config",
+    "--exclude",
+    "--include",
+    "--jobs",
+    "--max-memory",
+    "--metrics",
+    "--project-root",
+    "--severity",
+    "--timeout",
+    "--timeout-threshold",
+    "-c",
 }
 
 
@@ -73,6 +89,7 @@ def normalize_semgrep_result(
     ]
     active_findings, filter_reasons = filter_semgrep_findings(findings, policy)
     grouped_findings = group_semgrep_findings(active_findings)
+    scan_warnings = normalize_semgrep_scan_warnings(payload)
     severity_summary = Counter(
         str(finding["severity"])
         for finding in active_findings
@@ -85,10 +102,13 @@ def normalize_semgrep_result(
     result.severity_summary = dict(sorted(severity_summary.items()))
     result.grouped_findings = grouped_findings
     result.findings = active_findings
+    result.scan_warning_count = len(scan_warnings)
+    result.scan_warnings = scan_warnings
     result.message = semgrep_findings_message(
         findings_count=len(findings),
         blocking_count=result.blocking_findings_count or 0,
         filtered_count=result.filtered_findings_count or 0,
+        scan_warning_count=result.scan_warning_count or 0,
     )
     if is_semgrep_payload_error(payload, result):
         result.status = "error"
@@ -147,6 +167,8 @@ def invalid_semgrep_json_result(
     result.severity_summary = {}
     result.grouped_findings = []
     result.findings = []
+    result.scan_warning_count = 0
+    result.scan_warnings = []
     if result.exit_code == 0:
         result.status = "error"
         result.error_type = "invalid_semgrep_json"
@@ -161,14 +183,58 @@ def invalid_semgrep_json_result(
 
 
 def semgrep_findings_message(
-    *, findings_count: int, blocking_count: int, filtered_count: int = 0
+    *,
+    findings_count: int,
+    blocking_count: int,
+    filtered_count: int = 0,
+    scan_warning_count: int = 0,
 ) -> str:
     """Return a compact normalized Semgrep result message."""
     noun = "finding" if findings_count == 1 else "findings"
     message = f"Semgrep reported {findings_count} {noun}; {blocking_count} blocking."
     if filtered_count:
         message += f" {filtered_count} filtered."
+    if scan_warning_count:
+        warning_noun = "warning" if scan_warning_count == 1 else "warnings"
+        message += f" {scan_warning_count} scan {warning_noun}."
     return message
+
+
+def normalize_semgrep_scan_warnings(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract non-fatal Semgrep scan-quality warnings from JSON payloads."""
+    errors = list_payload_items(payload.get("errors"))
+    time_payload = payload.get("time")
+    if isinstance(time_payload, dict):
+        errors.extend(list_payload_items(time_payload.get("fixpoint_timeouts")))
+    warnings: list[dict[str, Any]] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        severity = normalize_severity(first_string(error.get("severity")))
+        if severity not in {"WARN", "WARNING"}:
+            continue
+        warning: dict[str, Any] = {
+            "error_type": first_string(error.get("error_type")) or "semgrep_warning",
+            "severity": "WARN",
+            "message": first_string(error.get("message")) or "",
+        }
+        location = error.get("location")
+        if isinstance(location, dict):
+            path = first_string(location.get("path"))
+            if path:
+                warning["path"] = normalize_path(path)
+            start = location.get("start")
+            if isinstance(start, dict):
+                line = coerce_positive_int(start.get("line"))
+                if line is not None:
+                    warning["line"] = line
+        warnings.append(warning)
+    return warnings
+
+
+def list_payload_items(value: Any) -> list[Any]:
+    """Return a list payload or an empty list for malformed fields."""
+    return value if isinstance(value, list) else []
 
 
 def semgrep_policy_from_config(
@@ -224,12 +290,50 @@ def semgrep_command_with_config(command: list[str], config: str) -> list[str]:
     return configured
 
 
+def semgrep_targeted_command(command: list[str], targets: list[str]) -> list[str]:
+    """Replace configured positional Semgrep scan roots with selected targets."""
+    semgrep_index = semgrep_executable_index(command)
+    if semgrep_index is None:
+        return unique_strings([*command, *targets])
+
+    prefix = list(command[:semgrep_index])
+    semgrep_parts = command[semgrep_index:]
+    cleaned: list[str] = []
+    index = 0
+    while index < len(semgrep_parts):
+        part = semgrep_parts[index]
+        cleaned.append(part)
+        if part in SEMGREP_OPTION_VALUE_FLAGS and index + 1 < len(semgrep_parts):
+            cleaned.append(semgrep_parts[index + 1])
+            index += 2
+            continue
+        if part.startswith("-"):
+            index += 1
+            continue
+        if index == 0:
+            index += 1
+            continue
+        cleaned.pop()
+        index += 1
+
+    return unique_strings([*prefix, *cleaned, *targets])
+
+
 def is_semgrep_executable(command: list[str]) -> bool:
     """Return whether the configured command invokes a Semgrep executable."""
     if not command:
         return False
     executable = command[0].replace("\\", "/").rsplit("/", 1)[-1].lower()
     return executable in {"semgrep", "semgrep.exe", "semgrep.cmd", "semgrep.bat"}
+
+
+def semgrep_executable_index(command: list[str]) -> int | None:
+    """Return the position of a Semgrep executable token in a command."""
+    for index, part in enumerate(command):
+        executable = part.replace("\\", "/").rsplit("/", 1)[-1].lower()
+        if executable in {"semgrep", "semgrep.exe", "semgrep.cmd", "semgrep.bat"}:
+            return index
+    return None
 
 
 def semgrep_config_from_command(command: list[Any]) -> str | None:

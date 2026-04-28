@@ -16,6 +16,19 @@ from qa_z.artifacts import (
 from qa_z.config import get_nested
 from qa_z.diffing.models import ChangeSet
 from qa_z.diffing.parser import parse_unified_diff
+from qa_z.runners.deep_policy import (
+    configured_deep_checks,
+    deep_exclude_paths,
+    fail_on_missing_tool,
+    full_run_threshold,
+    high_risk_paths,
+    resolve_deep_checks,
+)
+from qa_z.runners.deep_runtime import (
+    resolve_deep_change_set,
+    resolve_deep_run_dir,
+    run_deep,
+)
 from qa_z.runners.fast import format_path, utc_now
 from qa_z.runners.models import (
     CheckPlan,
@@ -40,6 +53,32 @@ DEEP_EXIT_FAILED = 1
 DEEP_EXIT_USAGE = 2
 DEEP_EXIT_ERROR = 3
 
+__all__ = [
+    "DEEP_EXIT_ERROR",
+    "DEEP_EXIT_FAILED",
+    "DEEP_EXIT_PASSED",
+    "DEEP_EXIT_USAGE",
+    "DeepRun",
+    "DeepRunResolution",
+    "configured_deep_checks",
+    "deep_diagnostics",
+    "deep_exclude_paths",
+    "deep_message",
+    "deep_policy_summary",
+    "deep_run_resolution_summary",
+    "ensure_fast_summary_is_valid",
+    "fail_on_missing_tool",
+    "full_run_threshold",
+    "high_risk_paths",
+    "resolve_deep_change_set",
+    "resolve_deep_check_item",
+    "resolve_deep_checks",
+    "resolve_deep_run_dir",
+    "run_deep",
+    "run_deep_check_plan",
+    "summarize_deep_status",
+]
+
 
 @dataclass(frozen=True)
 class DeepRunResolution:
@@ -48,6 +87,7 @@ class DeepRunResolution:
     run_dir: Path
     deep_dir: Path
     attached_to_fast_run: bool
+    source: str
     fast_summary_path: Path | None = None
 
 
@@ -60,7 +100,7 @@ class DeepRun:
     resolution: DeepRunResolution
 
 
-def run_deep(
+def _run_deep_impl(
     *,
     root: Path,
     config: dict[str, Any],
@@ -71,7 +111,7 @@ def run_deep(
 ) -> DeepRun:
     """Run configured deep checks and return a normalized summary."""
     started_at = utc_now()
-    resolution = resolve_deep_run_dir(
+    resolution = _resolve_deep_run_dir_impl(
         root=root,
         config=config,
         output_dir=output_dir,
@@ -82,8 +122,8 @@ def run_deep(
         if resolution.fast_summary_path is not None
         else None
     )
-    specs = resolve_deep_checks(config)
-    change_set = resolve_deep_change_set(
+    specs = _resolve_deep_checks_impl(config)
+    change_set = _resolve_deep_change_set_impl(
         diff_path=diff_path,
         fast_summary=fast_summary,
     )
@@ -91,8 +131,8 @@ def run_deep(
         check_specs=specs,
         change_set=change_set,
         selection_mode=selection_mode,
-        full_run_threshold=full_run_threshold(config),
-        high_risk_paths=high_risk_paths(config),
+        full_run_threshold=_full_run_threshold_impl(config),
+        high_risk_paths=_high_risk_paths_impl(config),
     )
     results = [
         run_deep_check_plan(
@@ -119,6 +159,8 @@ def run_deep(
         schema_version=2,
         selection=selection,
         policy=deep_policy_summary(specs),
+        run_resolution=deep_run_resolution_summary(resolution, root),
+        diagnostics=deep_diagnostics(results),
     )
     return DeepRun(
         summary=summary,
@@ -127,7 +169,7 @@ def run_deep(
     )
 
 
-def resolve_deep_run_dir(
+def _resolve_deep_run_dir_impl(
     *,
     root: Path,
     config: dict[str, Any],
@@ -141,6 +183,7 @@ def resolve_deep_run_dir(
             run_dir=run_dir,
             deep_dir=run_dir / "deep",
             attached_to_fast_run=False,
+            source="output_dir",
         )
 
     if from_run:
@@ -150,6 +193,7 @@ def resolve_deep_run_dir(
             run_dir=source.run_dir,
             deep_dir=source.run_dir / "deep",
             attached_to_fast_run=True,
+            source="from_run",
             fast_summary_path=source.summary_path,
         )
 
@@ -162,14 +206,33 @@ def resolve_deep_run_dir(
             run_dir=run_dir,
             deep_dir=run_dir / "deep",
             attached_to_fast_run=False,
+            source="new_run",
         )
 
     return DeepRunResolution(
         run_dir=source.run_dir,
         deep_dir=source.run_dir / "deep",
         attached_to_fast_run=True,
+        source="latest",
         fast_summary_path=source.summary_path,
     )
+
+
+def deep_run_resolution_summary(
+    resolution: DeepRunResolution, root: Path
+) -> dict[str, Any]:
+    """Render deep run resolution as stable artifact metadata."""
+    return {
+        "source": resolution.source,
+        "attached_to_fast_run": resolution.attached_to_fast_run,
+        "run_dir": format_path(resolution.run_dir, root),
+        "deep_dir": format_path(resolution.deep_dir, root),
+        "fast_summary_path": (
+            format_path(resolution.fast_summary_path, root)
+            if resolution.fast_summary_path is not None
+            else None
+        ),
+    }
 
 
 def ensure_fast_summary_is_valid(summary_path: Path) -> None:
@@ -179,18 +242,18 @@ def ensure_fast_summary_is_valid(summary_path: Path) -> None:
         raise ArtifactLoadError(f"Expected a fast summary at {summary_path}.")
 
 
-def resolve_deep_checks(config: dict[str, Any]) -> list[CheckSpec]:
+def _resolve_deep_checks_impl(config: dict[str, Any]) -> list[CheckSpec]:
     """Resolve configured deep checks into executable subprocess specs."""
     specs: list[CheckSpec] = []
-    global_exclude_paths = deep_exclude_paths(config)
-    for item in configured_deep_checks(config):
+    global_exclude_paths = _deep_exclude_paths_impl(config)
+    for item in _configured_deep_checks_impl(config):
         spec = resolve_deep_check_item(item, global_exclude_paths=global_exclude_paths)
         if spec is not None and spec.enabled:
             specs.append(spec)
     return specs
 
 
-def configured_deep_checks(config: dict[str, Any]) -> list[Any]:
+def _configured_deep_checks_impl(config: dict[str, Any]) -> list[Any]:
     """Return explicit deep check configuration."""
     deep_config = config.get("deep")
     if isinstance(deep_config, dict) and "checks" in deep_config:
@@ -327,12 +390,52 @@ def summarize_deep_status(results: list[CheckResult]) -> tuple[str, int]:
     return "passed", DEEP_EXIT_PASSED
 
 
-def fail_on_missing_tool(config: dict[str, Any]) -> bool:
+def deep_diagnostics(results: list[CheckResult]) -> dict[str, Any]:
+    """Aggregate non-blocking deep scan quality diagnostics."""
+    warning_checks = [result for result in results if result.scan_warnings]
+    warnings = [
+        warning
+        for result in warning_checks
+        for warning in result.scan_warnings
+        if isinstance(warning, dict)
+    ]
+    if not warnings:
+        return {}
+    return {
+        "scan_quality": {
+            "status": "warning",
+            "warning_count": len(warnings),
+            "warning_types": unique_diagnostic_strings(
+                str(warning.get("error_type") or "") for warning in warnings
+            ),
+            "warning_paths": unique_diagnostic_strings(
+                str(warning.get("path") or "") for warning in warnings
+            ),
+            "check_ids": unique_diagnostic_strings(
+                result.id for result in warning_checks
+            ),
+        }
+    }
+
+
+def unique_diagnostic_strings(values: Any) -> list[str]:
+    """Return non-empty diagnostic strings in first-seen order."""
+    seen: set[str] = set()
+    items: list[str] = []
+    for value in values:
+        item = str(value).strip()
+        if item and item not in seen:
+            seen.add(item)
+            items.append(item)
+    return items
+
+
+def _fail_on_missing_tool_impl(config: dict[str, Any]) -> bool:
     """Return whether missing deep tools should fail the run."""
     return bool(get_nested(config, "deep", "fail_on_missing_tool", default=True))
 
 
-def full_run_threshold(config: dict[str, Any]) -> int:
+def _full_run_threshold_impl(config: dict[str, Any]) -> int:
     """Return the smart-selection full-run threshold for deep checks."""
     value = get_nested(config, "deep", "selection", "full_run_threshold", default=None)
     if value is None:
@@ -346,7 +449,7 @@ def full_run_threshold(config: dict[str, Any]) -> int:
     return threshold if threshold >= 0 else 15
 
 
-def high_risk_paths(config: dict[str, Any]) -> list[str]:
+def _high_risk_paths_impl(config: dict[str, Any]) -> list[str]:
     """Return configured paths that should force full deep execution."""
     paths: list[str] = []
     for source in (
@@ -359,7 +462,7 @@ def high_risk_paths(config: dict[str, Any]) -> list[str]:
     return paths
 
 
-def deep_exclude_paths(config: dict[str, Any]) -> list[str]:
+def _deep_exclude_paths_impl(config: dict[str, Any]) -> list[str]:
     """Return configured deep selection exclude path patterns."""
     value = get_nested(config, "deep", "selection", "exclude_paths", default=[])
     if not isinstance(value, list):
@@ -375,7 +478,7 @@ def deep_policy_summary(specs: list[CheckSpec]) -> dict[str, Any]:
     return {}
 
 
-def resolve_deep_change_set(
+def _resolve_deep_change_set_impl(
     *,
     diff_path: Path | None,
     fast_summary: RunSummary | None,

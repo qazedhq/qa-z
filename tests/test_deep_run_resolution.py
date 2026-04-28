@@ -64,6 +64,7 @@ def test_deep_attaches_to_latest_valid_fast_run(tmp_path: Path) -> None:
     assert resolution.run_dir == fast_run_dir
     assert resolution.deep_dir == fast_run_dir / "deep"
     assert resolution.attached_to_fast_run is True
+    assert resolution.source == "latest"
 
 
 def test_deep_creates_new_run_when_no_valid_fast_run_exists(
@@ -79,10 +80,15 @@ def test_deep_creates_new_run_when_no_valid_fast_run_exists(
     assert output["mode"] == "deep"
     assert output["status"] == "passed"
     assert output["checks"] == []
+    assert output["run_resolution"]["source"] == "new_run"
+    assert output["run_resolution"]["attached_to_fast_run"] is False
     assert artifact_dir.name == "deep"
     assert (artifact_dir / "summary.json").exists()
     assert (artifact_dir / "summary.md").exists()
     assert "# QA-Z Deep Summary" in (artifact_dir / "summary.md").read_text(
+        encoding="utf-8"
+    )
+    assert "- Source: new_run" in (artifact_dir / "summary.md").read_text(
         encoding="utf-8"
     )
 
@@ -108,5 +114,68 @@ def test_deep_output_dir_overrides_attach_behavior(
 
     assert exit_code == 0
     assert output["artifact_dir"] == "custom-run/deep"
+    assert output["run_resolution"] == {
+        "attached_to_fast_run": False,
+        "deep_dir": "custom-run/deep",
+        "fast_summary_path": None,
+        "run_dir": "custom-run",
+        "source": "output_dir",
+    }
     assert (output_dir / "deep" / "summary.json").exists()
+    assert not (tmp_path / ".qa-z" / "runs" / "ci" / "deep").exists()
+
+
+def test_deep_from_run_records_explicit_resolution(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_fast_summary(tmp_path, "ci")
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/ci",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["run_resolution"] == {
+        "attached_to_fast_run": True,
+        "deep_dir": ".qa-z/runs/ci/deep",
+        "fast_summary_path": ".qa-z/runs/ci/fast/summary.json",
+        "run_dir": ".qa-z/runs/ci",
+        "source": "from_run",
+    }
+
+
+def test_deep_rejects_from_run_with_output_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_fast_summary(tmp_path, "ci")
+    output_dir = tmp_path / "custom-run"
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/ci",
+            "--output-dir",
+            str(output_dir),
+            "--json",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "qa-z deep: argument error:" in captured.out
+    assert "--from-run and --output-dir cannot be combined" in captured.out
+    assert not output_dir.exists()
     assert not (tmp_path / ".qa-z" / "runs" / "ci" / "deep").exists()

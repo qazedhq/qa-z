@@ -253,3 +253,91 @@ def test_deep_summary_includes_selection_metadata(
     assert summary["selection"]["input_source"] == "cli_diff"
     assert summary["selection"]["changed_files"][0]["path"] == "src/app.py"
     assert summary["checks"][0]["selection_reason"] == "source files changed"
+
+
+def test_semgrep_targeted_selection_replaces_configured_scan_roots(
+    tmp_path: Path,
+) -> None:
+    plans, _selection = build_deep_selection(
+        check_specs=[
+            CheckSpec(
+                id="sg_scan",
+                command=["semgrep", "--config", "auto", "--json", "src", "tests"],
+                kind="static-analysis",
+            )
+        ],
+        change_set=ChangeSet(source="cli_diff", files=[changed("src/app.py")]),
+        selection_mode="smart",
+        full_run_threshold=15,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "semgrep",
+        "--config",
+        "auto",
+        "--json",
+        "src/app.py",
+    ]
+
+
+def test_semgrep_targeted_selection_preserves_option_values(
+    tmp_path: Path,
+) -> None:
+    plans, _selection = build_deep_selection(
+        check_specs=[
+            CheckSpec(
+                id="sg_scan",
+                command=[
+                    "semgrep",
+                    "--config",
+                    "auto",
+                    "--json",
+                    "--exclude",
+                    "src/generated",
+                    "src",
+                ],
+                kind="static-analysis",
+            )
+        ],
+        change_set=ChangeSet(source="cli_diff", files=[changed("src/app.py")]),
+        selection_mode="smart",
+        full_run_threshold=15,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "semgrep",
+        "--config",
+        "auto",
+        "--json",
+        "--exclude",
+        "src/generated",
+        "src/app.py",
+    ]
+
+
+def test_semgrep_targeted_selection_preserves_wrapper_command(
+    tmp_path: Path,
+) -> None:
+    plans, _selection = build_deep_selection(
+        check_specs=[
+            CheckSpec(
+                id="sg_scan",
+                command=["uv", "run", "semgrep", "--json", "src"],
+                kind="static-analysis",
+            )
+        ],
+        change_set=ChangeSet(source="cli_diff", files=[changed("src/app.py")]),
+        selection_mode="smart",
+        full_run_threshold=15,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "uv",
+        "run",
+        "semgrep",
+        "--json",
+        "src/app.py",
+    ]

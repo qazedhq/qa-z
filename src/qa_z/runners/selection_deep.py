@@ -10,7 +10,7 @@ from qa_z.runners.selection_common import (
     skipped_check_plan,
     targeted_check_plan,
 )
-from qa_z.runners.semgrep import SEMGREP_CHECK_ID
+from qa_z.runners.semgrep import SEMGREP_CHECK_ID, semgrep_targeted_command
 
 
 def build_deep_selection(
@@ -143,7 +143,7 @@ def build_semgrep_plan(spec: CheckSpec, change_set: ChangeSet) -> CheckPlan:
         )
     return targeted_check_plan(
         spec,
-        [*spec.command, *targets],
+        semgrep_targeted_command(spec.command, targets),
         targets,
         "source files changed",
         [],
