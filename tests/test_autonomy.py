@@ -2,17 +2,27 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import sys
 from pathlib import Path
+from tests.ast_test_support import module_body
 from textwrap import dedent
 from typing import Any
 
+import qa_z.autonomy as autonomy_module
+import qa_z.autonomy_actions as autonomy_actions_module
+import qa_z.autonomy_plan as autonomy_plan_module
+import qa_z.autonomy_records as autonomy_records_module
+import qa_z.autonomy_selection as autonomy_selection_module
+import qa_z.autonomy_status as autonomy_status_module
 import yaml
 
 from qa_z.autonomy import (
+    AutonomyDependencies,
     action_for_task,
     load_autonomy_status,
+    record_executor_result,
     render_autonomy_loop_plan,
     render_autonomy_summary,
     render_autonomy_status,
@@ -20,9 +30,308 @@ from qa_z.autonomy import (
 )
 from qa_z.cli import main
 from qa_z.config import load_config
+from qa_z.self_improvement import SelectionArtifactPaths, SelfInspectionArtifactPaths
 
 
 NOW = "2026-04-15T00:00:00Z"
+
+
+def test_autonomy_module_publishes_explicit_exports() -> None:
+    assert {
+        "load_autonomy_status",
+        "render_autonomy_status",
+        "render_autonomy_summary",
+        "run_autonomy",
+    } <= set(autonomy_module.__all__)
+    assert {
+        "action_for_task",
+        "cleanup_action",
+        "merge_context_paths",
+        "repair_session_action",
+        "workflow_gap_action",
+    } <= set(autonomy_actions_module.__all__)
+    assert {
+        "record_executor_result",
+        "read_json_object",
+        "write_outcome_artifact",
+    } <= set(autonomy_records_module.__all__)
+    assert {
+        "build_loop_health",
+        "render_autonomy_loop_plan",
+    } <= set(autonomy_plan_module.__all__)
+    assert {
+        "autonomy_selection_context",
+        "next_recommendations",
+        "verification_observations",
+    } <= set(autonomy_selection_module.__all__)
+    assert {
+        "render_autonomy_status",
+        "render_autonomy_summary",
+        "status_prepared_actions",
+    } <= set(autonomy_status_module.__all__)
+
+
+def test_autonomy_actions_module_exports_match_autonomy_surface() -> None:
+    assert autonomy_actions_module.action_for_task is action_for_task
+
+
+def test_autonomy_records_module_exports_match_autonomy_surface() -> None:
+    assert autonomy_records_module.record_executor_result is record_executor_result
+
+
+def test_autonomy_plan_module_exports_match_autonomy_surface() -> None:
+    assert autonomy_plan_module.render_autonomy_loop_plan is render_autonomy_loop_plan
+
+
+def test_autonomy_status_module_exports_match_autonomy_surface() -> None:
+    assert autonomy_status_module.render_autonomy_status is render_autonomy_status
+    assert autonomy_status_module.render_autonomy_summary is render_autonomy_summary
+
+
+def test_autonomy_module_keeps_extracted_helper_defs_out_of_orchestrator() -> None:
+    source = Path(autonomy_module.__file__).read_text(encoding="utf-8")
+    tree = compile(
+        source, str(autonomy_module.__file__), "exec", flags=ast.PyCF_ONLY_AST
+    )
+    function_names = {
+        node.name for node in module_body(tree) if isinstance(node, ast.FunctionDef)
+    }
+
+    assert "render_autonomy_loop_plan" not in function_names
+    assert "build_loop_health" not in function_names
+    assert "load_autonomy_status" not in function_names
+    assert "record_executor_result" not in function_names
+
+
+def test_verification_observations_deduplicate_summary_paths(
+    tmp_path: Path,
+) -> None:
+    summary_path = tmp_path / ".qa-z" / "runs" / "run-one" / "verify" / "summary.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(
+        json.dumps({"verdict": "mixed", "regression_count": 2, "new_issue_count": 1}),
+        encoding="utf-8",
+    )
+
+    observations = autonomy_selection_module.verification_observations(
+        tmp_path,
+        [
+            {
+                "id": "verify-gap-one",
+                "evidence": [
+                    {"path": ".qa-z/runs/run-one/verify/summary.json"},
+                    {"path": ".qa-z/runs/run-one/verify/summary.json"},
+                ],
+            }
+        ],
+    )
+
+    assert observations == [
+        {
+            "path": ".qa-z/runs/run-one/verify/summary.json",
+            "verdict": "mixed",
+            "regression_count": 2,
+            "new_issue_count": 1,
+        }
+    ]
+
+
+def test_record_executor_result_updates_matching_history_entry(
+    tmp_path: Path,
+) -> None:
+    history_path = tmp_path / "history.jsonl"
+    history_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "kind": "qa_z.loop_history_entry",
+                        "loop_id": "loop-ignored",
+                        "next_recommendations": [],
+                    },
+                    sort_keys=True,
+                ),
+                json.dumps(
+                    {
+                        "kind": "qa_z.loop_history_entry",
+                        "loop_id": "loop-target",
+                        "next_recommendations": ["stale"],
+                    },
+                    sort_keys=True,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    record_executor_result(
+        history_path,
+        loop_id="loop-target",
+        result_status="applied",
+        ingest_status="ingested",
+        verify_resume_status="resume_ready",
+        result_path=".qa-z/results/loop-target.json",
+        validation_status="valid",
+        changed_files=["src/qa_z/autonomy.py", "tests/test_autonomy.py"],
+        verification_hint="rerun pytest",
+        verification_verdict="pass",
+        next_recommendation="rerun verify on touched files",
+    )
+
+    entries = [
+        json.loads(line)
+        for line in history_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert entries[0]["loop_id"] == "loop-ignored"
+    assert "executor_result_status" not in entries[0]
+    assert entries[1]["executor_result_status"] == "applied"
+    assert entries[1]["executor_ingest_status"] == "ingested"
+    assert entries[1]["executor_verify_resume_status"] == "resume_ready"
+    assert entries[1]["executor_result_path"] == ".qa-z/results/loop-target.json"
+    assert entries[1]["executor_validation_status"] == "valid"
+    assert entries[1]["executor_changed_files"] == [
+        "src/qa_z/autonomy.py",
+        "tests/test_autonomy.py",
+    ]
+    assert entries[1]["executor_verification_hint"] == "rerun pytest"
+    assert entries[1]["verify_verdict"] == "pass"
+    assert entries[1]["next_recommendations"] == ["rerun verify on touched files"]
+
+
+def test_run_autonomy_accepts_dependency_bundle(tmp_path: Path) -> None:
+    live_repository = {
+        "modified_count": 0,
+        "untracked_count": 0,
+        "staged_count": 0,
+        "runtime_artifact_count": 0,
+        "benchmark_result_count": 0,
+        "dirty_benchmark_result_count": 0,
+        "release_evidence_count": 0,
+        "generated_artifact_policy_explicit": True,
+        "dirty_area_summary": "",
+    }
+    backlog_item = {
+        "id": "coverage_gap-custom",
+        "title": "Expand benchmark realism",
+        "category": "coverage_gap",
+        "status": "open",
+        "priority_score": 11,
+        "recommendation": "add_benchmark_fixture",
+        "evidence": [
+            {
+                "source": "benchmark",
+                "path": "benchmarks/results/summary.json",
+                "summary": "fixture coverage is missing for a custom realism case",
+            }
+        ],
+    }
+    call_state = {"load_backlog_calls": 0}
+
+    def fake_load_backlog(_root: Path) -> dict[str, object]:
+        call_state["load_backlog_calls"] += 1
+        items = [] if call_state["load_backlog_calls"] == 1 else [dict(backlog_item)]
+        return {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": NOW,
+            "items": items,
+        }
+
+    def fake_open_backlog_items(backlog: dict[str, object]) -> list[dict[str, object]]:
+        items = backlog.get("items")
+        if not isinstance(items, list):
+            return []
+        return [
+            item
+            for item in items
+            if isinstance(item, dict) and str(item.get("status", "open")) == "open"
+        ]
+
+    def fake_run_self_inspection(
+        *, root: Path, now: str | None = None, loop_id: str | None = None
+    ) -> SelfInspectionArtifactPaths:
+        latest_dir = root / ".qa-z" / "loops" / "latest"
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        self_inspection_path = latest_dir / "self_inspect.json"
+        backlog_path = root / ".qa-z" / "improvement" / "backlog.json"
+        write_json(
+            self_inspection_path,
+            {
+                "kind": "qa_z.self_inspection",
+                "schema_version": 1,
+                "loop_id": loop_id,
+                "generated_at": now,
+                "live_repository": live_repository,
+                "candidates": [],
+            },
+        )
+        write_json(
+            backlog_path,
+            {
+                "kind": "qa_z.improvement_backlog",
+                "schema_version": 1,
+                "updated_at": now,
+                "items": [dict(backlog_item)],
+            },
+        )
+        return SelfInspectionArtifactPaths(
+            self_inspection_path=self_inspection_path,
+            backlog_path=backlog_path,
+        )
+
+    def fake_select_next_tasks(
+        *,
+        root: Path,
+        count: int = 3,
+        now: str | None = None,
+        loop_id: str | None = None,
+    ) -> SelectionArtifactPaths:
+        latest_dir = root / ".qa-z" / "loops" / "latest"
+        latest_dir.mkdir(parents=True, exist_ok=True)
+        selected_tasks_path = latest_dir / "selected_tasks.json"
+        loop_plan_path = latest_dir / "loop_plan.md"
+        history_path = root / ".qa-z" / "loops" / "history.jsonl"
+        write_json(
+            selected_tasks_path,
+            {
+                "kind": "qa_z.selected_tasks",
+                "schema_version": 1,
+                "loop_id": loop_id,
+                "generated_at": now,
+                "selected_tasks": [dict(backlog_item)],
+                "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+                "live_repository": live_repository,
+            },
+        )
+        loop_plan_path.write_text("# injected loop plan\n", encoding="utf-8")
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        history_path.write_text("", encoding="utf-8")
+        return SelectionArtifactPaths(
+            selected_tasks_path=selected_tasks_path,
+            loop_plan_path=loop_plan_path,
+            history_path=history_path,
+        )
+
+    summary = run_autonomy(
+        root=tmp_path,
+        loops=1,
+        count=1,
+        now=NOW,
+        deps=AutonomyDependencies(
+            load_backlog=fake_load_backlog,
+            open_backlog_items=fake_open_backlog_items,
+            run_self_inspection=fake_run_self_inspection,
+            select_next_tasks=fake_select_next_tasks,
+        ),
+    )
+
+    assert summary["loops_completed"] == 1
+    assert summary["outcomes"][0]["selected_task_ids"] == ["coverage_gap-custom"]
+    assert (
+        summary["outcomes"][0]["actions_prepared"][0]["type"]
+        == "benchmark_fixture_plan"
+    )
 
 
 class FakeClock:
@@ -226,8 +535,24 @@ def write_regressed_verify_artifacts(tmp_path: Path) -> None:
 
 
 def test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch
 ) -> None:
+    stub_live_repository_signals(
+        monkeypatch,
+        current_branch="codex/qa-z-bootstrap",
+        current_head="1234567890abcdef1234567890abcdef12345678",
+        modified_count=3,
+        untracked_count=2,
+        staged_count=0,
+        modified_paths=["README.md", "src/qa_z/autonomy.py", "tests/test_autonomy.py"],
+        untracked_paths=[
+            "docs/reports/current-state-analysis.md",
+            "qa/contracts/new.md",
+        ],
+        runtime_artifact_paths=[],
+        benchmark_result_paths=["benchmarks/results/summary.json"],
+        generated_artifact_policy_explicit=True,
+    )
     write_benchmark_summary(tmp_path)
 
     summary = run_autonomy(root=tmp_path, loops=1, count=2, now=NOW)
@@ -244,7 +569,12 @@ def test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history(
     latest_outcome = json.loads(
         (latest_dir / "outcome.json").read_text(encoding="utf-8")
     )
+    selected = json.loads(
+        (loop_dir / "selected_tasks.json").read_text(encoding="utf-8")
+    )
+    plan = (loop_dir / "loop_plan.md").read_text(encoding="utf-8")
     history = json.loads(history_lines[0])
+    status = load_autonomy_status(tmp_path)
 
     assert summary["kind"] == "qa_z.autonomy_summary"
     assert summary["loops_requested"] == 1
@@ -263,9 +593,31 @@ def test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history(
         "completed",
     ]
     assert outcome["selected_task_ids"] == ["benchmark_gap-py_type_error"]
+    assert (
+        outcome["source_self_inspection"] == f".qa-z/loops/{loop_id}/self_inspect.json"
+    )
+    assert outcome["source_self_inspection_loop_id"] == loop_id
+    assert outcome["source_self_inspection_generated_at"] == NOW
+    assert outcome["live_repository"]["modified_count"] == 3
+    assert outcome["live_repository"]["current_branch"] == "codex/qa-z-bootstrap"
+    assert (
+        outcome["live_repository"]["current_head"]
+        == "1234567890abcdef1234567890abcdef12345678"
+    )
+    assert selected["live_repository"] == outcome["live_repository"]
+    assert status["latest_live_repository"] == outcome["live_repository"]
+    assert "Live Repository Context" in plan
+    assert (
+        "modified=3; untracked=2; staged=0; runtime_artifacts=0; "
+        "benchmark_results=1; dirty_benchmark_results=0; release_evidence=0; "
+        "generated_policy=true; "
+        "branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678" in plan
+    )
     assert outcome["actions_prepared"][0]["type"] == "benchmark_fixture_plan"
     assert latest_outcome == outcome
     assert history["loop_id"] == loop_id
+    assert history["live_repository"] == outcome["live_repository"]
     assert history["resulting_session_id"] is None
     assert history["outcome_path"] == f".qa-z/loops/{loop_id}/outcome.json"
 
@@ -374,9 +726,15 @@ def test_autonomy_empty_evidence_is_graceful(tmp_path: Path) -> None:
     assert outcome["loop_health"]["backlog_open_count_before_inspection"] == 0
     assert outcome["loop_health"]["backlog_open_count_after_inspection"] == 0
     assert outcome["loop_health"]["stale_open_items_closed"] == 0
+    assert outcome["loop_health"]["blocked_chain_length"] == 1
+    assert outcome["loop_health"]["blocked_chain_remaining_until_stop"] == 1
+    assert outcome["loop_health"]["blocked_chain_loop_ids"] == [
+        "loop-20260415-000000-01"
+    ]
     assert (
         "no open backlog items before inspection" in outcome["loop_health"]["summary"]
     )
+    assert "blocked no-candidate chain 1/2" in outcome["loop_health"]["summary"]
     assert outcome["selected_task_ids"] == []
     assert outcome["actions_prepared"] == []
     assert outcome["next_recommendations"] == [
@@ -388,6 +746,8 @@ def test_autonomy_empty_evidence_is_graceful(tmp_path: Path) -> None:
     assert "Selection gap reason: `no_open_backlog_after_inspection`" in plan
     assert "Loop health: `taskless`" in plan
     assert "no open backlog items before inspection" in plan
+    assert "Blocked no-candidate chain: 1/2" in plan
+    assert "Blocked no-candidate loop ids: `loop-20260415-000000-01`" in plan
 
 
 def test_autonomy_marks_stale_backlog_taskless_loop_as_blocked(tmp_path: Path) -> None:
@@ -442,7 +802,13 @@ def test_autonomy_marks_stale_backlog_taskless_loop_as_blocked(tmp_path: Path) -
     assert outcome["backlog_open_count_after_inspection"] == 0
     assert outcome["loop_health"]["classification"] == "taskless"
     assert outcome["loop_health"]["stale_open_items_closed"] == 1
+    assert outcome["loop_health"]["blocked_chain_length"] == 1
+    assert outcome["loop_health"]["blocked_chain_remaining_until_stop"] == 1
+    assert outcome["loop_health"]["blocked_chain_loop_ids"] == [
+        "loop-20260415-000000-01"
+    ]
     assert "closed 1 stale open backlog item" in outcome["loop_health"]["summary"]
+    assert "blocked no-candidate chain 1/2" in outcome["loop_health"]["summary"]
     assert "empty_backlog_detected" not in outcome["state_transitions"]
     assert "blocked_no_candidates" in outcome["state_transitions"]
     assert history["state"] == "blocked_no_candidates"
@@ -452,6 +818,8 @@ def test_autonomy_marks_stale_backlog_taskless_loop_as_blocked(tmp_path: Path) -
     assert history["loop_health"] == outcome["loop_health"]
     assert "Selection gap reason: `no_open_backlog_after_inspection`" in plan
     assert "Loop health: `taskless`" in plan
+    assert "Blocked no-candidate chain: 1/2" in plan
+    assert "Blocked no-candidate loop ids: `loop-20260415-000000-01`" in plan
     assert status["latest_selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert status["latest_backlog_open_count_before_inspection"] == 1
     assert status["latest_backlog_open_count_after_inspection"] == 0
@@ -600,6 +968,21 @@ def test_autonomy_stops_after_repeated_blocked_no_candidate_loops(
         "blocked_no_candidates",
         "blocked_no_candidates",
     ]
+    assert summary["outcomes"][0]["loop_health"]["blocked_chain_length"] == 1
+    assert (
+        summary["outcomes"][0]["loop_health"]["blocked_chain_remaining_until_stop"] == 1
+    )
+    assert summary["outcomes"][0]["loop_health"]["blocked_chain_loop_ids"] == [
+        "loop-20260415-000000-01"
+    ]
+    assert summary["outcomes"][1]["loop_health"]["blocked_chain_length"] == 2
+    assert (
+        summary["outcomes"][1]["loop_health"]["blocked_chain_remaining_until_stop"] == 0
+    )
+    assert summary["outcomes"][1]["loop_health"]["blocked_chain_loop_ids"] == [
+        "loop-20260415-000000-01",
+        "loop-20260415-000000-02",
+    ]
     assert [json.loads(line)["state"] for line in history_lines] == [
         "blocked_no_candidates",
         "blocked_no_candidates",
@@ -739,7 +1122,7 @@ def test_action_mapping_is_grounded_by_task_category(tmp_path: Path) -> None:
     )
 
 
-def test_action_mapping_loop_health_plan_includes_task_context_paths(
+def test_runtime_artifact_cleanup_gap_action_prioritizes_cleanup_follow_through(
     tmp_path: Path,
 ) -> None:
     action = action_for_task(
@@ -747,179 +1130,30 @@ def test_action_mapping_loop_health_plan_includes_task_context_paths(
         config=None,
         loop_id="loop-one",
         task={
-            "id": "autonomy_selection_gap-repeated-fallback-cleanup",
-            "category": "autonomy_selection_gap",
-            "recommendation": "improve_fallback_diversity",
-            "signals": ["recent_fallback_family_repeat"],
-            "evidence": [
-                {
-                    "source": "loop_history",
-                    "path": ".qa-z/loops/history.jsonl",
-                    "summary": (
-                        "recent_fallback_family=cleanup; loops=3; "
-                        "states=unknown, completed, unknown"
-                    ),
-                }
-            ],
-        },
-    )
-
-    assert action["type"] == "loop_health_plan"
-    assert action["commands"] == [
-        "python -m qa_z self-inspect",
-        "python -m qa_z autonomy --loops 1",
-    ]
-    assert action["context_paths"] == [".qa-z/loops/history.jsonl"]
-    assert action["next_recommendation"] == (
-        "rerun autonomy after tightening loop health rules"
-    )
-
-
-def test_action_mapping_specializes_cleanup_packets_by_recommendation(
-    tmp_path: Path,
-) -> None:
-    cleanup_action = action_for_task(
-        root=tmp_path,
-        config=None,
-        loop_id="loop-one",
-        task={
-            "id": "worktree_risk-dirty-worktree",
-            "category": "worktree_risk",
-            "recommendation": "reduce_integration_risk",
-            "signals": ["dirty_worktree_large", "worktree_integration_risk"],
-            "evidence": [
-                {
-                    "source": "git_status",
-                    "path": ".",
-                    "summary": "modified=25; untracked=344; staged=0",
-                }
-            ],
-        },
-    )
-    isolation_action = action_for_task(
-        root=tmp_path,
-        config=None,
-        loop_id="loop-one",
-        task={
-            "id": "commit_isolation_gap-foundation-order",
-            "category": "commit_isolation_gap",
-            "recommendation": "isolate_foundation_commit",
-            "signals": ["commit_order_dependency_exists"],
-            "evidence": [
-                {
-                    "source": "worktree_commit_plan",
-                    "path": "docs/reports/worktree-commit-plan.md",
-                    "summary": "corrected commit order still requires isolation",
-                }
-            ],
-        },
-    )
-
-    assert cleanup_action["type"] == "integration_cleanup_plan"
-    assert cleanup_action["commands"] == [
-        "git status --short",
-        "python -m qa_z backlog --json",
-        "python -m qa_z self-inspect --json",
-    ]
-    assert cleanup_action["context_paths"] == ["docs/reports/worktree-triage.md"]
-    assert cleanup_action["next_recommendation"] == (
-        "reduce dirty worktree integration risk and rerun self-inspection"
-    )
-    assert isolation_action["type"] == "integration_cleanup_plan"
-    assert isolation_action["context_paths"] == ["docs/reports/worktree-commit-plan.md"]
-    assert isolation_action["next_recommendation"] == (
-        "isolate the foundation commit before rerunning self-inspection"
-    )
-
-
-def test_deferred_cleanup_action_includes_generated_policy_context_path(
-    tmp_path: Path,
-) -> None:
-    action = action_for_task(
-        root=tmp_path,
-        config=None,
-        loop_id="loop-one",
-        task={
-            "id": "deferred_cleanup_gap-worktree-deferred-items",
-            "category": "deferred_cleanup_gap",
+            "id": "runtime_artifact_cleanup_gap-generated-results",
+            "category": "runtime_artifact_cleanup_gap",
             "recommendation": "triage_and_isolate_changes",
-            "signals": ["deferred_cleanup_items_open"],
+            "signals": ["policy_managed_runtime_artifacts"],
             "evidence": [
                 {
-                    "source": "current_state",
-                    "path": "docs/reports/current-state-analysis.md",
+                    "source": "runtime_artifacts",
+                    "path": "benchmarks/results-analysis/report.md",
                     "summary": (
-                        "report calls out deferred cleanup work or generated "
-                        "outputs to isolate"
+                        "generated runtime artifacts need explicit cleanup handling"
                     ),
-                },
-                {
-                    "source": "generated_outputs",
-                    "path": "benchmarks/results/report.md",
-                    "summary": "generated benchmark outputs still present",
-                },
+                }
             ],
         },
     )
 
-    assert action["type"] == "integration_cleanup_plan"
-    assert action["context_paths"] == [
-        "benchmarks/results/report.md",
-        "docs/generated-vs-frozen-evidence-policy.md",
-        "docs/reports/current-state-analysis.md",
-        "docs/reports/worktree-commit-plan.md",
-        "docs/reports/worktree-triage.md",
-    ]
-    assert action["next_recommendation"] == (
-        "triage and isolate worktree changes before rerunning self-inspection"
-    )
-
-
-def test_action_mapping_specializes_integration_gap_packets_from_reports(
-    tmp_path: Path,
-) -> None:
-    action = action_for_task(
-        root=tmp_path,
-        config=None,
-        loop_id="loop-one",
-        task={
-            "id": "integration_gap-worktree-integration-risk",
-            "category": "integration_gap",
-            "recommendation": "audit_worktree_integration",
-            "signals": ["worktree_integration_risk"],
-            "evidence": [
-                {
-                    "source": "current_state",
-                    "path": "docs/reports/current-state-analysis.md",
-                    "summary": "report calls out worktree integration risk",
-                },
-                {
-                    "source": "worktree_triage",
-                    "path": "docs/reports/worktree-triage.md",
-                    "summary": "report calls out commit split risk",
-                },
-                {
-                    "source": "worktree_commit_plan",
-                    "path": "docs/reports/worktree-commit-plan.md",
-                    "summary": "report calls out commit order dependency",
-                },
-            ],
-        },
-    )
-
-    assert action["type"] == "workflow_gap_plan"
     assert action["commands"] == [
         "git status --short",
-        "python -m qa_z backlog --json",
+        "python scripts/runtime_artifact_cleanup.py --json",
+        "python scripts/runtime_artifact_cleanup.py --apply --json",
         "python -m qa_z self-inspect --json",
     ]
-    assert action["context_paths"] == [
-        "docs/reports/current-state-analysis.md",
-        "docs/reports/worktree-commit-plan.md",
-        "docs/reports/worktree-triage.md",
-    ]
     assert action["next_recommendation"] == (
-        "audit worktree integration evidence and rerun self-inspection"
+        "clear policy-managed runtime artifacts before rerunning self-inspection"
     )
 
 
@@ -944,9 +1178,15 @@ def test_render_autonomy_loop_plan_includes_action_context_paths() -> None:
                 "next_recommendation": "reduce dirty worktree integration risk and rerun self-inspection",
                 "commands": [
                     "git status --short",
+                    "python scripts/runtime_artifact_cleanup.py --json",
+                    "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
                     "python -m qa_z backlog --json",
                 ],
-                "context_paths": ["docs/reports/worktree-triage.md"],
+                "context_paths": [
+                    "docs/reports/worktree-commit-plan.md",
+                    "docs/reports/worktree-triage.md",
+                    "scripts/runtime_artifact_cleanup.py",
+                ],
             }
         ],
     )
@@ -1087,7 +1327,10 @@ def test_autonomy_prepares_repair_session_with_context_paths(
     action = outcome["actions_prepared"][0]
 
     assert action["type"] == "repair_session"
-    assert action["context_paths"] == [".qa-z/runs/candidate/verify/summary.json"]
+    assert action["context_paths"] == [
+        ".qa-z/loops/loop-20260415-000000-01/self_inspect.json",
+        ".qa-z/runs/candidate/verify/summary.json",
+    ]
 
 
 def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1161,6 +1404,7 @@ def test_load_autonomy_status_without_previous_loop(tmp_path: Path) -> None:
     assert status["latest_prepared_actions"] == []
     assert status["latest_next_recommendations"] == []
     assert status["open_session_count"] == 0
+    assert "Live repository:" not in render_autonomy_status(status)
 
 
 def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() -> None:
@@ -1189,14 +1433,30 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
                     ),
                     "commands": [
                         "git status --short",
+                        "python scripts/runtime_artifact_cleanup.py --json",
+                        "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
                         "python -m qa_z backlog --json",
                     ],
-                    "context_paths": ["docs/reports/worktree-triage.md"],
+                    "context_paths": [
+                        "docs/reports/worktree-commit-plan.md",
+                        "docs/reports/worktree-triage.md",
+                        "scripts/runtime_artifact_cleanup.py",
+                    ],
                 }
             ],
             "latest_next_recommendations": [
                 "reduce dirty worktree integration risk and rerun self-inspection"
             ],
+            "latest_live_repository": {
+                "modified_count": 3,
+                "untracked_count": 2,
+                "staged_count": 0,
+                "runtime_artifact_count": 1,
+                "benchmark_result_count": 1,
+                "dirty_benchmark_result_count": 0,
+                "generated_artifact_policy_explicit": False,
+                "dirty_area_summary": "docs:1, source:1, tests:1",
+            },
             "backlog_top_items": [],
         }
     )
@@ -1204,9 +1464,23 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
     assert "Prepared actions:" in output
     assert "Runtime: 1 seconds elapsed (no minimum budget)" in output
     assert "Selected fallback families: cleanup" in output
+    assert (
+        "Live repository: modified=3; untracked=2; staged=0; "
+        "runtime_artifacts=1; benchmark_results=1; dirty_benchmark_results=0; "
+        "release_evidence=0; "
+        "generated_policy=false; areas=docs:1, source:1, tests:1" in output
+    )
     assert "integration_cleanup_plan for worktree_risk-dirty-worktree" in output
-    assert "commands: git status --short; python -m qa_z backlog --json" in output
-    assert "context: docs/reports/worktree-triage.md" in output
+    assert (
+        "commands: git status --short; "
+        "python scripts/runtime_artifact_cleanup.py --json; "
+        "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json; "
+        "python -m qa_z backlog --json" in output
+    )
+    assert (
+        "context: docs/reports/worktree-commit-plan.md, "
+        "docs/reports/worktree-triage.md, scripts/runtime_artifact_cleanup.py" in output
+    )
 
 
 def test_render_autonomy_loop_plan_includes_selected_fallback_families() -> None:
@@ -1253,9 +1527,13 @@ def test_render_autonomy_status_shows_next_recommendations_without_actions() -> 
                 "backlog_open_count_before_inspection": 1,
                 "backlog_open_count_after_inspection": 0,
                 "stale_open_items_closed": 1,
+                "blocked_chain_length": 1,
+                "blocked_chain_remaining_until_stop": 1,
+                "blocked_chain_loop_ids": ["loop-empty"],
                 "summary": (
                     "self-inspection closed 1 stale open backlog item; no "
-                    "replacement fallback candidates were selected"
+                    "replacement fallback candidates were selected; blocked "
+                    "no-candidate chain 1/2"
                 ),
             },
             "latest_prepared_actions": [],
@@ -1273,6 +1551,8 @@ def test_render_autonomy_status_shows_next_recommendations_without_actions() -> 
         "Loop health summary: self-inspection closed 1 stale open backlog item"
         in output
     )
+    assert "Blocked no-candidate chain: 1/2" in output
+    assert "Blocked no-candidate loop ids: loop-empty" in output
     assert "Selection gap reason: no_open_backlog_after_inspection" in output
     assert "Open backlog count: 1 before inspection, 0 after inspection" in output
     assert "- no evidence-backed fallback candidates available" in output
