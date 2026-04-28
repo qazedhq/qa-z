@@ -495,11 +495,11 @@ def test_current_reports_reflect_latest_local_gate_refresh() -> None:
     )
 
     for text in (current_state, roadmap):
-        assert "Date: 2026-04-24" in text
-        assert "1184 passed" in text
+        assert "Date: 2026-04-28" in text
+        assert "1212 passed" in text
         assert "54/54 fixtures, overall_rate 1.0" in text
-        assert "500 source files" in text
-        assert "562 files already formatted" in text
+        assert "507 source files" in text
+        assert "519 files already formatted" in text
         assert "generated_local_only_count" in text
         assert "generated_local_by_default_count" in text
         assert "cross_cutting_count=12" in text
@@ -511,8 +511,11 @@ def test_current_reports_reflect_latest_local_gate_refresh() -> None:
         assert "Generated at:" in text
         assert "release_evidence_consistency" in text
     assert "alpha release gate passed" in current_state
-    assert "needs_repository_bootstrap" in current_state
-    assert "repository_missing" in current_state
+    assert "GitHub Actions run `25050794900`" in current_state
+    assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha" in (
+        current_state
+    )
+    assert "no PyPI, TestPyPI, or package-registry publish" in current_state
     assert "generated_artifact_count=0" in current_state
     assert "generated_local_only_count=0" in current_state
     assert "generated_local_by_default_count=0" in current_state
@@ -527,8 +530,8 @@ def test_current_reports_reflect_latest_local_gate_refresh() -> None:
     assert "generated_local_only_count=0" in roadmap
     assert "generated_local_by_default_count=7" in roadmap
     assert "unassigned_source_path_count=0" in roadmap
-    assert "local_only_remote_preflight" in current_state
-    assert "ready_for_remote_checks" in current_state
+    assert "GitHub prerelease" in current_state
+    assert "v0.9.8-alpha" in current_state
     assert "mypy.ini" in roadmap
     assert "$TEMP/qa-z-mypy-cache" in roadmap
     assert "`30` generated roots total" not in roadmap
@@ -965,8 +968,7 @@ def test_reports_identify_generated_evidence_policy_as_post_l29_immediate_focus(
         in current_state
     )
     assert (
-        "Immediate next focus: create or expose `qazedhq/qa-z`, or install/authorize access to that owner for this session, rerun remote preflight against the configured `origin`, and only then choose direct publish versus release-PR cutover."
-        in roadmap
+        "Immediate next focus: keep post-publish evidence surfaces aligned" in roadmap
     )
     assert (
         "Priority 5 executor operator diagnostics now includes the committed non-blocked `validation_conflict + repeated_rejected_attempts` mixed-history slice"

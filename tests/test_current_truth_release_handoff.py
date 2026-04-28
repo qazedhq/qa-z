@@ -65,24 +65,22 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     ).read_text(encoding="utf-8")
 
     assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_plan
-    assert "docs/releases/v0.9.8-alpha-publish-handoff.md" in release_notes
-    assert "scripts/alpha_release_preflight.py" in release_notes
+    assert "first public alpha release" in release_notes
     assert "configured `origin` remote" in release_handoff
     assert "qazedhq/qa-z" in release_handoff
-    assert "2026-04-23 remote preflight against the configured origin" in (
+    assert "public GitHub prerelease was created" in release_handoff
+    assert "GitHub prerelease `QA-Z v0.9.8-alpha` is published" in (release_handoff)
+    assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha" in (
         release_handoff
     )
-    assert "2026-04-24 live recheck kept the same blocker" in release_handoff
-    assert "404 Not Found" in release_handoff
-    assert "Repository not found." in release_handoff
-    assert "`release_path_state=blocked_repository`" in release_handoff
-    assert "`remote_readiness=needs_repository_bootstrap`" in release_handoff
-    assert "`remote_blocker=repository_missing`" in release_handoff
-    assert "`ggbu75769-dot`" in release_handoff
-    assert "visible org membership is empty" in release_handoff
-    assert "search returned no visible `qazedhq/qa-z` result" in release_handoff
-    assert ".qa-z/tmp/alpha-release-gate-l36.json" in release_handoff
-    assert "only the remote publish path remains blocked" in release_handoff
+    assert "GitHub Actions run `25050794900`" in release_handoff
+    assert "`1212 passed`" in release_handoff
+    assert "`507` mypy source files" in release_handoff
+    assert "`519 files" in release_handoff
+    assert "`0` forbidden files" in release_handoff
+    assert "No PyPI, TestPyPI, or package-registry publish was performed" in (
+        release_handoff
+    )
     assert "https://github.com/qazedhq/qa-z.git" in release_handoff
     assert "git remote add origin <repository-url>" in release_handoff
     assert "git ls-remote --refs <repository-url>" in release_handoff
@@ -134,7 +132,9 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "Release QA-Z v0.9.8-alpha" in release_handoff
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_handoff
     assert "docs/releases/v0.9.8-alpha-github-release.md" in release_handoff
-    assert "Do not tag before the target repository exists" in release_handoff
+    assert "Annotated tag `v0.9.8-alpha` exists locally and remotely" in (
+        release_handoff
+    )
     assert "git tag -s v0.9.8-alpha -m" in release_handoff
     assert "git tag -v v0.9.8-alpha" in release_handoff
     assert "git tag -a v0.9.8-alpha -m" in release_handoff
@@ -165,8 +165,7 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
     assert "git bundle verify" in release_handoff
     assert "git bundle list-heads" in release_handoff
     assert "git rev-parse HEAD" in release_handoff
-    assert "No `gh` CLI is available in this environment." in release_handoff
-    assert "`GITHUB_TOKEN` and `GH_TOKEN` are absent." in release_handoff
+    assert "GitHub prerelease `QA-Z v0.9.8-alpha` is published" in (release_handoff)
     assert "SHA256: `" not in release_handoff
     for artifact in (
         "dist/qa_z-0.9.8a0.tar.gz",
@@ -191,22 +190,14 @@ def test_live_remote_blocker_recheck_is_captured_in_state_and_plan_docs() -> Non
         / "2026-04-24-remote-publish-path-blocker-recheck.md"
     ).read_text(encoding="utf-8")
 
-    assert ".qa-z/tmp/alpha-release-preflight-remote-live.json" in current_state
-    assert "`ggbu75769-dot`" in current_state
-    assert "GitHub org visibility is" in current_state
-    assert "empty, so Stage 4-5 remain blocked by external repository bootstrap" in (
-        current_state
-    )
-    assert "git ls-remote --refs https://github.com/qazedhq/qa-z.git" in current_state
-    assert "remote: Repository not found." in current_state
+    assert "GitHub Actions run `25050794900`" in current_state
+    assert "remote `main` advanced to" in current_state
+    assert "public GitHub prerelease now exists" in current_state
+    assert "no PyPI, TestPyPI, or package-registry publish" in (current_state)
 
-    assert "2026-04-24: L36 closed the live remote publish-path blocker recheck" in (
-        roadmap
-    )
-    assert "only the installed GitHub account `ggbu75769-dot`" in roadmap
-    assert "no visible `qazedhq/qa-z` search result" in roadmap
-    assert "`EXTERNAL + ACCESS`" in roadmap
-    assert "git ls-remote --refs https://github.com/qazedhq/qa-z.git" in roadmap
+    assert "2026-04-28: Published `QA-Z v0.9.8-alpha`" in roadmap
+    assert "GitHub Actions run `25050794900` succeeded" in roadmap
+    assert "No PyPI, TestPyPI, or package-registry publish was performed" in (roadmap)
 
     assert "# QA-Z Remote Publish Path Blocker Recheck" in blocker_plan
     assert "- type: EXTERNAL + ACCESS" in blocker_plan

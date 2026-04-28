@@ -55,10 +55,10 @@ python scripts/alpha_release_gate.py --json
 Observed results:
 
 ```text
-ruff format: 1014 files already formatted
+ruff format: 519 files already formatted
 ruff check: All checks passed!
-mypy: Success: no issues found in 498 source files
-pytest: 1158 passed
+mypy: Success: no issues found in 507 source files
+pytest: 1212 passed
 build: qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl built
 artifact smoke: wheel and sdist metadata install smoke passed
 bundle manifest: bundle head and SHA256 artifact manifest generated
@@ -228,7 +228,7 @@ python -m pytest
 Expected:
 
 ```text
-All commands pass. The expected current pytest count is 1158 passed.
+All commands pass. The expected current pytest count is 1212 passed.
 ```
 
 - [ ] **Step 3: Run the QA-Z local release gate**

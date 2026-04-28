@@ -122,14 +122,13 @@ def test_alpha_closure_readiness_snapshot_is_pinned() -> None:
     assert "Verified on 2026-04-22" not in release_plan
     assert "Audit date: 2026-04-23 KST." in launch_plan
     assert "Audit date: 2026-04-22 KST." not in launch_plan
-    assert "1158 passed" in commit_plan
-    assert "1158 passed" in release_plan
-    assert "1158 passed" in release_handoff
-    assert "pytest: 1158 passed" in launch_plan
-    assert "expected current pytest count is 1158 passed" in launch_plan
-    assert "`python -m pytest`: 1158 passed" in release_notes
-    assert "`python -m pytest`: passed, `1158 passed" in release_pr
-    assert "`python -m pytest`: passed, `1158 passed`" in github_release
+    assert "1212 passed" in commit_plan
+    assert "1212 passed" in release_handoff
+    assert "pytest: 1212 passed" in launch_plan
+    assert "expected current pytest count is 1212 passed" in launch_plan
+    assert "`pytest`: `1212 passed`" in release_notes
+    assert "`pytest`: `1212 passed`" in release_pr
+    assert "`pytest`: `1212 passed`" in github_release
     assert "repo_probe=..." in readme
     assert "repo_probe_basis=last_known" in readme
     assert "repo_probe_at=..." in readme
@@ -286,24 +285,30 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "`generated_local_only_tracked_paths`" in schema
     assert "`generated_local_by_default_tracked_paths`" in schema
     assert "python -m qa_z benchmark --json" in commit_plan
-    assert "python -m qa_z benchmark --json" in release_pr
-    assert "python -m qa_z benchmark --json" in github_release
-    assert "non-blocking `scan_quality` warnings surfaced" in release_notes
-    assert "non-blocking `scan_quality` warnings surfaced" in release_pr
-    assert "non-blocking `scan_quality` warnings surfaced" in github_release
-    assert "non-blocking `scan_quality` warnings surfaced" in release_handoff
+    assert "54/54 fixtures, overall_rate 1.0" in release_pr
+    assert "GitHub Actions run `25050794900`" in github_release
+    assert "Artifact contents scan" in release_notes
+    assert "Artifact contents scan" in release_pr
+    assert "Artifact contents scan" in github_release
+    assert "GitHub Actions run `25050794900`" in release_handoff
     assert "python -m build --sdist --wheel" in commit_plan
     assert "python -m build --sdist --wheel" in release_plan
-    assert "`python -m build --sdist --wheel`: passed" in release_notes
-    assert "`python -m build --sdist --wheel`: passed" in release_pr
-    assert "`python -m build --sdist --wheel`: passed" in github_release
+    assert "Packaged templates and installed-artifact smoke coverage" in (release_notes)
+    assert "Package registry publish: not performed" in release_pr
+    assert "No PyPI/TestPyPI/package registry publish" in github_release
     assert "python scripts/alpha_release_artifact_smoke.py --json" in commit_plan
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_plan
     assert "python scripts/alpha_release_artifact_smoke.py --json" in release_handoff
     assert "python scripts/alpha_release_artifact_smoke.py --json" in launch_plan
-    assert "python scripts/alpha_release_artifact_smoke.py --json" in release_notes
-    assert "python scripts/alpha_release_artifact_smoke.py --json" in release_pr
-    assert "python scripts/alpha_release_artifact_smoke.py --json" in github_release
+    assert "python scripts/alpha_release_artifact_smoke.py --with-deps --json" in (
+        release_notes
+    )
+    assert "python scripts/alpha_release_artifact_smoke.py --with-deps --json" in (
+        release_pr
+    )
+    assert "python scripts/alpha_release_artifact_smoke.py --with-deps --json" in (
+        github_release
+    )
     assert "python scripts/alpha_release_gate.py --json" in release_notes
     assert "python scripts/alpha_release_gate.py --json" in release_pr
     assert "python scripts/alpha_release_gate.py --json" in github_release
@@ -548,23 +553,28 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "python scripts/alpha_release_bundle_manifest.py --json" in release_handoff
     assert "python scripts/alpha_release_bundle_manifest.py --json" in launch_plan
     assert "wheel and sdist metadata install smoke" in release_handoff
-    assert "wheel and sdist metadata install smoke" in release_pr
-    assert "wheel and sdist metadata install smoke" in github_release
+    assert "python scripts/alpha_release_artifact_smoke.py --with-deps --json" in (
+        release_pr
+    )
+    assert "python scripts/alpha_release_artifact_smoke.py --with-deps --json" in (
+        github_release
+    )
     assert "54/54 fixtures" in commit_plan
     assert "54/54 fixtures, overall_rate 1.0" in release_pr
     assert "54/54 fixtures, overall_rate 1.0" in github_release
     assert "benchmark summary `snapshot` field" in commit_plan
     assert "python -m ruff check ." in commit_plan
-    assert "`python -m ruff check .`: passed" in release_notes
-    assert "`python -m ruff check .`: passed" in release_pr
-    assert "`python -m ruff check .`: passed" in github_release
+    assert "`ruff check src tests scripts`: passed" in release_notes
+    assert "`ruff check src tests scripts`: passed" in release_pr
+    assert "`ruff check src tests scripts`: passed" in github_release
     assert "python -m ruff format --check ." in commit_plan
-    assert "`python -m ruff format --check .`: 1014 files already formatted" in (
-        release_notes
+    assert (
+        "`ruff format --check src tests scripts`: passed, `519 files already formatted`"
+        in (release_notes)
     )
-    assert "`python -m ruff format --check .`: passed" in release_pr
-    assert "`python -m ruff format --check .`: passed" in github_release
-    assert "1014 files already formatted" in commit_plan
+    assert "`ruff format --check src tests scripts`: passed" in release_pr
+    assert "`ruff format --check src tests scripts`: passed" in github_release
+    assert "519 files already formatted" in commit_plan
     assert "146 files already formatted" not in commit_plan
     assert "146 files already formatted" not in release_notes
     assert "146 files already formatted" not in release_pr
@@ -578,10 +588,10 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "128 files already formatted" not in release_pr
     assert "128 files already formatted" not in github_release
     assert "python -m mypy src tests" in commit_plan
-    assert "`python -m mypy src tests`: 498 source files" in release_notes
-    assert "`python -m mypy src tests`: passed" in release_pr
-    assert "`python -m mypy src tests`: passed" in github_release
-    assert "498 source files" in commit_plan
+    assert "`mypy src tests`: passed across `507` source files" in release_notes
+    assert "`mypy src tests`: passed" in release_pr
+    assert "`mypy src tests`: passed" in github_release
+    assert "507 source files" in commit_plan
     assert "85 source files" not in commit_plan
     assert "85 source files" not in release_notes
     assert "85 source files" not in release_pr
@@ -594,9 +604,9 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "83 source files" not in release_notes
     assert "83 source files" not in release_pr
     assert "83 source files" not in github_release
-    assert "CLI smoke checks: 17 help surfaces passed" in release_notes
-    assert "CLI smoke checks: passed for 17 help surfaces" in release_pr
-    assert "CLI smoke checks: passed for 17 help surfaces" in github_release
+    assert "python scripts/alpha_release_gate.py --json" in release_notes
+    assert "python scripts/alpha_release_gate.py --json" in release_pr
+    assert "python scripts/alpha_release_gate.py --json" in github_release
     assert "Generated Output Policy" in commit_plan
     assert "split the worktree by this commit plan" in commit_plan
     assert "action basis:" in commit_plan
@@ -607,13 +617,15 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "benchmarks/results-*" in commit_plan
     assert "benchmarks/results-*" in release_handoff
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_plan
-    assert "docs/releases/v0.9.8-alpha-pr.md" in release_notes
+    assert "Release tag: `v0.9.8-alpha`" in release_pr
     assert "docs/releases/v0.9.8-alpha-github-release.md" in release_plan
-    assert "docs/releases/v0.9.8-alpha-github-release.md" in release_notes
+    assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha" in (
+        release_notes
+    )
     assert "# Release QA-Z v0.9.8-alpha" in release_pr
     assert "# QA-Z v0.9.8-alpha" in github_release
     assert "No live Codex or Claude execution." in release_pr
-    assert "No live Codex or Claude execution." in github_release
+    assert "No live Codex, Claude, or other agent execution." in github_release
     assert "No autonomous code editing." in release_pr
     assert "No autonomous code editing." in github_release
     assert "No remote orchestration" in release_pr
@@ -625,52 +637,26 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "Generated Artifact Policy" in release_pr
     assert "Generated Artifact Policy" in github_release
     assert "Benchmark Snapshot" in release_pr
-    assert "Benchmark corpus" in github_release
-    assert "Self-inspection" in github_release
-    assert "Executor bridge packaging" in github_release
-    assert "live-free executor dry-run" in github_release
+    assert "Benchmark fixtures" in github_release
+    assert "`qa-z doctor`" in github_release
+    assert "executor bridge packaging" in github_release
+    assert "live-free executor safety dry-run" in github_release
     assert "configured `origin` remote" in release_plan
-    assert "configured `origin` remote" in release_pr
-    assert "configured `origin` remote" in github_release
+    assert "Repository: `https://github.com/qazedhq/qa-z`" in release_pr
+    assert "first public alpha release" in github_release
     assert "qazedhq/qa-z" in release_pr
     assert "qazedhq/qa-z" in github_release
-    assert "`actual_origin_target`" in release_notes
-    assert "`actual_origin_target`" in release_pr
-    assert "`actual_origin_target`" in github_release
-    assert "`remote_ref_count`" in release_notes
-    assert "`remote_ref_count`" in release_pr
-    assert "`remote_ref_count`" in github_release
-    assert "`remote_ref_head_count`" in release_notes
-    assert "`remote_ref_head_count`" in release_pr
-    assert "`remote_ref_head_count`" in github_release
-    assert "`remote_ref_tag_count`" in release_notes
-    assert "`remote_ref_tag_count`" in release_pr
-    assert "`remote_ref_tag_count`" in github_release
-    assert "`remote_ref_kinds`" in release_notes
-    assert "`remote_ref_kinds`" in release_pr
-    assert "`remote_ref_kinds`" in github_release
-    assert "`publish_checklist`" in release_notes
-    assert "`publish_checklist`" in release_pr
-    assert "`publish_checklist`" in github_release
-    assert "`publish_strategy=bootstrap_origin`" in release_notes
-    assert "`publish_strategy=bootstrap_origin`" in release_pr
-    assert "`publish_strategy=bootstrap_origin`" in github_release
-    assert "`release_path_state`" in release_notes
-    assert "`release_path_state`" in release_pr
-    assert "`release_path_state`" in github_release
-    assert "`remote_ref_sample`" in release_notes
-    assert "`remote_ref_sample`" in release_pr
-    assert "`remote_ref_sample`" in github_release
-    assert "`next_action_count`" in release_notes
-    assert "`next_action_count`" in release_pr
-    assert "`next_action_count`" in github_release
-    assert "`next_command_count`" in release_notes
-    assert "`next_command_count`" in release_pr
-    assert "`next_command_count`" in github_release
-    assert "`ready_for_remote_checks`" in release_notes
-    assert "`ready_for_remote_checks`" in release_pr
-    assert "`ready_for_remote_checks`" in github_release
-    assert "latest remote preflight still returns `404 Not Found`" in github_release
+    assert "Release Commit" in release_notes
+    assert "Release commit" in release_pr
+    assert "Release Commit" in github_release
+    assert "Release commit: `6ed3a205443498f4bd063a97106fd9d3a05b99a0`" in (release_pr)
+    assert "`6ed3a205443498f4bd063a97106fd9d3a05b99a0`" in release_notes
+    assert "`6ed3a205443498f4bd063a97106fd9d3a05b99a0`" in github_release
+    assert "GitHub Actions run `25050794900`: `test` success, `qa-z` success" in (
+        release_notes
+    )
+    assert "Package registry publish: not performed" in release_pr
+    assert "No PyPI/TestPyPI/package registry publish" in github_release
     assert "worktree is not releaseable as-is" not in release_plan
     assert "31 tracked modified files" not in release_plan
     assert "- [x] **Step 1: Run full deterministic validation**" in release_plan

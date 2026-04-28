@@ -1,6 +1,6 @@
 # QA-Z Current State Analysis
 
-Date: 2026-04-24
+Date: 2026-04-28
 Branch context: `codex/qa-z-bootstrap`
 
 ## Purpose
@@ -45,20 +45,27 @@ The current alpha loop is local and deterministic. It packages evidence for an
 external repair actor, but it does not perform live model execution, remote
 orchestration, autonomous code editing, commit/push flows, or GitHub bot actions.
 
-Current verification refresh for this work package:
+Current verification refresh for the published alpha baseline:
 
-- `python -m pytest`: 1184 passed
+- `ruff check src tests scripts`: passed
+- `ruff format --check src tests scripts`: passed, `519 files already formatted`
+- `mypy src tests`: passed across `507` source files
+- `pytest`: `1212 passed`
 - `python -m qa_z benchmark --json`: 54/54 fixtures, overall_rate 1.0
-- `python -m ruff check .`: passed
-- `python -m ruff format --check .`: 562 files already formatted
-- `python -m mypy src tests`: Success: no issues found in 500 source files
+- `python scripts/alpha_release_gate.py --json`: alpha release gate passed with `29/29`
+- `python scripts/alpha_release_artifact_smoke.py --with-deps --json`: passed
+- artifact contents scan: wheel and sdist contained `0` forbidden files
+- GitHub Actions run `25050794900`: `test` success, `qa-z` success
+- remote publication reference: remote `main`, annotated tag `v0.9.8-alpha`,
+  and the public GitHub prerelease all point at
+  `6ed3a205443498f4bd063a97106fd9d3a05b99a0`
+- published release URL:
+  `https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha`
+- package registry publish remains intentionally out of scope for this GitHub
+  prerelease step
 - release stageability reference: `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output %TEMP%\qa-z-worktree-plan-l19-compact.json`: attention required only for `cross_cutting_paths_present`, with `generated_artifact_count=0`, `generated_local_only_count=0`, `generated_local_by_default_count=0`, `cross_cutting_count=12`, `cross_cutting_group_count=5`, and `unassigned_source_path_count=0`
 - ignored-artifact policy reference: `python scripts/worktree_commit_plan.py --include-ignored --summary-only --json --output %TEMP%\qa-z-worktree-plan-l20-include-ignored-postcleanup.json`: ready with `generated_artifact_count=7`, `generated_local_only_count=0`, `generated_local_by_default_count=7`, `cross_cutting_count=12`, `cross_cutting_group_count=5`, and `unassigned_source_path_count=0`
 - runtime cleanup reference: `python scripts/runtime_artifact_cleanup.py --apply --json`: deleted 17 local-only runtime artifact roots, left 7 local-by-default benchmark result roots in `review_local_by_default`, and reported `skipped_tracked=0`
-- local-only remote preflight reference: `python scripts/alpha_release_preflight.py --skip-remote --allow-dirty --expected-origin-url https://github.com/qazedhq/qa-z.git --json --output %TEMP%\qa-z-preflight-l12-expected-origin.json`: passed with `release_path_state=local_only_remote_preflight`, `remote_readiness=ready_for_remote_checks`, and `origin_target_matches_repository`
-- remote publish reference: `python scripts/alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --allow-dirty --json --output %TEMP%\qa-z-alpha-remote-preflight-l20.json`: still fails with `release_path_state=blocked_repository`, `remote_readiness=needs_repository_bootstrap`, and `remote_blocker=repository_missing` after the configured `origin` matched the intended target
-- direct remote ref probe: `git ls-remote --refs https://github.com/qazedhq/qa-z.git`: still fails with `remote: Repository not found.`
-- broader alpha-closure reference: `python scripts/alpha_release_gate.py --allow-dirty --output %TEMP%\qa-z-alpha-gate-l18-rerun.json --json`: alpha release gate passed locally again with `1184 passed`, `54/54 fixtures, overall_rate 1.0`, `562 files already formatted`, `500 source files`, build, artifact smoke, bundle manifest, and CLI help all green; the nested local-only preflight still auto-carries the configured `origin` as `--expected-origin-url`
 
 Release evidence hardening is part of this current baseline: alpha gate and
 preflight JSON now carry `generated_at`, human output prints `Generated at:`,
@@ -618,63 +625,51 @@ The latest narrower continuity slice is now closed as well: cleanup and
 workflow prepared actions now keep loop-local self-inspection in
 `context_paths`, and current-truth release continuity pins the same contract
 across README, schema, current state, and roadmap wording. The release track is
-no longer blocked on source stageability: `python scripts/alpha_release_gate.py
---allow-dirty --output .qa-z/tmp/alpha-release-gate-l35.json --json` now
-passes locally again even after `origin` bootstrap, and the strict helper no
-longer reports unassigned source paths. The remaining blocker is remote
-publication:
-`python scripts/alpha_release_preflight.py --repository-url
-https://github.com/qazedhq/qa-z.git --expected-origin-url
-https://github.com/qazedhq/qa-z.git --allow-dirty --json --output
-.qa-z/tmp/alpha-release-preflight-remote-l35.json` fails with
-`release_path_state=blocked_repository`,
-`remote_readiness=needs_repository_bootstrap`, and
-`remote_blocker=repository_missing` because `qazedhq/qa-z` still returns
-`404 Not Found` even though `origin` now points at the intended URL.
-The 2026-04-24 live recheck keeps that same blocker classification: fresh
-remote preflight evidence was written to
-`.qa-z/tmp/alpha-release-preflight-remote-live.json`, GitHub app search returned
-no visible `qazedhq/qa-z` repository, the only installed account visible to this
-session is `ggbu75769-dot`, and GitHub org visibility is
-empty, so Stage 4-5 remain blocked by external repository bootstrap plus access
-alignment rather than a new repo-local release gap.
-A later same-day probe kept that result unchanged:
-`git ls-remote --refs https://github.com/qazedhq/qa-z.git` still returned
-`remote: Repository not found.`, so the blocker remains at the remote owner
-boundary rather than inside QA-Z's local release surface.
+no longer blocked on source stageability or remote publication. The repository
+was imported to `qazedhq/qa-z`, remote `main` advanced to
+`6ed3a205443498f4bd063a97106fd9d3a05b99a0`, GitHub Actions run `25050794900`
+passed for both release jobs, annotated tag `v0.9.8-alpha` was pushed, and the
+public GitHub prerelease now exists at
+`https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha`. The remaining
+release boundary is deliberate: no PyPI, TestPyPI, or package-registry publish
+has been performed for this GitHub prerelease step.
 
-For the current release track, the immediate blocker sequence is narrower than
-the standing roadmap:
+For the current release track, the immediate follow-up sequence is narrower
+than the standing roadmap:
 
-1. create or expose the public `qazedhq/qa-z` repository, or deliberately align the expected target to a different reachable repository
-2. rerun remote preflight against the configured `origin`
-3. choose direct publish versus release-PR cutover only after the remote target is reachable and empty-or-known by policy
-4. tag only after the remote baseline is pushed and remote CI passes
+1. keep post-publish docs and current-truth tests aligned with the published tag
+2. treat the GitHub prerelease as the public truth surface for `v0.9.8-alpha`
+3. split any PyPI/TestPyPI/package-registry publish into a separate release gate
+4. continue P2 productization work without moving the published alpha tag
 
 ## Validation Baseline
 
 The repository baseline for this analysis pass is:
 
 ```text
-python -m ruff format --check .
-python -m ruff check .
-python -m mypy src tests
-python -m pytest
+ruff check src tests scripts
+ruff format --check src tests scripts
+mypy src tests
+pytest
 python -m qa_z benchmark --json
+python scripts/alpha_release_gate.py --json
+python scripts/alpha_release_artifact_smoke.py --with-deps --json
 ```
 
 Latest observed outputs:
 
 ```text
-python -m pytest -> 1184 passed
+pytest -> 1212 passed
 python -m qa_z benchmark --json -> 54/54 fixtures, overall_rate 1.0
-python -m ruff check . -> passed
-python -m ruff format --check . -> 562 files already formatted
-python -m mypy src tests -> Success: no issues found in 500 source files
+ruff check src tests scripts -> passed
+ruff format --check src tests scripts -> 519 files already formatted
+mypy src tests -> Success: no issues found in 507 source files
 python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output %TEMP%\qa-z-worktree-plan-l19-compact.json -> attention_required, generated_artifact_count=0, generated_local_only_count=0, generated_local_by_default_count=0, cross_cutting_count=12, cross_cutting_group_count=5, unassigned_source_path_count=0
 python scripts/worktree_commit_plan.py --include-ignored --summary-only --json --output %TEMP%\qa-z-worktree-plan-l20-include-ignored-postcleanup.json -> ready, generated_artifact_count=7, generated_local_only_count=0, generated_local_by_default_count=7, cross_cutting_count=12, cross_cutting_group_count=5, unassigned_source_path_count=0
-python scripts/alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --allow-dirty --json --output %TEMP%\qa-z-alpha-remote-preflight-l20.json -> release preflight failed, release_path_state=blocked_repository, remote_readiness=needs_repository_bootstrap, remote_blocker=repository_missing
-python scripts/alpha_release_gate.py --allow-dirty --output %TEMP%\qa-z-alpha-gate-l18-rerun.json --json -> alpha release gate passed locally again; remote publish remains blocked by missing repository bootstrap
+python scripts/alpha_release_gate.py --json -> alpha release gate passed, 29/29
+python scripts/alpha_release_artifact_smoke.py --with-deps --json -> passed; artifact contents scan reported 0 forbidden files
+GitHub Actions run 25050794900 -> test success, qa-z success
+GitHub prerelease -> https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha
 ```
 
 Useful smoke checks for the current alpha surface:
