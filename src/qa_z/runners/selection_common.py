@@ -63,6 +63,18 @@ def skipped_check_plan(spec: CheckSpec, selection_reason: str) -> CheckPlan:
     )
 
 
+def command_with_targets(
+    spec: CheckSpec,
+    targets: list[str],
+    *,
+    replace_roots: set[str] | None = None,
+) -> list[str]:
+    """Return the configured command with selected target paths injected."""
+    roots = replace_roots or set()
+    command = [part for part in spec.command if part not in roots]
+    return [*command, *unique_preserve_order(targets)]
+
+
 def unique_preserve_order(items: list[str]) -> list[str]:
     """Return unique strings in first-seen order."""
     seen: set[str] = set()

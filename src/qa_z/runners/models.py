@@ -10,6 +10,21 @@ from qa_z.diffing.models import ChangedFile
 
 ExecutionMode = Literal["full", "targeted", "skipped"]
 
+__all__ = [
+    "CheckPlan",
+    "CheckResult",
+    "CheckSpec",
+    "ExecutionMode",
+    "GroupedFinding",
+    "RunSummary",
+    "SelectionSummary",
+    "SemgrepCheckPolicy",
+    "SemgrepFinding",
+    "coerce_execution_mode",
+    "coerce_int_mapping",
+    "string_list",
+]
+
 
 @dataclass(slots=True)
 class SemgrepFinding:
@@ -157,6 +172,8 @@ class CheckResult:
     severity_summary: dict[str, int] = field(default_factory=dict)
     grouped_findings: list[dict[str, Any]] = field(default_factory=list)
     findings: list[dict[str, Any]] = field(default_factory=list)
+    scan_warning_count: int | None = None
+    scan_warnings: list[dict[str, Any]] = field(default_factory=list)
     policy: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -188,6 +205,9 @@ class CheckResult:
             data["severity_summary"] = dict(self.severity_summary)
             data["grouped_findings"] = list(self.grouped_findings)
             data["findings"] = list(self.findings)
+        if self.scan_warning_count is not None:
+            data["scan_warning_count"] = self.scan_warning_count
+            data["scan_warnings"] = list(self.scan_warnings)
         if self.policy:
             data["policy"] = dict(self.policy)
         return data
@@ -266,6 +286,16 @@ class CheckResult:
                 for item in data.get("findings", [])
                 if isinstance(item, dict)
             ],
+            scan_warning_count=(
+                int(data["scan_warning_count"])
+                if data.get("scan_warning_count") is not None
+                else None
+            ),
+            scan_warnings=[
+                dict(item)
+                for item in data.get("scan_warnings", [])
+                if isinstance(item, dict)
+            ],
             policy=dict(data["policy"]) if isinstance(data.get("policy"), dict) else {},
         )
 
@@ -335,6 +365,8 @@ class RunSummary:
     schema_version: int = 1
     selection: SelectionSummary | None = None
     policy: dict[str, Any] = field(default_factory=dict)
+    run_resolution: dict[str, Any] = field(default_factory=dict)
+    diagnostics: dict[str, Any] = field(default_factory=dict)
 
     @property
     def totals(self) -> dict[str, int]:
@@ -371,6 +403,10 @@ class RunSummary:
             )
         if self.policy:
             data["policy"] = dict(self.policy)
+        if self.run_resolution:
+            data["run_resolution"] = dict(self.run_resolution)
+        if self.diagnostics:
+            data["diagnostics"] = dict(self.diagnostics)
         return data
 
     @classmethod
@@ -421,6 +457,16 @@ class RunSummary:
                 else None
             ),
             policy=dict(data["policy"]) if isinstance(data.get("policy"), dict) else {},
+            run_resolution=(
+                dict(data["run_resolution"])
+                if isinstance(data.get("run_resolution"), dict)
+                else {}
+            ),
+            diagnostics=(
+                dict(data["diagnostics"])
+                if isinstance(data.get("diagnostics"), dict)
+                else {}
+            ),
         )
 
 

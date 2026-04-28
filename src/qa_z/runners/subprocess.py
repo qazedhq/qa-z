@@ -8,16 +8,14 @@ import time
 from pathlib import Path
 
 from qa_z.runners.models import CheckResult, CheckSpec
+from qa_z.subprocess_env import build_tool_subprocess_env
 
 TAIL_LIMIT = 4000
 
 
 def utf8_subprocess_env() -> dict[str, str]:
     """Return an environment that keeps Python-based tools UTF-8 stable."""
-    env = os.environ.copy()
-    env["PYTHONUTF8"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    return env
+    return build_tool_subprocess_env(os.environ)
 
 
 def tail_text(value: str | None, limit: int = TAIL_LIMIT) -> str:

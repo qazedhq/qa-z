@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 
 from qa_z.diffing.models import ChangedFile, ChangeSet
 from qa_z.runners.models import CheckPlan, CheckSpec, SelectionSummary
+from qa_z.runners.selection_common import command_with_targets
 from qa_z.runners.selection_typescript import (
     TYPESCRIPT_BUILTIN_IDS,
     build_typescript_check_plan,
@@ -189,7 +190,7 @@ def build_python_check_plan(
         if targets:
             return targeted_check_plan(
                 spec,
-                ["ruff", "check", *targets],
+                command_with_targets(spec, targets, replace_roots={"."}),
                 targets,
                 "python source/test files changed",
                 high_risk_reasons,
@@ -199,7 +200,7 @@ def build_python_check_plan(
         if targets:
             return targeted_check_plan(
                 spec,
-                ["ruff", "format", "--check", *targets],
+                command_with_targets(spec, targets, replace_roots={"."}),
                 targets,
                 "python source/test files changed",
                 high_risk_reasons,
@@ -216,7 +217,7 @@ def build_python_check_plan(
             targets = [changed.path for changed in changed_tests]
             return targeted_check_plan(
                 spec,
-                ["pytest", "-q", *targets],
+                command_with_targets(spec, targets),
                 targets,
                 "changed test files selected directly",
                 high_risk_reasons,
@@ -226,7 +227,7 @@ def build_python_check_plan(
             if targets:
                 return targeted_check_plan(
                     spec,
-                    ["pytest", "-q", *targets],
+                    command_with_targets(spec, targets),
                     targets,
                     reason or "mapped changed source files to candidate tests",
                     high_risk_reasons,

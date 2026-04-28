@@ -9,17 +9,20 @@ TYPESCRIPT_FAST_DEFAULTS: dict[str, CheckSpec] = {
         id="ts_lint",
         command=["eslint", "."],
         kind="lint",
+        timeout_seconds=60,
     ),
     "ts_type": CheckSpec(
         id="ts_type",
         command=["tsc", "--noEmit"],
         kind="typecheck",
+        timeout_seconds=180,
     ),
     "ts_test": CheckSpec(
         id="ts_test",
         command=["vitest", "run"],
         kind="test",
         no_tests="warn",
+        timeout_seconds=300,
     ),
 }
 

@@ -45,9 +45,9 @@ def resolve_check_item(item: Any) -> CheckSpec | None:
     if not check_id:
         return None
 
+    default = default_spec_for_name(check_id)
     command = item.get("run")
     if command is None:
-        default = default_spec_for_name(check_id)
         command = default.command if default else None
     if not isinstance(command, list) or not all(
         isinstance(part, str) for part in command
@@ -57,10 +57,14 @@ def resolve_check_item(item: Any) -> CheckSpec | None:
     return CheckSpec(
         id=check_id,
         command=list(command),
-        kind=str(item.get("kind", default_kind(check_id))),
+        kind=str(item.get("kind", default.kind if default else default_kind(check_id))),
         enabled=bool(item.get("enabled", True)),
-        no_tests=str(item.get("no_tests", "warn")),
-        timeout_seconds=coerce_timeout(item.get("timeout_seconds")),
+        no_tests=str(item.get("no_tests", default.no_tests if default else "warn")),
+        timeout_seconds=(
+            coerce_timeout(item.get("timeout_seconds"))
+            if "timeout_seconds" in item
+            else (default.timeout_seconds if default else None)
+        ),
     )
 
 

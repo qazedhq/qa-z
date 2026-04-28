@@ -571,3 +571,125 @@ def test_fast_uses_configured_smart_selection_default(tmp_path, capsys) -> None:
     assert exit_code == 0
     assert output["selection"]["mode"] == "smart"
     assert output["selection"]["skipped_checks"] == ["py_lint"]
+
+
+def test_python_test_smart_selection_preserves_configured_pytest_command(
+    tmp_path,
+) -> None:
+    test_path = tmp_path / "tests" / "test_app.py"
+    test_path.parent.mkdir(parents=True)
+    test_path.write_text("def test_app():\n    assert True\n", encoding="utf-8")
+
+    plans, _selection = build_fast_selection(
+        check_specs=[
+            CheckSpec(
+                id="py_test",
+                command=["python", "-m", "pytest", "-q"],
+                kind="test",
+            )
+        ],
+        change_set=ChangeSet(
+            source="cli_diff",
+            files=[changed("src/app.py")],
+        ),
+        repo_root=tmp_path,
+        selection_mode="smart",
+        full_run_threshold=40,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_app.py",
+    ]
+
+
+def test_python_lint_smart_selection_replaces_configured_root_with_targets(
+    tmp_path,
+) -> None:
+    plans, _selection = build_fast_selection(
+        check_specs=[
+            CheckSpec(
+                id="py_lint",
+                command=["uv", "run", "ruff", "check", "."],
+                kind="lint",
+            )
+        ],
+        change_set=ChangeSet(
+            source="cli_diff",
+            files=[changed("src/app.py")],
+        ),
+        repo_root=tmp_path,
+        selection_mode="smart",
+        full_run_threshold=40,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "src/app.py",
+    ]
+
+
+def test_typescript_lint_preserves_pnpm_eslint_command(tmp_path) -> None:
+    plans, _selection = build_fast_selection(
+        check_specs=[
+            CheckSpec(
+                id="ts_lint",
+                command=["pnpm", "exec", "eslint", "."],
+                kind="lint",
+            )
+        ],
+        change_set=ChangeSet(
+            source="cli_diff",
+            files=[changed("src/ui/button.ts", language="typescript", kind="source")],
+        ),
+        repo_root=tmp_path,
+        selection_mode="smart",
+        full_run_threshold=40,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "pnpm",
+        "exec",
+        "eslint",
+        "src/ui/button.ts",
+    ]
+
+
+def test_typescript_test_preserves_configured_vitest_command(tmp_path) -> None:
+    test_path = tmp_path / "tests" / "ui" / "button.test.ts"
+    test_path.parent.mkdir(parents=True)
+    test_path.write_text("import { test } from 'vitest';\n", encoding="utf-8")
+
+    plans, _selection = build_fast_selection(
+        check_specs=[
+            CheckSpec(
+                id="ts_test",
+                command=["pnpm", "vitest", "run"],
+                kind="test",
+            )
+        ],
+        change_set=ChangeSet(
+            source="cli_diff",
+            files=[changed("src/ui/button.ts", language="typescript", kind="source")],
+        ),
+        repo_root=tmp_path,
+        selection_mode="smart",
+        full_run_threshold=40,
+        high_risk_paths=[],
+    )
+
+    assert plans[0].resolved_command == [
+        "pnpm",
+        "vitest",
+        "run",
+        "tests/ui/button.test.ts",
+    ]

@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 from qa_z.diffing.models import ChangedFile, ChangeSet
 from qa_z.runners.models import CheckPlan, CheckSpec
 from qa_z.runners.selection_common import (
+    command_with_targets,
     full_check_plan,
     skipped_check_plan,
     targeted_check_plan,
@@ -44,7 +45,7 @@ def build_typescript_check_plan(
         if targets:
             return targeted_check_plan(
                 spec,
-                ["eslint", *targets],
+                command_with_targets(spec, targets, replace_roots={"."}),
                 targets,
                 "typescript source/test files changed",
                 high_risk_reasons,
@@ -61,7 +62,7 @@ def build_typescript_check_plan(
             targets = [changed.path for changed in changed_tests]
             return targeted_check_plan(
                 spec,
-                ["vitest", "run", *targets],
+                command_with_targets(spec, targets),
                 targets,
                 "changed test files selected directly",
                 high_risk_reasons,
@@ -73,7 +74,7 @@ def build_typescript_check_plan(
             if targets:
                 return targeted_check_plan(
                     spec,
-                    ["vitest", "run", *targets],
+                    command_with_targets(spec, targets),
                     targets,
                     reason or "mapped changed source files to candidate tests",
                     high_risk_reasons,
