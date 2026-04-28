@@ -12,9 +12,22 @@ from textwrap import dedent
 import pytest
 import yaml
 
+import qa_z.commands.planning_output as planning_output_module
+
+from qa_z.commands import (
+    ALL_COMMAND_REGISTRARS,
+    COMMAND_REGISTRY_GROUPS,
+    EXECUTION_COMMAND_REGISTRARS,
+    PLANNING_COMMAND_REGISTRARS,
+    ROOT_COMMAND_REGISTRARS,
+    RUNTIME_COMMAND_REGISTRARS,
+    SESSION_COMMAND_REGISTRARS,
+    register_modular_commands,
+)
 from qa_z.cli import (
     build_parser,
     main,
+    render_backlog,
     render_select_next_stdout,
     render_self_inspect_stdout,
 )
@@ -22,6 +35,14 @@ from qa_z.config import EXAMPLE_CONFIG
 from qa_z.self_improvement import SelectionArtifactPaths
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
+
+
+def test_planning_output_module_exports_match_cli_surface() -> None:
+    assert planning_output_module.render_backlog is render_backlog
+    assert planning_output_module.render_select_next_stdout is render_select_next_stdout
+    assert (
+        planning_output_module.render_self_inspect_stdout is render_self_inspect_stdout
+    )
 
 
 def get_subcommands(parser: argparse.ArgumentParser) -> set[str]:
@@ -184,6 +205,91 @@ def test_parser_registers_core_subcommands() -> None:
     } <= get_subcommands(parser)
 
 
+def test_root_command_registry_exposes_bootstrap_and_review_surface() -> None:
+    names = {registrar.name for registrar in ROOT_COMMAND_REGISTRARS}
+
+    assert {"init", "plan", "review", "github-summary"} <= names
+
+
+def test_execution_command_registry_exposes_runner_surface() -> None:
+    names = {registrar.name for registrar in EXECUTION_COMMAND_REGISTRARS}
+
+    assert {"fast", "deep", "repair-prompt"} <= names
+
+
+def test_session_command_registry_exposes_verification_surface() -> None:
+    names = {registrar.name for registrar in SESSION_COMMAND_REGISTRARS}
+
+    assert {"verify", "repair-session"} <= names
+
+
+def test_planning_command_registry_exposes_backlog_surface() -> None:
+    names = {registrar.name for registrar in PLANNING_COMMAND_REGISTRARS}
+
+    assert {"self-inspect", "select-next", "backlog"} <= names
+
+
+def test_all_command_registrars_cover_public_root_surface() -> None:
+    names = {registrar.name for registrar in ALL_COMMAND_REGISTRARS}
+
+    assert {
+        "init",
+        "plan",
+        "review",
+        "github-summary",
+        "fast",
+        "deep",
+        "repair-prompt",
+        "verify",
+        "repair-session",
+        "self-inspect",
+        "select-next",
+        "backlog",
+        "autonomy",
+        "executor-bridge",
+        "executor-result",
+        "benchmark",
+    } <= names
+
+
+def test_command_registry_groups_define_authoritative_modular_surface() -> None:
+    grouped_names = tuple(
+        registrar.name
+        for registrars in COMMAND_REGISTRY_GROUPS.values()
+        for registrar in registrars
+    )
+
+    assert tuple(COMMAND_REGISTRY_GROUPS) == (
+        "root",
+        "execution",
+        "session",
+        "planning",
+        "runtime",
+    )
+    assert grouped_names == tuple(
+        registrar.name for registrar in ALL_COMMAND_REGISTRARS
+    )
+
+
+def test_runtime_command_registry_exposes_remaining_public_surface() -> None:
+    names = {registrar.name for registrar in RUNTIME_COMMAND_REGISTRARS}
+
+    assert {"autonomy", "executor-bridge", "executor-result", "benchmark"} <= names
+
+
+def test_register_modular_commands_registers_exact_authoritative_surface() -> None:
+    parser = argparse.ArgumentParser(prog="qa-z")
+    subparsers = parser.add_subparsers(dest="command")
+
+    register_modular_commands(subparsers)
+
+    assert get_subcommands(parser) == {
+        registrar.name
+        for registrars in COMMAND_REGISTRY_GROUPS.values()
+        for registrar in registrars
+    }
+
+
 def test_parser_registers_executor_result_dry_run_subcommand() -> None:
     parser = build_parser()
 
@@ -205,6 +311,18 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
 
     output = render_select_next_stdout(
         {
+            "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+            "live_repository": {
+                "modified_count": 25,
+                "untracked_count": 346,
+                "staged_count": 0,
+                "runtime_artifact_count": 2,
+                "benchmark_result_count": 1,
+                "current_branch": "codex/qa-z-bootstrap",
+                "current_head": "1234567890abcdef1234567890abcdef12345678",
+                "generated_artifact_policy_explicit": True,
+                "dirty_area_summary": "docs:2, source:1",
+            },
             "selected_tasks": [
                 {
                     "id": "worktree_risk-dirty-worktree",
@@ -227,7 +345,7 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
                         }
                     ],
                 }
-            ]
+            ],
         },
         paths,
         tmp_path,
@@ -235,13 +353,23 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
 
     assert "Selected task details:" in output
     assert (
+        "Live repository: modified=25; untracked=346; staged=0; "
+        "runtime_artifacts=2; benchmark_results=1; dirty_benchmark_results=0; "
+        "release_evidence=0; "
+        "generated_policy=true; branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=docs:2, source:1" in output
+    )
+    assert (
         "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
         in output
     )
     assert "recommendation: reduce_integration_risk" in output
     assert (
-        "action: triage docs and source changes first, separate generated artifacts, "
-        "then rerun self-inspection" in output
+        "action: triage docs and source changes first, run "
+        "`python scripts/runtime_artifact_cleanup.py --json` plus "
+        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "self-inspection" in output
     )
     assert "validation: python -m qa_z self-inspect" in output
     assert "selection score: 60" in output
@@ -260,6 +388,23 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
 ) -> None:
     output = render_self_inspect_stdout(
         {
+            "backlog_reseeded": True,
+            "reseeded_candidate_ids": [
+                "worktree_risk-dirty-worktree",
+                "docs_drift-current-truth-sync",
+            ],
+            "live_repository": {
+                "modified_count": 25,
+                "untracked_count": 346,
+                "staged_count": 0,
+                "runtime_artifact_count": 2,
+                "benchmark_result_count": 1,
+                "release_evidence_count": 0,
+                "current_branch": "codex/qa-z-bootstrap",
+                "current_head": "1234567890abcdef1234567890abcdef12345678",
+                "generated_artifact_policy_explicit": True,
+                "dirty_area_summary": "docs:2, source:1",
+            },
             "candidates": [
                 {
                     "id": "worktree_risk-dirty-worktree",
@@ -276,7 +421,7 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
                         }
                     ],
                 }
-            ]
+            ],
         },
         self_inspection_path=tmp_path
         / ".qa-z"
@@ -289,19 +434,68 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
 
     assert "Top candidates:" in output
     assert (
+        "Live repository: modified=25; untracked=346; staged=0; "
+        "runtime_artifacts=2; benchmark_results=1; dirty_benchmark_results=0; "
+        "release_evidence=0; "
+        "generated_policy=true; branch=codex/qa-z-bootstrap; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=docs:2, source:1" in output
+    )
+    assert (
         "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
         in output
     )
     assert "recommendation: reduce_integration_risk" in output
+    assert "Backlog reseeded: yes (2 concrete task(s))" in output
     assert (
-        "action: triage docs and source changes first, separate generated artifacts, "
-        "then rerun self-inspection" in output
+        "action: triage docs and source changes first, run "
+        "`python scripts/runtime_artifact_cleanup.py --json` plus "
+        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "self-inspection" in output
     )
     assert "validation: python -m qa_z self-inspect" in output
     assert "priority score: 65" in output
     assert (
         "evidence: git_status: modified=25; untracked=346; staged=0; "
         "areas=docs:2, source:1" in output
+    )
+
+
+def test_render_self_inspect_stdout_marks_detached_head_live_repository(
+    tmp_path: Path,
+) -> None:
+    output = render_self_inspect_stdout(
+        {
+            "live_repository": {
+                "modified_count": 1,
+                "untracked_count": 0,
+                "staged_count": 0,
+                "runtime_artifact_count": 0,
+                "benchmark_result_count": 0,
+                "release_evidence_count": 0,
+                "current_branch": "HEAD",
+                "current_head": "1234567890abcdef1234567890abcdef12345678",
+                "generated_artifact_policy_explicit": True,
+                "dirty_area_summary": "source:1",
+            },
+            "candidates": [],
+        },
+        self_inspection_path=tmp_path
+        / ".qa-z"
+        / "loops"
+        / "latest"
+        / "self_inspect.json",
+        backlog_path=tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        root=tmp_path,
+    )
+
+    assert (
+        "Live repository: modified=1; untracked=0; staged=0; "
+        "runtime_artifacts=0; benchmark_results=0; dirty_benchmark_results=0; "
+        "release_evidence=0; "
+        "generated_policy=true; branch=detached; "
+        "head=1234567890abcdef1234567890abcdef12345678; "
+        "areas=source:1" in output
     )
 
 
@@ -397,6 +591,43 @@ def test_select_next_plain_output_includes_selected_task_details(
         "evidence: benchmark: fixture coverage is missing for replay gap"
         in captured.out
     )
+
+
+def test_select_next_refresh_runs_self_inspection_before_selection(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_backlog_artifact(
+        tmp_path,
+        [
+            {
+                "id": "docs_drift-current_truth_sync",
+                "title": "Refresh stale current truth docs",
+                "category": "docs_drift",
+                "status": "open",
+                "priority_score": 12,
+                "recommendation": "sync_docs",
+                "first_seen_at": "2026-04-17T00:00:00Z",
+                "last_seen_at": "2026-04-17T00:00:00Z",
+                "evidence": [
+                    {
+                        "source": "current_state",
+                        "path": "docs/reports/current-state-analysis.md",
+                        "summary": "stale report",
+                    }
+                ],
+            }
+        ],
+    )
+
+    exit_code = main(["select-next", "--path", str(tmp_path), "--refresh"])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Count: 0" in output
+    assert "Refreshed: yes" in output
+    assert "Selected task details:\n- none" in output
+    assert "docs_drift-current_truth_sync" not in output
 
 
 def test_init_creates_bootstrap_files(
@@ -552,6 +783,85 @@ def test_plan_uses_custom_contract_output_directory(
     )
 
 
+def test_plan_resolves_relative_context_paths_from_repo_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text(
+        dedent(
+            """
+            project:
+              name: qa-z
+              languages:
+                - python
+            contracts:
+              output_dir: qa/contracts
+            checks:
+              fast:
+                - lint
+              deep:
+                - security
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "issue.md").write_text(
+        "# Protect session boundaries\nUsers can cross tenant boundaries.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "spec.md").write_text(
+        "# Spec\nReject tenant-mismatched session access.\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "changes.diff").write_text(
+        dedent(
+            """\
+            diff --git a/src/app.py b/src/app.py
+            index 1111111..2222222 100644
+            --- a/src/app.py
+            +++ b/src/app.py
+            @@ -1 +1,2 @@
+             old
+            +new
+            """
+        ),
+        encoding="utf-8",
+    )
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    monkeypatch.chdir(outside)
+
+    exit_code = main(
+        [
+            "plan",
+            "--path",
+            str(tmp_path),
+            "--title",
+            "Protect session boundaries",
+            "--issue",
+            "issue.md",
+            "--spec",
+            "spec.md",
+            "--diff",
+            "changes.diff",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    contract = (
+        tmp_path / "qa" / "contracts" / "protect-session-boundaries.md"
+    ).read_text(encoding="utf-8")
+    assert "Users can cross tenant boundaries." in contract
+    assert "Reject tenant-mismatched session access." in contract
+    assert "diff_path: changes.diff" in contract
+    assert "created contract: qa/contracts/protect-session-boundaries.md" in (
+        captured.out
+    )
+
+
 def test_plan_reads_top_level_fast_check_ids(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
@@ -650,6 +960,16 @@ def test_backlog_plain_output_focuses_on_open_items(
                         "recommendation": "sync_contract_and_docs",
                         "evidence": [],
                     },
+                    {
+                        "id": "commit_isolation_gap-foundation-order",
+                        "title": "Isolate the foundation commit before later batches",
+                        "category": "commit_isolation_gap",
+                        "status": "closed",
+                        "priority_score": 24,
+                        "recommendation": "isolate_foundation_commit",
+                        "closure_reason": "freshness_guard_not_satisfied",
+                        "evidence": [],
+                    },
                 ],
             },
             indent=2,
@@ -663,7 +983,8 @@ def test_backlog_plain_output_focuses_on_open_items(
     output = capsys.readouterr().out
 
     assert exit_code == 0
-    assert "qa-z backlog: 3 item(s)" in output
+    assert "qa-z backlog: 4 item(s)" in output
+    assert "Updated: 2026-04-17T00:00:00Z" in output
     assert "Open items: 2" in output
     assert (
         "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
@@ -674,17 +995,97 @@ def test_backlog_plain_output_focuses_on_open_items(
         in output
     )
     assert (
-        "action: triage docs and source changes first, separate generated artifacts, "
-        "then rerun self-inspection" in output
+        "action: triage docs and source changes first, run "
+        "`python scripts/runtime_artifact_cleanup.py --json` plus "
+        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "self-inspection" in output
     )
     assert "validation: python -m qa_z self-inspect" in output
     assert (
         "evidence: git_status: modified=25; untracked=346; staged=0; "
         "areas=docs:2, source:1" in output
     )
-    assert "Closed items: 1" in output
+    assert "Closed items: 2" in output
+    assert "Freshness-guard closures: 1" in output
     assert "use `qa-z backlog --json` for the full history" in output
     assert "docs_drift-current_truth_sync" not in output
+
+
+def test_backlog_refresh_runs_self_inspection_before_printing(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    backlog_dir = tmp_path / ".qa-z" / "improvement"
+    backlog_dir.mkdir(parents=True, exist_ok=True)
+    (backlog_dir / "backlog.json").write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.improvement_backlog",
+                "schema_version": 1,
+                "updated_at": "2026-04-17T00:00:00Z",
+                "items": [
+                    {
+                        "id": "docs_drift-current_truth_sync",
+                        "title": "Refresh stale current truth docs",
+                        "category": "docs_drift",
+                        "status": "open",
+                        "priority_score": 12,
+                        "recommendation": "sync_docs",
+                        "first_seen_at": "2026-04-17T00:00:00Z",
+                        "last_seen_at": "2026-04-17T00:00:00Z",
+                        "evidence": [
+                            {
+                                "source": "current_state",
+                                "path": "docs/reports/current-state-analysis.md",
+                                "summary": "stale report",
+                            }
+                        ],
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["backlog", "--path", str(tmp_path), "--refresh"])
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "qa-z backlog: 1 item(s)" in output
+    assert "Refreshed: yes" in output
+    assert "Updated: 2026-04-17T00:00:00Z" not in output
+    assert "Open items: 0" in output
+    assert "Closed items: 1" in output
+
+
+def test_render_backlog_omits_freshness_guard_line_when_none_are_closed() -> None:
+    output = render_backlog(
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "generated_at": "2026-04-21T00:00:00Z",
+            "items": [
+                {
+                    "id": "docs_drift-current_truth_sync",
+                    "title": "Refresh current truth docs",
+                    "category": "docs_drift",
+                    "status": "open",
+                    "priority_score": 19,
+                    "recommendation": "sync_contract_and_docs",
+                    "evidence": [],
+                }
+            ],
+        }
+    )
+
+    assert "qa-z backlog: 1 item(s)" in output
+    assert "Closed items: 0" in output
+    assert "Freshness-guard closures:" not in output
+    assert "None" not in output
+    assert "- no closed history recorded" in output
 
 
 def test_review_renders_a_packet_from_the_latest_contract(
@@ -782,6 +1183,39 @@ def test_fast_runs_configured_checks_and_writes_json_artifacts(
     assert (output_dir / "fast" / "summary.md").exists()
     assert (output_dir / "fast" / "checks" / "py_lint.json").exists()
     assert json.loads(summary_path.read_text(encoding="utf-8"))["status"] == "passed"
+
+
+def test_fast_resolves_relative_config_path_from_repo_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    checks = [{"id": "py_test", "kind": "test", "run": python_command("")}]
+    write_fast_config(tmp_path, checks)
+    write_contract(tmp_path)
+    relative_config = tmp_path / "qa-z.alt.yaml"
+    (tmp_path / "qa-z.yaml").replace(relative_config)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    monkeypatch.chdir(outside)
+
+    exit_code = main(
+        [
+            "fast",
+            "--path",
+            str(tmp_path),
+            "--config",
+            "qa-z.alt.yaml",
+            "--output-dir",
+            str(tmp_path / "runs"),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["status"] == "passed"
+    assert output["contract_path"] == "qa/contracts/contract.md"
 
 
 def test_fast_writes_latest_run_manifest(
