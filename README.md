@@ -12,7 +12,7 @@ AI coding agents can write code fast. QA-Z helps you decide whether that code is
 
 QA-Z turns code changes into QA contracts, deterministic checks, review packets, repair prompts, verification evidence, GitHub summaries, SARIF, and benchmark artifacts.
 
-> Should this change be merged — and if not, what should the agent fix next?
+> Should this change be merged, and if not, what should the agent fix next?
 
 ## Why QA-Z?
 
@@ -39,42 +39,65 @@ QA-Z adds the missing QA layer:
 
 ## Quickstart
 
-Install QA-Z locally:
+QA-Z is alpha software and is currently installed from source.
 
 ```bash
 python -m pip install -e .[dev]
 ```
 
-Install Semgrep before running local deep checks:
-
-```bash
-python -m pip install semgrep
-```
-
-Check the CLI:
-
-```bash
-python -m qa_z --help
-```
-
-Initialize a repository:
+Then run the smallest local loop from the repository you want to inspect:
 
 ```bash
 python -m qa_z init --profile python --with-agent-templates --with-github-workflow
-```
-
-Run the short QA loop:
-
-```bash
 python -m qa_z doctor
 python -m qa_z plan --title "Review recent agent change" --slug agent-change --overwrite
 python -m qa_z fast
-python -m qa_z deep --from-run latest
+```
+
+Then generate review evidence:
+
+```bash
 python -m qa_z review --from-run latest
 python -m qa_z repair-prompt --from-run latest --adapter codex
 ```
 
+For Semgrep-backed deep checks:
+
+```bash
+python -m pip install semgrep
+python -m qa_z deep --from-run latest
+```
+
 The output is local and artifact-first. Look under `.qa-z/runs/` for the run evidence.
+
+## Preview
+
+A real FastAPI demo run produces local evidence like this:
+
+```text
+created contract: qa/contracts/protect-invoice-access.md
+qa-z fast: passed
+Contract: qa/contracts/protect-invoice-access.md
+Summary: .qa-z/runs/preview-fast/fast/summary.json
+```
+
+The review packet then records the selected checks and verdict:
+
+```text
+## Run Verdict
+
+- Status: passed
+- Run directory: `.qa-z/runs/preview-fast`
+- Summary: `.qa-z/runs/preview-fast/fast/summary.json`
+
+## Executed Checks
+
+- py_lint: passed (lint, ruff, exit 0)
+- py_format: passed (format, ruff, exit 0)
+- py_test: passed (test, python, exit 0)
+```
+
+For the captured transcript, see [docs/demo-output.md](docs/demo-output.md).
 
 ## Core Workflow
 
@@ -84,7 +107,7 @@ init -> plan -> fast -> deep -> review -> repair-prompt -> external repair -> ve
 
 QA-Z does not edit your code by itself. It creates the contracts, evidence, prompts, and verification artifacts that make external repair work safer to review.
 
-## Command Surface
+## Core Commands
 
 | Command | What it does |
 | --- | --- |
@@ -95,8 +118,13 @@ QA-Z does not edit your code by itself. It creates the contracts, evidence, prom
 | `qa-z deep` | Run configured Semgrep deep checks |
 | `qa-z review` | Render a review packet from run artifacts |
 | `qa-z repair-prompt` | Generate Codex / Claude / handoff repair prompts |
-| `qa-z repair-session` | Package a local repair workflow |
 | `qa-z verify` | Compare baseline and candidate run artifacts |
+
+## Advanced Commands
+
+| Command | What it does |
+| --- | --- |
+| `qa-z repair-session` | Package a local repair workflow |
 | `qa-z github-summary` | Render GitHub Actions summary Markdown |
 | `qa-z benchmark` | Run seeded QA-Z benchmark fixtures |
 | `qa-z self-inspect` | Inspect QA-Z artifacts and surface improvement tasks |
@@ -137,7 +165,7 @@ python -m qa_z repair-prompt --from-run latest --adapter codex
 python -m qa_z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
 
-`verify` expects existing baseline and candidate run directories; use it after an external repair tool or human fix creates a candidate run. For a fuller transcript, see [docs/demo-script.md](docs/demo-script.md). A runnable TypeScript fast-gate example lives under [examples/typescript-demo/](examples/typescript-demo/).
+`verify` expects existing baseline and candidate run directories; use it after an external repair tool or human fix creates a candidate run. For a fuller transcript, see [docs/demo-script.md](docs/demo-script.md). Runnable examples are indexed in [examples/README.md](examples/README.md).
 
 ## What QA-Z Is Not
 
@@ -169,10 +197,12 @@ Next up: broader TypeScript deep QA, multi-engine checks, richer GitHub annotati
 - [Pre-live executor safety](docs/pre-live-executor-safety.md)
 - [Generated vs frozen evidence policy](docs/generated-vs-frozen-evidence-policy.md)
 - [Current-truth maintenance anchors](docs/current-truth-maintenance-anchors.md)
+- [Architecture](docs/architecture.md)
 - [Demo script](docs/demo-script.md)
+- [Demo output](docs/demo-output.md)
 - [Docs index](docs/README.md)
 - [Example config](qa-z.yaml.example)
-- [TypeScript demo](examples/typescript-demo/)
+- [Examples index](examples/README.md)
 
 ## License
 

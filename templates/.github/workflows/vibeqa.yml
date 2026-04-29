@@ -100,7 +100,7 @@ jobs:
 
       - name: Upload QA-Z SARIF to code scanning
         if: ${{ always() }}
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         continue-on-error: true
         with:
           sarif_file: .qa-z/runs/pr/deep/results.sarif

@@ -20,11 +20,22 @@ def test_github_workflow_builds_package_artifacts_after_tests() -> None:
     runs = [step.get("run", "") for step in steps]
 
     install_position = runs.index("python -m pip install -e .[dev]")
+    format_position = runs.index("python -m ruff format --check src tests scripts")
+    lint_position = runs.index("python -m ruff check src tests scripts")
+    mypy_position = runs.index("python -m mypy src tests")
     test_position = runs.index("python -m pytest")
     build_position = runs.index("python -m build --sdist --wheel")
     smoke_position = runs.index("python scripts/alpha_release_artifact_smoke.py --json")
 
-    assert install_position < test_position < build_position < smoke_position
+    assert (
+        install_position
+        < format_position
+        < lint_position
+        < mypy_position
+        < test_position
+        < build_position
+        < smoke_position
+    )
 
 
 @pytest.mark.parametrize(
@@ -74,7 +85,7 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     sarif_step = next(
         step
         for step in steps
-        if step.get("uses") == "github/codeql-action/upload-sarif@v3"
+        if step.get("uses") == "github/codeql-action/upload-sarif@v4"
     )
     assert sarif_step.get("if") == "${{ always() }}"
     assert sarif_step.get("with", {}).get("sarif_file") == (

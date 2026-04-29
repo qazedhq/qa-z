@@ -28,7 +28,7 @@ def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
     assert readme.startswith("# QA-Z\n\n> Deterministic QA gates for AI coding agents.")
-    assert "Should this change be merged — and if not" in readme
+    assert "Should this change be merged, and if not" in readme
     assert "## Quickstart" in readme
     assert "| Command | What it does |" in readme
     assert "| Path | Purpose |" in readme
