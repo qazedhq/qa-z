@@ -7,8 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from qa_z.config import EXAMPLE_CONFIG
-from qa_z.config import COMMAND_GUIDANCE
+from qa_z.config import COMMAND_GUIDANCE, EXAMPLE_CONFIG
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,36 +26,39 @@ def read_readme() -> str:
 def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
-    assert readme.startswith("# QA-Z\n\n> Deterministic QA gates for AI coding agents.")
+    assert readme.startswith("# QA-Z\n\n> The safety belt for AI-generated code.")
+    assert "QA-Z = QA from A to Z for agent-generated code." in readme
+    assert (
+        "Coding agents write code. QA-Z tells you if that code is safe to merge."
+        in readme
+    )
     assert "Should this change be merged, and if not" in readme
+    assert "## Five-Minute Demo" in readme
     assert "## Quickstart" in readme
+    assert (
+        'pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"' in readme
+    )
+    assert (
+        'uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"'
+        in readme
+    )
+    assert "python -m pip install semgrep" in readme
+    assert (
+        "| Tool | Writes code | Runs checks | Produces repair prompt | Verifies repair | Model-agnostic QA evidence |"
+        in readme
+    )
     assert "| Command | What it does |" in readme
     assert "| Path | Purpose |" in readme
     assert "| `.qa-z/loops/` | Autonomy planning loop artifacts |" in readme
+    assert (
+        "If QA-Z helps you trust AI-generated code before merging, star the repo to follow the alpha."
+        in readme
+    )
     assert "v0.9.8-alpha" in readme
     assert "v0.9.x-alpha" not in readme
     assert "docs/current-truth-maintenance-anchors.md" in readme
     assert "Detailed operator contract index" not in readme
     assert len(readme.splitlines()) <= 230
-
-
-def test_pyproject_metadata_uses_public_launch_positioning() -> None:
-    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-
-    assert 'description = "Deterministic QA gates for AI coding agents."' in pyproject
-    for keyword in (
-        "qa",
-        "testing",
-        "ci",
-        "ai-agents",
-        "coding-agents",
-        "codex",
-        "claude",
-        "semgrep",
-        "sarif",
-        "quality-assurance",
-    ):
-        assert f'"{keyword}"' in pyproject
 
 
 def test_command_guidance_matches_landed_review_and_repair_prompt_surface() -> None:

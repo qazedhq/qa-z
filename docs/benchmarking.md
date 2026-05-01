@@ -34,6 +34,16 @@ python -m qa_z benchmark --fixture semgrep_eval
 python -m qa_z benchmark --fixtures-dir benchmarks/fixtures --results-dir benchmarks/results
 ```
 
+CI and release gates should use an isolated generated-results directory so local
+operator runs and automation cannot contend for the same benchmark lock:
+
+```bash
+python -m qa_z benchmark --results-dir benchmarks/results-ci --json
+```
+
+The `benchmarks/results-*` ignore rule keeps CI-style generated evidence local
+unless it is intentionally frozen with surrounding release context.
+
 The exit code is `0` only when every selected fixture passes its expected-result contract.
 
 Only one benchmark run should write to a given `--results-dir` at a time. QA-Z

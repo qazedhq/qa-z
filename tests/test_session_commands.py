@@ -9,6 +9,7 @@ from tests.ast_test_support import module_body
 import qa_z.commands.session_repair as session_repair_module
 import qa_z.commands.session_verify as session_verify_module
 import qa_z.commands.sessioning as sessioning_module
+from qa_z.verification import VerificationArtifactPaths
 
 
 def _sessioning_function_names() -> set[str]:
@@ -42,6 +43,23 @@ def test_sessioning_module_keeps_verify_defs_out_of_monolith() -> None:
     assert "handle_verify" not in function_names
     assert "register_verify_command" not in function_names
     assert "render_verify_stdout" not in function_names
+
+
+def test_verify_stdout_renders_external_output_dirs(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    external = tmp_path / "external" / "verify"
+    paths = VerificationArtifactPaths(
+        summary_path=external / "summary.json",
+        compare_path=external / "compare.json",
+        report_path=external / "report.md",
+    )
+
+    output = session_verify_module.render_verify_stdout("improved", paths, root)
+
+    assert "qa-z verify: improved" in output
+    assert f"Summary: {paths.summary_path}" in output
+    assert f"Compare: {paths.compare_path}" in output
+    assert f"Report: {paths.report_path}" in output
 
 
 def test_session_repair_module_exports_match_sessioning_surface() -> None:

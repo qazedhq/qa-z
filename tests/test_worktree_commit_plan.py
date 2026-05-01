@@ -470,6 +470,33 @@ def test_commit_plan_routes_fast_gate_environment_into_planning_runtime_batch() 
     assert result["unassigned_source_paths"] == []
 
 
+def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M tests/test_examples.py",
+            "?? tests/test_public_docs_current_truth.py",
+            " M tests/test_sarif_reporter.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["current_truth_release_surface"]["changed_paths"] == [
+        "tests/test_examples.py",
+        "tests/test_public_docs_current_truth.py",
+    ]
+    assert batches["repair_session_publish"]["changed_paths"] == [
+        "tests/test_sarif_reporter.py"
+    ]
+    validation = " ".join(
+        batches["current_truth_release_surface"]["validation_commands"]
+    )
+    assert "tests/test_examples.py" in validation
+    assert "tests/test_public_docs_current_truth.py" in validation
+    assert result["unassigned_source_paths"] == []
+
+
 def test_commit_plan_routes_mypy_ini_into_planning_runtime_batch() -> None:
     module = load_plan_module()
 

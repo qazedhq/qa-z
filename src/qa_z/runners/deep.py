@@ -259,6 +259,9 @@ def _configured_deep_checks_impl(config: dict[str, Any]) -> list[Any]:
     if isinstance(deep_config, dict) and "checks" in deep_config:
         checks = deep_config.get("checks") or []
         return checks if isinstance(checks, list) else []
+    legacy_checks = get_nested(config, "checks", "deep", default=[]) or []
+    if isinstance(legacy_checks, list):
+        return legacy_checks
     return []
 
 
@@ -280,9 +283,10 @@ def resolve_deep_check_item(
     if not check_id:
         return None
 
+    default = default_semgrep_spec_for_name(check_id)
+    resolved_check_id = default.id if default else check_id
     command = item.get("run")
     if command is None:
-        default = default_semgrep_spec_for_name(check_id)
         command = default.command if default else None
     if not isinstance(command, list) or not all(
         isinstance(part, str) for part in command
@@ -291,7 +295,7 @@ def resolve_deep_check_item(
 
     semgrep_policy = None
     resolved_command = list(command)
-    if check_id == SEMGREP_CHECK_ID:
+    if resolved_check_id == SEMGREP_CHECK_ID:
         semgrep_policy = semgrep_policy_from_config(
             item, global_exclude_paths=global_exclude_paths
         )
@@ -300,9 +304,11 @@ def resolve_deep_check_item(
         )
 
     return CheckSpec(
-        id=check_id,
+        id=resolved_check_id,
         command=resolved_command,
-        kind=str(item.get("kind", default_deep_kind(check_id))),
+        kind=str(
+            item.get("kind", default.kind if default else default_deep_kind(check_id))
+        ),
         enabled=bool(item.get("enabled", True)),
         timeout_seconds=coerce_timeout(item.get("timeout_seconds")),
         semgrep_policy=semgrep_policy,

@@ -468,7 +468,7 @@ Recommendation mapping is deterministic and uses only recorded verdicts:
 - `verification_failed`: `rerun_required`
 - `unchanged`: `continue_repair`
 
-The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v3`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
+The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
 
 TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeScript lint or test entry records `execution_mode: targeted`, the resolved `eslint` or `vitest run` command, and the selected `target_paths`.
 
@@ -1220,8 +1220,12 @@ The command writes:
 - `safety_package`: copied safety package summary with `package_id`, `status`, copied policy paths, ordered rule ids, and safety rule count
 - `non_goals`: executor safety boundaries such as no unrelated refactors, no broadened scope, no weakened checks, no live API calls from QA-Z, and no commit/push/GitHub bot behavior
 - `safety_constraints`: short operational guardrails for scoped execution
+- `output_policy`: whether the bridge package is under the repository root, under `.qa-z`, under the default `.qa-z/executor` tree, managed by QA-Z cleanup policy, and known to contain copied evidence
+- `warnings`: each non-blocking warning for the operator, such as `custom_output_dir_outside_qa_z` when `--output-dir` writes generated bridge evidence outside `.qa-z`, or `custom_output_dir_outside_repository` when the bridge package is also outside the repository root
 - `return_contract`: expected post-repair handoff back to QA-Z
 - `evidence_summary`: compact loop/session/handoff context
+
+Custom `--output-dir` paths are allowed so operators can place bridge packages deliberately, but paths outside `.qa-z` are no longer silent. The manifest records `output_policy` booleans and `custom_output_dir_outside_qa_z`; paths outside the repository root also record `custom_output_dir_outside_repository`. Non-JSON stdout plus `executor_guide.md`, `codex.md`, and `claude.md` repeat the warning so operators can keep that generated evidence local or manage it intentionally outside QA-Z cleanup and repository ignore policy.
 
 The return contract records:
 

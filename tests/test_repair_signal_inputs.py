@@ -41,6 +41,43 @@ def test_discover_verification_candidate_inputs_normalizes_verdict_text(
     ]
 
 
+def test_discover_verification_candidate_inputs_marks_verification_failed_without_regression(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "runs" / "candidate" / "verify" / "summary.json",
+        {
+            "kind": "qa_z.verify_summary",
+            "schema_version": 1,
+            "verdict": "verification_failed",
+            "regression_count": 0,
+            "new_issue_count": 0,
+            "not_comparable_count": 1,
+        },
+    )
+
+    candidates = repair_signals_module.discover_verification_candidate_inputs(tmp_path)
+
+    assert candidates == [
+        {
+            "run_id": "candidate",
+            "path": tmp_path
+            / ".qa-z"
+            / "runs"
+            / "candidate"
+            / "verify"
+            / "summary.json",
+            "verdict": "verification_failed",
+            "signals": ["regression_prevention", "verify_failed"],
+            "summary": (
+                "verdict=verification_failed; regressions=0; "
+                "new_issues=0; not_comparable=1"
+            ),
+            "impact": 4,
+        }
+    ]
+
+
 def test_discover_session_candidate_inputs_normalizes_incomplete_state_text(
     tmp_path: Path,
 ) -> None:

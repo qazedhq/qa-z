@@ -1279,12 +1279,17 @@ def test_autonomy_prepares_repair_session_for_verify_regression(
     session_dir = tmp_path / ".qa-z" / "sessions" / session_id
 
     assert summary["created_session_ids"] == [session_id]
+    assert outcome["state"] == "fallback_selected"
+    assert outcome["loop_health"]["fallback_selected"] is True
     assert action["type"] == "repair_session"
     assert action["session_id"] == session_id
     assert action["baseline_run"] == ".qa-z/runs/baseline"
     assert outcome["state_transitions"] == [
         "inspected",
         "selected",
+        "empty_backlog_detected",
+        "reseeded",
+        "fallback_selected",
         "verification_observed",
         "session_prepared",
         "awaiting_repair",
@@ -1303,6 +1308,8 @@ def test_autonomy_prepares_repair_session_for_verify_regression(
         .read_text(encoding="utf-8")
         .splitlines()[0]
     )
+    assert history["state"] == "fallback_selected"
+    assert history["selected_fallback_families"] == ["verification_remediation"]
     assert history["verify_verdict"] == "regressed"
 
 

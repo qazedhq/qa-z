@@ -46,5 +46,5 @@ fast:
       kind: test
       no_tests: warn
 
-checks:
-  deep: []
+deep:
+  checks: []

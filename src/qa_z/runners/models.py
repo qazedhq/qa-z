@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -44,10 +45,10 @@ class SemgrepFinding:
             "severity": self.severity,
             "path": self.path,
             "line": self.line,
-            "message": self.message,
+            "message": redact_sensitive_text(self.message),
         }
         if self.metadata:
-            data["metadata"] = dict(self.metadata)
+            data["metadata"] = redact_sensitive_value(dict(self.metadata))
         return data
 
 
@@ -70,7 +71,7 @@ class GroupedFinding:
             "path": self.path,
             "count": self.count,
             "representative_line": self.representative_line,
-            "message": self.message,
+            "message": redact_sensitive_text(self.message),
         }
 
 
@@ -117,7 +118,7 @@ class CheckSpec:
         data: dict[str, Any] = {
             "id": self.id,
             "tool": self.tool,
-            "command": self.command,
+            "command": redact_sensitive_value(self.command),
             "kind": self.kind,
             "enabled": self.enabled,
             "no_tests": self.no_tests,
@@ -181,20 +182,20 @@ class CheckResult:
         data: dict[str, Any] = {
             "id": self.id,
             "tool": self.tool,
-            "command": self.command,
+            "command": redact_sensitive_value(self.command),
             "kind": self.kind,
             "status": self.status,
             "exit_code": self.exit_code,
             "duration_ms": self.duration_ms,
-            "stdout_tail": self.stdout_tail,
-            "stderr_tail": self.stderr_tail,
+            "stdout_tail": redact_sensitive_text(self.stdout_tail),
+            "stderr_tail": redact_sensitive_text(self.stderr_tail),
             "execution_mode": self.execution_mode,
             "target_paths": self.target_paths,
             "selection_reason": self.selection_reason,
-            "high_risk_reasons": self.high_risk_reasons,
+            "high_risk_reasons": redact_sensitive_value(self.high_risk_reasons),
         }
         if self.message:
-            data["message"] = self.message
+            data["message"] = redact_sensitive_text(self.message)
         if self.error_type:
             data["error_type"] = self.error_type
         if self.findings_count is not None:
@@ -203,13 +204,15 @@ class CheckResult:
             data["filtered_findings_count"] = self.filtered_findings_count
             data["filter_reasons"] = dict(self.filter_reasons)
             data["severity_summary"] = dict(self.severity_summary)
-            data["grouped_findings"] = list(self.grouped_findings)
-            data["findings"] = list(self.findings)
+            data["grouped_findings"] = redact_sensitive_value(
+                list(self.grouped_findings)
+            )
+            data["findings"] = redact_sensitive_value(list(self.findings))
         if self.scan_warning_count is not None:
             data["scan_warning_count"] = self.scan_warning_count
-            data["scan_warnings"] = list(self.scan_warnings)
+            data["scan_warnings"] = redact_sensitive_value(list(self.scan_warnings))
         if self.policy:
-            data["policy"] = dict(self.policy)
+            data["policy"] = redact_sensitive_value(dict(self.policy))
         return data
 
     @classmethod
@@ -396,17 +399,17 @@ class RunSummary:
         if self.contract_title:
             data["contract_title"] = self.contract_title
         if self.message:
-            data["message"] = self.message
+            data["message"] = redact_sensitive_text(self.message)
         if self.selection is not None or self.schema_version >= 2:
             data["selection"] = (
                 self.selection.to_dict() if self.selection is not None else None
             )
         if self.policy:
-            data["policy"] = dict(self.policy)
+            data["policy"] = redact_sensitive_value(dict(self.policy))
         if self.run_resolution:
-            data["run_resolution"] = dict(self.run_resolution)
+            data["run_resolution"] = redact_sensitive_value(dict(self.run_resolution))
         if self.diagnostics:
-            data["diagnostics"] = dict(self.diagnostics)
+            data["diagnostics"] = redact_sensitive_value(dict(self.diagnostics))
         return data
 
     @classmethod
@@ -495,3 +498,119 @@ def coerce_int_mapping(value: Any) -> dict[str, int]:
         except (TypeError, ValueError):
             continue
     return mapping
+
+
+AUTH_HEADER_RE = re.compile(
+    r"\b(authorization\s*[:=]\s*)[^\r\n,;]+",
+    re.IGNORECASE,
+)
+BEARER_RE = re.compile(r"\b(Bearer\s+)[A-Za-z0-9._~+/=-]{6,}", re.IGNORECASE)
+URL_USERINFO_RE = re.compile(r"\b([A-Za-z][A-Za-z0-9+.-]*://)([^/\s@]+)@")
+SECRET_KEY_PATTERN = (
+    r"(?:[A-Za-z0-9]+[_-])*"
+    r"(?:api[_-]?key|token|secret|password|passwd|private[_-]?key|access[_-]?key|client[_-]?secret)"
+    r"(?:[_-](?:raw|value))?"
+)
+SECRET_KEY_RE = re.compile(rf"^{SECRET_KEY_PATTERN}$", re.IGNORECASE)
+SECRET_ASSIGNMENT_RE = re.compile(
+    r"\b("
+    r"[A-Za-z0-9][A-Za-z0-9_-]*"
+    r"(?:api[_-]?key|token|secret|password|passwd|private[_-]?key|access[_-]?key|client[_-]?secret)"
+    r"[A-Za-z0-9_-]*"
+    r"|api[_-]?key|token|secret|password|passwd|private[_-]?key|access[_-]?key|client[_-]?secret"
+    r")"
+    r"(\s*[:=]\s*)"
+    r"([^\s,;]+)",
+    re.IGNORECASE,
+)
+SECRET_QUOTED_ASSIGNMENT_RE = re.compile(
+    rf"(?P<key_quote>[\"'])(?P<key>{SECRET_KEY_PATTERN})(?P=key_quote)"
+    r"(?P<separator>\s*:\s*)"
+    r"(?P<value_quote>[\"'])(?P<value>.*?)(?P=value_quote)",
+    re.IGNORECASE,
+)
+
+
+def redact_sensitive_text(value: str) -> str:
+    """Redact common secret-like values from persisted diagnostics."""
+    if not value:
+        return value
+    redacted = AUTH_HEADER_RE.sub(r"\1[REDACTED_TOKEN]", value)
+    redacted = BEARER_RE.sub(r"\1[REDACTED_TOKEN]", redacted)
+    redacted = URL_USERINFO_RE.sub(r"\1[REDACTED_SECRET]@", redacted)
+    redacted = SECRET_QUOTED_ASSIGNMENT_RE.sub(redact_quoted_assignment, redacted)
+    return SECRET_ASSIGNMENT_RE.sub(redact_assignment, redacted)
+
+
+def redact_sensitive_value(value: Any) -> Any:
+    """Recursively redact strings in JSON-safe diagnostic payloads."""
+    if isinstance(value, str):
+        return redact_sensitive_text(value)
+    if isinstance(value, list):
+        return redact_sensitive_sequence(value)
+    if isinstance(value, dict):
+        return {
+            key: (
+                redaction_placeholder_for_key(str(key))
+                if is_secret_key(str(key))
+                else redact_sensitive_value(item)
+            )
+            for key, item in value.items()
+        }
+    return value
+
+
+def redact_sensitive_sequence(value: list[Any]) -> list[Any]:
+    """Redact sequence values, including split command flag secrets."""
+    redacted: list[Any] = []
+    redact_next_for_key: str | None = None
+    for item in value:
+        if redact_next_for_key is not None:
+            redacted.append(redaction_placeholder_for_key(redact_next_for_key))
+            redact_next_for_key = None
+            continue
+        redacted.append(redact_sensitive_value(item))
+        if isinstance(item, str):
+            redact_next_for_key = secret_flag_key(item)
+    return redacted
+
+
+def secret_flag_key(value: str) -> str | None:
+    """Return the secret-like key for split argv flags such as ``--token``."""
+    stripped = value.strip()
+    if not stripped.startswith("-") or "=" in stripped:
+        return None
+    key = stripped.lstrip("-")
+    if not key or not is_secret_key(key):
+        return None
+    return key
+
+
+def redact_assignment(match: re.Match[str]) -> str:
+    """Redact one KEY=value style secret assignment."""
+    key = match.group(1)
+    separator = match.group(2)
+    placeholder = redaction_placeholder_for_key(key)
+    return f"{key}{separator}{placeholder}"
+
+
+def redact_quoted_assignment(match: re.Match[str]) -> str:
+    """Redact one JSON-style quoted secret key assignment."""
+    key = match.group("key")
+    key_quote = match.group("key_quote")
+    separator = match.group("separator")
+    value_quote = match.group("value_quote")
+    placeholder = redaction_placeholder_for_key(key)
+    return (
+        f"{key_quote}{key}{key_quote}{separator}{value_quote}{placeholder}{value_quote}"
+    )
+
+
+def is_secret_key(key: str) -> bool:
+    """Return whether a mapping key conventionally names a secret value."""
+    return bool(SECRET_KEY_RE.fullmatch(key.strip()))
+
+
+def redaction_placeholder_for_key(key: str) -> str:
+    """Return the redaction placeholder for one secret-like key."""
+    return "[REDACTED_TOKEN]" if "token" in key.lower() else "[REDACTED_SECRET]"

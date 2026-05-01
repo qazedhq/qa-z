@@ -21,6 +21,7 @@ answer three questions:
 The current repository surface supports a coherent local QA control-plane flow:
 
 - repository bootstrap with `init`
+- config and onboarding validation with `doctor`
 - contract generation with `plan`
 - deterministic fast QA for Python and TypeScript with `fast`
 - Semgrep-backed deep QA with `deep`

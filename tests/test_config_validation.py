@@ -77,6 +77,277 @@ def test_doctor_fails_for_non_list_fast_checks(
     assert payload["errors"][0]["code"] == "invalid_checks_type"
 
 
+def test_doctor_fails_for_unsafe_check_ids(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {
+                "checks": [
+                    {
+                        "id": "../escape",
+                        "run": ["python", "-m", "pytest"],
+                        "kind": "test",
+                    }
+                ]
+            },
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "invalid_check_id"
+    assert payload["errors"][0]["path"] == "fast.checks[0].id"
+
+
+def test_doctor_fails_for_duplicate_check_ids(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {
+                "checks": [
+                    {"id": "custom_gate", "run": ["python", "-c", ""]},
+                    {"id": "custom_gate", "run": ["python", "-c", ""]},
+                ]
+            },
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "duplicate_check_id"
+    assert payload["errors"][0]["path"] == "fast.checks[1].id"
+
+
+def test_doctor_fails_for_empty_check_executable(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {
+                "checks": [
+                    {
+                        "id": "custom_gate",
+                        "run": [""],
+                        "kind": "test",
+                    }
+                ]
+            },
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "invalid_check_run"
+    assert payload["errors"][0]["path"] == "fast.checks[0].run"
+
+
+def test_doctor_allows_empty_string_command_arguments(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {
+                "checks": [
+                    {
+                        "id": "custom_gate",
+                        "run": ["python", "-c", ""],
+                        "kind": "test",
+                    }
+                ]
+            },
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+
+
+def test_doctor_allows_disabled_custom_checks_without_run(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {"checks": [{"id": "fast_placeholder", "enabled": False}]},
+            "deep": {"checks": [{"id": "deep_placeholder", "enabled": False}]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+
+
+def test_doctor_detects_duplicate_check_aliases(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "deep": {"checks": ["semgrep", {"id": "sg_scan"}]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "duplicate_check_id"
+    assert payload["errors"][0]["path"] == "deep.checks[1].id"
+
+
+def test_doctor_fails_unknown_string_checks(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {"checks": ["unknown_gate"]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "unknown_check_id"
+    assert payload["errors"][0]["path"] == "fast.checks[0]"
+
+
+def test_doctor_validates_legacy_deep_check_items(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "checks": {"deep": ["unknown_gate"]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["warnings"][0]["code"] == "legacy_checks_deep"
+    assert payload["errors"][0]["code"] == "unknown_check_id"
+    assert payload["errors"][0]["path"] == "checks.deep[0]"
+
+
+def test_doctor_ignores_legacy_deep_checks_when_modern_deep_checks_exist(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "deep": {"checks": ["sg_scan"]},
+            "checks": {"deep": ["unknown_gate"]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "warning"
+    assert payload["warnings"][0]["code"] == "legacy_checks_deep"
+    assert payload["errors"] == []
+
+
+def test_doctor_ignores_legacy_fast_checks_when_modern_fast_checks_exist(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {"checks": ["py_test"]},
+            "checks": {"fast": {"id": "unknown_gate"}},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "warning"
+    assert payload["warnings"][0]["code"] == "legacy_checks_fast"
+    assert payload["errors"] == []
+
+
+def test_doctor_requires_run_for_custom_mapping_checks(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo"},
+            "contracts": {"output_dir": "qa/contracts"},
+            "deep": {"checks": [{"id": "custom_deep"}]},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "missing_check_run"
+    assert payload["errors"][0]["path"] == "deep.checks[0].run"
+
+
 def test_doctor_warns_for_missing_agent_instruction_files(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

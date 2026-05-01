@@ -1,0 +1,62 @@
+name: QA-Z PR Comment Gate
+
+# Optional template. Do not enable this template unless maintainers explicitly
+# accept PR comment behavior and the required pull-requests: write permission.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  QA_Z_INSTALL: "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+  QA_Z_POST_PR_COMMENT: "false"
+
+jobs:
+  qa-z-comment:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      security-events: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run QA-Z gate
+        uses: qazedhq/qa-z/.github/actions/qa-z@v0.9.8-alpha
+        with:
+          qa-z-install: ${{ env.QA_Z_INSTALL }}
+          run-dir: .qa-z/runs/pr
+          adapter: codex
+
+      - name: Build optional PR comment body
+        if: ${{ always() && env.QA_Z_POST_PR_COMMENT == 'true' }}
+        shell: bash
+        run: |
+          {
+            echo "## QA-Z Review"
+            echo ""
+            if [ -f .qa-z/runs/pr/github-summary.md ]; then
+              cat .qa-z/runs/pr/github-summary.md
+            else
+              echo "QA-Z did not produce a summary artifact."
+            fi
+            echo ""
+            echo "Repair prompt: \`qa-z repair-prompt --from-run .qa-z/runs/pr --adapter codex\`"
+          } > .qa-z-runs-pr-comment.md
+
+      - name: Post optional PR comment
+        if: ${{ always() && env.QA_Z_POST_PR_COMMENT == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const body = fs.readFileSync(".qa-z-runs-pr-comment.md", "utf8");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

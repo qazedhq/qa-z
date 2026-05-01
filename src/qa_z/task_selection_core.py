@@ -18,6 +18,8 @@ FALLBACK_FAMILY_BY_CATEGORY = {
     "provenance_gap": "workflow_remediation",
     "partial_completion_gap": "workflow_remediation",
     "no_op_safeguard_gap": "workflow_remediation",
+    "verification_failure": "verification_remediation",
+    "verify_regression": "verification_remediation",
     "worktree_risk": "cleanup",
     "commit_isolation_gap": "cleanup",
     "artifact_hygiene_gap": "cleanup",

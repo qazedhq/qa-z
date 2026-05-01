@@ -28,10 +28,13 @@ def render_finding_category(
         return [*lines, "- none", ""]
     for delta in deltas:
         location = f"{delta.path}:{delta.line}" if delta.line else delta.path
-        lines.append(
+        line = (
             f"- `{delta.rule_id}` in `{location or 'unknown'}` "
             f"({delta.baseline_severity or 'missing'} -> "
             f"{delta.candidate_severity or 'missing'}, match: {delta.match})"
         )
+        if delta.classification == "skipped_or_not_comparable" and delta.message:
+            line = f"{line}: {delta.message}"
+        lines.append(line)
     lines.append("")
     return lines

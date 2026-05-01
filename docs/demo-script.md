@@ -1,44 +1,92 @@
-# QA-Z demo script
+# QA-Z Demo Script
 
-This script shows the shortest path from a code change to QA evidence. It uses real CLI commands and does not depend on screenshots, GIFs, or generated media.
+Demo title:
+
+```text
+AI wrote a bad auth change. QA-Z caught it.
+```
+
+This script uses real CLI commands and local artifacts. It does not depend on screenshots, GIFs, generated media, or live model APIs.
 
 ## Setup
+
+From the repository root:
 
 ```bash
 python -m pip install -e .[dev]
 python -m qa_z --help
-python -m qa_z init --profile python --with-agent-templates --with-github-workflow
-python -m qa_z doctor
-python -m qa_z plan --title "Review recent agent change" --slug agent-change --overwrite
+cd examples/agent-auth-bug
 ```
 
-## Generate QA evidence
+If `qa-z` is on PATH, use the shorter command form below. Otherwise replace `qa-z` with `python -m qa_z`.
+
+## Baseline: Agent Change Is Unsafe
 
 ```bash
-python -m qa_z fast
-python -m qa_z deep --from-run latest
-python -m qa_z review --from-run latest
-python -m qa_z repair-prompt --from-run latest --adapter codex
+qa-z plan --title "AI auth bug caught by QA-Z" --issue issue.md --spec spec.md --slug ai-auth-bug --overwrite
+qa-z fast --output-dir .qa-z/runs/baseline
+qa-z review --from-run .qa-z/runs/baseline
+qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
-## Verify a candidate repair
-
-After an external repair tool or human applies a candidate fix, rerun the checks into a candidate run directory and compare it with the baseline evidence:
-
-```bash
-python -m qa_z verify \
-  --baseline-run .qa-z/runs/baseline \
-  --candidate-run .qa-z/runs/candidate
-```
-
-## Expected artifact surfaces
+Expected result:
 
 ```text
-.qa-z/runs/
-.qa-z/runs/latest/review/
-.qa-z/runs/latest/repair/
-.qa-z/runs/latest/deep/results.sarif
-.qa-z/sessions/
+Before:
+- Agent changed auth logic.
+- Tests failed.
+- QA-Z produced a repair prompt.
+
+QA-Z:
+- Generated a QA contract.
+- Captured deterministic evidence.
+- Produced a repair prompt for Codex.
+- Preserved the run artifacts under .qa-z/runs/baseline.
 ```
 
-The TypeScript demo under [examples/typescript-demo/](../examples/typescript-demo/) is the quickest runnable example for a fast-gate walkthrough.
+## Optional Deep Check
+
+Install Semgrep and run the local auth rule:
+
+```bash
+python -m pip install semgrep
+qa-z deep --from-run .qa-z/runs/baseline
+```
+
+Expected result: the local Semgrep rule flags the risky signed-in-user shortcut in `app/auth.py`.
+
+## Candidate Repair
+
+Apply the included fixed implementation:
+
+```bash
+cp app/auth.fixed.py app/auth.py
+qa-z fast --output-dir .qa-z/runs/candidate
+qa-z deep --from-run .qa-z/runs/candidate
+qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+```
+
+PowerShell:
+
+```powershell
+Copy-Item app\auth.fixed.py app\auth.py -Force
+qa-z fast --output-dir .qa-z/runs/candidate
+qa-z deep --from-run .qa-z/runs/candidate
+qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+```
+
+## Expected Artifact Surfaces
+
+```text
+.qa-z/runs/baseline/fast/summary.json
+.qa-z/runs/baseline/review/
+.qa-z/runs/baseline/repair/
+.qa-z/runs/baseline/deep/results.sarif
+.qa-z/runs/candidate/fast/summary.json
+```
+
+Use this as the short recorded terminal demo. Keep the message simple:
+
+```text
+AI-generated code -> QA-Z -> deterministic merge evidence
+```

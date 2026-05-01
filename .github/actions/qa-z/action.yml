@@ -1,0 +1,104 @@
+name: QA-Z Gate
+description: Run QA-Z fast/deep checks and publish local review artifacts.
+
+inputs:
+  qa-z-install:
+    description: Python package spec used to install QA-Z.
+    required: false
+    default: git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha
+  run-dir:
+    description: QA-Z run artifact directory.
+    required: false
+    default: .qa-z/runs/pr
+  adapter:
+    description: Repair prompt adapter.
+    required: false
+    default: codex
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install QA-Z and Semgrep
+      shell: bash
+      run: python -m pip install "${{ inputs.qa-z-install }}" semgrep
+
+    - name: Run fast checks
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.run-dir }}"
+        set +e
+        qa-z fast --selection smart --output-dir "${{ inputs.run-dir }}" --json | tee "${{ inputs.run-dir }}/fast-stdout.json"
+        fast_exit=${PIPESTATUS[0]}
+        set -e
+        echo "$fast_exit" > "${{ inputs.run-dir }}/fast-exit-code"
+
+    - name: Run deep checks
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.run-dir }}"
+        set +e
+        qa-z deep --selection smart --from-run "${{ inputs.run-dir }}" --json | tee "${{ inputs.run-dir }}/deep-stdout.json"
+        deep_exit=${PIPESTATUS[0]}
+        set -e
+        echo "$deep_exit" > "${{ inputs.run-dir }}/deep-exit-code"
+
+    - name: Generate review and repair artifacts
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.run-dir }}/review" "${{ inputs.run-dir }}/repair"
+        qa-z review --from-run "${{ inputs.run-dir }}" --output-dir "${{ inputs.run-dir }}/review" > "${{ inputs.run-dir }}/review/review-stdout.md" || true
+        qa-z repair-prompt --from-run "${{ inputs.run-dir }}" --adapter "${{ inputs.adapter }}" --output-dir "${{ inputs.run-dir }}/repair" > "${{ inputs.run-dir }}/repair/prompt-stdout.md" || true
+
+    - name: Publish QA-Z job summary
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        qa-z github-summary --from-run "${{ inputs.run-dir }}" --output "${{ inputs.run-dir }}/github-summary.md" > "${{ inputs.run-dir }}/github-summary-stdout.md" || true
+        if [ -f "${{ inputs.run-dir }}/github-summary.md" ]; then
+          cat "${{ inputs.run-dir }}/github-summary.md" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "# QA-Z Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "QA-Z did not produce a summary artifact." >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload QA-Z SARIF to code scanning
+      if: ${{ always() }}
+      uses: github/codeql-action/upload-sarif@v4
+      continue-on-error: true
+      with:
+        sarif_file: ${{ inputs.run-dir }}/deep/results.sarif
+        category: qa-z-semgrep
+
+    - name: Upload QA-Z run artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: qa-z-runs
+        path: ${{ inputs.run-dir }}
+        retention-days: 7
+        if-no-files-found: warn
+
+    - name: Fail if QA-Z fast or deep failed
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        fast_exit=1
+        deep_exit=1
+        if [ -f "${{ inputs.run-dir }}/fast-exit-code" ]; then
+          fast_exit="$(cat "${{ inputs.run-dir }}/fast-exit-code")"
+        fi
+        if [ -f "${{ inputs.run-dir }}/deep-exit-code" ]; then
+          deep_exit="$(cat "${{ inputs.run-dir }}/deep-exit-code")"
+        fi
+        if [ "$fast_exit" -ne 0 ] || [ "$deep_exit" -ne 0 ]; then
+          echo "QA-Z checks failed: fast=$fast_exit deep=$deep_exit"
+          exit 1
+        fi

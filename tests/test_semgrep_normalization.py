@@ -24,6 +24,7 @@ from qa_z.runners.semgrep import (
 def write_deep_config(
     root: Path,
     *,
+    check_id: str = "sg_scan",
     run: list[str] | None = None,
     semgrep: dict[str, Any] | None = None,
     exclude_paths: list[str] | None = None,
@@ -37,7 +38,7 @@ def write_deep_config(
             "selection": {"exclude_paths": exclude_paths or []},
             "checks": [
                 {
-                    "id": "sg_scan",
+                    "id": check_id,
                     "enabled": True,
                     "run": run or ["semgrep", "--config", "auto", "--json"],
                     "kind": "static-analysis",
@@ -411,6 +412,50 @@ def test_deep_writes_findings_artifact_when_semgrep_reports_issues(
     assert output["checks"][0]["blocking_findings_count"] == 1
     assert check_artifact["grouped_findings"][0]["count"] == 1
     assert check_artifact["findings"][0]["path"] == "src/settings.py"
+
+
+def test_deep_canonicalizes_semgrep_alias_mapping_for_normalization(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_deep_config(tmp_path, check_id="semgrep", run=["semgrep", "--json"])
+    payload = {
+        "results": [
+            {
+                "check_id": "generic.secrets.security.detected-token",
+                "path": "src/settings.py",
+                "start": {"line": 7},
+                "extra": {
+                    "severity": "ERROR",
+                    "message": "Possible hardcoded token",
+                },
+            }
+        ]
+    }
+    commands: list[list[str]] = []
+
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        command = list(args[0])
+        commands.append(command)
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+
+    monkeypatch.setattr("qa_z.runners.subprocess.subprocess.run", fake_run)
+
+    exit_code = main(["deep", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+    check_path = tmp_path / output["artifact_dir"] / "checks" / "sg_scan.json"
+
+    assert exit_code == 1
+    assert commands == [["semgrep", "--config", "auto", "--json"]]
+    assert output["checks"][0]["id"] == "sg_scan"
+    assert output["checks"][0]["findings_count"] == 1
+    assert check_path.exists()
 
 
 def test_deep_warning_findings_are_non_blocking_by_default(

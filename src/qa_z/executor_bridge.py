@@ -73,6 +73,8 @@ from qa_z.executor_bridge_summary import (  # noqa: E402
     bridge_safety_rule_count,
 )
 from qa_z.executor_bridge_support import (  # noqa: E402
+    bridge_output_policy,
+    bridge_output_warnings,
     default_bridge_id,
     ensure_session_exists,
     format_command,
@@ -103,6 +105,8 @@ __all__ = [
     "default_bridge_id",
     "slugify",
     "format_command",
+    "bridge_output_policy",
+    "bridge_output_warnings",
     "resolve_bridge_dir",
     "ensure_session_exists",
     "utc_now",

@@ -13,8 +13,15 @@ import yaml
 
 from qa_z.autonomy import run_autonomy
 from qa_z.cli import main
+from qa_z.artifacts import ArtifactLoadError, ArtifactSourceNotFound
 from qa_z.config import load_config
 from qa_z.executor_bridge import create_executor_bridge
+from qa_z.executor_result import (
+    ExecutorResult,
+    ExecutorValidation,
+    load_bridge_manifest,
+    load_executor_result,
+)
 from qa_z.executor_ingest import (
     ExecutorResultIngestRejected,
     ingest_executor_result_artifact,
@@ -209,6 +216,179 @@ def read_history(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def test_executor_result_serialization_omits_unused_candidate_run_dir() -> None:
+    outside_candidate = "C:/Users/operator/private-candidate"
+    result = ExecutorResult(
+        bridge_id="bridge-session",
+        source_session_id="session-one",
+        source_loop_id=None,
+        created_at=NOW,
+        status="partial",
+        summary="Executor skipped verification with an unused candidate path.",
+        verification_hint="skip",
+        candidate_run_dir=outside_candidate,
+        validation=ExecutorValidation(status="not_run"),
+    )
+
+    payload = result.to_dict()
+
+    assert outside_candidate not in str(payload)
+    assert payload["candidate_run_dir"] is None
+
+
+def test_executor_result_serialization_keeps_candidate_run_dir_when_used() -> None:
+    result = ExecutorResult(
+        bridge_id="bridge-session",
+        source_session_id="session-one",
+        source_loop_id=None,
+        created_at=NOW,
+        status="completed",
+        summary="Executor produced a candidate run for verification.",
+        verification_hint="candidate_run",
+        candidate_run_dir=".qa-z/runs/candidate",
+        validation=ExecutorValidation(status="passed"),
+    )
+
+    payload = result.to_dict()
+
+    assert payload["candidate_run_dir"] == ".qa-z/runs/candidate"
+
+
+def test_executor_result_rejects_malformed_changed_file_entries(tmp_path: Path) -> None:
+    result_path = tmp_path / "result.json"
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": NOW,
+            "status": "partial",
+            "summary": "Executor reported a malformed changed file.",
+            "verification_hint": "skip",
+            "candidate_run_dir": None,
+            "changed_files": [
+                {
+                    "path": "src/qa_z/executor_result.py",
+                    "status": "modified",
+                },
+                "src/qa_z/hidden.py",
+            ],
+            "validation": {"status": "not_run", "commands": [], "results": []},
+            "notes": [],
+        },
+    )
+
+    with pytest.raises(ArtifactLoadError, match="changed_files entry 2"):
+        load_executor_result(result_path)
+
+
+def test_executor_result_rejects_malformed_validation_result_entries(
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "result.json"
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": NOW,
+            "status": "partial",
+            "summary": "Executor reported a malformed validation result.",
+            "verification_hint": "skip",
+            "candidate_run_dir": None,
+            "changed_files": [],
+            "validation": {
+                "status": "failed",
+                "commands": [["python", "-m", "pytest"]],
+                "results": [
+                    {
+                        "command": ["python", "-m", "pytest"],
+                        "status": "failed",
+                        "exit_code": 1,
+                    },
+                    "pytest failed",
+                ],
+            },
+            "notes": [],
+        },
+    )
+
+    with pytest.raises(ArtifactLoadError, match="validation results entry 2"):
+        load_executor_result(result_path)
+
+
+def test_executor_result_rejects_empty_validation_commands(tmp_path: Path) -> None:
+    result_path = tmp_path / "result.json"
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": NOW,
+            "status": "partial",
+            "summary": "Executor reported an empty validation command.",
+            "verification_hint": "skip",
+            "candidate_run_dir": None,
+            "changed_files": [],
+            "validation": {
+                "status": "not_run",
+                "commands": [["", "  "]],
+                "results": [],
+            },
+            "notes": [],
+        },
+    )
+
+    with pytest.raises(ArtifactLoadError, match="commands entry 1"):
+        load_executor_result(result_path)
+
+
+def test_executor_result_rejects_empty_validation_result_command(
+    tmp_path: Path,
+) -> None:
+    result_path = tmp_path / "result.json"
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": NOW,
+            "status": "partial",
+            "summary": "Executor reported a validation result without a command.",
+            "verification_hint": "skip",
+            "candidate_run_dir": None,
+            "changed_files": [],
+            "validation": {
+                "status": "failed",
+                "commands": [["python", "-m", "pytest"]],
+                "results": [
+                    {
+                        "command": [],
+                        "status": "failed",
+                        "exit_code": 1,
+                    }
+                ],
+            },
+            "notes": [],
+        },
+    )
+
+    with pytest.raises(ArtifactLoadError, match="validation result command"):
+        load_executor_result(result_path)
+
+
 def start_session_and_bridge(
     tmp_path: Path,
     capsys,
@@ -287,6 +467,151 @@ def start_loop_bridge(tmp_path: Path, capsys) -> tuple[str, str, Any]:
     manifest["updated_at"] = NOW
     write_json(session_dir / "session.json", manifest)
     return loop_id, session_id, bridge
+
+
+def test_executor_result_rejects_bridge_id_path_traversal(tmp_path: Path) -> None:
+    escape_manifest = tmp_path / ".qa-z" / "escape" / "bridge.json"
+    write_json(
+        escape_manifest,
+        {
+            "kind": "qa_z.executor_bridge",
+            "schema_version": 1,
+            "bridge_id": "../escape",
+            "source_session_id": "session-one",
+        },
+    )
+
+    with pytest.raises(ArtifactSourceNotFound, match="Invalid executor bridge id"):
+        load_bridge_manifest(tmp_path, "../escape")
+
+
+def test_executor_result_ingest_accepts_custom_output_dir_bridge_result(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    start_exit = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    bridge_dir = tmp_path / "external-bridge-package"
+    bridge = create_executor_bridge(
+        root=tmp_path,
+        from_session="session-one",
+        bridge_id="bridge-custom-output",
+        output_dir=bridge_dir,
+        now=NOW,
+    )
+    session_manifest_path = (
+        tmp_path / ".qa-z" / "sessions" / "session-one" / "session.json"
+    )
+    session_manifest = read_json(session_manifest_path)
+    session_manifest["created_at"] = NOW
+    session_manifest["updated_at"] = NOW
+    write_json(session_manifest_path, session_manifest)
+    result = read_json(bridge.result_template_path)
+    result["summary"] = "External executor completed a partial handoff."
+    result["status"] = "partial"
+    result["verification_hint"] = "skip"
+    result_path = bridge_dir / "result.json"
+    write_executor_result(result_path, result)
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(result_path),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert start_exit == 0
+    assert bridge.manifest_path == bridge_dir / "bridge.json"
+    assert exit_code == 0
+    assert output["ingest_status"] == "accepted_partial"
+    assert output["bridge_id"] == "bridge-custom-output"
+    assert output["session_id"] == "session-one"
+    assert output["warnings"] == ["custom_output_dir_outside_qa_z"]
+    assert (
+        output["stored_result_path"]
+        == ".qa-z/sessions/session-one/executor_result.json"
+    )
+
+
+def test_executor_result_ingest_recomputes_custom_output_warnings(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    start_exit = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    bridge_dir = tmp_path / "external-bridge-package"
+    bridge = create_executor_bridge(
+        root=tmp_path,
+        from_session="session-one",
+        bridge_id="bridge-missing-warning",
+        output_dir=bridge_dir,
+        now=NOW,
+    )
+    session_manifest_path = (
+        tmp_path / ".qa-z" / "sessions" / "session-one" / "session.json"
+    )
+    session_manifest = read_json(session_manifest_path)
+    session_manifest["created_at"] = NOW
+    session_manifest["updated_at"] = NOW
+    write_json(session_manifest_path, session_manifest)
+    bridge_manifest = read_json(bridge.manifest_path)
+    bridge_manifest["warnings"] = []
+    write_json(bridge.manifest_path, bridge_manifest)
+    result = read_json(bridge.result_template_path)
+    result["summary"] = "External executor completed a partial handoff."
+    result["status"] = "partial"
+    result["verification_hint"] = "skip"
+    result_path = bridge_dir / "result.json"
+    write_executor_result(result_path, result)
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(result_path),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert start_exit == 0
+    assert exit_code == 0
+    assert output["warnings"] == ["custom_output_dir_outside_qa_z"]
 
 
 def test_executor_result_ingest_reruns_verification_and_updates_session(
@@ -398,6 +723,101 @@ def test_executor_result_ingest_reruns_verification_and_updates_session(
     assert history["attempts"][0]["ingest_status"] == "accepted"
     assert history["attempts"][0]["verification_verdict"] == "improved"
     assert history["attempts"][0]["attempt_path"].endswith(".json")
+
+
+def test_executor_result_ingest_redacts_secret_like_fields_before_storing(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(
+        tmp_path,
+        checks=[{"id": "py_test", "run": python_command(""), "kind": "test"}],
+    )
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    write_deep_summary(tmp_path, "baseline")
+    session_dir, _bridge = start_session_and_bridge(tmp_path, capsys)
+
+    result_path = tmp_path / "external-result.json"
+    secret_command = [
+        "python",
+        "-m",
+        "pytest",
+        "--token",
+        "raw-token-value",
+        "--client-secret",
+        "raw-client-secret",
+    ]
+    write_executor_result(
+        result_path,
+        {
+            "kind": "qa_z.executor_result",
+            "schema_version": 1,
+            "bridge_id": "bridge-session",
+            "source_session_id": "session-one",
+            "source_loop_id": None,
+            "created_at": NOW,
+            "status": "completed",
+            "summary": "Applied repair with Authorization: Basic raw-basic-credential",
+            "verification_hint": "rerun",
+            "candidate_run_dir": None,
+            "changed_files": [
+                {
+                    "path": "src/qa_z/executor_result.py",
+                    "status": "modified",
+                    "old_path": None,
+                    "summary": "Removed password=raw-password-value from logs.",
+                }
+            ],
+            "validation": {
+                "status": "passed",
+                "commands": [secret_command],
+                "results": [
+                    {
+                        "command": secret_command,
+                        "status": "passed",
+                        "exit_code": 0,
+                        "summary": "client_secret=raw-client-secret",
+                    }
+                ],
+            },
+            "notes": [
+                "authorization: Digest raw-digest-credential, password=raw-password-value"
+            ],
+        },
+    )
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(result_path),
+            "--json",
+        ]
+    )
+    capsys.readouterr()
+
+    stored = read_json(session_dir / "executor_result.json")
+    rendered = json.dumps(stored, sort_keys=True)
+
+    assert exit_code == 0
+    for raw_secret in (
+        "raw-token-value",
+        "raw-client-secret",
+        "raw-basic-credential",
+        "raw-digest-credential",
+        "raw-password-value",
+    ):
+        assert raw_secret not in rendered
+    assert stored["validation"]["commands"][0][4] == "[REDACTED_TOKEN]"
+    assert stored["validation"]["commands"][0][6] == "[REDACTED_SECRET]"
+    assert stored["validation"]["results"][0]["command"][4] == "[REDACTED_TOKEN]"
+    assert stored["validation"]["results"][0]["command"][6] == "[REDACTED_SECRET]"
+    assert "[REDACTED_TOKEN]" in stored["summary"]
+    assert "[REDACTED_SECRET]" in stored["changed_files"][0]["summary"]
+    assert "[REDACTED_TOKEN]" in stored["notes"][0]
 
 
 def test_executor_result_ingest_updates_loop_history_without_verifying(
@@ -749,6 +1169,70 @@ def test_executor_result_ingest_rejects_unrelated_changed_files(
     assert history["attempts"][0]["ingest_status"] == "rejected_invalid"
     assert history["attempts"][0]["result_status"] == "completed"
     assert history["attempts"][0]["verify_resume_status"] == "verify_blocked"
+
+
+def test_executor_result_ingest_uses_bridge_local_handoff_for_scope(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path, related_files=["src/qa_z/executor_result.py"])
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    session_dir, bridge = start_session_and_bridge(tmp_path, capsys)
+    bridge_manifest = read_json(bridge.manifest_path)
+    original_handoff_path = Path(str(bridge_manifest["handoff_path"]))
+    if not original_handoff_path.is_absolute():
+        original_handoff_path = tmp_path / original_handoff_path
+    copied_handoff_path = Path(str(bridge_manifest["inputs"]["handoff"]))
+    if not copied_handoff_path.is_absolute():
+        copied_handoff_path = tmp_path / copied_handoff_path
+
+    handoff = read_json(original_handoff_path)
+    assert read_json(copied_handoff_path)["repair"]["affected_files"] == [
+        "src/qa_z/executor_result.py"
+    ]
+    handoff["repair"]["affected_files"].append("docs/README.md")
+    write_json(original_handoff_path, handoff)
+
+    result = read_json(bridge.result_template_path)
+    result["status"] = "completed"
+    result["summary"] = "Edited an unrelated docs file after the bridge was created."
+    result["verification_hint"] = "skip"
+    result["candidate_run_dir"] = None
+    result["changed_files"] = [
+        {
+            "path": "docs/README.md",
+            "status": "modified",
+            "old_path": None,
+            "summary": "Unrelated docs edit.",
+        }
+    ]
+    result["validation"] = {"status": "not_run", "commands": [], "results": []}
+    result_path = tmp_path / "external-result-mutated-handoff.json"
+    write_executor_result(result_path, result)
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(result_path),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+    manifest = read_json(session_dir / "session.json")
+
+    assert exit_code == 2
+    assert output["ingest_status"] == "rejected_invalid"
+    assert output["stored_result_path"] is None
+    assert any(
+        "outside the bridge affected_files" in detail
+        for detail in output["provenance_check"]["details"]
+    )
+    assert (session_dir / "executor_result.json").exists() is False
+    assert manifest["executor_result_status"] is None
 
 
 def test_executor_result_ingest_rejects_result_older_than_bridge(

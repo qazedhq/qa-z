@@ -23,6 +23,16 @@ def copy_fastapi_demo(tmp_path: Path) -> Path:
     return demo
 
 
+def copy_agent_auth_bug_demo(tmp_path: Path) -> Path:
+    demo = tmp_path / "agent-auth-bug"
+    shutil.copytree(
+        ROOT / "examples" / "agent-auth-bug",
+        demo,
+        ignore=shutil.ignore_patterns(".qa-z", "qa", "__pycache__"),
+    )
+    return demo
+
+
 def test_fastapi_demo_passing_flow_runs_to_green(tmp_path, capsys) -> None:
     demo = copy_fastapi_demo(tmp_path)
 
@@ -55,6 +65,58 @@ def test_fastapi_demo_passing_flow_runs_to_green(tmp_path, capsys) -> None:
     assert plan_exit == 0
     assert fast_exit == 0
     assert output["status"] == "passed"
+
+
+def test_agent_auth_bug_demo_catches_bad_auth_change(tmp_path, capsys) -> None:
+    demo = copy_agent_auth_bug_demo(tmp_path)
+
+    plan_exit = main(
+        [
+            "plan",
+            "--path",
+            str(demo),
+            "--title",
+            "AI auth bug caught by QA-Z",
+            "--issue",
+            str(demo / "issue.md"),
+            "--spec",
+            str(demo / "spec.md"),
+        ]
+    )
+    capsys.readouterr()
+
+    fast_exit = main(
+        [
+            "fast",
+            "--path",
+            str(demo),
+            "--output-dir",
+            str(demo / ".qa-z" / "runs" / "baseline"),
+            "--json",
+        ]
+    )
+    fast_output = json.loads(capsys.readouterr().out)
+
+    repair_exit = main(
+        [
+            "repair-prompt",
+            "--path",
+            str(demo),
+            "--from-run",
+            str(demo / ".qa-z" / "runs" / "baseline"),
+            "--adapter",
+            "codex",
+            "--json",
+        ]
+    )
+    repair_packet = json.loads(capsys.readouterr().out)
+
+    assert plan_exit == 0
+    assert fast_exit == 1
+    assert fast_output["status"] == "failed"
+    assert repair_exit == 0
+    assert repair_packet["repair_needed"] is True
+    assert repair_packet["suggested_fix_order"] == ["py_test"]
 
 
 def test_fastapi_demo_failing_flow_generates_repair_packet(tmp_path, capsys) -> None:
@@ -124,8 +186,8 @@ def test_fastapi_demo_readme_states_dependency_light_deterministic_boundary() ->
         "py_format",
         "py_test_bug_demo",
     ]
-    assert config["checks"]["deep"] == []
-    assert failing_config["checks"]["deep"] == []
+    assert config["deep"]["checks"] == []
+    assert failing_config["deep"]["checks"] == []
     assert "dependency-light" in readme
     assert "works without installing a web server" in readme
     assert "deterministic fast and repair-prompt demo" in readme
@@ -154,6 +216,25 @@ def test_nextjs_demo_readme_is_honest_placeholder() -> None:
     assert "Playwright smoke coverage" not in readme
 
 
+def test_agent_auth_bug_demo_documents_five_minute_safety_belt_flow() -> None:
+    demo = ROOT / "examples" / "agent-auth-bug"
+    readme = (demo / "README.md").read_text(encoding="utf-8")
+    config = yaml.safe_load((demo / "qa-z.yaml").read_text(encoding="utf-8"))
+
+    assert [check["id"] for check in config["fast"]["checks"]] == [
+        "py_lint",
+        "py_format",
+        "py_test",
+    ]
+    assert [check["id"] for check in config["deep"]["checks"]] == ["sg_scan"]
+    assert "AI wrote a bad auth change. QA-Z caught it." in readme
+    assert "five-minute demo" in readme
+    assert "qa-z fast" in readme
+    assert "qa-z repair-prompt" in readme
+    assert "qa-z verify" in readme
+    assert "does not call live agents" in readme
+
+
 def test_typescript_demo_readme_states_fast_only_live_free_boundary() -> None:
     demo = ROOT / "examples" / "typescript-demo"
     readme = (demo / "README.md").read_text(encoding="utf-8")
@@ -164,7 +245,7 @@ def test_typescript_demo_readme_states_fast_only_live_free_boundary() -> None:
         "ts_type",
         "ts_test",
     ]
-    assert config["checks"]["deep"] == []
+    assert config["deep"]["checks"] == []
     assert "TypeScript fast gate" in readme
     assert "fast-only demo" in readme
     assert "not a Next.js demo" in readme

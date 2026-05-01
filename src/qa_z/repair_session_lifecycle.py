@@ -173,4 +173,60 @@ def load_repair_session(root: Path, session: str):
         ) from exc
     if not isinstance(data, dict):
         raise ArtifactLoadError("Repair session manifest must contain an object.")
-    return RepairSession.from_dict(data)
+    loaded = RepairSession.from_dict(data)
+    loaded_session_dir = resolve_path(root, loaded.session_dir)
+    if loaded_session_dir != session_dir:
+        raise ArtifactLoadError(
+            "Repair session manifest session_dir does not match loaded manifest path: "
+            f"expected {format_path(session_dir, root)}, "
+            f"got {format_path(loaded_session_dir, root)}"
+        )
+    if loaded.session_id != session_dir.name:
+        raise ArtifactLoadError(
+            "Repair session manifest session_id does not match loaded manifest path: "
+            f"expected {session_dir.name}, got {loaded.session_id}"
+        )
+    _validate_session_local_path(
+        root=root,
+        session_dir=session_dir,
+        field="handoff_dir",
+        value=loaded.handoff_dir,
+    )
+    _validate_session_local_path(
+        root=root,
+        session_dir=session_dir,
+        field="executor_guide_path",
+        value=loaded.executor_guide_path,
+    )
+    for key, value in loaded.handoff_artifacts.items():
+        _validate_session_local_path(
+            root=root,
+            session_dir=session_dir,
+            field=f"handoff_artifacts.{key}",
+            value=value,
+        )
+    for key, value in loaded.safety_artifacts.items():
+        _validate_session_local_path(
+            root=root,
+            session_dir=session_dir,
+            field=f"safety_artifacts.{key}",
+            value=value,
+        )
+    return loaded
+
+
+def _validate_session_local_path(
+    *, root: Path, session_dir: Path, field: str, value: str | None
+) -> None:
+    """Reject session-local artifact paths that escape the loaded session."""
+    text = str(value or "").strip()
+    if not text:
+        return
+    resolved = resolve_path(root, text)
+    try:
+        resolved.relative_to(session_dir)
+    except ValueError as exc:
+        raise ArtifactLoadError(
+            f"Repair session manifest {field} must stay under session_dir: "
+            f"{format_path(resolved, root)}"
+        ) from exc

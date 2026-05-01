@@ -10,6 +10,7 @@ import pytest
 import yaml
 
 from qa_z.cli import main
+from qa_z.runners.deep import configured_deep_checks, resolve_deep_checks
 from qa_z.runners.deep import resolve_deep_run_dir
 
 
@@ -179,3 +180,22 @@ def test_deep_rejects_from_run_with_output_dir(
     assert "--from-run and --output-dir cannot be combined" in captured.out
     assert not output_dir.exists()
     assert not (tmp_path / ".qa-z" / "runs" / "ci" / "deep").exists()
+
+
+def test_deep_runner_uses_legacy_checks_deep_when_modern_deep_absent() -> None:
+    config = {"checks": {"deep": ["security"]}}
+
+    specs = resolve_deep_checks(config)
+
+    assert configured_deep_checks(config) == ["security"]
+    assert [spec.id for spec in specs] == ["sg_scan"]
+
+
+def test_deep_runner_prefers_modern_deep_checks_over_legacy() -> None:
+    config = {
+        "deep": {"checks": []},
+        "checks": {"deep": ["security"]},
+    }
+
+    assert configured_deep_checks(config) == []
+    assert resolve_deep_checks(config) == []

@@ -1,0 +1,41 @@
+project:
+  name: qa-z-typescript-agent-bug
+  languages:
+    - typescript
+  roots:
+    - src
+    - tests
+
+contracts:
+  output_dir: qa/contracts
+
+fast:
+  output_dir: .qa-z/runs
+  strict_no_tests: false
+  fail_on_missing_tool: true
+  checks:
+    - id: ts_lint
+      enabled: true
+      run: ["node", "scripts/lint.mjs"]
+      kind: lint
+    - id: ts_type
+      enabled: true
+      run: ["node", "scripts/typecheck.mjs"]
+      kind: typecheck
+    - id: ts_test
+      enabled: true
+      run: ["node", "scripts/test.mjs"]
+      kind: test
+      no_tests: fail
+
+deep:
+  fail_on_missing_tool: true
+  checks:
+    - id: sg_scan
+      enabled: true
+      run: ["semgrep", "--config", "semgrep-rules/auth-bypass.yml", "--json", "src"]
+      kind: static-analysis
+      semgrep:
+        config: semgrep-rules/auth-bypass.yml
+        fail_on_severity:
+          - ERROR

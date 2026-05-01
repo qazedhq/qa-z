@@ -180,12 +180,14 @@ BATCH_RULES = (
         message="Keep release-facing docs and current-truth guards aligned with the shipped surface.",
         patterns=(
             "tests/test_current_truth*.py",
+            "tests/test_*current_truth*.py",
+            "tests/test_examples.py",
             "docs/superpowers/plans/*github*release*.md",
             "docs/superpowers/plans/*github*launch*.md",
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(
-            "python -m pytest tests/test_current_truth.py tests/test_current_truth_release_surfaces.py -q",
+            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_examples.py -q",
             "python -m qa_z --help",
         ),
     ),
@@ -378,6 +380,7 @@ BATCH_RULES = (
             "tests/test_repair_prompt*.py",
             "tests/test_review_packet*.py",
             "tests/test_run_summary*.py",
+            "tests/test_sarif*.py",
             "tests/test_review_commands.py",
             "tests/test_review_*.py",
             "tests/verification*_support.py",

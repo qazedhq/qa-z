@@ -8,6 +8,11 @@ The current public alpha target is `v0.9.8-alpha`.
 
 ## Reporting
 
+Preferred private path: open a GitHub Security Advisory for this repository if
+that option is available to you. If advisories are unavailable, contact a
+maintainer through an existing private channel before sharing exploit details.
+Do not include live secrets in public issues.
+
 When reporting a vulnerability, include:
 
 - affected command or artifact surface

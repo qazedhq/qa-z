@@ -7,12 +7,14 @@ from typing import Any, Literal
 
 from qa_z.artifacts import ArtifactLoadError
 from qa_z.executor_result_parsing import (
+    list_of_dicts,
     list_of_string_lists,
     optional_int,
     optional_string,
     required_string,
     string_list,
 )
+from qa_z.runners.models import redact_sensitive_text, redact_sensitive_value
 
 EXECUTOR_RESULT_KIND = "qa_z.executor_result"
 EXECUTOR_RESULT_INGEST_KIND = "qa_z.executor_result_ingest"
@@ -53,7 +55,7 @@ class ExecutorChangedFile:
             "path": self.path,
             "status": self.status,
             "old_path": self.old_path,
-            "summary": self.summary,
+            "summary": redact_sensitive_text(self.summary),
         }
 
     @classmethod
@@ -83,10 +85,10 @@ class ExecutorValidationResult:
     def to_dict(self) -> dict[str, Any]:
         """Render a JSON-safe validation command result."""
         return {
-            "command": list(self.command),
+            "command": redact_sensitive_value(list(self.command)),
             "status": self.status,
             "exit_code": self.exit_code,
-            "summary": self.summary,
+            "summary": redact_sensitive_text(self.summary),
         }
 
     @classmethod
@@ -95,8 +97,16 @@ class ExecutorValidationResult:
         status = required_string(data, "status")
         if status not in EXECUTOR_VALIDATION_STATUSES:
             raise ArtifactLoadError(f"Unsupported validation result status: {status}")
+        command = string_list(
+            data.get("command"), field_name="validation result command"
+        )
+        if not command:
+            raise ArtifactLoadError(
+                "Executor result field validation result command must contain "
+                "at least one argument."
+            )
         return cls(
-            command=string_list(data.get("command"), field_name="command"),
+            command=command,
             status=status,
             exit_code=optional_int(data.get("exit_code"), field_name="exit_code"),
             summary=optional_string(data.get("summary")) or "",
@@ -115,7 +125,9 @@ class ExecutorValidation:
         """Render a JSON-safe validation section."""
         return {
             "status": self.status,
-            "commands": [list(command) for command in self.commands],
+            "commands": [
+                redact_sensitive_value(list(command)) for command in self.commands
+            ],
             "results": [result.to_dict() for result in self.results],
         }
 
@@ -126,19 +138,13 @@ class ExecutorValidation:
         if status not in EXECUTOR_VALIDATION_STATUSES:
             raise ArtifactLoadError(f"Unsupported validation status: {status}")
         commands = list_of_string_lists(data.get("commands"), field_name="commands")
-        raw_results = data.get("results")
-        if raw_results is None:
-            raw_results = []
-        if not isinstance(raw_results, list):
-            raise ArtifactLoadError("Executor validation results must be a list.")
+        raw_results = list_of_dicts(
+            data.get("results"), field_name="validation results"
+        )
         return cls(
             status=status,
             commands=commands,
-            results=[
-                ExecutorValidationResult.from_dict(item)
-                for item in raw_results
-                if isinstance(item, dict)
-            ],
+            results=[ExecutorValidationResult.from_dict(item) for item in raw_results],
         )
 
 
@@ -172,13 +178,19 @@ class ExecutorResult:
             "source_loop_id": self.source_loop_id,
             "created_at": self.created_at,
             "status": self.status,
-            "summary": self.summary,
+            "summary": redact_sensitive_text(self.summary),
             "verification_hint": self.verification_hint,
-            "candidate_run_dir": self.candidate_run_dir,
+            "candidate_run_dir": self.serialized_candidate_run_dir(),
             "changed_files": [item.to_dict() for item in self.changed_files],
             "validation": self.validation.to_dict(),
-            "notes": list(self.notes),
+            "notes": redact_sensitive_value(list(self.notes)),
         }
+
+    def serialized_candidate_run_dir(self) -> str | None:
+        """Return a candidate run path only when verification will use it."""
+        if self.verification_hint != "candidate_run":
+            return None
+        return self.candidate_run_dir
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExecutorResult":
@@ -211,11 +223,9 @@ class ExecutorResult:
                 "Executor result requires candidate_run_dir when "
                 "verification_hint is candidate_run."
             )
-        raw_changed_files = data.get("changed_files")
-        if raw_changed_files is None:
-            raw_changed_files = []
-        if not isinstance(raw_changed_files, list):
-            raise ArtifactLoadError("Executor result changed_files must be a list.")
+        raw_changed_files = list_of_dicts(
+            data.get("changed_files"), field_name="changed_files"
+        )
         validation_data = data.get("validation")
         if not isinstance(validation_data, dict):
             raise ArtifactLoadError("Executor result validation must be an object.")
@@ -229,9 +239,7 @@ class ExecutorResult:
             verification_hint=verification_hint,
             candidate_run_dir=candidate_run_dir,
             changed_files=[
-                ExecutorChangedFile.from_dict(item)
-                for item in raw_changed_files
-                if isinstance(item, dict)
+                ExecutorChangedFile.from_dict(item) for item in raw_changed_files
             ],
             validation=ExecutorValidation.from_dict(validation_data),
             notes=string_list(data.get("notes"), field_name="notes"),

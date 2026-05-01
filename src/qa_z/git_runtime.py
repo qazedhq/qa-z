@@ -11,7 +11,7 @@ __all__ = ["git_stdout"]
 
 
 def git_stdout(root: Path, args: list[str]) -> str | None:
-    """Return stripped stdout for one git command, or ``None`` on failure."""
+    """Return stdout without trailing whitespace, or ``None`` on failure."""
     command = ["git", *args]
     try:
         completed = subprocess.run(
@@ -28,5 +28,5 @@ def git_stdout(root: Path, args: list[str]) -> str | None:
         return None
     if completed.returncode != 0:
         return None
-    stdout = completed.stdout.strip()
+    stdout = completed.stdout.rstrip()
     return stdout or None

@@ -49,11 +49,12 @@ def bridge_allowed_files(
     *, root: Path, bridge: dict[str, Any], session: RepairSession | None = None
 ) -> set[str]:
     """Return the allowed changed files declared by the bridge handoff."""
-    handoff_path_text = str(bridge.get("handoff_path") or "").strip()
+    inputs = bridge.get("inputs")
+    handoff_path_text = ""
+    if isinstance(inputs, dict):
+        handoff_path_text = str(inputs.get("handoff") or "").strip()
     if not handoff_path_text:
-        inputs = bridge.get("inputs")
-        if isinstance(inputs, dict):
-            handoff_path_text = str(inputs.get("handoff") or "").strip()
+        handoff_path_text = str(bridge.get("handoff_path") or "").strip()
     if not handoff_path_text:
         raise ArtifactLoadError(
             "Executor bridge is missing handoff_path required for scope validation."

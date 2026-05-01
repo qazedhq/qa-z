@@ -10,6 +10,24 @@ from typing import Any
 
 from qa_z.artifacts import ArtifactSourceNotFound
 
+BRIDGE_OUTPUT_OUTSIDE_QA_Z_WARNING = {
+    "id": "custom_output_dir_outside_qa_z",
+    "message": (
+        "Executor bridge package is outside .qa-z; keep this generated "
+        "executor evidence local or intentionally manage it outside QA-Z "
+        "cleanup and ignore policy."
+    ),
+}
+
+BRIDGE_OUTPUT_OUTSIDE_REPOSITORY_WARNING = {
+    "id": "custom_output_dir_outside_repository",
+    "message": (
+        "Executor bridge package is outside the repository root; keep this copied "
+        "QA evidence local or intentionally manage it outside repository cleanup "
+        "and ignore policy."
+    ),
+}
+
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     """Write a deterministic JSON artifact."""
@@ -63,6 +81,42 @@ def resolve_bridge_dir(*, root: Path, output_dir: Path | None, bridge_id: str) -
             path = root / path
         return path.resolve()
     return (root / ".qa-z" / "executor" / bridge_id).resolve()
+
+
+def bridge_output_warnings(*, root: Path, bridge_dir: Path) -> list[dict[str, str]]:
+    """Return non-blocking warnings for bridge output paths."""
+    policy = bridge_output_policy(root=root, bridge_dir=bridge_dir)
+    warnings: list[dict[str, str]] = []
+    if not policy["under_repository_root"]:
+        warnings.append(dict(BRIDGE_OUTPUT_OUTSIDE_REPOSITORY_WARNING))
+    if not policy["under_qa_z"]:
+        warnings.append(dict(BRIDGE_OUTPUT_OUTSIDE_QA_Z_WARNING))
+    return warnings
+
+
+def bridge_output_policy(*, root: Path, bridge_dir: Path) -> dict[str, bool]:
+    """Return policy context for where the bridge package was written."""
+    under_repository_root = _path_is_within(bridge_dir, root)
+    under_qa_z = _path_is_within(bridge_dir, root / ".qa-z")
+    under_default_executor_tree = _path_is_within(
+        bridge_dir, root / ".qa-z" / "executor"
+    )
+    return {
+        "under_repository_root": under_repository_root,
+        "under_qa_z": under_qa_z,
+        "under_default_executor_tree": under_default_executor_tree,
+        "cleanup_managed_by_qaz": under_qa_z,
+        "contains_copied_evidence": True,
+    }
+
+
+def _path_is_within(path: Path, parent: Path) -> bool:
+    """Return whether path resolves under parent."""
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def ensure_session_exists(root: Path, session_ref: str) -> None:

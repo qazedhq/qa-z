@@ -505,6 +505,137 @@ def test_select_next_surfaces_non_repeated_family_after_fallback_diversity_task(
     ]
 
 
+def test_select_next_treats_verification_failure_as_repeat_recovery_alternative(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": NOW,
+            "items": [
+                {
+                    "id": "autonomy_selection_gap-repeated-fallback-cleanup",
+                    "title": "Diversify repeated fallback selections across task families",
+                    "category": "autonomy_selection_gap",
+                    "evidence": [
+                        {
+                            "source": "loop_history",
+                            "path": ".qa-z/loops/history.jsonl",
+                            "summary": "recent_fallback_family=cleanup; loops=3",
+                        }
+                    ],
+                    "impact": 4,
+                    "likelihood": 4,
+                    "confidence": 4,
+                    "repair_cost": 2,
+                    "priority_score": 67,
+                    "status": "open",
+                    "recommendation": "improve_fallback_diversity",
+                    "signals": ["recent_fallback_family_repeat"],
+                    "first_seen_at": NOW,
+                    "last_seen_at": NOW,
+                    "recurrence_count": 3,
+                },
+                {
+                    "id": "worktree_risk-dirty-worktree",
+                    "title": "Reduce dirty worktree integration risk",
+                    "category": "worktree_risk",
+                    "evidence": [
+                        {"source": "git_status", "path": ".", "summary": "dirty"}
+                    ],
+                    "impact": 4,
+                    "likelihood": 4,
+                    "confidence": 4,
+                    "repair_cost": 3,
+                    "priority_score": 65,
+                    "status": "open",
+                    "recommendation": "reduce_integration_risk",
+                    "signals": ["dirty_worktree_large"],
+                    "first_seen_at": NOW,
+                    "last_seen_at": NOW,
+                    "recurrence_count": 2,
+                },
+                {
+                    "id": "verify_failure-2026-04-29t00-28-09z",
+                    "title": "Stabilize failed verification artifacts",
+                    "category": "verification_failure",
+                    "evidence": [
+                        {
+                            "source": "verification",
+                            "path": ".qa-z/runs/2026-04-29T00-28-09Z/verify/summary.json",
+                            "summary": (
+                                "verdict=verification_failed; regressions=0; "
+                                "new_issues=0; not_comparable=1"
+                            ),
+                        }
+                    ],
+                    "impact": 4,
+                    "likelihood": 4,
+                    "confidence": 4,
+                    "repair_cost": 4,
+                    "priority_score": 62,
+                    "status": "open",
+                    "recommendation": "stabilize_verification_surface",
+                    "signals": ["regression_prevention", "verify_failed"],
+                    "first_seen_at": NOW,
+                    "last_seen_at": NOW,
+                    "recurrence_count": 2,
+                },
+            ],
+        },
+    )
+    write_loop_history(
+        tmp_path,
+        [
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-1",
+                "created_at": "2026-04-14T00:00:00Z",
+                "selected_tasks": ["worktree_risk-dirty-worktree"],
+                "selected_categories": ["worktree_risk"],
+                "selected_fallback_families": ["cleanup"],
+                "evidence_used": ["."],
+                "resulting_session_id": None,
+                "verify_verdict": None,
+                "benchmark_delta": None,
+                "next_candidates": [],
+                "state": "fallback_selected",
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-2",
+                "created_at": "2026-04-14T00:05:00Z",
+                "selected_tasks": ["commit_isolation_gap-foundation-order"],
+                "selected_categories": ["commit_isolation_gap"],
+                "selected_fallback_families": ["cleanup"],
+                "evidence_used": ["docs/reports/worktree-commit-plan.md"],
+                "resulting_session_id": None,
+                "verify_verdict": None,
+                "benchmark_delta": None,
+                "next_candidates": [],
+                "state": "fallback_selected",
+            },
+        ],
+    )
+
+    paths = select_next_tasks(
+        root=tmp_path, count=1, now=NOW, loop_id="verification-family"
+    )
+    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    history = json.loads(
+        paths.history_path.read_text(encoding="utf-8").splitlines()[-1]
+    )
+
+    assert [task["id"] for task in selected["selected_tasks"]] == [
+        "verify_failure-2026-04-29t00-28-09z"
+    ]
+    assert history["selected_fallback_families"] == ["verification_remediation"]
+
+
 def test_select_next_keeps_cleanup_family_when_no_alternative_family_exists(
     tmp_path: Path,
 ) -> None:

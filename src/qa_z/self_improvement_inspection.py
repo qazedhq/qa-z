@@ -116,7 +116,8 @@ def discover_candidates(
     """Find evidence-backed improvement candidates in local artifacts."""
     si = _surface()
     backlog = existing or empty_backlog()
-    live_signals = live_signals or si.collect_live_repository_signals(root)
+    if live_signals is None:
+        live_signals = si.collect_live_repository_signals(root)
     candidates = run_discovery_pipeline(
         root=root,
         backlog=backlog,
