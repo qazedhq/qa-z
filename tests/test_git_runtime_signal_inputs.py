@@ -38,6 +38,23 @@ def test_git_stdout_runs_git_with_utf8_and_returns_text(
     assert recorded["kwargs"]["env"]["PYTHONIOENCODING"] == "utf-8"
 
 
+def test_git_stdout_preserves_leading_status_columns(
+    tmp_path: Path, monkeypatch
+) -> None:
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command, 0, stdout=" M README.md\n?? notes.md\n", stderr=""
+        )
+
+    monkeypatch.setattr("qa_z.git_runtime.subprocess.run", fake_run)
+
+    output = git_runtime_module.git_stdout(
+        tmp_path, ["status", "--short", "--untracked-files=all"]
+    )
+
+    assert output == " M README.md\n?? notes.md"
+
+
 def test_git_stdout_returns_none_for_git_failures(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(
         "qa_z.git_runtime.subprocess.run",

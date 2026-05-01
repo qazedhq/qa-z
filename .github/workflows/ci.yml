@@ -18,6 +18,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -47,6 +49,20 @@ jobs:
 
       - name: Smoke test built package artifacts
         run: python scripts/alpha_release_artifact_smoke.py --json
+
+      - name: Run benchmark corpus
+        run: python -m qa_z benchmark --results-dir benchmarks/results-ci --json
+
+      - name: Upload benchmark report artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-z-benchmark-report
+          path: |
+            benchmarks/results-ci/summary.json
+            benchmarks/results-ci/report.md
+          retention-days: 7
+          if-no-files-found: warn
 
   qa-z:
     runs-on: ubuntu-latest
@@ -104,7 +120,7 @@ jobs:
         run: |
           mkdir -p .qa-z/runs/ci
           set +e
-          python -m qa_z deep --selection smart --json | tee .qa-z/runs/ci/deep-stdout.json
+          python -m qa_z deep --selection smart --from-run .qa-z/runs/ci --json | tee .qa-z/runs/ci/deep-stdout.json
           deep_exit=${PIPESTATUS[0]}
           set -e
           echo "$deep_exit" > .qa-z/runs/ci/deep-exit-code
@@ -114,14 +130,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p .qa-z/runs/ci/review .qa-z/runs/ci/repair
-          python -m qa_z review --from-run latest --output-dir .qa-z/runs/ci/review > .qa-z/runs/ci/review/review-stdout.md || true
-          python -m qa_z repair-prompt --from-run latest --output-dir .qa-z/runs/ci/repair > .qa-z/runs/ci/repair/prompt-stdout.md || true
+          python -m qa_z review --from-run .qa-z/runs/ci --output-dir .qa-z/runs/ci/review > .qa-z/runs/ci/review/review-stdout.md || true
+          python -m qa_z repair-prompt --from-run .qa-z/runs/ci --output-dir .qa-z/runs/ci/repair > .qa-z/runs/ci/repair/prompt-stdout.md || true
 
       - name: Publish QA-Z job summary
         if: ${{ always() }}
         shell: bash
         run: |
-          python -m qa_z github-summary --from-run latest --output .qa-z/runs/ci/github-summary.md > .qa-z/runs/ci/github-summary-stdout.md || true
+          python -m qa_z github-summary --from-run .qa-z/runs/ci --output .qa-z/runs/ci/github-summary.md > .qa-z/runs/ci/github-summary-stdout.md || true
           if [ -f .qa-z/runs/ci/github-summary.md ]; then
             cat .qa-z/runs/ci/github-summary.md >> "$GITHUB_STEP_SUMMARY"
           else
@@ -143,9 +159,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-z-runs
-          path: |
-            .qa-z/runs
-            .qa-z/sessions
+          path: .qa-z/runs/ci
+          retention-days: 7
           if-no-files-found: warn
 
       - name: Fail if QA-Z fast or deep failed

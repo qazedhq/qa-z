@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Literal
 
+from qa_z.runners.checks import default_spec_for_name as default_fast_spec_for_name
+from qa_z.runners.semgrep import default_semgrep_spec_for_name
+
 IssueLevel = Literal["error", "warning"]
+
+CHECK_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 KNOWN_TOP_LEVEL_KEYS = {
     "project",
@@ -80,6 +86,8 @@ def validate_checks_shape(
                     f"Use {mode}.checks instead of legacy checks.{mode}.",
                 )
             )
+            if modern_check_list_exists(config, mode):
+                continue
             if not isinstance(checks.get(mode), list):
                 errors.append(
                     issue(
@@ -88,6 +96,14 @@ def validate_checks_shape(
                         f"checks.{mode} must be a list when present.",
                     )
                 )
+            else:
+                validate_check_items(checks.get(mode), mode, f"checks.{mode}", errors)
+
+
+def modern_check_list_exists(config: dict[str, Any], section_name: str) -> bool:
+    """Return whether a modern section shadows its legacy check list."""
+    section = config.get(section_name)
+    return isinstance(section, dict) and "checks" in section
 
 
 def validate_check_list(
@@ -102,42 +118,109 @@ def validate_check_list(
         return
     value = section.get(key)
     path = f"{section_name}.{key}"
+    validate_check_items(value, section_name, path, errors)
+
+
+def validate_check_items(
+    value: Any,
+    section_name: str,
+    path: str,
+    errors: list[dict[str, str]],
+) -> None:
+    """Validate one configured check item list."""
     if not isinstance(value, list):
         errors.append(issue("invalid_checks_type", path, f"{path} must be a list."))
         return
+    seen_ids: set[str] = set()
     for index, item in enumerate(value):
-        validate_check_item(item, f"{path}[{index}]", errors)
+        check_id = validate_check_item(item, section_name, f"{path}[{index}]", errors)
+        if check_id is None:
+            continue
+        if check_id in seen_ids:
+            errors.append(
+                issue(
+                    "duplicate_check_id",
+                    f"{path}[{index}].id",
+                    f"Duplicate check id in {path}: {check_id}",
+                )
+            )
+        else:
+            seen_ids.add(check_id)
 
 
 def validate_check_item(
     item: Any,
+    section_name: str,
     path: str,
     errors: list[dict[str, str]],
-) -> None:
+) -> str | None:
     """Validate one check item."""
     if isinstance(item, str):
-        return
+        check_id = item.strip()
+        if not check_id:
+            errors.append(issue("missing_check_id", path, "Check id cannot be empty."))
+            return None
+        if not is_safe_check_id(check_id):
+            errors.append(
+                issue(
+                    "invalid_check_id",
+                    path,
+                    "Check id must use letters, numbers, dots, underscores, or hyphens.",
+                )
+            )
+            return None
+        default = default_spec_for_section(section_name, check_id)
+        if default is None:
+            errors.append(
+                issue(
+                    "unknown_check_id",
+                    path,
+                    f"Unknown built-in check id or alias: {check_id}",
+                )
+            )
+            return None
+        return default.id
     if not isinstance(item, dict):
         errors.append(
             issue("invalid_check_item", path, f"{path} must be a string or mapping.")
         )
-        return
-    check_id = item.get("id")
-    if not isinstance(check_id, str) or not check_id.strip():
+        return None
+    raw_check_id = item.get("id")
+    if not isinstance(raw_check_id, str) or not raw_check_id.strip():
         errors.append(
             issue(
                 "missing_check_id", f"{path}.id", "Check item requires a non-empty id."
             )
         )
+        return None
+    check_id = raw_check_id.strip()
+    if not is_safe_check_id(check_id):
+        errors.append(
+            issue(
+                "invalid_check_id",
+                f"{path}.id",
+                "Check id must use letters, numbers, dots, underscores, or hyphens.",
+            )
+        )
+        return None
     run = item.get("run")
-    if run is not None and (
-        not isinstance(run, list) or not all(isinstance(part, str) for part in run)
-    ):
+    enabled = item.get("enabled", True)
+    disabled = enabled is False
+    default = default_spec_for_section(section_name, check_id)
+    if run is None and default is None and not disabled:
+        errors.append(
+            issue(
+                "missing_check_run",
+                f"{path}.run",
+                "Custom checks require a run command.",
+            )
+        )
+    elif run is not None and not is_valid_run_command(run):
         errors.append(
             issue(
                 "invalid_check_run",
                 f"{path}.run",
-                "Check run must be a list of strings.",
+                "Check run must be a non-empty list of strings with a non-empty executable.",
             )
         )
     if (
@@ -151,6 +234,31 @@ def validate_check_item(
                 "timeout_seconds must be a positive integer.",
             )
         )
+    return default.id if default is not None else check_id
+
+
+def default_spec_for_section(section_name: str, check_id: str) -> Any:
+    """Return the built-in check spec for a fast or deep section."""
+    if section_name == "fast":
+        return default_fast_spec_for_name(check_id)
+    if section_name == "deep":
+        return default_semgrep_spec_for_name(check_id)
+    return None
+
+
+def is_safe_check_id(check_id: str) -> bool:
+    """Return whether a check id is safe for per-check artifact filenames."""
+    return bool(CHECK_ID_RE.fullmatch(check_id))
+
+
+def is_valid_run_command(run: Any) -> bool:
+    """Return whether a configured command can be passed to subprocess safely."""
+    return (
+        isinstance(run, list)
+        and bool(run)
+        and all(isinstance(part, str) for part in run)
+        and bool(run[0].strip())
+    )
 
 
 def validate_adapters(

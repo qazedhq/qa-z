@@ -8,6 +8,12 @@ QA-Z is a Codex-first, model-agnostic QA control plane. Contributions should kee
 python -m pip install -e .[dev]
 ```
 
+Install Semgrep when running the documented deep QA gate locally:
+
+```bash
+python -m pip install semgrep
+```
+
 ## Required Validation
 
 Run the Python gate before opening a pull request:
@@ -28,6 +34,23 @@ python -m qa_z benchmark --json
 ```
 
 CLI behavior changes must update tests and README examples together. Config surface changes must keep `qa-z.yaml.example` aligned.
+
+## Good First Issues
+
+Good first issues should be small, deterministic, and easy to verify locally.
+Prefer tasks that improve examples, docs, fixtures, or CI evidence without
+changing core planner behavior.
+
+Strong candidates:
+
+- add a screenshot or asciinema capture for `examples/agent-auth-bug`;
+- improve the Semgrep rule in the auth-bug demo with a focused fixture;
+- add a TypeScript auth-bug demo using Vitest;
+- clarify `pipx` or `uv tool install` docs after a package publish;
+- add a GitHub Actions summary screenshot or SARIF walkthrough.
+
+Every issue should include the expected file paths, the validation command, and
+the artifact or documentation surface that proves the work.
 
 ## Generated Artifact Policy
 

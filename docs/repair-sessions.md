@@ -130,7 +130,9 @@ The bridge copies the session manifest, handoff JSON, session safety artifacts, 
 
 Human stdout includes bridge stdout return pointers for the result template, expected result artifact, copied safety package, safety rule count, and verification command. The bridge guides and stdout also include template placeholder guidance so the scaffolded result summary is replaced before `executor-result ingest`.
 
-The bridge manifest records the source loop/session, baseline run, handoff paths, selected task ids, validation command, copied input paths, copied action context records under `inputs.action_context`, skipped context paths under `inputs.action_context_missing`, a `safety_package` summary, safety constraints, non-goals, and the return contract. The expected return path is still the normal session verification command:
+When `--output-dir` points outside `.qa-z`, the bridge still writes the requested package but records and prints a `custom_output_dir_outside_qa_z` non-blocking warning so generated executor evidence is not mistaken for policy-managed local QA-Z output. If the path is also outside the repository root, the same warning surfaces include `custom_output_dir_outside_repository` so operators know the copied QA evidence is outside repository cleanup and ignore policy too.
+
+The bridge manifest records the source loop/session, baseline run, handoff paths, selected task ids, validation command, copied input paths, copied action context records under `inputs.action_context`, skipped context paths under `inputs.action_context_missing`, a `safety_package` summary, safety constraints, non-goals, `output_policy`, warnings, and the return contract. The expected return path is still the normal session verification command:
 
 ```bash
 python -m qa_z repair-session verify --session .qa-z/sessions/<session-id> --rerun

@@ -56,6 +56,18 @@ def render_executor_bridge_guide(
                 f"- {render_live_repository_summary(live_repository)}",
             ]
         )
+    warnings = manifest.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        lines.extend(["", "## Warnings", ""])
+        for warning in warnings:
+            if not isinstance(warning, dict):
+                continue
+            warning_id = str(warning.get("id") or "warning")
+            message = str(warning.get("message") or "").strip()
+            if message:
+                lines.append(f"- `{warning_id}`: {message}")
+            else:
+                lines.append(f"- `{warning_id}`")
     lines.extend(["", "## What To Fix", ""])
     if isinstance(objectives, list) and objectives:
         lines.extend(f"- {objective}" for objective in objectives)
@@ -147,6 +159,17 @@ def render_bridge_stdout(manifest: dict[str, Any]) -> str:
         lines.append(
             f"Live repository: {render_live_repository_summary(live_repository)}"
         )
+    warnings = manifest.get("warnings")
+    if isinstance(warnings, list):
+        for warning in warnings:
+            if not isinstance(warning, dict):
+                continue
+            warning_id = str(warning.get("id") or "warning")
+            message = str(warning.get("message") or "").strip()
+            if message:
+                lines.append(f"Warning: {warning_id} - {message}")
+            else:
+                lines.append(f"Warning: {warning_id}")
     action_context = bridge_action_context_inputs(manifest)
     if action_context:
         lines.append(f"Action context inputs: {len(action_context)}")

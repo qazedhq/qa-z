@@ -180,7 +180,7 @@ def action_for_task(
         )
         action["session_id"] = session_id
         return action
-    if category == "verify_regression" or recommendation == (
+    if category in {"verify_regression", "verification_failure"} or recommendation == (
         "stabilize_verification_surface"
     ):
         baseline_run = baseline_run_from_verify_evidence(root, task)
@@ -200,7 +200,7 @@ def action_for_task(
         action = prepared_action(
             task_id=task_id,
             action_type="verification_stabilization_plan",
-            title="Create a stabilization plan from verification regression evidence.",
+            title="Create a stabilization plan from verification evidence.",
             next_recommendation="prepare a repair session once baseline evidence is available",
             commands=[
                 "python -m qa_z verify --baseline-run <baseline> --candidate-run <candidate>"

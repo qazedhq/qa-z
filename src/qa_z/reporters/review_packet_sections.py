@@ -123,6 +123,7 @@ def render_deep_findings_markdown(deep: DeepContext | None) -> list[str]:
         f"- Severity summary: {format_severity_summary(deep.severity_summary)}",
         f"- Affected files: {format_affected_files(deep.affected_files)}",
     ]
+    lines.extend(render_scan_warning_markdown(deep))
     if deep.primary_check is not None:
         lines.append(f"- {format_deep_check_run_sentence(deep)}")
         if deep.primary_check.selection_reason:
@@ -143,6 +144,20 @@ def render_deep_findings_markdown(deep: DeepContext | None) -> list[str]:
     else:
         lines.extend(["", "No Semgrep findings were reported."])
     return lines
+
+
+def render_scan_warning_markdown(deep: DeepContext) -> list[str]:
+    """Render non-blocking deep scan-quality warnings when present."""
+    if not deep.scan_warning_count and not deep.scan_quality_status:
+        return []
+    warning_noun = "warning" if deep.scan_warning_count == 1 else "warnings"
+    status = deep.scan_quality_status or "unknown"
+    return [
+        f"- Scan quality: {status} ({deep.scan_warning_count} {warning_noun})",
+        f"- Scan warning types: {format_check_list(deep.scan_warning_types)}",
+        f"- Scan warning paths: {format_affected_files(deep.scan_warning_paths)}",
+        f"- Scan warning checks: {format_check_list(deep.scan_warning_check_ids)}",
+    ]
 
 
 def format_deep_check_run_sentence(deep: DeepContext) -> str:

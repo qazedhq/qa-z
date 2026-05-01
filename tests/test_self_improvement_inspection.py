@@ -44,6 +44,32 @@ def test_self_improvement_inspection_module_writes_report_and_backlog(
     assert backlog["kind"] == "qa_z.improvement_backlog"
 
 
+def test_discover_candidates_respects_explicit_empty_live_signals(
+    tmp_path: Path, monkeypatch
+) -> None:
+    def fail_live_signal_collection(_root: Path) -> dict[str, object]:
+        raise AssertionError("live signals should not be collected")
+
+    monkeypatch.setattr(
+        self_improvement_module,
+        "collect_live_repository_signals",
+        fail_live_signal_collection,
+    )
+
+    candidates = self_improvement_inspection_module.discover_candidates(
+        tmp_path,
+        existing={
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "items": [],
+        },
+        live_signals={},
+        generated_at="2026-04-22T08:09:10Z",
+    )
+
+    assert isinstance(candidates, list)
+
+
 def test_self_improvement_module_keeps_inspection_defs_out_of_monolith() -> None:
     source = Path(self_improvement_module.__file__).read_text(encoding="utf-8")
     tree = compile(

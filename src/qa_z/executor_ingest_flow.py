@@ -20,6 +20,11 @@ from qa_z.executor_ingest_checks import (
     validation_warnings_for_result,
     verify_resume_status_for_result,
 )
+from qa_z.executor_ingest_bridge_warnings import (
+    bridge_output_warning_ids,
+    bridge_output_warning_ids_for_manifest,
+    unique_warning_ids,
+)
 from qa_z.executor_ingest_finalize import finalize_ingest_success
 from qa_z.executor_ingest_outcome import (
     executor_result_id,
@@ -56,7 +61,8 @@ def ingest_executor_result_artifact(
 ):
     """Ingest an external executor result and optionally resume verification."""
     root = root.resolve()
-    result = load_executor_result(resolve_relative_path(root, result_path))
+    resolved_result_path = resolve_relative_path(root, result_path)
+    result = load_executor_result(resolved_result_path)
     result_id = executor_result_id(result)
     warnings: list[str] = []
     stored_result_path: Path | None = None
@@ -70,7 +76,9 @@ def ingest_executor_result_artifact(
     session: RepairSession | None = None
 
     try:
-        bridge = load_bridge_manifest(root, result.bridge_id)
+        bridge = load_bridge_manifest(
+            root, result.bridge_id, result_path=resolved_result_path
+        )
     except (ArtifactLoadError, ArtifactSourceNotFound) as exc:
         raise_rejected_ingest(
             root=root,
@@ -99,6 +107,13 @@ def ingest_executor_result_artifact(
         optional_text(bridge.get("source_loop_id")) or result.source_loop_id
     )
     source_context = ingest_source_context(bridge)
+    warnings.extend(bridge_output_warning_ids(bridge))
+    warnings.extend(
+        bridge_output_warning_ids_for_manifest(
+            root, resolved_result_path, result.bridge_id
+        )
+    )
+    warnings = unique_warning_ids(warnings)
 
     provenance_check = build_provenance_check(
         result=result,

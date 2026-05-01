@@ -17,7 +17,11 @@ from qa_z.repair_session import RepairSession
 VERIFY_BLOCKING_WARNINGS = {
     "completed_without_changed_files",
     "candidate_run_missing",
+    "candidate_run_outside_repository",
+    "candidate_run_fast_summary_missing",
     "baseline_run_missing",
+    "baseline_run_outside_repository",
+    "baseline_run_fast_summary_missing",
     "validation_summary_conflicts_with_results",
     "validation_result_command_not_declared",
 }
@@ -211,14 +215,32 @@ def verify_resume_status_for_result(
         return "verify_blocked"
     if result.verification_hint == "candidate_run":
         candidate_dir = optional_text(result.candidate_run_dir)
-        if (
-            candidate_dir is None
-            or not resolve_relative_path(root, candidate_dir).exists()
-        ):
+        if candidate_dir is None:
             warnings.append("candidate_run_missing")
             return "verify_blocked"
-    if not resolve_relative_path(root, session.baseline_run_dir).exists():
+        candidate_path = resolve_relative_path(root, candidate_dir)
+        try:
+            candidate_path.relative_to(root.resolve())
+        except ValueError:
+            warnings.append("candidate_run_outside_repository")
+            return "verify_blocked"
+        if not candidate_path.exists():
+            warnings.append("candidate_run_missing")
+            return "verify_blocked"
+        if not (candidate_path / "fast" / "summary.json").is_file():
+            warnings.append("candidate_run_fast_summary_missing")
+            return "verify_blocked"
+    baseline_path = resolve_relative_path(root, session.baseline_run_dir)
+    try:
+        baseline_path.relative_to(root.resolve())
+    except ValueError:
+        warnings.append("baseline_run_outside_repository")
+        return "verify_blocked"
+    if not baseline_path.exists():
         warnings.append("baseline_run_missing")
+        return "verify_blocked"
+    if not (baseline_path / "fast" / "summary.json").is_file():
+        warnings.append("baseline_run_fast_summary_missing")
         return "verify_blocked"
     if any(warning in VERIFY_BLOCKING_WARNINGS for warning in warnings):
         return "verify_blocked"

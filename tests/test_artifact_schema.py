@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from qa_z.benchmark import BenchmarkFixtureResult, build_benchmark_summary
-from qa_z.reporters.run_summary import render_summary_markdown
+from qa_z.reporters.run_summary import (
+    render_summary_markdown,
+    write_run_summary_artifacts,
+)
 from qa_z.reporters.repair_prompt import FailureContext, RepairPacket
 from qa_z.executor_result import (
     ExecutorChangedFile,
@@ -72,6 +75,45 @@ def test_run_summary_schema_v1_required_fields_are_stable() -> None:
         "stderr_tail",
     } <= payload["checks"][0].keys()
     assert RunSummary.from_dict(payload).schema_version == 1
+
+
+def test_run_summary_per_check_artifacts_use_safe_unique_filenames(
+    tmp_path: Path,
+) -> None:
+    summary = RunSummary(
+        mode="fast",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="failed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        checks=[
+            CheckResult(
+                id="../escape",
+                tool="custom",
+                command=["custom"],
+                kind="custom",
+                status="failed",
+                exit_code=1,
+                duration_ms=1,
+            ),
+            CheckResult(
+                id="../escape",
+                tool="custom",
+                command=["custom"],
+                kind="custom",
+                status="failed",
+                exit_code=1,
+                duration_ms=1,
+            ),
+        ],
+    )
+
+    write_run_summary_artifacts(summary, tmp_path / "run")
+
+    assert (tmp_path / "run" / "checks" / "escape.json").exists()
+    assert (tmp_path / "run" / "checks" / "escape-2.json").exists()
+    assert not (tmp_path / "run" / "escape.json").exists()
 
 
 def test_runtime_artifact_cleanup_schema_v1_required_fields_are_stable(
@@ -196,6 +238,123 @@ def test_run_summary_schema_v2_diagnostics_are_persisted() -> None:
     assert payload["diagnostics"]["scan_quality"]["status"] == "warning"
     assert payload["diagnostics"]["scan_quality"]["warning_count"] == 1
     assert loaded.diagnostics["scan_quality"]["warning_types"] == ["Fixpoint timeout"]
+
+
+def test_run_summary_redacts_summary_level_diagnostics_and_markdown() -> None:
+    summary = RunSummary(
+        mode="deep",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="failed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        message="api_key=abcdef",
+        diagnostics={
+            "scan_quality": {
+                "status": "warning",
+                "warning_count": 1,
+                "warning_types": ["Authorization: Bearer abc.def.ghi"],
+                "warning_paths": ["src/app.py"],
+                "check_ids": ["sg_scan"],
+            }
+        },
+        checks=[
+            CheckResult(
+                id="secret_check",
+                tool="custom",
+                command=["custom"],
+                kind="static-analysis",
+                status="failed",
+                exit_code=1,
+                duration_ms=1,
+                message="password=hunter2",
+            )
+        ],
+    )
+
+    payload = summary.to_dict()
+    markdown = render_summary_markdown(summary)
+
+    assert "abcdef" not in payload["message"]
+    assert "abc.def.ghi" not in str(payload["diagnostics"])
+    assert "hunter2" not in markdown
+    assert "abc.def.ghi" not in markdown
+    assert "[REDACTED_SECRET]" in markdown
+    assert "[REDACTED_TOKEN]" in markdown
+
+
+def test_run_summary_redacts_prefixed_env_secret_names_in_json_and_markdown() -> None:
+    summary = RunSummary(
+        mode="deep",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="failed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        message="GITHUB_TOKEN=github-raw",
+        diagnostics={
+            "scan_quality": {
+                "status": "warning",
+                "warning_count": 1,
+                "warning_types": ["OPENAI_API_KEY=openai-raw"],
+                "warning_paths": ["src/app.py"],
+                "check_ids": ["sg_scan"],
+            }
+        },
+        checks=[
+            CheckResult(
+                id="secret_check",
+                tool="custom",
+                command=["custom", "CLIENT_SECRET=client-raw"],
+                kind="static-analysis",
+                status="failed",
+                exit_code=1,
+                duration_ms=1,
+                message="AWS_SECRET_ACCESS_KEY=aws-raw",
+            )
+        ],
+    )
+
+    payload = summary.to_dict()
+    markdown = render_summary_markdown(summary)
+    rendered = f"{payload}\n{markdown}"
+
+    for raw_secret in ("github-raw", "openai-raw", "client-raw", "aws-raw"):
+        assert raw_secret not in rendered
+    assert "GITHUB_TOKEN=[REDACTED_TOKEN]" in payload["message"]
+    assert "OPENAI_API_KEY=[REDACTED_SECRET]" in str(payload["diagnostics"])
+    assert "AWS_SECRET_ACCESS_KEY=[REDACTED_SECRET]" in markdown
+
+
+def test_run_summary_redacts_secret_like_mapping_keys() -> None:
+    summary = RunSummary(
+        mode="deep",
+        contract_path="qa/contracts/example.md",
+        project_root="/repo",
+        status="failed",
+        started_at="2026-04-11T12:00:00Z",
+        finished_at="2026-04-11T12:00:01Z",
+        schema_version=2,
+        diagnostics={
+            "scan_quality": {
+                "status": "warning",
+                "warning_count": 1,
+                "GITHUB_TOKEN": "github-raw",
+                "token_count": 3,
+            }
+        },
+        checks=[],
+    )
+
+    payload = summary.to_dict()
+
+    assert "github-raw" not in str(payload)
+    assert payload["diagnostics"]["scan_quality"]["GITHUB_TOKEN"] == (
+        "[REDACTED_TOKEN]"
+    )
+    assert payload["diagnostics"]["scan_quality"]["token_count"] == 3
 
 
 def test_run_summary_markdown_tolerates_malformed_diagnostics() -> None:

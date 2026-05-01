@@ -38,19 +38,26 @@ def discover_verification_candidate_inputs(root: Path) -> list[dict[str, Any]]:
         signals = ["regression_prevention"]
         if verdict == "mixed":
             signals.append("verify_mixed")
-        else:
+        elif verdict == "regressed":
             signals.append("verify_regressed")
+        else:
+            signals.append("verify_failed")
+        summary_text = (
+            f"verdict={verdict}; "
+            f"regressions={int_value(summary.get('regression_count'))}; "
+            f"new_issues={int_value(summary.get('new_issue_count'))}"
+        )
+        if verdict == "verification_failed":
+            summary_text += (
+                f"; not_comparable={int_value(summary.get('not_comparable_count'))}"
+            )
         candidates.append(
             {
                 "run_id": path.parent.parent.name,
                 "path": path,
                 "verdict": verdict,
                 "signals": signals,
-                "summary": (
-                    f"verdict={verdict}; "
-                    f"regressions={int_value(summary.get('regression_count'))}; "
-                    f"new_issues={int_value(summary.get('new_issue_count'))}"
-                ),
+                "summary": summary_text,
                 "impact": 5 if verdict == "regressed" else 4,
             }
         )

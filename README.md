@@ -1,6 +1,6 @@
 # QA-Z
 
-> Deterministic QA gates for AI coding agents.
+> The safety belt for AI-generated code.
 
 [![CI](https://github.com/qazedhq/qa-z/actions/workflows/ci.yml/badge.svg)](https://github.com/qazedhq/qa-z/actions/workflows/ci.yml)
 ![Status](https://img.shields.io/badge/status-alpha-orange)
@@ -8,11 +8,89 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 [![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha)
 
-AI coding agents can write code fast. QA-Z helps you decide whether that code is safe to merge.
+Coding agents write code. QA-Z tells you if that code is safe to merge.
 
-QA-Z turns code changes into QA contracts, deterministic checks, review packets, repair prompts, verification evidence, GitHub summaries, SARIF, and benchmark artifacts.
+QA-Z = QA from A to Z for agent-generated code. It turns agent changes into deterministic merge evidence: QA contracts, fast checks, Semgrep-backed deep checks, review packets, repair prompts, post-repair verification, GitHub summaries, SARIF, and benchmark artifacts.
 
 > Should this change be merged, and if not, what should the agent fix next?
+
+```bash
+qa-z plan --diff changes.diff --title "Review agent change" --slug agent-change --overwrite
+qa-z fast
+qa-z deep --from-run latest
+qa-z review --from-run latest
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+QA-Z does not replace coding agents. QA-Z makes Codex, Claude Code, Cursor, aider, OpenHands, Goose, and similar tools safer to use before merge.
+
+## Five-Minute Demo
+
+Try the "AI wrote a bad auth change. QA-Z caught it." demo:
+
+```bash
+cd examples/agent-auth-bug
+qa-z plan --title "AI auth bug caught by QA-Z" --issue issue.md --spec spec.md --slug ai-auth-bug --overwrite
+qa-z fast --output-dir .qa-z/runs/baseline
+qa-z deep --from-run .qa-z/runs/baseline
+qa-z review --from-run .qa-z/runs/baseline
+qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
+```
+
+What the demo shows:
+
+- Agent changed auth logic.
+- Tests catch the unsafe access path.
+- Optional Semgrep deep checks flag the risky pattern.
+- QA-Z writes a repair prompt with deterministic evidence.
+- After the fix, `qa-z verify` can compare baseline and candidate run artifacts.
+
+For the full copy/paste script, see [docs/demo-script.md](docs/demo-script.md). For the short onboarding path, see [docs/quickstart.md](docs/quickstart.md).
+
+## Quickstart
+
+QA-Z is alpha software. Install the prerelease from GitHub:
+
+```bash
+pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+```
+
+Or with uv:
+
+```bash
+uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+```
+
+Contributor fallback:
+
+```bash
+python -m pip install -e .[dev]
+```
+
+Install Semgrep when running the documented deep QA gate locally:
+
+```bash
+python -m pip install semgrep
+```
+
+Initialize a repository and run the smallest local loop:
+
+```bash
+qa-z init --profile python --with-agent-templates --with-github-workflow
+qa-z doctor
+qa-z plan --title "Review recent agent change" --slug agent-change --overwrite
+qa-z fast
+qa-z review --from-run latest
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+If the console script is not on PATH, use the module fallback:
+
+```bash
+python -m qa_z fast
+```
+
+The output is local and artifact-first. Look under `.qa-z/runs/` for run evidence.
 
 ## Why QA-Z?
 
@@ -27,77 +105,18 @@ QA-Z adds the missing QA layer:
 - What should the agent fix next?
 - Did the repair actually improve the result?
 
-## What QA-Z Does
+## Comparison
 
-- Generates QA contracts from issues, specs, and diffs
-- Runs deterministic fast checks for Python and TypeScript
-- Runs Semgrep-backed deep checks and emits SARIF
-- Produces review packets and repair prompts
-- Packages local repair sessions for Codex, Claude, or humans
-- Verifies whether a repair improved, stayed unchanged, mixed fixes with regressions, or regressed
-- Publishes GitHub Actions summaries and local artifacts
+| Tool | Writes code | Runs checks | Produces repair prompt | Verifies repair | Model-agnostic QA evidence |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Codex | yes | partial | partial | partial | no |
+| Claude Code | yes | partial | partial | partial | no |
+| Cursor | yes | partial | partial | partial | no |
+| Semgrep | no | yes | no | no | partial |
+| pytest/ruff/mypy | no | yes | no | no | no |
+| QA-Z | no | yes | yes | yes | yes |
 
-## Quickstart
-
-QA-Z is alpha software and is currently installed from source.
-
-```bash
-python -m pip install -e .[dev]
-```
-
-Then run the smallest local loop from the repository you want to inspect:
-
-```bash
-python -m qa_z init --profile python --with-agent-templates --with-github-workflow
-python -m qa_z doctor
-python -m qa_z plan --title "Review recent agent change" --slug agent-change --overwrite
-python -m qa_z fast
-```
-
-Then generate review evidence:
-
-```bash
-python -m qa_z review --from-run latest
-python -m qa_z repair-prompt --from-run latest --adapter codex
-```
-
-For Semgrep-backed deep checks:
-
-```bash
-python -m pip install semgrep
-python -m qa_z deep --from-run latest
-```
-
-The output is local and artifact-first. Look under `.qa-z/runs/` for the run evidence.
-
-## Preview
-
-A real FastAPI demo run produces local evidence like this:
-
-```text
-created contract: qa/contracts/protect-invoice-access.md
-qa-z fast: passed
-Contract: qa/contracts/protect-invoice-access.md
-Summary: .qa-z/runs/preview-fast/fast/summary.json
-```
-
-The review packet then records the selected checks and verdict:
-
-```text
-## Run Verdict
-
-- Status: passed
-- Run directory: `.qa-z/runs/preview-fast`
-- Summary: `.qa-z/runs/preview-fast/fast/summary.json`
-
-## Executed Checks
-
-- py_lint: passed (lint, ruff, exit 0)
-- py_format: passed (format, ruff, exit 0)
-- py_test: passed (test, python, exit 0)
-```
-
-For the captured transcript, see [docs/demo-output.md](docs/demo-output.md).
+QA-Z does not autonomously edit code. It creates deterministic evidence and repair instructions around the tools you already use.
 
 ## Core Workflow
 
@@ -105,19 +124,17 @@ For the captured transcript, see [docs/demo-output.md](docs/demo-output.md).
 init -> plan -> fast -> deep -> review -> repair-prompt -> external repair -> verify -> github-summary
 ```
 
-QA-Z does not edit your code by itself. It creates the contracts, evidence, prompts, and verification artifacts that make external repair work safer to review.
-
 ## Core Commands
 
 | Command | What it does |
 | --- | --- |
 | `qa-z init` | Create starter QA-Z config and optional templates |
 | `qa-z doctor` | Validate config shape and launch readiness |
-| `qa-z plan` | Generate a QA contract from issue/spec/diff input |
+| `qa-z plan` | Generate a QA contract from issue, spec, or diff input |
 | `qa-z fast` | Run deterministic fast checks |
 | `qa-z deep` | Run configured Semgrep deep checks |
 | `qa-z review` | Render a review packet from run artifacts |
-| `qa-z repair-prompt` | Generate Codex / Claude / handoff repair prompts |
+| `qa-z repair-prompt` | Generate Codex, Claude, or handoff repair prompts |
 | `qa-z verify` | Compare baseline and candidate run artifacts |
 
 ## Advanced Commands
@@ -150,22 +167,16 @@ QA-Z does not edit your code by itself. It creates the contracts, evidence, prom
 
 Root `.qa-z/**` is local by default and should normally stay out of release commits.
 
-For detailed operator-contract and current-truth maintenance anchors, see [docs/current-truth-maintenance-anchors.md](docs/current-truth-maintenance-anchors.md).
+## GitHub Action
 
-## Demo Flow
+Use the shipped workflow template to add QA-Z to a pull request gate:
 
-The shortest demo is text-first and uses real CLI commands:
-
-```bash
-python -m qa_z plan --title "Review recent agent change" --slug agent-change --overwrite
-python -m qa_z fast
-python -m qa_z deep --from-run latest
-python -m qa_z review --from-run latest
-python -m qa_z repair-prompt --from-run latest --adapter codex
-python -m qa_z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+```yaml
+- name: Run QA-Z
+  uses: qazedhq/qa-z/.github/actions/qa-z@v0.9.8-alpha
 ```
 
-`verify` expects existing baseline and candidate run directories; use it after an external repair tool or human fix creates a candidate run. For a fuller transcript, see [docs/demo-script.md](docs/demo-script.md). Runnable examples are indexed in [examples/README.md](examples/README.md).
+Until the standalone action is published, copy [templates/.github/workflows/vibeqa.yml](templates/.github/workflows/vibeqa.yml) or follow [docs/github-action.md](docs/github-action.md).
 
 ## What QA-Z Is Not
 
@@ -173,7 +184,7 @@ QA-Z is not:
 
 - a coding agent
 - an autonomous code editor
-- a live Codex or Claude runtime
+- a live Codex, Claude, Cursor, or model runtime
 - a queue, scheduler, or remote orchestrator
 - an LLM-only judge replacing deterministic checks
 - a tool that commits, pushes, or posts GitHub comments by itself
@@ -186,23 +197,33 @@ QA-Z is alpha software. The current package metadata targets `0.9.8a0`, publishe
 
 Deep QA automation currently centers on Semgrep-backed checks and deterministic local artifacts. Codex and Claude support is adapter-oriented: QA-Z writes handoff material for external tools instead of calling live model APIs.
 
-## Roadmap
-
-Next up: broader TypeScript deep QA, multi-engine checks, richer GitHub annotations, and stronger mixed Python/TypeScript benchmark realism.
-
 ## Docs
 
+- [Quickstart](docs/quickstart.md)
+- [Comparison](docs/comparison.md)
+- [GitHub Action](docs/github-action.md)
+- [Use with Codex](docs/use-with-codex.md)
+- [Use with Claude Code](docs/use-with-claude-code.md)
+- [Use with Cursor](docs/use-with-cursor.md)
+- [Launch package](docs/launch-package.md)
+- Growth package: [launch checklist](docs/launch-checklist.md), [roadmap](docs/public-roadmap.md), [publish plan](docs/package-publish-plan.md), [Semgrep](docs/use-with-semgrep.md), [PR comments](docs/pr-summary-comment.md), [benchmark](docs/agent-merge-safety-benchmark.md), [scorecard](docs/scorecard.md), [distribution](docs/community-distribution.md)
+- [Launch posts](docs/launch-posts.md)
+- [Product direction](docs/product/PRODUCT_DIRECTION.md)
+- [V8 handoff](docs/product/V8_HANDOFF.md)
+- [Product decisions](docs/product/PRODUCT_DECISIONS.md)
 - [Artifact schema v1](docs/artifact-schema-v1.md)
 - [Repair sessions](docs/repair-sessions.md)
-- [Pre-live executor safety](docs/pre-live-executor-safety.md)
 - [Generated vs frozen evidence policy](docs/generated-vs-frozen-evidence-policy.md)
 - [Current-truth maintenance anchors](docs/current-truth-maintenance-anchors.md)
 - [Architecture](docs/architecture.md)
+- [Benchmarking](docs/benchmarking.md)
 - [Demo script](docs/demo-script.md)
 - [Demo output](docs/demo-output.md)
 - [Docs index](docs/README.md)
 - [Example config](qa-z.yaml.example)
 - [Examples index](examples/README.md)
+
+If QA-Z helps you trust AI-generated code before merging, star the repo to follow the alpha.
 
 ## License
 

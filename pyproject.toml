@@ -11,6 +11,9 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [{ name = "QA-Z Contributors" }]
 keywords = [
+  "ai",
+  "code-review",
+  "devsecops",
   "qa",
   "testing",
   "ci",
@@ -18,8 +21,10 @@ keywords = [
   "coding-agents",
   "codex",
   "claude",
+  "cursor",
   "semgrep",
   "sarif",
+  "static-analysis",
   "quality-assurance",
 ]
 classifiers = [

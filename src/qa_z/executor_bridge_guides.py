@@ -39,6 +39,19 @@ def render_executor_specific_guide(manifest: dict[str, Any], executor: str) -> s
                 "",
             ]
         )
+    warnings = manifest.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        lines.extend(["## Warnings", ""])
+        for warning in warnings:
+            if not isinstance(warning, dict):
+                continue
+            warning_id = str(warning.get("id") or "warning")
+            message = str(warning.get("message") or "").strip()
+            if message:
+                lines.append(f"- `{warning_id}`: {message}")
+            else:
+                lines.append(f"- `{warning_id}`")
+        lines.append("")
     action_context = bridge_action_context_inputs(manifest)
     if action_context:
         lines.extend(["## Action Context", ""])

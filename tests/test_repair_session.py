@@ -11,7 +11,9 @@ from typing import Any
 import pytest
 import yaml
 
+from qa_z.artifacts import ArtifactLoadError
 from qa_z.cli import main
+from qa_z.repair_session import load_repair_session
 
 
 def python_command(source: str) -> list[str]:
@@ -282,6 +284,102 @@ def test_repair_session_start_creates_manifest_handoff_and_executor_guide(
         rule["id"] for rule in safety_json["rules"]
     }
     assert "# QA-Z Pre-Live Executor Safety Package" in safety_markdown
+
+
+def test_repair_session_load_rejects_manifest_session_dir_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    manifest_path = session_dir / "session.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["session_dir"] = ".qa-z/sessions/other-session"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    assert exit_code == 0
+    with pytest.raises(ArtifactLoadError, match="session_dir"):
+        load_repair_session(tmp_path, "session-one")
+
+
+def test_repair_session_load_rejects_manifest_session_id_mismatch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    manifest_path = session_dir / "session.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["session_id"] = "other-session"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    assert exit_code == 0
+    with pytest.raises(ArtifactLoadError, match="session_id"):
+        load_repair_session(tmp_path, "session-one")
+
+
+def test_repair_session_load_rejects_handoff_artifact_outside_session_dir(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    manifest_path = session_dir / "session.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["handoff_artifacts"]["handoff_json"] = "qa/contracts/contract.md"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    assert exit_code == 0
+    with pytest.raises(ArtifactLoadError, match="handoff_artifacts.handoff_json"):
+        load_repair_session(tmp_path, "session-one")
 
 
 def test_repair_session_start_returns_not_found_for_missing_baseline(

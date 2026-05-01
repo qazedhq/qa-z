@@ -1,0 +1,8 @@
+rules:
+  - id: qa-z.typescript-auth-bypass-any-signed-in-user
+    message: TypeScript authorization must compare actorId to invoice.ownerId, not only check that actorId is present.
+    severity: ERROR
+    languages:
+      - typescript
+    pattern: |
+      return $ACTOR !== null;

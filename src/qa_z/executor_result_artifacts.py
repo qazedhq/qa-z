@@ -13,6 +13,7 @@ from qa_z.executor_result_models import (
     ExecutorResult,
     PLACEHOLDER_SUMMARY,
 )
+from qa_z.executor_bridge_support import normalize_bridge_id
 
 
 def executor_result_template(
@@ -52,20 +53,45 @@ def load_executor_result(path: Path) -> ExecutorResult:
     return ExecutorResult.from_dict(data)
 
 
-def resolve_bridge_manifest_path(root: Path, bridge_id: str) -> Path:
+def resolve_bridge_manifest_path(
+    root: Path, bridge_id: str, *, result_path: Path | None = None
+) -> Path:
     """Resolve a bridge id to its bridge manifest path."""
-    path = (root / ".qa-z" / "executor" / bridge_id / "bridge.json").resolve()
-    if not path.is_file():
-        raise ArtifactSourceNotFound(f"Executor bridge not found: {path}")
-    return path
+    try:
+        normalized_bridge_id = normalize_bridge_id(bridge_id)
+    except ValueError as exc:
+        raise ArtifactSourceNotFound(
+            f"Invalid executor bridge id: {bridge_id}"
+        ) from exc
+    executor_root = (root / ".qa-z" / "executor").resolve()
+    path = (executor_root / normalized_bridge_id / "bridge.json").resolve()
+    try:
+        path.relative_to(executor_root)
+    except ValueError as exc:
+        raise ArtifactSourceNotFound(
+            f"Executor bridge path escaped executor directory: {path}"
+        ) from exc
+    if path.is_file():
+        return path
+    if result_path is not None:
+        custom_path = (result_path.resolve().parent / "bridge.json").resolve()
+        if custom_path.is_file():
+            return custom_path
+    raise ArtifactSourceNotFound(f"Executor bridge not found: {path}")
 
 
-def load_bridge_manifest(root: Path, bridge_id: str) -> dict[str, Any]:
+def load_bridge_manifest(
+    root: Path, bridge_id: str, *, result_path: Path | None = None
+) -> dict[str, Any]:
     """Load and validate a bridge manifest."""
-    path = resolve_bridge_manifest_path(root, bridge_id)
+    path = resolve_bridge_manifest_path(root, bridge_id, result_path=result_path)
     data = read_json_object(path)
     if data.get("kind") != "qa_z.executor_bridge":
         raise ArtifactLoadError(f"Unsupported executor bridge artifact: {path}")
+    if data.get("bridge_id") != normalize_bridge_id(bridge_id):
+        raise ArtifactLoadError(
+            f"Executor bridge id mismatch: expected {bridge_id} at {path}"
+        )
     return data
 
 

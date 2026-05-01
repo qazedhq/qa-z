@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from qa_z.reporters.run_summary_artifacts import write_run_summary_artifacts
 from qa_z.reporters.run_summary_render import render_summary_markdown
-from qa_z.runners.models import RunSummary
+from qa_z.runners.models import (
+    RunSummary,
+    redact_sensitive_text,
+    redact_sensitive_value,
+)
 
 __all__ = [
     "format_bool",
@@ -34,14 +39,31 @@ def _write_run_summary_artifacts_impl(summary: RunSummary, artifact_dir: Path) -
         _render_summary_markdown_impl(summary), encoding="utf-8"
     )
 
+    used_check_names: dict[str, int] = {}
     for check in summary.checks:
-        check_path = checks_dir / f"{check.id}.json"
+        check_path = checks_dir / unique_check_artifact_name(check.id, used_check_names)
         check_path.write_text(
             json.dumps(check.to_dict(), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
     return summary_path
+
+
+def unique_check_artifact_name(check_id: str, used_names: dict[str, int]) -> str:
+    """Return a safe, unique JSON filename for one check artifact."""
+    stem = safe_check_artifact_stem(check_id)
+    count = used_names.get(stem, 0) + 1
+    used_names[stem] = count
+    if count == 1:
+        return f"{stem}.json"
+    return f"{stem}-{count}.json"
+
+
+def safe_check_artifact_stem(check_id: str) -> str:
+    """Return a filename-safe stem derived from a check id."""
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "-", check_id.strip()).strip(".-")
+    return safe or "check"
 
 
 def _render_summary_markdown_impl(summary: RunSummary) -> str:
@@ -87,7 +109,9 @@ def _render_summary_markdown_impl(summary: RunSummary) -> str:
             ]
         )
     if summary.diagnostics:
-        lines.extend(render_diagnostics_markdown(summary.diagnostics))
+        redacted_diagnostics = redact_sensitive_value(summary.diagnostics)
+        if isinstance(redacted_diagnostics, dict):
+            lines.extend(render_diagnostics_markdown(redacted_diagnostics))
     lines.extend(
         [
             "## Totals",
@@ -110,7 +134,7 @@ def _render_summary_markdown_impl(summary: RunSummary) -> str:
                 f"- {check.id}: {check.status} ({check.tool}, exit {check.exit_code})"
             )
             if check.message:
-                detail += f" - {check.message}"
+                detail += f" - {redact_sensitive_text(check.message)}"
             lines.append(detail)
 
     return "\n".join(lines).strip() + "\n"

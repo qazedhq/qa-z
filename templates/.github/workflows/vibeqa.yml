@@ -12,7 +12,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 env:
-  QA_Z_INSTALL: "git+https://github.com/your-org/qa-z.git"
+  QA_Z_INSTALL: "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
 
 jobs:
   qa-z-gate:
@@ -72,7 +72,7 @@ jobs:
         run: |
           mkdir -p .qa-z/runs/pr
           set +e
-          qa-z deep --selection smart --json | tee .qa-z/runs/pr/deep-stdout.json
+          qa-z deep --selection smart --from-run .qa-z/runs/pr --json | tee .qa-z/runs/pr/deep-stdout.json
           deep_exit=${PIPESTATUS[0]}
           set -e
           echo "$deep_exit" > .qa-z/runs/pr/deep-exit-code
@@ -82,14 +82,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p .qa-z/runs/pr/review .qa-z/runs/pr/repair
-          qa-z review --from-run latest --output-dir .qa-z/runs/pr/review > .qa-z/runs/pr/review/review-stdout.md || true
-          qa-z repair-prompt --from-run latest --output-dir .qa-z/runs/pr/repair > .qa-z/runs/pr/repair/prompt-stdout.md || true
+          qa-z review --from-run .qa-z/runs/pr --output-dir .qa-z/runs/pr/review > .qa-z/runs/pr/review/review-stdout.md || true
+          qa-z repair-prompt --from-run .qa-z/runs/pr --output-dir .qa-z/runs/pr/repair > .qa-z/runs/pr/repair/prompt-stdout.md || true
 
       - name: Publish QA-Z job summary
         if: ${{ always() }}
         shell: bash
         run: |
-          qa-z github-summary --from-run latest --output .qa-z/runs/pr/github-summary.md > .qa-z/runs/pr/github-summary-stdout.md || true
+          qa-z github-summary --from-run .qa-z/runs/pr --output .qa-z/runs/pr/github-summary.md > .qa-z/runs/pr/github-summary-stdout.md || true
           if [ -f .qa-z/runs/pr/github-summary.md ]; then
             cat .qa-z/runs/pr/github-summary.md >> "$GITHUB_STEP_SUMMARY"
           else
@@ -111,9 +111,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-z-runs
-          path: |
-            .qa-z/runs
-            .qa-z/sessions
+          path: .qa-z/runs/pr
+          retention-days: 7
           if-no-files-found: warn
 
       - name: Fail if QA-Z fast or deep failed
