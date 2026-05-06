@@ -119,6 +119,71 @@ def test_agent_auth_bug_demo_catches_bad_auth_change(tmp_path, capsys) -> None:
     assert repair_packet["suggested_fix_order"] == ["py_test"]
 
 
+def test_agent_auth_bug_demo_verifies_included_repair(tmp_path, capsys) -> None:
+    demo = copy_agent_auth_bug_demo(tmp_path)
+    main(
+        [
+            "plan",
+            "--path",
+            str(demo),
+            "--title",
+            "AI auth bug caught by QA-Z",
+            "--issue",
+            str(demo / "issue.md"),
+            "--spec",
+            str(demo / "spec.md"),
+        ]
+    )
+    capsys.readouterr()
+    baseline_run = demo / ".qa-z" / "runs" / "baseline"
+    candidate_run = demo / ".qa-z" / "runs" / "candidate"
+
+    baseline_exit = main(
+        [
+            "fast",
+            "--path",
+            str(demo),
+            "--output-dir",
+            str(baseline_run),
+            "--json",
+        ]
+    )
+    capsys.readouterr()
+    shutil.copyfile(demo / "app" / "auth.fixed.py", demo / "app" / "auth.py")
+    candidate_exit = main(
+        [
+            "fast",
+            "--path",
+            str(demo),
+            "--output-dir",
+            str(candidate_run),
+            "--json",
+        ]
+    )
+    candidate_output = json.loads(capsys.readouterr().out)
+    verify_exit = main(
+        [
+            "verify",
+            "--path",
+            str(demo),
+            "--baseline-run",
+            str(baseline_run),
+            "--candidate-run",
+            str(candidate_run),
+            "--json",
+        ]
+    )
+    verify_output = json.loads(capsys.readouterr().out)
+
+    assert baseline_exit == 1
+    assert candidate_exit == 0
+    assert candidate_output["status"] == "passed"
+    assert verify_exit == 0
+    assert verify_output["verdict"] == "improved"
+    assert verify_output["summary"]["resolved_count"] >= 1
+    assert verify_output["summary"]["regression_count"] == 0
+
+
 def test_fastapi_demo_failing_flow_generates_repair_packet(tmp_path, capsys) -> None:
     demo = copy_fastapi_demo(tmp_path)
     main(
@@ -219,6 +284,7 @@ def test_nextjs_demo_readme_is_honest_placeholder() -> None:
 def test_agent_auth_bug_demo_documents_five_minute_safety_belt_flow() -> None:
     demo = ROOT / "examples" / "agent-auth-bug"
     readme = (demo / "README.md").read_text(encoding="utf-8")
+    demo_script = (ROOT / "docs" / "demo-script.md").read_text(encoding="utf-8")
     config = yaml.safe_load((demo / "qa-z.yaml").read_text(encoding="utf-8"))
 
     assert [check["id"] for check in config["fast"]["checks"]] == [
@@ -232,7 +298,10 @@ def test_agent_auth_bug_demo_documents_five_minute_safety_belt_flow() -> None:
     assert "qa-z fast" in readme
     assert "qa-z repair-prompt" in readme
     assert "qa-z verify" in readme
+    assert "verdict" in readme
+    assert "improved" in readme
     assert "does not call live agents" in readme
+    assert ".qa-z/runs/candidate/verify/summary.json" in demo_script
 
 
 def test_typescript_demo_readme_states_fast_only_live_free_boundary() -> None:

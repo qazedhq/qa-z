@@ -107,6 +107,31 @@ def test_run_check_normalizes_subprocess_os_error(tmp_path, monkeypatch) -> None
     assert "permission denied by OS" in result.stderr_tail
 
 
+def test_run_check_preserves_timeout_bytes_output(tmp_path, monkeypatch) -> None:
+    def raise_timeout(*_args, **_kwargs):
+        raise subprocess_runner.subprocess.TimeoutExpired(
+            cmd=["tool"],
+            timeout=1,
+            output=b"byte stdout: \xed\xa0\x80",
+            stderr=b"byte stderr: \xed\xa0\x80",
+        )
+
+    monkeypatch.setattr(subprocess_runner.subprocess, "run", raise_timeout)
+    spec = CheckSpec(
+        id="timeout_bytes",
+        command=[sys.executable, "-c", "print('unreachable')"],
+        kind="test",
+        timeout_seconds=1,
+    )
+
+    result = run_check(spec, cwd=tmp_path)
+
+    assert result.status == "error"
+    assert result.error_type == "timeout"
+    assert "byte stdout:" in result.stdout_tail
+    assert "byte stderr:" in result.stderr_tail
+
+
 def test_run_check_keeps_full_stdout_for_machine_consumers(tmp_path) -> None:
     full_stdout = "prefix-" + ("x" * (TAIL_LIMIT + 10))
     spec = CheckSpec(
@@ -293,6 +318,43 @@ def test_check_result_serialization_redacts_prefixed_env_secret_names() -> None:
     assert "OPENAI_API_KEY=[REDACTED_SECRET]" in payload["stdout_tail"]
     assert "AWS_SECRET_ACCESS_KEY=[REDACTED_SECRET]" in payload["stderr_tail"]
     assert "CLIENT_SECRET=[REDACTED_SECRET]" in payload["stderr_tail"]
+
+
+def test_check_result_serialization_preserves_non_secret_query_params() -> None:
+    result = CheckResult(
+        id="query_secret_probe",
+        tool="curl",
+        command=[
+            "curl",
+            "https://example.test/api?token=raw-token-value&mode=debug",
+        ],
+        kind="test",
+        status="failed",
+        exit_code=1,
+        duration_ms=1,
+        stdout_tail=("GET https://example.test/api?api_key=raw-api-key&region=kr"),
+        stderr_tail=(
+            "retry https://example.test/api?client_secret=raw-client-secret&attempt=2"
+        ),
+    )
+
+    payload = result.to_dict()
+    rendered = str(payload)
+
+    for raw_secret in ("raw-token-value", "raw-api-key", "raw-client-secret"):
+        assert raw_secret not in rendered
+    assert (
+        payload["command"][1]
+        == "https://example.test/api?token=[REDACTED_TOKEN]&mode=debug"
+    )
+    assert (
+        payload["stdout_tail"]
+        == "GET https://example.test/api?api_key=[REDACTED_SECRET]&region=kr"
+    )
+    assert (
+        payload["stderr_tail"]
+        == "retry https://example.test/api?client_secret=[REDACTED_SECRET]&attempt=2"
+    )
 
 
 def test_check_result_serialization_redacts_json_shaped_secret_output() -> None:

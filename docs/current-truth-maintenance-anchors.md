@@ -24,23 +24,29 @@ every internal operator field.
 - Generated-artifact preflight checks keep root `.qa-z/**`,
   `benchmarks/results/work/**`, `build/**`, `dist/**`, and cache output local by
   default.
-- `python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`
+- `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`
   records worktree commit-plan evidence including `unassigned_source_paths`,
   `generated_artifact_paths`, `generated_local_only_paths`,
   `generated_local_by_default_paths`, `cross_cutting_paths`, `changed_batches`,
-  `shared_patch_add_paths`, `cross_cutting_groups`, and repository context.
+  `shared_patch_add_paths`, `cross_cutting_groups`, `patch_command_text`,
+  `git_add_command_text`, `git_add_patch_command_text`, and repository context.
 - Gate JSON stores `evidence.worktree_commit_plan`; strict audits use
   `--strict-worktree-plan` with `--fail-on-generated --fail-on-cross-cutting`.
 - `generated_local_only_count`, `generated_local_by_default_count`,
   `batch_count`, `attention_reason_count`, `global_attention_reason_count`,
-  `attention_reasons`, `strict_worktree_plan`, "Global attention reasons:",
-  "Attention reasons:", "Attention reasons are de-duplicated", "Next actions
-  are de-duplicated", and "Next commands are de-duplicated" are expected
-  operator evidence fields.
+  `attention_reasons`, `selected_batch_empty`, `strict_worktree_plan`,
+  "Global attention reasons:", "Attention reasons:", "Attention reasons are
+  de-duplicated", "Next actions are de-duplicated", and "Next commands are
+  de-duplicated" are expected operator evidence fields.
 - The worktree helper also reports "worktree generated artifact split mismatch",
   "worktree patch-add group mismatch", and `generated_exclude_count`.
 - `reduce_integration_risk` prepared actions are tied to the worktree
   commit-plan path rather than generic cleanup.
+- `reduce_integration_risk` selected-task validation points at the strict
+  worktree commit-plan command before the operator reruns self-inspection.
+- Batch-filtered worktree commit-plan payloads preserve global
+  `attention_reasons`; use `selected_batch_summary.status` for selected batch
+  readiness.
 - Report-only deferred cleanup wording is not enough; live git or runtime
   artifact evidence is required before cleanup candidates reopen.
 - `.benchmark.lock` protects benchmark results-dir writes.
@@ -58,6 +64,7 @@ every internal operator field.
   `executor_dry_run_scope_validation_operator_actions`, and
   `executor_dry_run_missing_noop_explanation_operator_actions`.
 - Self-inspection records `backlog_reseeded` and concrete reseed candidate ids.
+- self-inspection verification discovery ignores nested generated scratch repos.
 - GitHub summary supports session candidate resolution:
   `python -m qa_z github-summary --from-session .qa-z/sessions/<session-id>`.
 - Session dry-run verdict, reason, source, attempt counts, and history signals
@@ -280,13 +287,14 @@ prints the backlog `Updated:` timestamp
 Human `qa-z select-next` output now echoes each selected task's title,
 selection score, penalty reasons, and compact evidence summary
 selection penalty and its reasons
-surface a non-cleanup fallback family before selecting more cleanup work
+surface a non-cleanup fallback family before selecting more cleanup work, then inspect autonomy status
 loop plans now mirror selection score and penalty residue
 autonomy loop plans now mirror selected-task evidence summaries
 selected fallback families
 `latest_selected_fallback_families`
 Loop-health packets
 loop-history evidence
+Run local planner artifact writers serially
 Autonomy-created repair-session packets
 loop-local self-inspection plus selected verification evidence
 cleanup and workflow packets now also carry loop-local self-inspection
@@ -307,10 +315,18 @@ not as local-only runtime cleanup pressure
 normalize back to the intended repository URL
 Set --repository-url to https://github.com/qazedhq/qa-z.git
 python scripts/alpha_release_gate.py --include-remote
+python scripts/alpha_release_gate.py --quick --allow-dirty --json
+python scripts/alpha_release_gate.py --mode quality --allow-dirty --json
+python scripts/alpha_release_gate.py --mode release --target-tag <tag> --json
 python scripts/alpha_release_gate.py --json --output dist/alpha-release-gate.json
 dist/alpha-release-gate.preflight.json
 dist/alpha-release-gate.worktree-plan.json
+quality mode ignores historical local release tags
+release mode checks only the requested target tag
 include `generated_at`
+quick source-only gate; not final publish evidence
+`with_deps_requested`
+`local_release_tag_exists`
 preflight output also print `Generated at:`
 check_count, passed_count, failed_count,
 skipped_count, failed_checks
@@ -340,4 +356,3 @@ generated alpha release evidence count
 ```
 
 </details>
-

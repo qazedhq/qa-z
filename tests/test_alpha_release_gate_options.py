@@ -29,7 +29,7 @@ def test_alpha_release_gate_can_include_remote_preflight(tmp_path):
         "python scripts/alpha_release_preflight.py "
         "--repository-url https://github.com/qazedhq/qa-z.git "
         "--expected-origin-url https://github.com/qazedhq/qa-z.git "
-        "--allow-existing-refs --json"
+        "--allow-existing-refs --skip-release-tag-check --json"
     )
     assert "--skip-remote" not in runner.commands[0]
     assert "--allow-existing-refs" in runner.commands[0]
@@ -51,7 +51,8 @@ def test_alpha_release_gate_include_remote_defaults_origin_to_repository_url(tmp
     assert labels_from_result(result)[0] == (
         "python scripts/alpha_release_preflight.py "
         "--repository-url https://github.com/qazedhq/qa-z.git "
-        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git "
+        "--skip-release-tag-check --json"
     )
     assert "--expected-origin-url" in runner.commands[0]
 
@@ -71,9 +72,102 @@ def test_alpha_release_gate_remote_options_imply_remote_preflight(tmp_path):
     assert labels_from_result(result)[0] == (
         "python scripts/alpha_release_preflight.py "
         "--repository-url https://github.com/qazedhq/qa-z.git "
-        "--expected-origin-url https://github.com/qazedhq/qa-z.git --json"
+        "--expected-origin-url https://github.com/qazedhq/qa-z.git "
+        "--skip-release-tag-check --json"
     )
     assert "--skip-remote" not in runner.commands[0]
+
+
+def test_alpha_release_gate_quality_mode_skips_historical_tag_preflight(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="quality", allow_dirty=True, runner=runner
+    )
+
+    assert result.exit_code == 0
+    assert result.payload["mode"] == "quality"
+    assert result.payload["target_tag"] is None
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote --allow-dirty "
+        "--skip-release-tag-check --json"
+    )
+    assert "--skip-release-tag-check" in runner.commands[0]
+    assert "--expected-tag" not in runner.commands[0]
+
+
+def test_alpha_release_gate_release_mode_checks_target_tag(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
+
+    assert result.exit_code == 0
+    assert result.payload["mode"] == "release"
+    assert result.payload["target_tag"] == "v0.10.0"
+    assert labels_from_result(result)[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote "
+        "--expected-tag v0.10.0 --json"
+    )
+    assert "--expected-tag" in runner.commands[0]
+    assert "v0.10.0" in runner.commands[0]
+
+
+def test_alpha_release_gate_release_mode_includes_bundle_manifest(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
+
+    labels = labels_from_result(result)
+    assert result.exit_code == 0
+    assert labels[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote "
+        "--expected-tag v0.10.0 --json"
+    )
+    assert labels[-1] == "python scripts/alpha_release_bundle_manifest.py --json"
+
+
+def test_alpha_release_gate_release_mode_fails_when_target_tag_exists(tmp_path):
+    module = load_gate_module()
+    local_preflight = module.default_gate_commands(
+        mode="release", target_tag="v0.10.0"
+    )[0].command
+    preflight_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["release_tag_absent"],
+        "checks": [
+            {
+                "name": "release_tag_absent",
+                "status": "failed",
+                "detail": "v0.10.0",
+            }
+        ],
+    }
+    runner = RecordingRunner(
+        {tuple(local_preflight): (1, json.dumps(preflight_payload), "")}
+    )
+
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
+
+    assert result.exit_code == 1
+    assert result.payload["mode"] == "release"
+    assert result.payload["target_tag"] == "v0.10.0"
+    assert result.payload["failed_checks"] == ["local_preflight"]
+    assert result.payload["preflight_failed_checks"] == ["release_tag_absent"]
+    assert result.payload["evidence"]["gate_failures"]["local_preflight"] == {
+        "kind": "local_release_tag_exists",
+        "summary": "local release tag already exists: v0.10.0",
+        "tag": "v0.10.0",
+    }
 
 
 def test_alpha_release_gate_can_request_preflight_output_artifact(tmp_path):
@@ -91,7 +185,7 @@ def test_alpha_release_gate_can_request_preflight_output_artifact(tmp_path):
     assert result.payload["preflight_output"] == str(preflight_output)
     assert labels_from_result(result)[0] == (
         "python scripts/alpha_release_preflight.py --skip-remote "
-        f"--output {preflight_output} --json"
+        f"--skip-release-tag-check --output {preflight_output} --json"
     )
     assert "--output" in runner.commands[0]
     assert str(preflight_output) in runner.commands[0]
@@ -163,3 +257,41 @@ def test_alpha_release_gate_reads_worktree_plan_fields_from_output_file(tmp_path
     assert result.payload["next_actions"] == [
         "Review generated_artifact_paths before staging."
     ]
+
+
+def test_alpha_release_gate_quick_mode_runs_source_gate_without_slow_release_checks(
+    tmp_path,
+):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(tmp_path, quick=True, runner=runner)
+
+    labels = labels_from_result(result)
+    assert result.exit_code == 0
+    assert result.payload["quick"] is True
+    assert "python -m pytest" in labels
+    assert "python -m qa_z executor-result --help" in labels
+    assert "python -m qa_z fast --selection smart --json" not in labels
+    assert "python -m qa_z deep --selection smart --json" not in labels
+    assert "python -m qa_z benchmark --json" not in labels
+    assert "python -m build --sdist --wheel" not in labels
+    assert "python scripts/alpha_release_artifact_smoke.py --json" not in labels
+    assert "python scripts/alpha_release_bundle_manifest.py --json" not in labels
+
+
+def test_alpha_release_gate_quick_mode_reports_with_deps_as_not_run(tmp_path):
+    module = load_gate_module()
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path, quick=True, with_deps=True, runner=runner
+    )
+
+    labels = labels_from_result(result)
+    assert result.payload["with_deps"] is False
+    assert result.payload["with_deps_requested"] is True
+    assert (
+        "python scripts/alpha_release_artifact_smoke.py --with-deps --json"
+        not in labels
+    )

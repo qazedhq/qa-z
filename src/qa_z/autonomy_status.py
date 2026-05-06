@@ -9,8 +9,11 @@ from qa_z.artifacts import format_path
 from qa_z.autonomy_records import loops_root, read_json_object
 from qa_z.improvement_state import load_backlog
 from qa_z.live_repository import render_live_repository_summary
+from qa_z.repair_signals import iter_live_verification_summary_paths
 from qa_z.self_improvement import SELF_IMPROVEMENT_SCHEMA_VERSION, int_value
 from qa_z.task_selection import compact_backlog_evidence_summary
+from qa_z.task_selection import selected_task_action_hint
+from qa_z.task_selection import selected_task_validation_command
 
 AUTONOMY_STATUS_KIND = "qa_z.autonomy_status"
 
@@ -38,6 +41,8 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
     summary = read_json_object(latest_dir / "autonomy_summary.json")
     outcome = read_json_object(latest_dir / "outcome.json")
     selected = read_json_object(latest_dir / "selected_tasks.json")
+    selected_loop_id = str(selected.get("loop_id") or "").strip()
+    outcome_loop_id = str(outcome.get("loop_id") or "").strip()
     selected_tasks = [
         item
         for item in selected.get("selected_tasks", [])
@@ -56,7 +61,22 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
         "kind": AUTONOMY_STATUS_KIND,
         "schema_version": SELF_IMPROVEMENT_SCHEMA_VERSION,
         "latest_loop_id": outcome.get("loop_id"),
+        "latest_outcome_loop_id": outcome_loop_id or None,
+        "latest_selected_loop_id": selected_loop_id or None,
+        "latest_selection_outcome_mismatch": bool(
+            selected_loop_id and outcome_loop_id and selected_loop_id != outcome_loop_id
+        ),
         "latest_state": outcome.get("state"),
+        "latest_source_self_inspection": selected.get("source_self_inspection")
+        or outcome.get("source_self_inspection"),
+        "latest_source_self_inspection_loop_id": selected.get(
+            "source_self_inspection_loop_id"
+        )
+        or outcome.get("source_self_inspection_loop_id"),
+        "latest_source_self_inspection_generated_at": selected.get(
+            "source_self_inspection_generated_at"
+        )
+        or outcome.get("source_self_inspection_generated_at"),
         "latest_selected_tasks": [str(item["id"]) for item in selected_tasks],
         "latest_selected_fallback_families": [
             str(item)
@@ -69,6 +89,15 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
         else outcome.get("live_repository", {}),
         "latest_selected_task_details": status_selected_task_details(selected_tasks),
         "latest_prepared_actions": prepared_actions,
+        "latest_prepared_actions_loop_id": outcome_loop_id
+        if prepared_actions and outcome_loop_id
+        else None,
+        "latest_prepared_actions_stale_for_selection": bool(
+            prepared_actions
+            and selected_loop_id
+            and outcome_loop_id
+            and selected_loop_id != outcome_loop_id
+        ),
         "latest_next_recommendations": next_actions,
         "latest_loop_health": outcome.get("loop_health") or {},
         "latest_selection_gap_reason": outcome.get("selection_gap_reason"),
@@ -148,6 +177,36 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
         f"Recent verify verdict: {status.get('recent_verify_verdict') or 'none'}",
         "Selected task details:",
     ]
+    selected_loop_id = str(status.get("latest_selected_loop_id") or "").strip()
+    outcome_loop_id = str(status.get("latest_outcome_loop_id") or "").strip()
+    if selected_loop_id:
+        lines.append(f"Selected task loop: {selected_loop_id}")
+    if outcome_loop_id:
+        lines.append(f"Outcome loop: {outcome_loop_id}")
+    if status.get("latest_selection_outcome_mismatch"):
+        lines.append("Selection/outcome loop mismatch: true")
+    source_self_inspection = str(
+        status.get("latest_source_self_inspection") or ""
+    ).strip()
+    if source_self_inspection:
+        lines.append(f"Self-inspection source: {source_self_inspection}")
+    source_loop_id = str(
+        status.get("latest_source_self_inspection_loop_id") or ""
+    ).strip()
+    source_generated_at = str(
+        status.get("latest_source_self_inspection_generated_at") or ""
+    ).strip()
+    if source_loop_id or source_generated_at:
+        if source_loop_id and source_generated_at:
+            lines.append(
+                f"Self-inspection loop: {source_loop_id} ({source_generated_at})"
+            )
+        else:
+            lines.append(
+                "Self-inspection loop: "
+                + (source_loop_id or "unknown")
+                + (f" ({source_generated_at})" if source_generated_at else "")
+            )
     if selected_fallback_families:
         lines.append(
             "Selected fallback families: " + ", ".join(selected_fallback_families)
@@ -197,6 +256,10 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
         )
         if item.get("recommendation"):
             lines.append(f"  recommendation: {item['recommendation']}")
+        if item.get("action_hint"):
+            lines.append(f"  action: {item['action_hint']}")
+        if item.get("validation_command"):
+            lines.append(f"  validation: {item['validation_command']}")
         if item.get("selection_priority_score") is not None:
             lines.append(f"  selection score: {item['selection_priority_score']}")
         selection_penalty = item.get("selection_penalty")
@@ -216,6 +279,16 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
         if item.get("evidence_summary"):
             lines.append(f"  evidence: {item['evidence_summary']}")
     lines.extend(["Prepared actions:"])
+    if prepared_actions:
+        prepared_actions_loop_id = str(
+            status.get("latest_prepared_actions_loop_id") or ""
+        ).strip()
+        if prepared_actions_loop_id:
+            lines.append(f"Prepared actions loop: {prepared_actions_loop_id}")
+        if status.get("latest_prepared_actions_stale_for_selection"):
+            lines.append(
+                "Prepared actions may not match the latest selected task artifact."
+            )
     open_sessions = status.get("open_sessions") or []
     if open_sessions:
         lines.append("Open session details:")
@@ -256,6 +329,10 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
             lines.append(f"  title: {item['title']}")
         if item.get("recommendation"):
             lines.append(f"  next: {item['recommendation']}")
+        if item.get("action_hint"):
+            lines.append(f"  action: {item['action_hint']}")
+        if item.get("validation_command"):
+            lines.append(f"  validation: {item['validation_command']}")
         if item.get("evidence_summary"):
             lines.append(f"  evidence: {item['evidence_summary']}")
     return "\n".join(lines)
@@ -315,7 +392,15 @@ def status_selected_task_details(items: list[dict[str, Any]]) -> list[dict[str, 
             "title": str(item.get("title") or item.get("id") or "untitled"),
             "category": str(item.get("category") or ""),
             "recommendation": str(item.get("recommendation") or ""),
-            "evidence_summary": compact_backlog_evidence_summary(item),
+            "action_hint": str(
+                item.get("action_hint") or selected_task_action_hint(item)
+            ),
+            "validation_command": str(
+                item.get("validation_command") or selected_task_validation_command(item)
+            ),
+            "evidence_summary": str(
+                item.get("evidence_summary") or compact_backlog_evidence_summary(item)
+            ),
         }
         if item.get("selection_priority_score") is not None:
             detail["selection_priority_score"] = int_value(
@@ -379,6 +464,8 @@ def backlog_top_items(root: Path) -> list[dict[str, Any]]:
             "status": str(item.get("status", "open")),
             "title": str(item.get("title") or ""),
             "recommendation": str(item.get("recommendation") or ""),
+            "action_hint": selected_task_action_hint(item),
+            "validation_command": selected_task_validation_command(item),
             "evidence_summary": compact_backlog_evidence_summary(item),
         }
         for item in items[:5]
@@ -387,12 +474,7 @@ def backlog_top_items(root: Path) -> list[dict[str, Any]]:
 
 def latest_verify_observation(root: Path) -> str | None:
     """Return the newest verification verdict if local verify summaries exist."""
-    qa_root = root / ".qa-z"
-    if not qa_root.is_dir():
-        return None
-    summaries = [
-        path for path in qa_root.rglob("verify/summary.json") if path.is_file()
-    ]
+    summaries = iter_live_verification_summary_paths(root)
     if not summaries:
         return None
     latest = max(summaries, key=lambda path: (path.stat().st_mtime, str(path)))

@@ -17,6 +17,8 @@ from qa_z.runners.subprocess import TAIL_LIMIT, tail_text
 from qa_z.runners.semgrep import (
     default_semgrep_spec_for_name,
     normalize_semgrep_result,
+    normalized_semgrep_policy,
+    semgrep_config_from_command,
     semgrep_command_with_config,
 )
 
@@ -91,6 +93,16 @@ def semgrep_raw_result(stdout: str, *, exit_code: int = 0) -> CheckResult:
         duration_ms=12,
         stdout_tail=stdout,
     )
+
+
+def test_normalized_semgrep_policy_deduplicates_blocking_severities() -> None:
+    policy = normalized_semgrep_policy(
+        SemgrepCheckPolicy(
+            fail_on_severity=["error", "ERROR", " ", " warning ", "WARNING"]
+        )
+    )
+
+    assert policy.fail_on_severity == ["ERROR", "WARNING"]
 
 
 def test_semgrep_normalization_uses_full_stdout_when_tail_is_truncated() -> None:
@@ -209,6 +221,21 @@ def test_semgrep_wrapper_commands_are_not_rewritten_with_semgrep_flags() -> None
     )
 
     assert command == ["python", ".qa-z-benchmark/fake_semgrep.py"]
+
+
+def test_semgrep_command_with_config_replaces_short_config_flag() -> None:
+    command = semgrep_command_with_config(
+        ["semgrep", "-c", "p/security-audit", "--json", "src"],
+        "auto",
+    )
+
+    assert command == ["semgrep", "--config", "auto", "--json", "src"]
+
+
+def test_semgrep_config_from_command_reads_short_config_flag() -> None:
+    assert semgrep_config_from_command(["semgrep", "-c", "p/python", "--json"]) == (
+        "p/python"
+    )
 
 
 def test_semgrep_findings_are_normalized_into_check_result() -> None:

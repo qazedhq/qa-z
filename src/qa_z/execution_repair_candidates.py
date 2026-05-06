@@ -28,18 +28,29 @@ def discover_verification_candidates(root: Path) -> list[Any]:
             verdict=verdict,
             run_id=run_id,
         )
+        evidence = {
+            "source": "verification",
+            "path": format_path(candidate_input["path"], root),
+            "summary": str(candidate_input["summary"]),
+        }
+        for field in (
+            "compare_path",
+            "baseline_run",
+            "candidate_run",
+            "not_comparable_reason",
+        ):
+            value = candidate_input.get(field)
+            if not value:
+                continue
+            evidence[field] = (
+                format_path(value, root) if isinstance(value, Path) else str(value)
+            )
         candidates.append(
             BacklogCandidate(
                 id=candidate_id,
                 title=title,
                 category=category,
-                evidence=[
-                    {
-                        "source": "verification",
-                        "path": format_path(candidate_input["path"], root),
-                        "summary": str(candidate_input["summary"]),
-                    }
-                ],
+                evidence=[evidence],
                 impact=int(candidate_input["impact"]),
                 likelihood=4,
                 confidence=4,

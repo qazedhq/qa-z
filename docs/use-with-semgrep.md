@@ -37,6 +37,15 @@ deep:
         config: auto
         fail_on_severity: ["ERROR"]
         ignore_rules: []
+        exclude_paths: []
 ```
+
+`qa-z doctor` validates this policy before a deep run. `semgrep` must be a
+mapping, `config` must be a non-empty string, and `fail_on_severity`,
+`ignore_rules`, and `exclude_paths` must be lists of non-empty strings.
+The policy is applied only to the built-in `sg_scan` deep check. Unknown Semgrep
+policy keys fail validation so typos do not silently fall back to default
+blocking behavior. Blocking severities are limited to `INFO`, `WARNING`, `WARN`,
+and `ERROR`.
 
 QA-Z does not reclassify findings with an LLM. It records deterministic findings, filters configured suppressions, and sends blocking evidence to review and repair packets.

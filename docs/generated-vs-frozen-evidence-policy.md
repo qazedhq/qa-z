@@ -50,6 +50,8 @@ Self-inspection treats the generated-artifact policy as explicit only when both 
 
 When both surfaces are present and no live runtime artifact paths are dirty, stale report language alone should not keep re-promoting generated-versus-frozen evidence policy work.
 
+Self-inspection only promotes verification summaries from `.qa-z/runs/*/verify/summary.json` and `.qa-z/sessions/*/verify/summary.json`. It ignores nested QA-Z repositories copied under generated scratch roots, such as benchmark work directories under `.qa-z/tmp/**/work/**` or `benchmarks/results/work/**`, so fixture execution residue does not masquerade as a live repository regression.
+
 ## Operator Checklist
 
 Before source integration:

@@ -44,6 +44,47 @@ def test_self_improvement_inspection_module_writes_report_and_backlog(
     assert backlog["kind"] == "qa_z.improvement_backlog"
 
 
+def test_self_inspection_report_candidates_include_operator_hints(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        self_improvement_module,
+        "collect_live_repository_signals",
+        lambda _root: {
+            "current_branch": "codex/qa-z-bootstrap",
+            "current_head": "abc123",
+            "modified_count": 20,
+            "untracked_count": 0,
+            "staged_count": 0,
+            "modified_paths": ["src/qa_z/cli.py"],
+            "untracked_paths": [],
+            "runtime_artifact_paths": [],
+            "benchmark_result_paths": [],
+            "generated_artifact_policy_explicit": True,
+        },
+    )
+
+    paths = self_improvement_inspection_module.run_self_inspection(
+        root=tmp_path,
+        now="2026-04-22T08:09:10Z",
+        loop_id="inspect-hints",
+    )
+
+    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
+    candidate = next(
+        item
+        for item in report["candidates"]
+        if item["id"] == "worktree_risk-dirty-worktree"
+    )
+    assert candidate["action_hint"].startswith("triage source changes first")
+    assert candidate["validation_command"] == (
+        "python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting --output "
+        ".qa-z/tmp/worktree-commit-plan.json"
+    )
+    assert candidate["evidence_summary"].startswith("git_status:")
+
+
 def test_discover_candidates_respects_explicit_empty_live_signals(
     tmp_path: Path, monkeypatch
 ) -> None:

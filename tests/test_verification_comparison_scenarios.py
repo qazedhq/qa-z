@@ -135,6 +135,43 @@ def test_verdict_improved_when_existing_blockers_resolve_without_new_issues() ->
     assert comparison["summary"]["new_issue_count"] == 0
 
 
+def test_fully_filtered_deep_counts_do_not_block_fast_verification() -> None:
+    baseline_deep = check_result(
+        "sg_scan",
+        "passed",
+        kind="static-analysis",
+        findings=[],
+        blocking_findings_count=0,
+    )
+    baseline_deep.findings_count = 1
+    baseline_deep.filtered_findings_count = 1
+    candidate_deep = check_result(
+        "sg_scan",
+        "passed",
+        kind="static-analysis",
+        findings=[],
+        blocking_findings_count=0,
+    )
+    candidate_deep.findings_count = 1
+    candidate_deep.filtered_findings_count = 1
+    baseline = verification_run(
+        "baseline",
+        fast_checks=[check_result("py_test", "failed", kind="test", exit_code=1)],
+        deep_checks=[baseline_deep],
+    )
+    candidate = verification_run(
+        "candidate",
+        fast_checks=[check_result("py_test", "passed", kind="test", exit_code=0)],
+        deep_checks=[candidate_deep],
+    )
+
+    comparison = compare_verification_runs(baseline, candidate).to_dict()
+
+    assert comparison["verdict"] == "improved"
+    assert comparison["deep_findings"]["skipped_or_not_comparable"] == []
+    assert comparison["summary"]["resolved_count"] == 1
+
+
 def test_verdict_regressed_when_candidate_introduces_only_new_blockers() -> None:
     baseline = verification_run(
         "baseline",

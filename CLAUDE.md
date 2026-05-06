@@ -4,6 +4,11 @@
 
 Act as an implementation partner, not just a code generator.
 
+## Codex Skill Context
+
+- Codex task startup rules live in `AGENTS.md`, including the Matt Pocock skill-selection gate and Karpathy coding-discipline gate.
+- Claude Code may use the same repo context files under `docs/agents/`, but `AGENTS.md` remains the Codex source of truth.
+
 ## QA-Z Workflow
 
 1. Read issue, spec, and diff context.

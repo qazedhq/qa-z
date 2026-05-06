@@ -18,6 +18,8 @@ from qa_z.subprocess_env import build_tool_subprocess_env
 
 DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"
+DEFAULT_TARGET_TAG = "v0.9.8-alpha"
+GATE_MODES = ("quality", "release")
 
 
 class GateCommand(NamedTuple):
@@ -62,6 +64,17 @@ def configured_origin_url_for_gate(repo_root: Path) -> str | None:
     return origin_url or None
 
 
+def current_branch_for_gate(repo_root: Path) -> str | None:
+    """Return the current branch name for quality-mode feature validation."""
+    exit_code, stdout, _stderr = subprocess_runner(
+        ("git", "branch", "--show-current"), repo_root
+    )
+    if exit_code != 0:
+        return None
+    branch = stdout.strip()
+    return branch or None
+
+
 def python_command(*args: str) -> tuple[str, ...]:
     return (sys.executable, *args)
 
@@ -85,6 +98,9 @@ def cli_help_commands() -> list[GateCommand]:
         ("deep",),
         ("review",),
         ("repair-prompt",),
+        ("guard",),
+        ("skill",),
+        ("demo",),
         ("repair-session",),
         ("github-summary",),
         ("verify",),
@@ -112,18 +128,24 @@ def cli_help_commands() -> list[GateCommand]:
 
 def default_gate_commands(
     *,
+    mode: str = "quality",
+    target_tag: str | None = None,
     with_deps: bool = False,
+    quick: bool = False,
     allow_dirty: bool = False,
     include_remote: bool = False,
     repository_url: str = DEFAULT_REPOSITORY_URL,
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
     local_expected_origin_url: str | None = None,
+    local_expected_branch: str | None = None,
     allow_existing_refs: bool = False,
     preflight_output: Path | None = None,
     worktree_plan_output: Path | None = None,
     strict_worktree_plan: bool = False,
 ) -> list[GateCommand]:
+    if mode not in GATE_MODES:
+        raise ValueError(f"unknown gate mode: {mode}")
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
         or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
@@ -162,9 +184,19 @@ def default_gate_commands(
             preflight_label_parts.extend(
                 ["--expected-origin-url", local_expected_origin_url]
             )
+    if mode == "quality" and local_expected_branch is not None:
+        preflight_args.extend(["--expected-branch", local_expected_branch])
+        preflight_label_parts.extend(["--expected-branch", local_expected_branch])
     if allow_dirty:
         preflight_args.append("--allow-dirty")
         preflight_label_parts.append("--allow-dirty")
+    if mode == "quality":
+        preflight_args.append("--skip-release-tag-check")
+        preflight_label_parts.append("--skip-release-tag-check")
+    else:
+        effective_target_tag = target_tag or DEFAULT_TARGET_TAG
+        preflight_args.extend(["--expected-tag", effective_target_tag])
+        preflight_label_parts.extend(["--expected-tag", effective_target_tag])
     if preflight_output is not None:
         preflight_args.extend(["--output", str(preflight_output)])
         preflight_label_parts.extend(["--output", str(preflight_output)])
@@ -203,6 +235,11 @@ def default_gate_commands(
             python_command(*worktree_plan_args),
         ),
         GateCommand(
+            "text_file_hygiene",
+            "python scripts/check_text_file_hygiene.py",
+            python_command("scripts/check_text_file_hygiene.py"),
+        ),
+        GateCommand(
             "ruff_format",
             "python -m ruff format --check .",
             python_command("-m", "ruff", "format", "--check", "."),
@@ -223,32 +260,40 @@ def default_gate_commands(
             python_command("-m", "pytest"),
         ),
         *cli_help_commands(),
-        GateCommand(
-            "qa_z_fast",
-            "python -m qa_z fast --selection smart --json",
-            python_command("-m", "qa_z", "fast", "--selection", "smart", "--json"),
-        ),
-        GateCommand(
-            "qa_z_deep",
-            "python -m qa_z deep --selection smart --json",
-            python_command("-m", "qa_z", "deep", "--selection", "smart", "--json"),
-        ),
-        GateCommand(
-            "qa_z_benchmark",
-            "python -m qa_z benchmark --json",
-            python_command("-m", "qa_z", "benchmark", "--json"),
-        ),
-        GateCommand(
-            "build",
-            "python -m build --sdist --wheel",
-            python_command("-m", "build", "--sdist", "--wheel"),
-        ),
-        GateCommand(
-            "artifact_smoke",
-            "python scripts/alpha_release_artifact_smoke.py --json",
-            python_command("scripts/alpha_release_artifact_smoke.py", "--json"),
-        ),
     ]
+
+    if quick:
+        return commands
+
+    commands.extend(
+        [
+            GateCommand(
+                "qa_z_fast",
+                "python -m qa_z fast --selection smart --json",
+                python_command("-m", "qa_z", "fast", "--selection", "smart", "--json"),
+            ),
+            GateCommand(
+                "qa_z_deep",
+                "python -m qa_z deep --selection smart --json",
+                python_command("-m", "qa_z", "deep", "--selection", "smart", "--json"),
+            ),
+            GateCommand(
+                "qa_z_benchmark",
+                "python -m qa_z benchmark --json",
+                python_command("-m", "qa_z", "benchmark", "--json"),
+            ),
+            GateCommand(
+                "build",
+                "python -m build --sdist --wheel",
+                python_command("-m", "build", "--sdist", "--wheel"),
+            ),
+            GateCommand(
+                "artifact_smoke",
+                "python scripts/alpha_release_artifact_smoke.py --json",
+                python_command("scripts/alpha_release_artifact_smoke.py", "--json"),
+            ),
+        ]
+    )
 
     if with_deps:
         commands.append(
@@ -263,13 +308,14 @@ def default_gate_commands(
             )
         )
 
-    commands.append(
-        GateCommand(
-            "bundle_manifest",
-            "python scripts/alpha_release_bundle_manifest.py --json",
-            python_command("scripts/alpha_release_bundle_manifest.py", "--json"),
+    if mode == "release":
+        commands.append(
+            GateCommand(
+                "bundle_manifest",
+                "python scripts/alpha_release_bundle_manifest.py --json",
+                python_command("scripts/alpha_release_bundle_manifest.py", "--json"),
+            )
         )
-    )
     return commands
 
 
@@ -360,7 +406,10 @@ render_release_evidence_lines = (
 def run_alpha_release_gate(
     repo_root: Path,
     *,
+    mode: str = "quality",
+    target_tag: str | None = None,
     with_deps: bool = False,
+    quick: bool = False,
     allow_dirty: bool = False,
     include_remote: bool = False,
     repository_url: str = DEFAULT_REPOSITORY_URL,
@@ -372,7 +421,13 @@ def run_alpha_release_gate(
     strict_worktree_plan: bool = False,
     runner: Runner = subprocess_runner,
 ) -> AlphaReleaseGateResult:
+    if mode not in GATE_MODES:
+        raise ValueError(f"unknown gate mode: {mode}")
+    effective_target_tag = target_tag or DEFAULT_TARGET_TAG
     detected_origin_url = configured_origin_url_for_gate(repo_root)
+    local_expected_branch = (
+        current_branch_for_gate(repo_root) if mode == "quality" else None
+    )
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
         or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
@@ -393,13 +448,17 @@ def run_alpha_release_gate(
         else None
     )
     commands = default_gate_commands(
+        mode=mode,
+        target_tag=target_tag,
         with_deps=with_deps,
+        quick=quick,
         allow_dirty=allow_dirty,
         include_remote=effective_include_remote,
         repository_url=repository_url,
         expected_repository=expected_repository,
         expected_origin_url=effective_expected_origin_url,
         local_expected_origin_url=local_expected_origin_url,
+        local_expected_branch=local_expected_branch,
         allow_existing_refs=allow_existing_refs,
         preflight_output=preflight_output,
         worktree_plan_output=worktree_plan_output,
@@ -551,7 +610,11 @@ def run_alpha_release_gate(
         "passed_count": passed_count,
         "failed_count": failed_count,
         "failed_checks": failed_checks,
-        "with_deps": with_deps,
+        "mode": mode,
+        "target_tag": effective_target_tag if mode == "release" else None,
+        "with_deps": with_deps and not quick,
+        "with_deps_requested": with_deps,
+        "quick": quick,
         "allow_dirty": allow_dirty,
         "include_remote": effective_include_remote,
         "repository_url": repository_url if effective_include_remote else None,
@@ -604,11 +667,37 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Run the deterministic local QA-Z alpha release gate."
     )
     parser.add_argument(
+        "--mode",
+        choices=GATE_MODES,
+        default="quality",
+        help=(
+            "Gate mode. quality validates feature/PR readiness without release-tag "
+            "preflight. release validates readiness to create a specific target tag."
+        ),
+    )
+    parser.add_argument(
+        "--target-tag",
+        default=None,
+        help=(
+            "Release tag to check in --mode release. Defaults to "
+            f"{DEFAULT_TARGET_TAG} for backward-compatible release preflight."
+        ),
+    )
+    parser.add_argument(
         "--with-deps",
         action="store_true",
         help=(
             "Also run the stronger artifact smoke with dependency resolution. "
             "This may contact the configured Python package index."
+        ),
+    )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help=(
+            "Run the source-only local release gate: preflight, worktree plan, "
+            "format/lint/type/test, and CLI help. Skips deep, benchmark, build, "
+            "artifact smoke, and bundle checks, so it is not final publish evidence."
         ),
     )
     parser.add_argument(
@@ -706,7 +795,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         worktree_plan_output = args.output.with_suffix(".worktree-plan.json")
     result = run_alpha_release_gate(
         Path.cwd(),
+        mode=args.mode,
+        target_tag=args.target_tag,
         with_deps=args.with_deps,
+        quick=args.quick,
         allow_dirty=args.allow_dirty,
         include_remote=args.include_remote,
         repository_url=args.repository_url,

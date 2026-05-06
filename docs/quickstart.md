@@ -61,6 +61,8 @@ qa-z deep --from-run .qa-z/runs/candidate
 qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
 
+Expected result: `qa-z verify` reports verdict `improved` with resolved blockers and no regressions.
+
 ## Use It In Your Repository
 
 ```bash
@@ -74,5 +76,11 @@ qa-z repair-prompt --from-run latest --adapter codex
 ```
 
 If `qa-z` is not on PATH, use `python -m qa_z` for the same commands.
+
+Use `qa-z doctor --json` when automation needs structured config or onboarding errors, and use `qa-z doctor --strict` when warnings such as missing agent instruction templates should fail a handoff gate.
+`doctor` also fails before execution on malformed check definitions, including
+empty check kinds and malformed Semgrep policy fields.
+
+The starter GitHub workflow installs the public alpha, then runs `qa-z doctor --json` before `qa-z fast --json` with read-only repository contents permission.
 
 Root `.qa-z/**` evidence is local by default. Commit source, tests, docs, and intentional fixtures, not incidental local runs.

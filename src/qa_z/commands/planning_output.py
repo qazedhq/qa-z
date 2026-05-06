@@ -96,6 +96,23 @@ def render_select_next_stdout(
     ]
     if refreshed:
         lines.insert(4, "Refreshed: yes")
+    source_self_inspection = str(selected.get("source_self_inspection") or "").strip()
+    if source_self_inspection:
+        lines.append(f"Source self-inspection: {source_self_inspection}")
+        source_loop = str(selected.get("source_self_inspection_loop_id") or "").strip()
+        source_generated_at = str(
+            selected.get("source_self_inspection_generated_at") or ""
+        ).strip()
+        if source_loop or source_generated_at:
+            if source_loop and source_generated_at:
+                lines.append(f"Source loop: {source_loop} ({source_generated_at})")
+            else:
+                lines.append(f"Source loop: {source_loop or source_generated_at}")
+        if not refreshed:
+            lines.append(
+                "Refresh hint: run `qa-z select-next --refresh` before acting on "
+                "a rapidly changing worktree."
+            )
     live_summary = render_live_repository_summary(selected.get("live_repository"))
     if live_summary:
         lines.append(f"Live repository: {live_summary}")

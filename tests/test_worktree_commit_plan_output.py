@@ -228,8 +228,11 @@ def test_commit_plan_human_output_prints_changed_batch_validation_commands() -> 
     assert "  validation: python -m qa_z benchmark --json" in output
     assert "- self_inspection_backlog: 1 paths" in output
     assert (
-        "  validation: python -m pytest tests/test_self_improvement.py tests/test_cli.py -q"
-        in output
+        "  validation: python -m pytest tests/test_self_improvement.py "
+        "tests/test_self_improvement_inspection.py "
+        "tests/test_self_improvement_selection_output.py "
+        "tests/test_repair_signal_inputs.py "
+        "tests/test_artifact_consistency_discovery.py tests/test_cli.py -q" in output
     )
 
 
@@ -244,6 +247,20 @@ def test_commit_plan_human_output_quotes_stage_command_paths_with_spaces() -> No
     assert (
         '  stage command: git add -- "benchmarks/fixtures/path with space/expected.json"'
         in output
+    )
+
+
+def test_commit_plan_human_output_quotes_shell_separator_paths() -> None:
+    module = load_plan_module()
+    result = module.analyze_status_lines(
+        [" M docs/reports/release;notes.md"],
+        fail_on_cross_cutting=True,
+    )
+
+    output = module.render_human(result)
+
+    assert '  patch command: git add --patch -- "docs/reports/release;notes.md"' in (
+        output
     )
 
 
@@ -264,3 +281,25 @@ def test_commit_plan_human_output_prints_batch_filter_context() -> None:
     assert "Selected staging: include=1, patch_add=0, generated_excludes=1" in output
     assert "Global status: attention_required" in output
     assert "Global attention reasons: generated_artifacts_present" in output
+
+
+def test_commit_plan_human_output_can_render_compact_payload() -> None:
+    module = load_plan_module()
+    result = module.analyze_status_lines(
+        [
+            " M README.md",
+            " M src/qa_z/benchmark.py",
+        ],
+        fail_on_cross_cutting=True,
+    )
+    compact = module.compact_payload(result)
+
+    output = module.render_human(compact)
+
+    assert "Status: attention_required" in output
+    assert "Changed paths: 2" in output
+    assert "Shared patch-add paths: 1" in output
+    assert "Cross-cutting groups: 1" in output
+    assert "- benchmark_coverage: 1 paths" in output
+    assert "  stage command: git add -- src/qa_z/benchmark.py" in output
+    assert "  patch command: git add --patch -- README.md" in output

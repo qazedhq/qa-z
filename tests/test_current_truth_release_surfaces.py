@@ -71,6 +71,9 @@ def test_worktree_commit_plan_names_release_closure_boundary() -> None:
         "python -m pytest tests/test_current_truth.py tests/test_github_workflow.py -q"
         in commit_plan
     )
+    assert "python scripts/alpha_release_gate.py --quick --allow-dirty --json" in (
+        commit_plan
+    )
     assert "Do not stage root `.qa-z/**`" in commit_plan
     assert "Do not stage `benchmarks/results/**`" in commit_plan
 
@@ -316,9 +319,12 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
     assert "python scripts/alpha_release_gate.py --json" in release_notes
     assert "python scripts/alpha_release_gate.py --json" in release_pr
     assert "python scripts/alpha_release_gate.py --json" in github_release
-    assert "python scripts/alpha_release_gate.py --json" in release_handoff
     assert (
-        "python scripts/alpha_release_gate.py --json --output dist/alpha-release-gate.json"
+        "python scripts/alpha_release_gate.py --mode quality --json --output "
+        "dist/alpha-release-gate.json" in release_handoff
+    )
+    assert (
+        "python scripts/alpha_release_gate.py --mode release --target-tag <new-tag> --json"
         in release_handoff
     )
     assert "dist/alpha-release-gate.preflight.json" in release_handoff
@@ -328,6 +334,12 @@ def test_release_surfaces_describe_preflight_generated_policy_split() -> None:
         in release_handoff
     )
     assert "gate JSON summarizes pytest, deep, and benchmark evidence" in readme
+    assert "python scripts/alpha_release_gate.py --quick --allow-dirty --json" in (
+        readme
+    )
+    assert "quick source-only gate; not final publish evidence" in readme
+    assert "`with_deps_requested`" in readme
+    assert "`local_release_tag_exists`" in readme
     assert (
         "gate JSON summarizes pytest, deep, and benchmark evidence" in release_handoff
     )

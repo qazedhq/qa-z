@@ -98,9 +98,13 @@ def resolve_check_item(item: Any) -> CheckSpec | None:
     return CheckSpec(
         id=check_id,
         command=list(command),
-        kind=str(item.get("kind", default.kind if default else default_kind(check_id))),
-        enabled=bool(item.get("enabled", True)),
-        no_tests=str(item.get("no_tests", default.no_tests if default else "warn")),
+        kind=coerce_check_kind(
+            item.get("kind"), default.kind if default else default_kind(check_id)
+        ),
+        enabled=item.get("enabled", True) is not False,
+        no_tests=coerce_no_tests_policy(
+            item.get("no_tests", default.no_tests if default else "warn")
+        ),
         timeout_seconds=(
             coerce_timeout(item.get("timeout_seconds"))
             if "timeout_seconds" in item
@@ -137,8 +141,24 @@ def coerce_timeout(value: Any) -> int | None:
     """Coerce timeout config to a positive integer."""
     if value is None:
         return None
+    if isinstance(value, bool):
+        return None
     try:
         timeout = int(value)
     except (TypeError, ValueError):
         return None
     return timeout if timeout > 0 else None
+
+
+def coerce_no_tests_policy(value: Any) -> str:
+    """Return a supported no-tests policy."""
+    if isinstance(value, str) and value.lower() in {"warn", "fail"}:
+        return value.lower()
+    return "warn"
+
+
+def coerce_check_kind(value: Any, default: str) -> str:
+    """Return a non-empty check kind, falling back to the resolved default."""
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return default

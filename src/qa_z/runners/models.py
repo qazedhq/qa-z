@@ -513,7 +513,7 @@ SECRET_KEY_PATTERN = (
 )
 SECRET_KEY_RE = re.compile(rf"^{SECRET_KEY_PATTERN}$", re.IGNORECASE)
 SECRET_ASSIGNMENT_RE = re.compile(
-    r"\b("
+    r"(?<![?&])\b("
     r"[A-Za-z0-9][A-Za-z0-9_-]*"
     r"(?:api[_-]?key|token|secret|password|passwd|private[_-]?key|access[_-]?key|client[_-]?secret)"
     r"[A-Za-z0-9_-]*"
@@ -521,6 +521,10 @@ SECRET_ASSIGNMENT_RE = re.compile(
     r")"
     r"(\s*[:=]\s*)"
     r"([^\s,;]+)",
+    re.IGNORECASE,
+)
+SECRET_QUERY_ASSIGNMENT_RE = re.compile(
+    rf"(?P<prefix>[?&])(?P<key>{SECRET_KEY_PATTERN})=(?P<value>[^&#\s,;]+)",
     re.IGNORECASE,
 )
 SECRET_QUOTED_ASSIGNMENT_RE = re.compile(
@@ -538,6 +542,7 @@ def redact_sensitive_text(value: str) -> str:
     redacted = AUTH_HEADER_RE.sub(r"\1[REDACTED_TOKEN]", value)
     redacted = BEARER_RE.sub(r"\1[REDACTED_TOKEN]", redacted)
     redacted = URL_USERINFO_RE.sub(r"\1[REDACTED_SECRET]@", redacted)
+    redacted = SECRET_QUERY_ASSIGNMENT_RE.sub(redact_query_assignment, redacted)
     redacted = SECRET_QUOTED_ASSIGNMENT_RE.sub(redact_quoted_assignment, redacted)
     return SECRET_ASSIGNMENT_RE.sub(redact_assignment, redacted)
 
@@ -604,6 +609,14 @@ def redact_quoted_assignment(match: re.Match[str]) -> str:
     return (
         f"{key_quote}{key}{key_quote}{separator}{value_quote}{placeholder}{value_quote}"
     )
+
+
+def redact_query_assignment(match: re.Match[str]) -> str:
+    """Redact one URL query secret while preserving neighboring parameters."""
+    prefix = match.group("prefix")
+    key = match.group("key")
+    placeholder = redaction_placeholder_for_key(key)
+    return f"{prefix}{key}={placeholder}"
 
 
 def is_secret_key(key: str) -> bool:

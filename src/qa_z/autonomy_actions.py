@@ -19,6 +19,13 @@ from qa_z.autonomy_action_sessions import (
     existing_session_id,
     repair_session_action,
 )
+from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
+from qa_z.operator_commands import AUTONOMY_STATUS_JSON_COMMAND
+from qa_z.operator_commands import BENCHMARK_COMMAND
+from qa_z.operator_commands import SELF_INSPECT_COMMAND
+from qa_z.operator_commands import SELF_INSPECT_JSON_COMMAND
+from qa_z.operator_commands import SELECT_NEXT_COUNT_JSON_COMMAND
+from qa_z.task_selection_core import repeated_fallback_family_from_item
 
 __all__ = [
     "action_for_task",
@@ -60,7 +67,7 @@ def action_for_task(
             action_type="benchmark_fixture_plan",
             title="Add or repair benchmark fixture evidence.",
             next_recommendation="run qa-z benchmark after fixture updates",
-            commands=["python -m qa_z benchmark"],
+            commands=[BENCHMARK_COMMAND],
         )
     if category == "policy_gap":
         return prepared_action(
@@ -68,7 +75,7 @@ def action_for_task(
             action_type="policy_fixture_plan",
             title="Add a deterministic policy fixture or policy expectation.",
             next_recommendation="rerun policy-focused benchmark fixtures",
-            commands=["python -m qa_z benchmark"],
+            commands=[BENCHMARK_COMMAND],
         )
     if category in {"docs_drift", "schema_drift"}:
         return prepared_action(
@@ -76,17 +83,54 @@ def action_for_task(
             action_type="docs_sync_plan",
             title="Synchronize README, schema docs, and examples with artifacts.",
             next_recommendation="rerun self-inspection after docs sync",
-            commands=["python -m qa_z self-inspect"],
+            commands=[SELF_INSPECT_COMMAND],
         )
     if category in {"backlog_reseeding_gap", "autonomy_selection_gap"}:
+        if recommendation == "improve_fallback_diversity":
+            repeated_family = repeated_fallback_family_from_item(task)
+            if repeated_family:
+                title = (
+                    f"Diversify repeated {repeated_family} fallback selections "
+                    f"before more {repeated_family} work."
+                )
+                next_recommendation = (
+                    f"surface and select a non-{repeated_family} fallback family "
+                    f"before another {repeated_family} loop"
+                )
+            else:
+                title = (
+                    "Diversify repeated fallback selections before more repeat work."
+                )
+                next_recommendation = (
+                    "surface and select a non-repeated fallback family before "
+                    "another repeated-family loop"
+                )
+            return prepared_action(
+                task_id=task_id,
+                action_type="loop_health_plan",
+                title=title,
+                next_recommendation=next_recommendation,
+                commands=[
+                    SELF_INSPECT_JSON_COMMAND,
+                    SELECT_NEXT_COUNT_JSON_COMMAND,
+                    AUTONOMY_ONE_LOOP_COMMAND,
+                    AUTONOMY_STATUS_JSON_COMMAND,
+                ],
+                context_paths=merge_context_paths(
+                    task_context_paths(task),
+                    recommendation_context_paths(recommendation),
+                    loop_local_self_inspection_context_paths(root, loop_id),
+                ),
+            )
         return prepared_action(
             task_id=task_id,
             action_type="loop_health_plan",
             title="Strengthen backlog reseeding and empty-loop prevention rules.",
             next_recommendation="rerun autonomy after tightening loop health rules",
             commands=[
-                "python -m qa_z self-inspect",
-                "python -m qa_z autonomy --loops 1",
+                SELF_INSPECT_COMMAND,
+                AUTONOMY_ONE_LOOP_COMMAND,
+                AUTONOMY_STATUS_JSON_COMMAND,
             ],
             context_paths=merge_context_paths(
                 task_context_paths(task),
@@ -104,7 +148,7 @@ def action_for_task(
             ),
             commands=[
                 executor_dry_run_command(session_id),
-                "python -m qa_z self-inspect",
+                SELF_INSPECT_COMMAND,
             ],
         )
     if "executor_dry_run_attention" in signals:
@@ -117,7 +161,7 @@ def action_for_task(
             ),
             commands=[
                 executor_dry_run_command(session_id),
-                "python -m qa_z self-inspect",
+                SELF_INSPECT_COMMAND,
             ],
         )
     if category in {
@@ -140,7 +184,7 @@ def action_for_task(
             action_type="workflow_gap_plan",
             title="Prepare a deterministic remediation plan for the workflow gap.",
             next_recommendation="close the structural gap and rerun self-inspection",
-            commands=["python -m qa_z self-inspect"],
+            commands=[SELF_INSPECT_COMMAND],
         )
     if category in {
         "worktree_risk",
@@ -213,5 +257,5 @@ def action_for_task(
         action_type="implementation_plan",
         title="Prepare an implementation plan for the selected backlog item.",
         next_recommendation="turn selected evidence into a scoped repair plan",
-        commands=["python -m qa_z self-inspect"],
+        commands=[SELF_INSPECT_COMMAND],
     )

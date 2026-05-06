@@ -22,6 +22,9 @@ from qa_z.self_improvement_constants import (
 )
 from qa_z.self_improvement_registry import DISCOVERY_PIPELINE_STAGES
 from qa_z.self_improvement_runtime import default_loop_id, utc_now, write_json
+from qa_z.task_selection import compact_backlog_evidence_summary
+from qa_z.task_selection import selected_task_action_hint
+from qa_z.task_selection import selected_task_validation_command
 
 __all__ = [
     "SelfInspectionArtifactPaths",
@@ -70,7 +73,7 @@ def run_self_inspection(
         "reseeded_candidate_ids": reseeded_candidate_ids,
         "live_repository": si.live_repository_summary(live_signals),
         "evidence_sources": evidence_sources(candidates),
-        "candidates": [candidate.to_dict() for candidate in candidates],
+        "candidates": [candidate_report_item(candidate) for candidate in candidates],
     }
     backlog = merge_backlog(
         existing=existing_backlog,
@@ -92,6 +95,15 @@ def run_self_inspection(
         self_inspection_path=self_inspection_path,
         backlog_path=backlog_path,
     )
+
+
+def candidate_report_item(candidate: BacklogCandidate) -> dict[str, Any]:
+    """Return a self-inspection candidate with deterministic operator hints."""
+    item = candidate.to_dict()
+    item["action_hint"] = selected_task_action_hint(item)
+    item["validation_command"] = selected_task_validation_command(item)
+    item["evidence_summary"] = compact_backlog_evidence_summary(item)
+    return item
 
 
 def _reseeded_candidate_ids(

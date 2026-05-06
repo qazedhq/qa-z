@@ -34,7 +34,7 @@ commit would be broken. The corrected order is foundation first, benchmark secon
 Before staging, run the deterministic dirty-path grouping helper:
 
 ```bash
-python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json
+python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json
 ```
 
 The helper reads `git status --short --untracked-files=all`, reports per-batch
@@ -75,6 +75,11 @@ deterministically: the current Ruff/tool-cache `pyproject.toml` delta plus
 `src/qa_z/runners/subprocess.py` rides with the shared runner contract spine,
 and `tests/test_release_script_environment.py` rides with the alpha release
 closure batch because it guards the release/preflight/cleanup script lane.
+Shared local operator command constants now ride with that same
+planning/runtime foundation batch: keep `src/qa_z/operator_commands.py` and
+`tests/test_operator_commands.py` together so strict worktree-plan and runtime
+cleanup command surfaces stay synchronized across autonomy and task-selection
+outputs.
 If a future `pyproject.toml` change is purely release-version metadata, still
 patch-add only the relevant hunks with the release-closure slice instead of
 blindly staging the whole file.
@@ -93,17 +98,40 @@ operator only needs compact evidence. That payload omits full per-file `batches`
 details while keeping `summary`, `attention_reasons`, `changed_batches`,
 generated-path previews, `cross_cutting_paths`, `shared_patch_add_paths`,
 `cross_cutting_groups`, and repository context.
+Each `changed_batches[]` item keeps the batch `message`, validation commands,
+and compact staging guidance. When a batch has at most 20 included paths, the
+summary preserves a complete `git_add_command` plus `git_add_command_text`;
+larger batches keep only path previews plus `include_paths_truncated_count` so
+operators do not mistake a partial preview for a complete staging command.
+When a batch-filtered compact payload carries patch-add candidates, compact
+staging guidance also includes `candidate_patch_add_count`,
+`candidate_patch_add_paths`, `git_add_patch_command`, and
+`git_add_patch_command_text` for complete small candidate sets.
+If a filtered batch has no changed paths, the helper returns
+`selected_batch_empty` and a `next_actions` hint to choose a changed batch or
+rerun without `--batch`, rather than leaving an `attention_required` status with
+no repair reason.
+Batch-filtered top-level `attention_reasons` preserve every global blocker,
+including unassigned or multi-batch paths; `selected_batch_summary.status` is
+the field to read when the operator only needs the selected batch readiness.
 Group payloads in summary-only output keep path previews and use
 `paths_truncated_count` for oversized review groups instead of carrying full
-patch-command arrays.
-Current compact strict snapshot on `2026-04-24` is still
+path lists. They still preserve each group's `patch_command` argv array, so a
+compact artifact remains directly actionable for review-surface patch-add
+handoff without requiring the human renderer. `patch_command_text` carries the
+same command as a copy/paste-friendly shell string with the helper's normal
+path quoting, including whitespace and common shell separator characters.
+Current compact strict snapshot on `2026-05-03` is still
 `attention_required`, but now only because cross-cutting patch-add ownership is
-still required: `generated_artifact_count=0`, `generated_local_only_count=0`,
-`generated_local_by_default_count=0`, `cross_cutting_count=12`,
-`shared_patch_add_count=16`, `unassigned_source_path_count=0`, and
-`multi_batch_path_count=0`. The companion include-ignored policy snapshot keeps
-ignored generated output visible with `generated_artifact_count=17`,
-`generated_local_only_count=10`, and `generated_local_by_default_count=7`.
+still required: `changed_path_count=53`, `generated_artifact_count=0`,
+`generated_local_only_count=0`, `generated_local_by_default_count=0`,
+`cross_cutting_count=3`, `cross_cutting_group_count=3`,
+`shared_patch_add_count=5`, `unassigned_source_path_count=0`, and
+`multi_batch_path_count=0`. The compact payload now includes complete
+cross-cutting `patch_command_text` strings plus complete small-batch
+`git_add_command_text` strings, so the saved evidence can drive review-surface
+patch-add handoff directly while the strict blocker remains intentionally
+non-zero until a human chooses the relevant hunks.
 `python scripts/runtime_artifact_cleanup.py` now mirrors that same split by
 deriving cleanup candidates from the strict helper's generated-policy buckets:
 apply mode clears all discovered local-only runtime roots, while benchmark roots
@@ -418,7 +446,7 @@ Validation:
 python -m ruff format --check .
 python -m ruff check .
 python -m mypy src tests
-python -m pytest tests/test_self_improvement.py tests/test_cli.py -q
+python -m pytest tests/test_self_improvement.py tests/test_self_improvement_inspection.py tests/test_self_improvement_selection_output.py tests/test_repair_signal_inputs.py tests/test_artifact_consistency_discovery.py tests/test_cli.py -q
 ```
 
 ## Commit 4: Autonomy Workflow
@@ -444,7 +472,7 @@ Validation:
 python -m ruff format --check .
 python -m ruff check .
 python -m mypy src tests
-python -m pytest tests/test_autonomy.py tests/test_cli.py -q
+python -m pytest tests/test_autonomy.py tests/test_autonomy_action_cleanup.py tests/test_autonomy_action_context.py tests/test_cli.py -q
 ```
 
 ## Commit 5: Repair Session And Publishing
@@ -594,6 +622,7 @@ Targeted validation:
 python -m pytest tests/test_current_truth.py tests/test_github_workflow.py -q
 python -m qa_z fast --selection smart --json
 python -m qa_z deep --selection smart --json
+python scripts/alpha_release_gate.py --quick --allow-dirty --json
 ```
 
 Rollback boundary:

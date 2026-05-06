@@ -6,7 +6,9 @@ from typing import Any
 
 from qa_z.config import get_nested
 from qa_z.runners.models import CheckSpec
+from qa_z.runners.python import coerce_check_kind
 from qa_z.runners.python import default_spec_for_name as default_python_spec_for_name
+from qa_z.runners.python import coerce_no_tests_policy
 from qa_z.runners.python import coerce_timeout
 from qa_z.runners.typescript import (
     default_spec_for_name as default_typescript_spec_for_name,
@@ -57,9 +59,13 @@ def resolve_check_item(item: Any) -> CheckSpec | None:
     return CheckSpec(
         id=check_id,
         command=list(command),
-        kind=str(item.get("kind", default.kind if default else default_kind(check_id))),
-        enabled=bool(item.get("enabled", True)),
-        no_tests=str(item.get("no_tests", default.no_tests if default else "warn")),
+        kind=coerce_check_kind(
+            item.get("kind"), default.kind if default else default_kind(check_id)
+        ),
+        enabled=item.get("enabled", True) is not False,
+        no_tests=coerce_no_tests_policy(
+            item.get("no_tests", default.no_tests if default else "warn")
+        ),
         timeout_seconds=(
             coerce_timeout(item.get("timeout_seconds"))
             if "timeout_seconds" in item

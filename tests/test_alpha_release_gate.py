@@ -11,7 +11,7 @@ from tests.alpha_release_gate_test_support import (
 )
 
 
-def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
+def test_alpha_release_gate_runs_quality_checks_in_validation_order(tmp_path):
     module = load_gate_module()
     runner = RecordingRunner()
 
@@ -21,8 +21,12 @@ def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
     assert result.summary == "alpha release gate passed"
     assert str(result.payload["generated_at"]).endswith("Z")
     assert labels_from_result(result) == [
-        "python scripts/alpha_release_preflight.py --skip-remote --json",
+        (
+            "python scripts/alpha_release_preflight.py --skip-remote "
+            "--skip-release-tag-check --json"
+        ),
         "python scripts/worktree_commit_plan.py --include-ignored --json",
+        "python scripts/check_text_file_hygiene.py",
         "python -m ruff format --check .",
         "python -m ruff check .",
         "python -m mypy src tests",
@@ -34,6 +38,9 @@ def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
         "python -m qa_z deep --help",
         "python -m qa_z review --help",
         "python -m qa_z repair-prompt --help",
+        "python -m qa_z guard --help",
+        "python -m qa_z skill --help",
+        "python -m qa_z demo --help",
         "python -m qa_z repair-session --help",
         "python -m qa_z github-summary --help",
         "python -m qa_z verify --help",
@@ -49,7 +56,6 @@ def test_alpha_release_gate_runs_release_checks_in_publish_order(tmp_path):
         "python -m qa_z benchmark --json",
         "python -m build --sdist --wheel",
         "python scripts/alpha_release_artifact_smoke.py --json",
-        "python scripts/alpha_release_bundle_manifest.py --json",
     ]
     assert [tuple(command) for command in result.commands] == runner.commands
 
@@ -92,9 +98,10 @@ def test_alpha_release_gate_records_failures_but_continues_running(tmp_path):
 
 def test_alpha_release_gate_classifies_environment_failures(tmp_path):
     module = load_gate_module()
-    commands_by_name = {
-        command.name: command.command for command in module.default_gate_commands()
-    }
+    release_commands = module.default_gate_commands(
+        mode="release", target_tag="v0.10.0"
+    )
+    commands_by_name = {command.name: command.command for command in release_commands}
     fast_failure_payload = {
         "status": "failed",
         "checks": [
@@ -197,7 +204,9 @@ def test_alpha_release_gate_classifies_environment_failures(tmp_path):
         }
     )
 
-    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
 
     assert result.payload["environment_failure_count"] == 7
     assert result.payload["product_failure_count"] == 0
@@ -235,9 +244,10 @@ def test_alpha_release_gate_classifies_environment_failures(tmp_path):
 
 def test_alpha_release_gate_adds_known_failure_next_actions(tmp_path):
     module = load_gate_module()
-    commands_by_name = {
-        command.name: command.command for command in module.default_gate_commands()
-    }
+    release_commands = module.default_gate_commands(
+        mode="release", target_tag="v0.10.0"
+    )
+    commands_by_name = {command.name: command.command for command in release_commands}
     deep_failure_payload = {
         "status": "failed",
         "checks": [
@@ -296,7 +306,9 @@ def test_alpha_release_gate_adds_known_failure_next_actions(tmp_path):
         }
     )
 
-    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
 
     assert result.payload["next_actions"] == [
         (
@@ -386,7 +398,8 @@ def test_alpha_release_gate_can_allow_dirty_worktree_for_development(tmp_path):
 
     assert result.exit_code == 0
     assert labels_from_result(result)[0] == (
-        "python scripts/alpha_release_preflight.py --skip-remote --allow-dirty --json"
+        "python scripts/alpha_release_preflight.py --skip-remote --allow-dirty "
+        "--skip-release-tag-check --json"
     )
 
 
@@ -407,7 +420,7 @@ def test_alpha_release_gate_carries_expected_origin_when_origin_is_configured(
     assert labels_from_result(result)[0] == (
         "python scripts/alpha_release_preflight.py --skip-remote "
         "--expected-origin-url https://github.com/qazedhq/qa-z.git "
-        "--allow-dirty --json"
+        "--allow-dirty --skip-release-tag-check --json"
     )
 
 

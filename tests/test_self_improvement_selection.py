@@ -91,6 +91,19 @@ def test_self_improvement_selection_module_writes_selected_task_artifacts(
     )
 
     assert selected["selected_tasks"][0]["id"] == "worktree_risk-dirty-worktree"
+    assert selected["selected_tasks"][0]["action_hint"] == (
+        "inspect the dirty worktree, run "
+        "`python scripts/runtime_artifact_cleanup.py --json` plus "
+        "`python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting --output "
+        ".qa-z/tmp/worktree-commit-plan.json`, then rerun self-inspection"
+    )
+    assert selected["selected_tasks"][0]["validation_command"] == (
+        "python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting --output "
+        ".qa-z/tmp/worktree-commit-plan.json"
+    )
+    assert selected["selected_tasks"][0]["evidence_summary"] == "git_status: dirty"
     assert selected["source_self_inspection"] == ".qa-z/loops/latest/self_inspect.json"
     assert selected["source_self_inspection_loop_id"] == "inspect-loop"
     assert selected["source_self_inspection_generated_at"] == "2026-04-22T00:00:00Z"

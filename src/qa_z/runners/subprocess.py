@@ -27,6 +27,15 @@ def tail_text(value: str | None, limit: int = TAIL_LIMIT) -> str:
     return value[-limit:]
 
 
+def subprocess_output_text(value: str | bytes | None) -> str:
+    """Return subprocess output as UTF-8 text while preserving failure evidence."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return ""
+
+
 def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
     """Run a configured check and capture a normalized result."""
     started = time.perf_counter()
@@ -82,8 +91,8 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             error_type="missing_tool",
         )
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+        stdout = subprocess_output_text(exc.stdout)
+        stderr = subprocess_output_text(exc.stderr)
         return CheckResult(
             id=spec.id,
             tool=spec.tool,

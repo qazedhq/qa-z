@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,62 @@ def integration_gap_evidence(
             current_head=current_head,
         ),
     )
+
+
+def worktree_commit_plan_json_evidence(
+    root: Path, *, current_head: str | None = None
+) -> list[dict[str, Any]]:
+    """Return compact evidence from the latest strict commit-plan JSON artifact."""
+    path = root / ".qa-z" / "tmp" / "worktree-commit-plan.json"
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    repository = payload.get("repository")
+    if current_head and isinstance(repository, dict):
+        artifact_head = str(repository.get("head") or "").strip()
+        if artifact_head and artifact_head != current_head:
+            return []
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    attention_reasons = [
+        str(reason)
+        for reason in payload.get("attention_reasons", [])
+        if isinstance(reason, str) and reason.strip()
+    ]
+    attention = ", ".join(attention_reasons) if attention_reasons else "none"
+    return [
+        {
+            "source": "worktree_commit_plan_json",
+            "path": format_path(path, root),
+            "summary": (
+                f"strict commit-plan status={payload.get('status', 'unknown')}; "
+                f"attention={attention}; "
+                f"unassigned={int_value(summary.get('unassigned_source_path_count'))}; "
+                f"cross_cutting={int_value(summary.get('cross_cutting_count'))}; "
+                f"generated={int_value(summary.get('generated_artifact_count'))}"
+            ),
+        }
+    ]
+
+
+def int_value(value: object) -> int:
+    """Return a safe integer for compact report evidence fields."""
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
 
 
 def deferred_cleanup_evidence(

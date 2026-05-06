@@ -8,11 +8,13 @@ from typing import Callable
 
 from qa_z.commands.bootstrap import register_init_command, register_plan_command
 from qa_z.commands.config_doctor import register_doctor_command
+from qa_z.commands.demo import register_demo_command
 from qa_z.commands.execution import (
     register_deep_command,
     register_fast_command,
     register_repair_prompt_command,
 )
+from qa_z.commands.guard import register_guard_command
 from qa_z.commands.planning import (
     register_backlog_command,
     register_self_inspect_command,
@@ -32,6 +34,7 @@ from qa_z.commands.sessioning import (
     register_repair_session_command,
     register_verify_command,
 )
+from qa_z.commands.skill_install import register_skill_command
 
 
 @dataclass(frozen=True)
@@ -52,6 +55,9 @@ COMMAND_REGISTRY_GROUPS = {
             name="github-summary",
             register=register_github_summary_command,
         ),
+        CommandRegistrar(name="guard", register=register_guard_command),
+        CommandRegistrar(name="skill", register=register_skill_command),
+        CommandRegistrar(name="demo", register=register_demo_command),
     ),
     "execution": (
         CommandRegistrar(name="fast", register=register_fast_command),

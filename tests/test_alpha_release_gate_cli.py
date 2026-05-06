@@ -111,3 +111,32 @@ def test_alpha_release_gate_cli_prints_next_actions(monkeypatch, capsys):
         "- python scripts/alpha_release_preflight.py --repository-url "
         "https://github.com/qazedhq/qa-z.git --json"
     ) in captured.out
+
+
+def test_alpha_release_gate_cli_forwards_quick_mode(monkeypatch, capsys):
+    module = load_gate_module()
+    seen: dict[str, object] = {}
+
+    def fake_run_alpha_release_gate(_repo_root, **kwargs):
+        seen.update(kwargs)
+        return module.AlphaReleaseGateResult(
+            summary="alpha release gate passed",
+            exit_code=0,
+            commands=[],
+            payload={
+                "summary": "alpha release gate passed",
+                "exit_code": 0,
+                "quick": kwargs["quick"],
+                "checks": [],
+            },
+        )
+
+    monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
+
+    exit_code = module.main(["--quick", "--json"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert seen["quick"] is True
+    assert payload["quick"] is True

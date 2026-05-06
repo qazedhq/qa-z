@@ -27,16 +27,28 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   qa-z:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install -e .[dev]
-      - run: python -m qa_z fast
+      - name: Install QA-Z
+        run: python -m pip install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+      - name: Validate QA-Z config
+        run: python -m qa_z doctor --json
+      - name: Run QA-Z fast gate
+        run: python -m qa_z fast --json
 """
 
 

@@ -107,6 +107,123 @@ def test_ci_jobs_use_explicit_least_privilege_permissions() -> None:
     }
 
 
+def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
+    """The reusable action should publish evidence before applying the verdict."""
+    action = yaml.safe_load(
+        (ROOT / ".github" / "actions" / "qa-z" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps: list[dict[str, Any]] = action["runs"]["steps"]
+    step_names = [step.get("name", "") for step in steps]
+    expected_order = [
+        "Validate QA-Z config",
+        "Run fast checks",
+        "Run deep checks",
+        "Generate review and repair artifacts",
+        "Publish QA-Z job summary",
+        "Upload QA-Z SARIF to code scanning",
+        "Upload QA-Z run artifacts",
+        "Fail if QA-Z fast or deep failed",
+    ]
+
+    positions = [step_names.index(name) for name in expected_order]
+    assert positions == sorted(positions)
+
+    for name in expected_order[2:]:
+        step = steps[step_names.index(name)]
+        assert step.get("if") == "${{ always() }}"
+
+    combined_runs = "\n".join(step.get("run", "") for step in steps)
+    assert "qa-z doctor --json" in combined_runs
+    assert "fast_exit=${PIPESTATUS[0]}" in combined_runs
+    assert "deep_exit=${PIPESTATUS[0]}" in combined_runs
+    assert "${{ inputs.run-dir }}/fast-exit-code" in combined_runs
+    assert "${{ inputs.run-dir }}/deep-exit-code" in combined_runs
+
+    sarif_step = steps[step_names.index("Upload QA-Z SARIF to code scanning")]
+    assert sarif_step.get("uses") == "github/codeql-action/upload-sarif@v4"
+    assert sarif_step.get("continue-on-error") is True
+    assert sarif_step.get("with", {}).get("sarif_file") == (
+        "${{ inputs.run-dir }}/deep/results.sarif"
+    )
+
+    artifact_step = steps[step_names.index("Upload QA-Z run artifacts")]
+    assert artifact_step.get("uses") == "actions/upload-artifact@v4"
+    assert artifact_step.get("with", {}).get("retention-days") == 7
+    assert artifact_step.get("with", {}).get("if-no-files-found") == "warn"
+
+    verdict_step = steps[step_names.index("Fail if QA-Z fast or deep failed")]
+    assert "QA-Z checks failed: fast=$fast_exit deep=$deep_exit" in verdict_step["run"]
+    assert "exit 1" in verdict_step["run"]
+
+
+def test_github_action_docs_explain_composite_action_operational_contract() -> None:
+    """Docs should describe the action evidence and permission behavior."""
+    docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+
+    assert (
+        "The composite action validates `qa-z doctor --json`, then preserves review, "
+        "repair, summary, optional SARIF, and run artifacts before the final fast/deep "
+        "verdict step."
+    ) in docs
+    assert (
+        "SARIF upload is disabled by default because code scanning permissions can be "
+        "repository-specific."
+    ) in docs
+    assert 'upload-sarif: "true"' in docs
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        ".github/workflows/ci.yml",
+        ".github/workflows/codex-review.yml",
+        ".github/workflows/scorecard.yml",
+        "templates/.github/workflows/vibeqa.yml",
+        "templates/.github/workflows/qa-z-pr-comment.yml",
+    ],
+)
+def test_github_workflow_jobs_have_explicit_timeouts(workflow_path: str) -> None:
+    """CI jobs should fail boundedly instead of waiting on the platform default."""
+    workflow = yaml.safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+
+    assert all(
+        isinstance(job.get("timeout-minutes"), int)
+        and 1 <= job["timeout-minutes"] <= 60
+        for job in workflow["jobs"].values()
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        ".github/workflows/ci.yml",
+        ".github/workflows/codex-review.yml",
+        ".github/workflows/scorecard.yml",
+        "templates/.github/workflows/vibeqa.yml",
+        "templates/.github/workflows/qa-z-pr-comment.yml",
+    ],
+)
+def test_github_workflow_checkout_steps_do_not_persist_credentials(
+    workflow_path: str,
+) -> None:
+    """Checkout tokens should not remain in git config after source checkout."""
+    workflow = yaml.safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    checkout_steps = [
+        step
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if step.get("uses") == "actions/checkout@v4"
+    ]
+
+    assert checkout_steps
+    assert all(
+        step.get("with", {}).get("persist-credentials") is False
+        for step in checkout_steps
+    )
+
+
 @pytest.mark.parametrize(
     ("workflow_path", "runner_command", "run_dir"),
     [
@@ -136,6 +253,7 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     assert "does not perform autonomous repair" in workflow_text
 
     expected_commands = [
+        f"{runner_command} doctor --json",
         f"{runner_command} fast",
         f"{runner_command} deep",
         f"{runner_command} review",
@@ -148,6 +266,7 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     assert f"{run_dir}/fast-exit-code" in combined_runs
     assert f"{run_dir}/deep-exit-code" in combined_runs
     assert f"{run_dir}/deep/results.sarif" in workflow_text
+    assert f"{runner_command} doctor --json" in combined_runs
     assert f"{runner_command} deep --selection smart --from-run {run_dir} --json" in (
         combined_runs
     )

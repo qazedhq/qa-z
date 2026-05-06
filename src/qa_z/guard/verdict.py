@@ -1,0 +1,75 @@
+"""Guard verdict model and persistence helpers."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+
+@dataclass(frozen=True)
+class GuardVerdict:
+    """Machine-readable result of `qa-z guard`."""
+
+    status: str
+    reasons: list[str]
+    fast: dict[str, Any]
+    deep: dict[str, Any]
+    risk: dict[str, Any]
+    repair: dict[str, Any]
+    artifacts: dict[str, str]
+    adapter: str = "codex"
+    title: str | None = None
+    schema_version: int = 1
+    kind: str = "qa_z.guard_verdict"
+    extra: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {
+            "kind": self.kind,
+            "schema_version": self.schema_version,
+            "status": self.status,
+            "title": self.title,
+            "adapter": self.adapter,
+            "reasons": list(self.reasons),
+            "fast": dict(self.fast),
+            "deep": dict(self.deep),
+            "risk": dict(self.risk),
+            "repair": dict(self.repair),
+            "artifacts": dict(self.artifacts),
+        }
+        data.update(self.extra)
+        return data
+
+
+def write_verdict_artifacts(
+    verdict: GuardVerdict, output_dir: Path
+) -> tuple[Path, Path]:
+    """Write JSON and Markdown verdict artifacts."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = output_dir / "verdict.json"
+    markdown_path = output_dir / "verdict.md"
+    json_path.write_text(
+        json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    markdown_path.write_text(render_verdict_markdown(verdict), encoding="utf-8")
+    return json_path, markdown_path
+
+
+def render_verdict_markdown(verdict: GuardVerdict) -> str:
+    """Render a compact Markdown verdict."""
+    lines = [
+        "# QA-Z Guard Verdict",
+        "",
+        f"- Status: `{verdict.status}`",
+        f"- Fast: `{verdict.fast.get('status')}`",
+        f"- Deep: `{verdict.deep.get('status', 'not_run')}`",
+        f"- Risk: {', '.join(verdict.risk.get('categories', [])) or 'none'}",
+        "",
+        "## Reasons",
+        "",
+    ]
+    lines.extend(f"- {reason}" for reason in verdict.reasons)
+    return "\n".join(lines).rstrip() + "\n"

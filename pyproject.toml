@@ -37,6 +37,13 @@ classifiers = [
 ]
 dependencies = ["PyYAML>=6.0"]
 
+[project.urls]
+Homepage = "https://github.com/qazedhq/qa-z"
+Repository = "https://github.com/qazedhq/qa-z"
+Issues = "https://github.com/qazedhq/qa-z/issues"
+Releases = "https://github.com/qazedhq/qa-z/releases"
+Documentation = "https://github.com/qazedhq/qa-z/tree/main/docs"
+
 [project.optional-dependencies]
 dev = [
   "build>=1.2",
@@ -56,10 +63,12 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-qa_z = ["templates/*.md"]
-
-[tool.ruff]
-cache-dir = "~/AppData/Local/Temp/qa-z-ruff-cache"
+qa_z = [
+  "templates/*.md",
+  "templates/*.mdc",
+  "templates/skills/qa-z-merge-safety/*.md",
+  "templates/skills/qa-z-merge-safety/examples/*.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

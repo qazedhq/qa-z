@@ -41,7 +41,13 @@ def compact_action_basis(item: dict[str, Any], primary_summary: str) -> str:
     area_basis = compact_area_action_basis(item, primary_summary)
     if area_basis:
         return area_basis
-    return compact_generated_action_basis(item, primary_summary)
+    generated_basis = compact_generated_action_basis(item, primary_summary)
+    if generated_basis:
+        return generated_basis
+    commit_plan_basis = compact_commit_plan_action_basis(item, primary_summary)
+    if commit_plan_basis:
+        return commit_plan_basis
+    return compact_verification_action_basis(item, primary_summary)
 
 
 def compact_area_action_basis(item: dict[str, Any], primary_summary: str) -> str:
@@ -87,6 +93,55 @@ def compact_generated_action_basis(item: dict[str, Any], primary_summary: str) -
             return f"{source}: {summary}"
         if path:
             return f"{source}: {path}"
+    return ""
+
+
+def compact_commit_plan_action_basis(item: dict[str, Any], primary_summary: str) -> str:
+    """Return strict commit-plan evidence behind dirty-worktree reduction work."""
+    if str(item.get("recommendation") or "").strip() != "reduce_integration_risk":
+        return ""
+    if "worktree_commit_plan_json:" in primary_summary:
+        return ""
+    evidence = item.get("evidence")
+    if not isinstance(evidence, list):
+        return ""
+    for entry in evidence:
+        if not isinstance(entry, dict):
+            continue
+        source = str(entry.get("source") or "artifact").strip() or "artifact"
+        if source != "worktree_commit_plan_json":
+            continue
+        summary = str(entry.get("summary") or "").strip()
+        return f"{source}: {summary}" if summary else ""
+    return ""
+
+
+def compact_verification_action_basis(
+    item: dict[str, Any], primary_summary: str
+) -> str:
+    """Return verification compare context that explains stabilization work."""
+    if (
+        str(item.get("recommendation") or "").strip()
+        != "stabilize_verification_surface"
+    ):
+        return ""
+    if "not comparable:" in primary_summary:
+        return ""
+    reason = verification_not_comparable_reason(item)
+    return f"not comparable: {reason}" if reason else ""
+
+
+def verification_not_comparable_reason(item: dict[str, Any]) -> str:
+    """Return the first non-comparable reason carried by verification evidence."""
+    evidence = item.get("evidence")
+    if not isinstance(evidence, list):
+        return ""
+    for entry in evidence:
+        if not isinstance(entry, dict):
+            continue
+        reason = " ".join(str(entry.get("not_comparable_reason") or "").split())
+        if reason:
+            return reason
     return ""
 
 

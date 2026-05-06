@@ -80,9 +80,17 @@ def test_action_mapping_loop_health_plan_includes_task_context_paths(
 
     assert action["type"] == "loop_health_plan"
     assert action["commands"] == [
-        "python -m qa_z self-inspect",
-        "python -m qa_z autonomy --loops 1",
+        "python -m qa_z self-inspect --json",
+        "python -m qa_z select-next --count 3 --json",
+        "python -m qa_z autonomy --loops 1 --json",
+        "python -m qa_z autonomy status --json",
     ]
+    assert action["title"] == (
+        "Diversify repeated cleanup fallback selections before more cleanup work."
+    )
+    assert action["next_recommendation"] == (
+        "surface and select a non-cleanup fallback family before another cleanup loop"
+    )
     assert action["context_paths"] == [
         ".qa-z/loops/history.jsonl",
         ".qa-z/loops/loop-one/self_inspect.json",

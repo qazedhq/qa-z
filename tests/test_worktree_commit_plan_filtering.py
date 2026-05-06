@@ -58,6 +58,39 @@ def test_commit_plan_batch_filter_keeps_global_attention_separate() -> None:
     assert filtered["selected_batch_summary"]["attention_reason_count"] == 1
 
 
+def test_commit_plan_batch_filter_preserves_unassigned_global_attention() -> None:
+    module = load_plan_module()
+    result = module.analyze_status_lines(
+        [
+            " M src/qa_z/benchmark.py",
+            " M src/qa_z/unowned_new_surface.py",
+        ]
+    )
+
+    filtered = module.filter_payload_for_batch(result, "benchmark_coverage")
+
+    assert result["attention_reasons"] == ["unassigned_source_paths"]
+    assert filtered["global_attention_reasons"] == ["unassigned_source_paths"]
+    assert filtered["status"] == "attention_required"
+    assert filtered["attention_reasons"] == ["unassigned_source_paths"]
+    assert filtered["selected_batch_summary"]["status"] == "ready"
+
+
+def test_commit_plan_batch_filter_reports_empty_selected_batch_reason() -> None:
+    module = load_plan_module()
+    result = module.analyze_status_lines([" M src/qa_z/benchmark.py"])
+
+    filtered = module.filter_payload_for_batch(result, "executor_return_path")
+
+    assert filtered["status"] == "attention_required"
+    assert filtered["attention_reasons"] == ["selected_batch_empty"]
+    assert filtered["next_actions"] == [
+        "Select a batch with changed paths or rerun without --batch to inspect changed_batches."
+    ]
+    assert filtered["selected_batch_summary"]["status"] == "attention_required"
+    assert filtered["selected_batch_summary"]["attention_reason_count"] == 1
+
+
 def test_commit_plan_cli_batch_preserves_strict_generated_exit(
     monkeypatch, capsys
 ) -> None:
@@ -97,6 +130,8 @@ def test_commit_plan_rejects_unknown_batch_filter() -> None:
         module.filter_payload_for_batch(result, "missing_batch")
     except ValueError as exc:
         assert "unknown batch missing_batch" in str(exc)
+        assert "known batches:" in str(exc)
+        assert "benchmark_coverage" in str(exc)
     else:
         raise AssertionError("expected unknown batch filter to fail")
 
@@ -269,6 +304,40 @@ def test_commit_plan_routes_modular_command_wrappers_to_feature_batches() -> Non
         "src/qa_z/commands/runtime_executor_result_stdout.py",
     ]
     assert result["cross_cutting_paths"] == []
+    assert result["unassigned_source_paths"] == []
+
+
+def test_commit_plan_routes_guard_skill_demo_and_hygiene_surfaces() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            "?? scripts/check_text_file_hygiene.py",
+            "?? src/qa_z/commands/guard.py",
+            "?? src/qa_z/commands/skill_install.py",
+            "?? src/qa_z/commands/demo.py",
+            "?? src/qa_z/guard/workflow.py",
+            "?? tests/test_text_file_hygiene.py",
+            "?? tests/test_guard_cli.py",
+            "?? tests/test_skill_install_cli.py",
+            "?? tests/test_demo_guard_action_package.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["alpha_release_closure"]["changed_paths"] == [
+        "scripts/check_text_file_hygiene.py",
+        "tests/test_text_file_hygiene.py",
+    ]
+    assert batches["planning_runtime_foundation"]["changed_paths"] == [
+        "src/qa_z/commands/guard.py",
+        "src/qa_z/commands/skill_install.py",
+        "src/qa_z/commands/demo.py",
+        "src/qa_z/guard/workflow.py",
+        "tests/test_guard_cli.py",
+        "tests/test_skill_install_cli.py",
+        "tests/test_demo_guard_action_package.py",
+    ]
     assert result["unassigned_source_paths"] == []
 
 

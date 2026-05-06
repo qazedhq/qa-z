@@ -48,6 +48,8 @@ qa-z deep --from-run .qa-z/runs/candidate
 qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
 
+Expected result: `qa-z verify` reports verdict `improved` with resolved blockers and no regressions.
+
 This is the core QA-Z story:
 
 ```text

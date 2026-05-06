@@ -83,7 +83,12 @@ qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candid
 .qa-z/runs/baseline/repair/
 .qa-z/runs/baseline/deep/results.sarif
 .qa-z/runs/candidate/fast/summary.json
+.qa-z/runs/candidate/verify/summary.json
+.qa-z/runs/candidate/verify/compare.json
+.qa-z/runs/candidate/verify/report.md
 ```
+
+Expected verification result: verdict `improved` with resolved blockers and no regressions.
 
 Use this as the short recorded terminal demo. Keep the message simple:
 

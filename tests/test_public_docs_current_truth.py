@@ -16,6 +16,10 @@ def read_docs_index() -> str:
     return (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
 
 
+def read_quickstart() -> str:
+    return (ROOT / "docs" / "quickstart.md").read_text(encoding="utf-8")
+
+
 def read_benchmarking_docs() -> str:
     return (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
 
@@ -45,6 +49,8 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
 
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
+    assert "verdict `improved`" in readme
+    assert "no regressions" in readme
     for command in (
         "`qa-z select-next`",
         "`qa-z backlog`",
@@ -120,6 +126,14 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Benchmarking](benchmarking.md)",
     ):
         assert link in docs_index
+
+
+def test_quickstart_states_repair_verification_success_signal() -> None:
+    quickstart = read_quickstart()
+
+    assert "qa-z verify --baseline-run .qa-z/runs/baseline" in quickstart
+    assert "verdict `improved`" in quickstart
+    assert "no regressions" in quickstart
 
 
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:

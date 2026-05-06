@@ -18,8 +18,11 @@ from qa_z.self_improvement_constants import SELF_IMPROVEMENT_SCHEMA_VERSION
 from qa_z.self_improvement_runtime import default_loop_id, utc_now, write_json
 from qa_z.task_selection import (
     apply_selection_penalty,
+    compact_backlog_evidence_summary,
     render_loop_plan,
     select_items_with_batch_diversity,
+    selected_task_action_hint,
+    selected_task_validation_command,
 )
 
 __all__ = [
@@ -70,6 +73,9 @@ def select_next_tasks(
         scored_items=scored_items,
         count=selected_count,
     )
+    selected_items = [
+        selected_task_with_operator_hints(item) for item in selected_items
+    ]
     selection_context = latest_self_inspection_selection_context(root)
 
     latest_dir = root / ".qa-z" / "loops" / "latest"
@@ -109,3 +115,12 @@ def select_next_tasks(
         loop_plan_path=loop_plan_path,
         history_path=history_path,
     )
+
+
+def selected_task_with_operator_hints(item: dict[str, object]) -> dict[str, object]:
+    """Return a selected task copy with deterministic operator hints attached."""
+    enriched = dict(item)
+    enriched["action_hint"] = selected_task_action_hint(enriched)
+    enriched["validation_command"] = selected_task_validation_command(enriched)
+    enriched["evidence_summary"] = compact_backlog_evidence_summary(enriched)
+    return enriched

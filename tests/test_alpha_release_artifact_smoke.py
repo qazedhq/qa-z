@@ -36,6 +36,8 @@ def test_artifact_smoke_installs_wheel_without_dependency_resolution(tmp_path):
         and "importlib.metadata" in command[2]
         and "qa_z.__version__" in command[2]
         and "qa_z.cli:main" in command[2]
+        and "qa_z.templates" in command[2]
+        and "qa-z-merge-safety" in command[2]
         for command in runner.commands
     )
 
@@ -74,6 +76,9 @@ def test_artifact_smoke_with_deps_runs_onboarding_commands(tmp_path):
     assert any(" qa_z doctor " in f" {command} " for command in commands)
     assert any(" qa_z plan " in f" {command} " for command in commands)
     assert any(" qa_z review " in f" {command} " for command in commands)
+    assert any(" qa_z guard --help" in f" {command}" for command in commands)
+    assert any(" qa_z skill install --help" in f" {command}" for command in commands)
+    assert any(" qa_z demo --help" in f" {command}" for command in commands)
 
 
 def test_artifact_smoke_cli_can_emit_json(monkeypatch, capsys):

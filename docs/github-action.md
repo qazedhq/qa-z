@@ -1,46 +1,49 @@
 # GitHub Action
 
-QA-Z ships a pull request gate template and a repository-local composite action.
-
-## Workflow Template
-
-Copy [../templates/.github/workflows/vibeqa.yml](../templates/.github/workflows/vibeqa.yml) into your repository as `.github/workflows/qa-z.yml`.
-
-The workflow:
-
-- installs QA-Z and Semgrep;
-- runs `qa-z fast`;
-- runs `qa-z deep`;
-- renders `qa-z review`, `qa-z repair-prompt`, and `qa-z github-summary`;
-- uploads `.qa-z/runs/pr` as an artifact;
-- uploads SARIF when `deep/results.sarif` exists;
-- fails only after artifacts are preserved.
-
-## Composite Action
-
-The local composite action can be used from this repository:
+Use the composite guard action for pull-request evidence.
 
 ```yaml
 name: QA-Z
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   qa-z:
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
-      security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
-      - uses: qazedhq/qa-z/.github/actions/qa-z@v0.9.8-alpha
+        with:
+          persist-credentials: false
+      - uses: qazedhq/qa-z/.github/actions/guard@main
+        with:
+          profile: python
+          deep: auto
+          adapter: codex
 ```
 
-The standalone `qazedhq/qa-z-action@v0` repository remains launch roadmap scope. Until that exists, the workflow template is the most stable copy/paste path.
+The action installs QA-Z from GitHub during alpha, runs `qa-z doctor`, then runs `qa-z guard --deep <input> --adapter <input> --github-summary`.
 
-## Non-Goals
+The composite action validates `qa-z doctor --json`, then preserves review, repair, summary, optional SARIF, and run artifacts before the final fast/deep verdict step.
 
-The shipped CI path does not call live agents, ingest executor results, perform autonomous repair, create branches, push commits, or post bot comments.
+SARIF upload is disabled by default because code scanning permissions can be repository-specific.
+
+To upload SARIF, add `security-events: write` and set `upload-sarif: "true"`:
+
+```yaml
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+steps:
+  - uses: actions/checkout@v4
+  - uses: qazedhq/qa-z/.github/actions/guard@main
+    with:
+      upload-sarif: "true"
+```
+
+The action does not comment on pull requests, commit, push, or require write permissions by default.

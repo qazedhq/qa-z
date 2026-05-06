@@ -90,7 +90,7 @@ def test_action_mapping_specializes_cleanup_packets_by_recommendation(
     assert cleanup_packet["commands"] == [
         "git status --short",
         "python scripts/runtime_artifact_cleanup.py --json",
-        "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
+        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
         "python -m qa_z backlog --json",
         "python -m qa_z self-inspect --json",
     ]

@@ -37,7 +37,7 @@ from qa_z.runners.models import (
     RunSummary,
     SemgrepCheckPolicy,
 )
-from qa_z.runners.python import coerce_timeout
+from qa_z.runners.python import coerce_check_kind, coerce_timeout
 from qa_z.runners.selection_deep import build_deep_selection
 from qa_z.runners.semgrep import (
     SEMGREP_CHECK_ID,
@@ -306,10 +306,10 @@ def resolve_deep_check_item(
     return CheckSpec(
         id=resolved_check_id,
         command=resolved_command,
-        kind=str(
-            item.get("kind", default.kind if default else default_deep_kind(check_id))
+        kind=coerce_check_kind(
+            item.get("kind"), default.kind if default else default_deep_kind(check_id)
         ),
-        enabled=bool(item.get("enabled", True)),
+        enabled=item.get("enabled", True) is not False,
         timeout_seconds=coerce_timeout(item.get("timeout_seconds")),
         semgrep_policy=semgrep_policy,
     )
@@ -438,7 +438,7 @@ def unique_diagnostic_strings(values: Any) -> list[str]:
 
 def _fail_on_missing_tool_impl(config: dict[str, Any]) -> bool:
     """Return whether missing deep tools should fail the run."""
-    return bool(get_nested(config, "deep", "fail_on_missing_tool", default=True))
+    return get_nested(config, "deep", "fail_on_missing_tool", default=True) is not False
 
 
 def _full_run_threshold_impl(config: dict[str, Any]) -> int:
@@ -448,6 +448,8 @@ def _full_run_threshold_impl(config: dict[str, Any]) -> int:
         value = get_nested(
             config, "checks", "selection", "max_changed_files", default=15
         )
+    if isinstance(value, bool):
+        return 15
     try:
         threshold = int(value)
     except (TypeError, ValueError):
