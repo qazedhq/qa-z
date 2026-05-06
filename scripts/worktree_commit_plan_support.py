@@ -160,7 +160,10 @@ BATCH_RULES = (
             "scripts/alpha_release_bundle_manifest_*.py",
             "scripts/alpha_release_preflight.py",
             "scripts/alpha_release_preflight_*.py",
+            "scripts/check_public_raw_urls.py",
             "scripts/check_text_file_hygiene.py",
+            ".github/workflows/*.yml",
+            ".github/actions/guard/**",
             "tests/test_alpha_release_artifact_smoke*.py",
             "tests/test_alpha_release_bundle_manifest*.py",
             "tests/alpha_release_artifact_smoke*_support.py",
@@ -169,11 +172,12 @@ BATCH_RULES = (
             "tests/alpha_release_gate*_support.py",
             "tests/test_alpha_release_preflight*.py",
             "tests/alpha_release_preflight*_support.py",
+            "tests/test_public_raw_urls.py",
             "tests/test_text_file_hygiene.py",
             "docs/releases/**",
         ),
         validation_commands=(
-            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py -q",
+            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
             "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
             "python scripts/alpha_release_gate.py --allow-dirty --json",
         ),
@@ -537,6 +541,8 @@ CROSS_CUTTING_GROUP_RULES = (
 )
 
 SOURCE_PATTERNS = (
+    ".github/actions/**",
+    ".github/workflows/**",
     "src/**",
     "scripts/**",
     "tests/**",

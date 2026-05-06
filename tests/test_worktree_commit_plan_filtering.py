@@ -313,11 +313,15 @@ def test_commit_plan_routes_guard_skill_demo_and_hygiene_surfaces() -> None:
     result = module.analyze_status_lines(
         [
             "?? scripts/check_text_file_hygiene.py",
+            "?? scripts/check_public_raw_urls.py",
+            "?? .github/workflows/public-raw-hygiene.yml",
+            "?? .github/actions/guard/action.yml",
             "?? src/qa_z/commands/guard.py",
             "?? src/qa_z/commands/skill_install.py",
             "?? src/qa_z/commands/demo.py",
             "?? src/qa_z/guard/workflow.py",
             "?? tests/test_text_file_hygiene.py",
+            "?? tests/test_public_raw_urls.py",
             "?? tests/test_guard_cli.py",
             "?? tests/test_skill_install_cli.py",
             "?? tests/test_demo_guard_action_package.py",
@@ -327,8 +331,16 @@ def test_commit_plan_routes_guard_skill_demo_and_hygiene_surfaces() -> None:
 
     assert batches["alpha_release_closure"]["changed_paths"] == [
         "scripts/check_text_file_hygiene.py",
+        "scripts/check_public_raw_urls.py",
+        ".github/workflows/public-raw-hygiene.yml",
+        ".github/actions/guard/action.yml",
         "tests/test_text_file_hygiene.py",
+        "tests/test_public_raw_urls.py",
     ]
+    assert (
+        "tests/test_public_raw_urls.py"
+        in (batches["alpha_release_closure"]["validation_commands"][0])
+    )
     assert batches["planning_runtime_foundation"]["changed_paths"] == [
         "src/qa_z/commands/guard.py",
         "src/qa_z/commands/skill_install.py",

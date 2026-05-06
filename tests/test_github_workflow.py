@@ -107,6 +107,32 @@ def test_ci_jobs_use_explicit_least_privilege_permissions() -> None:
     }
 
 
+def test_public_raw_hygiene_workflow_checks_branch_and_commit_urls() -> None:
+    """Public raw hygiene should verify GitHub raw bytes, not only local files."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "public-raw-hygiene.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    triggers = workflow.get("on", workflow.get(True, {}))
+    job = workflow["jobs"]["public-raw-hygiene"]
+    steps: list[dict[str, Any]] = job["steps"]
+    runs = [step.get("run", "") for step in steps]
+    combined_runs = "\n".join(runs)
+
+    assert {"push", "pull_request", "workflow_dispatch"} <= set(triggers)
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["timeout-minutes"] == 10
+    assert "python scripts/check_text_file_hygiene.py --source working-tree" in runs
+    assert 'current_commit="$(git rev-parse HEAD)"' in combined_runs
+    assert "github.event.pull_request.head.ref || github.ref_name" in str(workflow)
+    assert "github.event.pull_request.head.sha || github.sha" in str(workflow)
+    assert "python scripts/check_public_raw_urls.py" in combined_runs
+    assert '--repo "${{ steps.raw-target.outputs.repo }}"' in combined_runs
+    assert '--ref "${{ steps.raw-target.outputs.ref }}"' in combined_runs
+    assert '--commit "${{ steps.raw-target.outputs.commit }}"' in combined_runs
+
+
 def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
     """The reusable action should publish evidence before applying the verdict."""
     action = yaml.safe_load(
@@ -178,6 +204,7 @@ def test_github_action_docs_explain_composite_action_operational_contract() -> N
     "workflow_path",
     [
         ".github/workflows/ci.yml",
+        ".github/workflows/public-raw-hygiene.yml",
         ".github/workflows/codex-review.yml",
         ".github/workflows/scorecard.yml",
         "templates/.github/workflows/vibeqa.yml",
@@ -199,6 +226,7 @@ def test_github_workflow_jobs_have_explicit_timeouts(workflow_path: str) -> None
     "workflow_path",
     [
         ".github/workflows/ci.yml",
+        ".github/workflows/public-raw-hygiene.yml",
         ".github/workflows/codex-review.yml",
         ".github/workflows/scorecard.yml",
         "templates/.github/workflows/vibeqa.yml",

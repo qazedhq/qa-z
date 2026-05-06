@@ -323,7 +323,7 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
     batches = {batch["id"]: batch for batch in result["batches"]}
 
     assert batches["alpha_release_closure"]["validation_commands"] == [
-        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py -q",
+        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
         "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
         "python scripts/alpha_release_gate.py --allow-dirty --json",
     ]

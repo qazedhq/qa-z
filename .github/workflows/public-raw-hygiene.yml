@@ -1,0 +1,54 @@
+name: Public Raw Hygiene
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-raw-hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Local text file hygiene
+        run: python scripts/check_text_file_hygiene.py --source working-tree
+
+      - name: Resolve public raw target
+        id: raw-target
+        shell: bash
+        env:
+          RAW_REPO: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          RAW_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          RAW_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          current_commit="$(git rev-parse HEAD)"
+          if [ "$RAW_COMMIT" != "$current_commit" ]; then
+            echo "Expected commit $RAW_COMMIT but checked out $current_commit" >&2
+            exit 1
+          fi
+
+          echo "repo=$RAW_REPO" >> "$GITHUB_OUTPUT"
+          echo "ref=$RAW_REF" >> "$GITHUB_OUTPUT"
+          echo "commit=$current_commit" >> "$GITHUB_OUTPUT"
+
+      - name: Public raw URL hygiene
+        run: >
+          python scripts/check_public_raw_urls.py
+          --repo "${{ steps.raw-target.outputs.repo }}"
+          --ref "${{ steps.raw-target.outputs.ref }}"
+          --commit "${{ steps.raw-target.outputs.commit }}"
