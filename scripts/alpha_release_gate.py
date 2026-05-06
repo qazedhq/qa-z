@@ -235,32 +235,48 @@ def default_gate_commands(
             python_command(*worktree_plan_args),
         ),
         GateCommand(
-            "text_file_hygiene",
-            "python scripts/check_text_file_hygiene.py",
-            python_command("scripts/check_text_file_hygiene.py"),
+            "text_file_hygiene_working_tree",
+            "python scripts/check_text_file_hygiene.py --source working-tree",
+            python_command(
+                "scripts/check_text_file_hygiene.py", "--source", "working-tree"
+            ),
         ),
-        GateCommand(
-            "ruff_format",
-            "python -m ruff format --check .",
-            python_command("-m", "ruff", "format", "--check", "."),
-        ),
-        GateCommand(
-            "ruff_check",
-            "python -m ruff check .",
-            python_command("-m", "ruff", "check", "."),
-        ),
-        GateCommand(
-            "mypy",
-            "python -m mypy src tests",
-            python_command("-m", "mypy", "src", "tests"),
-        ),
-        GateCommand(
-            "pytest",
-            "python -m pytest",
-            python_command("-m", "pytest"),
-        ),
-        *cli_help_commands(),
     ]
+    if not allow_dirty:
+        commands.append(
+            GateCommand(
+                "text_file_hygiene_git_head",
+                "python scripts/check_text_file_hygiene.py --source git-head",
+                python_command(
+                    "scripts/check_text_file_hygiene.py", "--source", "git-head"
+                ),
+            )
+        )
+    commands.extend(
+        [
+            GateCommand(
+                "ruff_format",
+                "python -m ruff format --check .",
+                python_command("-m", "ruff", "format", "--check", "."),
+            ),
+            GateCommand(
+                "ruff_check",
+                "python -m ruff check .",
+                python_command("-m", "ruff", "check", "."),
+            ),
+            GateCommand(
+                "mypy",
+                "python -m mypy src tests",
+                python_command("-m", "mypy", "src", "tests"),
+            ),
+            GateCommand(
+                "pytest",
+                "python -m pytest",
+                python_command("-m", "pytest"),
+            ),
+            *cli_help_commands(),
+        ]
+    )
 
     if quick:
         return commands

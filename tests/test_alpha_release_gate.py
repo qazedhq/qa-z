@@ -17,8 +17,7 @@ def test_alpha_release_gate_runs_quality_checks_in_validation_order(tmp_path):
 
     result = module.run_alpha_release_gate(tmp_path, runner=runner)
 
-    assert result.exit_code == 0
-    assert result.summary == "alpha release gate passed"
+    assert (result.exit_code, result.summary) == (0, "alpha release gate passed")
     assert str(result.payload["generated_at"]).endswith("Z")
     assert labels_from_result(result) == [
         (
@@ -26,7 +25,8 @@ def test_alpha_release_gate_runs_quality_checks_in_validation_order(tmp_path):
             "--skip-release-tag-check --json"
         ),
         "python scripts/worktree_commit_plan.py --include-ignored --json",
-        "python scripts/check_text_file_hygiene.py",
+        "python scripts/check_text_file_hygiene.py --source working-tree",
+        "python scripts/check_text_file_hygiene.py --source git-head",
         "python -m ruff format --check .",
         "python -m ruff check .",
         "python -m mypy src tests",

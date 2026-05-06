@@ -36,7 +36,7 @@ jobs:
         run: python -m pip install -e .[dev]
 
       - name: Text file hygiene
-        run: python scripts/check_text_file_hygiene.py
+        run: python scripts/check_text_file_hygiene.py --source working-tree
 
       - name: Ruff format check
         run: python -m ruff format --check src tests scripts
