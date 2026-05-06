@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -100,13 +102,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=["working-tree"],
         metavar="SOURCE",
         help=(
-            "byte source to inspect: working-tree, git-head, or git-ref REF; "
-            "defaults to working-tree"
+            "byte source to inspect: working-tree, git-head, git-ref REF, "
+            "or raw-url URL; defaults to working-tree"
         ),
+    )
+    parser.add_argument(
+        "--critical-profile",
+        default="public",
+        help="critical line-count profile to enforce; currently only public",
     )
     args = parser.parse_args(argv)
     root = Path(args.path).expanduser().resolve()
     source, ref = parse_source_args(args.source, parser)
+    parse_critical_profile(args.critical_profile, parser)
     issues = check_repository(root, source, ref)
     if not issues:
         print("text file hygiene passed")
@@ -136,14 +144,36 @@ def parse_source_args(
         if len(values) != 2:
             parser.error("--source git-ref requires exactly one REF")
         return source, values[1]
-    parser.error("--source must be one of: working-tree, git-head, git-ref REF")
+    if source == "raw-url":
+        if len(values) != 2:
+            parser.error("--source raw-url requires exactly one URL")
+        return source, values[1]
+    parser.error(
+        "--source must be one of: working-tree, git-head, git-ref REF, raw-url URL"
+    )
     raise AssertionError("argparse parser.error exits")
+
+
+def parse_critical_profile(
+    value: str, parser: argparse.ArgumentParser | None = None
+) -> str:
+    """Return a supported critical-file profile name."""
+    if value == "public":
+        return value
+    message = "--critical-profile must be public"
+    if parser is not None:
+        parser.error(message)
+    raise ValueError(message)
 
 
 def check_repository(root: Path, source: str, ref: str | None) -> list[HygieneIssue]:
     """Check tracked files from the requested byte source."""
     if source == "working-tree":
         return check_paths(root, tracked_paths(root))
+    if source == "raw-url":
+        if ref is None:
+            raise ValueError("raw-url sources require a URL")
+        return check_raw_url(ref)
     if ref is None:
         raise ValueError("git blob sources require a ref")
     return check_git_ref(root, ref)
@@ -211,6 +241,53 @@ def check_git_ref(root: Path, ref: str) -> list[HygieneIssue]:
         data = git_blob_bytes(root, ref, relative)
         issues.extend(check_blob(relative, data))
     return issues
+
+
+def check_raw_url(url: str) -> list[HygieneIssue]:
+    """Fetch one public raw URL and check its bytes."""
+    relative = infer_raw_url_path(url)
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "qa-z-text-file-hygiene"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            status = getattr(response, "status", 200)
+            if status != 200:
+                return [HygieneIssue(relative, f"raw URL returned HTTP {status}")]
+            data = response.read()
+    except Exception as exc:
+        return [HygieneIssue(relative, f"raw URL fetch failed: {exc}")]
+    return check_blob(relative, data)
+
+
+def infer_raw_url_path(url: str) -> str:
+    """Infer the repository-relative path represented by a raw file URL."""
+    parsed = urllib.parse.urlparse(url)
+    parts = [urllib.parse.unquote(part) for part in parsed.path.split("/") if part]
+    if not parts:
+        return url
+    tail = "/".join(parts[2:] if len(parts) >= 3 else parts)
+    normalized_tail = normalize_relative(tail)
+    for critical in sorted(CRITICAL_MIN_LINES, key=len, reverse=True):
+        if normalized_tail == critical or normalized_tail.endswith(f"/{critical}"):
+            return critical
+    for marker in (
+        ".github",
+        "skills",
+        "templates",
+        "docs",
+        "examples",
+        "scripts",
+        "src",
+        "tests",
+    ):
+        if marker in parts:
+            return "/".join(parts[parts.index(marker) :])
+    name = parts[-1]
+    if name in {"README.md", "pyproject.toml", ".gitattributes", ".editorconfig"}:
+        return name
+    return normalized_tail or name
 
 
 def check_paths(root: Path, paths: Iterable[Path]) -> list[HygieneIssue]:
@@ -283,6 +360,8 @@ def collapsed_public_file_reason(relative: str, data: bytes) -> str | None:
     """Return a reason when a critical public file looks line-collapsed."""
     min_lines = min_lines_for_public_file(relative)
     line_count = data.count(b"\n")
+    if collapsed_skill_front_matter(relative, data, line_count):
+        return "suspiciously collapsed YAML front matter in skill file"
     if min_lines is None:
         if generic_collapsed_text_file(relative, data, line_count):
             return (
@@ -296,6 +375,15 @@ def collapsed_public_file_reason(relative: str, data: bytes) -> str | None:
         f"suspiciously collapsed into {line_count} LF-separated line(s); "
         f"expected at least {min_lines}"
     )
+
+
+def collapsed_skill_front_matter(relative: str, data: bytes, line_count: int) -> bool:
+    """Return whether a skill's YAML front matter is collapsed onto one line."""
+    normalized = normalize_relative(relative)
+    if not (normalized.startswith("skills/") and normalized.endswith("/SKILL.md")):
+        return False
+    stripped = data.lstrip()
+    return stripped.startswith(b"---") and line_count < 4
 
 
 def min_lines_for_public_file(relative: str) -> int | None:

@@ -26,7 +26,7 @@ def read_readme() -> str:
 def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
-    assert readme.startswith("# QA-Z\n\n> Make AI coding safe to merge.")
+    assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.")
     assert "AI agents write code fast." in readme
     assert "Is this AI-generated change safe to merge?" in readme
     assert "qa-z demo auth-bug" in readme

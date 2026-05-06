@@ -35,6 +35,17 @@ runs:
       shell: bash
       run: python -m pip install git+https://github.com/qazedhq/qa-z.git
 
+    - name: Validate QA-Z profile input
+      shell: bash
+      run: |
+        case "${{ inputs.profile }}" in
+          default|python|typescript|monorepo) ;;
+          *)
+            echo "Unsupported QA-Z profile: ${{ inputs.profile }}" >&2
+            exit 2
+            ;;
+        esac
+
     - name: Validate QA-Z config
       shell: bash
       run: qa-z doctor --json

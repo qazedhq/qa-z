@@ -1,4 +1,4 @@
-# QA-Z
+# QA-Z 🛡️
 
 > Make AI coding safe to merge.
 
@@ -16,6 +16,30 @@ Planned demo asset: `docs/assets/qa-z-demo.gif`. Until that GIF lands, run the l
 pipx install git+https://github.com/qazedhq/qa-z.git
 qa-z demo auth-bug
 qa-z guard
+```
+
+## Quickstart
+
+```bash
+qa-z init
+qa-z guard --adapter codex --deep auto --fail-on-risk
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+If the console script is not on PATH, use `python -m qa_z` as a fallback.
+
+## GitHub Alpha Install
+
+```bash
+pipx install git+https://github.com/qazedhq/qa-z.git
+uv tool install git+https://github.com/qazedhq/qa-z.git
+python -m pip install -e .[dev]
+```
+
+Install Semgrep when running deep checks locally:
+
+```bash
+python -m pip install semgrep
 ```
 
 ## Why QA-Z?
@@ -95,34 +119,6 @@ Targets:
 
 The reusable skill lives at [skills/qa-z-merge-safety/SKILL.md](skills/qa-z-merge-safety/SKILL.md).
 
-## Local Install
-
-Alpha install from GitHub:
-
-```bash
-pipx install git+https://github.com/qazedhq/qa-z.git
-```
-
-With uv:
-
-```bash
-uv tool install git+https://github.com/qazedhq/qa-z.git
-```
-
-Contributor install:
-
-```bash
-python -m pip install -e .[dev]
-```
-
-Install Semgrep when running deep checks locally:
-
-```bash
-python -m pip install semgrep
-```
-
-If the console script is not on PATH, use `python -m qa_z` as a fallback.
-
 ## GitHub Action
 
 ```yaml
@@ -136,7 +132,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
       actions: read
     steps:
       - uses: actions/checkout@v4
@@ -149,7 +144,7 @@ jobs:
           adapter: codex
 ```
 
-See [docs/github-action.md](docs/github-action.md). Remove `security-events: write` when SARIF upload is disabled.
+See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
 
 ## Agent QA Playbook
 

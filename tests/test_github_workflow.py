@@ -163,9 +163,9 @@ def test_github_action_docs_explain_composite_action_operational_contract() -> N
     docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
 
     assert (
-        "The composite action validates `qa-z doctor --json`, then preserves review, "
-        "repair, summary, optional SARIF, and run artifacts before the final fast/deep "
-        "verdict step."
+        "The composite action validates `qa-z doctor --json`, runs the guard verdict "
+        "step, then preserves the summary, optional SARIF, and QA-Z run artifacts with "
+        "`always()` cleanup steps."
     ) in docs
     assert (
         "SARIF upload is disabled by default because code scanning permissions can be "

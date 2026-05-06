@@ -25,9 +25,11 @@ jobs:
           adapter: codex
 ```
 
-The action installs QA-Z from GitHub during alpha, runs `qa-z doctor`, then runs `qa-z guard --deep <input> --adapter <input> --github-summary`.
+The action installs QA-Z from GitHub during alpha, validates the `profile` input, runs `qa-z doctor`, then runs `qa-z guard --deep <input> --adapter <input> --github-summary`.
 
-The composite action validates `qa-z doctor --json`, then preserves review, repair, summary, optional SARIF, and run artifacts before the final fast/deep verdict step.
+The `profile` input records the intended starter profile for examples and validates accepted values. Existing `qa-z.yaml` remains the source of truth for guard execution.
+
+The composite action validates `qa-z doctor --json`, runs the guard verdict step, then preserves the summary, optional SARIF, and QA-Z run artifacts with `always()` cleanup steps.
 
 SARIF upload is disabled by default because code scanning permissions can be repository-specific.
 

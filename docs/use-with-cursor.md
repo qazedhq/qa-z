@@ -9,7 +9,7 @@ qa-z plan --diff changes.diff --title "Review Cursor change" --slug cursor-chang
 qa-z fast --output-dir .qa-z/runs/baseline
 qa-z deep --from-run .qa-z/runs/baseline
 qa-z review --from-run .qa-z/runs/baseline
-qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter handoff
+qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
 Paste the repair target back into Cursor:
