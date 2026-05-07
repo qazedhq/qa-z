@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from tests.alpha_release_gate_test_support import (
     RecordingRunner,
@@ -131,6 +132,29 @@ def test_alpha_release_gate_release_mode_includes_bundle_manifest(tmp_path):
         "--expected-tag v0.10.0 --json"
     )
     assert labels[-1] == "python scripts/alpha_release_bundle_manifest.py --json"
+
+
+def test_alpha_release_gate_release_mode_targets_current_branch_for_new_tag(
+    tmp_path, monkeypatch
+):
+    module = load_gate_module()
+    monkeypatch.setattr(module, "current_branch_for_gate", lambda _repo_root: "main")
+    runner = RecordingRunner()
+
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
+
+    labels = labels_from_result(result)
+    assert result.exit_code == 0
+    assert labels[0] == (
+        "python scripts/alpha_release_preflight.py --skip-remote "
+        "--expected-branch main --expected-tag v0.10.0 --json"
+    )
+    assert labels[-1] == (
+        "python scripts/alpha_release_bundle_manifest.py --branch main "
+        f"--bundle {Path('dist') / 'qa-z-v0.10.0-main.bundle'} --json"
+    )
 
 
 def test_alpha_release_gate_release_mode_fails_when_target_tag_exists(tmp_path):

@@ -75,6 +75,21 @@ def current_branch_for_gate(repo_root: Path) -> str | None:
     return branch or None
 
 
+def release_ref_fragment(value: str) -> str:
+    """Return a filesystem-safe release ref fragment."""
+    fragment = "".join(
+        character if character.isalnum() or character in {".", "-", "_"} else "-"
+        for character in value.strip()
+    ).strip("-")
+    return fragment or "ref"
+
+
+def release_bundle_path_for_gate(target_tag: str, branch: str) -> Path:
+    return Path("dist") / (
+        f"qa-z-{release_ref_fragment(target_tag)}-{release_ref_fragment(branch)}.bundle"
+    )
+
+
 def python_command(*args: str) -> tuple[str, ...]:
     return (sys.executable, *args)
 
@@ -146,6 +161,7 @@ def default_gate_commands(
 ) -> list[GateCommand]:
     if mode not in GATE_MODES:
         raise ValueError(f"unknown gate mode: {mode}")
+    effective_target_tag = target_tag or DEFAULT_TARGET_TAG
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
         or expected_repository != DEFAULT_REPOSITORY_FULL_NAME
@@ -184,7 +200,7 @@ def default_gate_commands(
             preflight_label_parts.extend(
                 ["--expected-origin-url", local_expected_origin_url]
             )
-    if mode == "quality" and local_expected_branch is not None:
+    if local_expected_branch is not None:
         preflight_args.extend(["--expected-branch", local_expected_branch])
         preflight_label_parts.extend(["--expected-branch", local_expected_branch])
     if allow_dirty:
@@ -194,7 +210,6 @@ def default_gate_commands(
         preflight_args.append("--skip-release-tag-check")
         preflight_label_parts.append("--skip-release-tag-check")
     else:
-        effective_target_tag = target_tag or DEFAULT_TARGET_TAG
         preflight_args.extend(["--expected-tag", effective_target_tag])
         preflight_label_parts.extend(["--expected-tag", effective_target_tag])
     if preflight_output is not None:
@@ -325,11 +340,26 @@ def default_gate_commands(
         )
 
     if mode == "release":
+        bundle_args = ["scripts/alpha_release_bundle_manifest.py"]
+        bundle_label_parts = ["python", "scripts/alpha_release_bundle_manifest.py"]
+        if local_expected_branch is not None:
+            bundle_path = release_bundle_path_for_gate(
+                effective_target_tag,
+                local_expected_branch,
+            )
+            bundle_args.extend(
+                ["--branch", local_expected_branch, "--bundle", str(bundle_path)]
+            )
+            bundle_label_parts.extend(
+                ["--branch", local_expected_branch, "--bundle", str(bundle_path)]
+            )
+        bundle_args.append("--json")
+        bundle_label_parts.append("--json")
         commands.append(
             GateCommand(
                 "bundle_manifest",
-                "python scripts/alpha_release_bundle_manifest.py --json",
-                python_command("scripts/alpha_release_bundle_manifest.py", "--json"),
+                " ".join(bundle_label_parts),
+                python_command(*bundle_args),
             )
         )
     return commands
@@ -442,7 +472,9 @@ def run_alpha_release_gate(
     effective_target_tag = target_tag or DEFAULT_TARGET_TAG
     detected_origin_url = configured_origin_url_for_gate(repo_root)
     local_expected_branch = (
-        current_branch_for_gate(repo_root) if mode == "quality" else None
+        current_branch_for_gate(repo_root)
+        if mode == "quality" or (mode == "release" and target_tag is not None)
+        else None
     )
     remote_options_requested = (
         repository_url != DEFAULT_REPOSITORY_URL
