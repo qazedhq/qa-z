@@ -187,6 +187,14 @@ def test_checks_branch_and_commit_refs(monkeypatch) -> None:
 
     assert any("/qazedhq/qa-z/codex/topic/README.md" in url for url in requested_urls)
     assert any("/qazedhq/qa-z/abc123/README.md" in url for url in requested_urls)
+    assert any(
+        "/qazedhq/qa-z/codex/topic/.github/actions/qa-z/action.yml" in url
+        for url in requested_urls
+    )
+    assert any(
+        "/qazedhq/qa-z/abc123/.github/actions/qa-z/action.yml" in url
+        for url in requested_urls
+    )
     assert len(requested_urls) == len(module.CRITICAL_MIN_LF) * 2
 
 

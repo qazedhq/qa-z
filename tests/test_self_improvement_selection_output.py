@@ -149,6 +149,34 @@ def test_selected_task_action_hint_uses_dirty_worktree_area_evidence() -> None:
     )
 
 
+def test_selected_task_action_hint_names_patch_add_group_count() -> None:
+    assert selected_task_action_hint(
+        {
+            "recommendation": "reduce_integration_risk",
+            "evidence": [
+                {
+                    "source": "git_status",
+                    "summary": "modified=23; areas=docs:9, tests:8, source:2",
+                },
+                {
+                    "source": "worktree_commit_plan_json",
+                    "summary": (
+                        "strict commit-plan status=attention_required; "
+                        "attention=cross_cutting_paths_present; unassigned=0; "
+                        "cross_cutting=2; patch_add_groups=2; "
+                        "shared_patch_add=2; generated=0"
+                    ),
+                },
+            ],
+        }
+    ) == (
+        "triage docs and tests changes first, patch-add 2 cross-cutting groups, "
+        "rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "self-inspection"
+    )
+
+
 def test_selected_task_action_hint_keeps_fallback_without_area_evidence() -> None:
     assert selected_task_action_hint(
         {

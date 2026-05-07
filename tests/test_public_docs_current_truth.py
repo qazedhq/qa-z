@@ -52,6 +52,7 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "verdict `improved`" in readme
     assert "no regressions" in readme
     for command in (
+        "`qa-z self-inspect`",
         "`qa-z select-next`",
         "`qa-z backlog`",
         "`qa-z autonomy`",
@@ -134,6 +135,62 @@ def test_quickstart_states_repair_verification_success_signal() -> None:
     assert "qa-z verify --baseline-run .qa-z/runs/baseline" in quickstart
     assert "verdict `improved`" in quickstart
     assert "no regressions" in quickstart
+
+
+def test_public_docs_point_to_latest_github_prerelease_without_package_publish() -> (
+    None
+):
+    readme = read_readme()
+    quickstart = read_quickstart()
+    package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
+        encoding="utf-8"
+    )
+    roadmap = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+    launch_checklist = (ROOT / "docs" / "launch-checklist.md").read_text(
+        encoding="utf-8"
+    )
+    launch_package = (ROOT / "docs" / "launch-package.md").read_text(encoding="utf-8")
+    product_direction = (ROOT / "docs" / "product" / "PRODUCT_DIRECTION.md").read_text(
+        encoding="utf-8"
+    )
+    v8_handoff = (ROOT / "docs" / "product" / "V8_HANDOFF.md").read_text(
+        encoding="utf-8"
+    )
+    action = yaml.safe_load(
+        (ROOT / ".github" / "actions" / "qa-z" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    release_notes = (ROOT / "docs" / "releases" / "v0.9.9-alpha.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha" in readme
+    assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha" not in readme
+    for text in (quickstart, package_plan):
+        assert "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha" in text
+    assert "No GitHub Release has been created yet" not in release_notes
+    assert "No tag has been pushed yet" not in release_notes
+    assert "This should be created" not in release_notes
+    assert "GitHub prerelease created for `v0.9.9-alpha`." in release_notes
+    assert "Annotated `v0.9.9-alpha` tag pushed and targeting" in release_notes
+    assert "This release is a GitHub prerelease only." in release_notes
+    assert "Package publish: none" in release_notes
+    assert (
+        "`qa-z guard`."
+        in roadmap.split("## v0.9.9-alpha", 1)[1].split("## v0.10.0-beta", 1)[0]
+    )
+    assert "Package-publish readiness." in roadmap.split("## v0.10.0-beta", 1)[1]
+    assert "GitHub prerelease: present for `v0.9.9-alpha`" in launch_checklist
+    assert "v0.9.9-alpha post-release maintenance." in launch_checklist
+    assert "GitHub prerelease exists for `v0.9.9-alpha`" in launch_package
+    assert "package metadata remains `0.9.8a0`" in product_direction
+    assert "Latest GitHub prerelease: `v0.9.9-alpha`" in product_direction
+    assert "package metadata `0.9.8a0`" in v8_handoff
+    assert "latest GitHub prerelease `v0.9.9-alpha`" in v8_handoff
+    assert action["inputs"]["qa-z-install"]["default"] == (
+        "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
+    )
 
 
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:

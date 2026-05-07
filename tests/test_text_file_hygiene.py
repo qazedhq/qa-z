@@ -242,6 +242,7 @@ def test_critical_profile_public_is_accepted() -> None:
     module = load_hygiene_module()
 
     assert module.parse_critical_profile("public") == "public"
+    assert ".github/actions/qa-z/action.yml" in module.CRITICAL_MIN_LINES
 
 
 class FakeResponse:

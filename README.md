@@ -6,7 +6,7 @@
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
-[![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha)
+[![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha)
 
 AI agents write code fast. QA-Z turns their changes into deterministic merge evidence: contracts, checks, repair prompts, and verification reports.
 
@@ -163,6 +163,7 @@ See [docs/github-action.md](docs/github-action.md). Add `security-events: write`
 
 ## Advanced Commands
 
+- `qa-z self-inspect`
 - `qa-z select-next`
 - `qa-z backlog`
 - `qa-z autonomy`
@@ -183,8 +184,8 @@ QA-Z is not:
 
 See [docs/roadmap.md](docs/roadmap.md).
 
-- `v0.9.9-alpha`: repo hygiene, skill pack, install docs
-- `v0.10.0-beta`: guard, demo, GitHub Action
+- `v0.9.9-alpha`: repo hygiene, guard, demo, skill pack, GitHub Action, install docs
+- `v0.10.0-beta`: release polish, hosted-demo path, and package-publish readiness
 - `v0.11.0`: deeper verification UX, benchmarks, integrations
 
 ## Contributing

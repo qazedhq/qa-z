@@ -101,6 +101,8 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
                 "summary": {
                     "unassigned_source_path_count": 0,
                     "cross_cutting_count": 3,
+                    "cross_cutting_group_count": 2,
+                    "shared_patch_add_count": 2,
                     "generated_artifact_count": 0,
                 },
                 "repository": {
@@ -122,7 +124,8 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
         "summary": (
             "strict commit-plan status=attention_required; "
             "attention=cross_cutting_paths_present; unassigned=0; "
-            "cross_cutting=3; generated=0"
+            "cross_cutting=3; patch_add_groups=2; "
+            "shared_patch_add=2; generated=0"
         ),
     } in candidates[0].evidence
 

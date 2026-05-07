@@ -37,7 +37,7 @@ def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     assert "python -m pip install semgrep" in readme
     assert "## Agent QA Playbook" in readme
     assert "## Advanced Commands" in readme
-    assert "v0.9.8-alpha" in readme
+    assert "v0.9.9-alpha" in readme
     assert "v0.9.x-alpha" not in readme
     assert "package-registry publish yet" in readme
     assert len(readme.splitlines()) <= 230

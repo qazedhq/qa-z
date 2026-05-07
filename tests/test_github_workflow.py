@@ -140,6 +140,9 @@ def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
             encoding="utf-8"
         )
     )
+    assert action["inputs"]["qa-z-install"]["default"] == (
+        "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
+    )
     steps: list[dict[str, Any]] = action["runs"]["steps"]
     step_names = [step.get("name", "") for step in steps]
     expected_order = [

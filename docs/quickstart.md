@@ -7,13 +7,13 @@ This quickstart gets from install to deterministic QA evidence in about five min
 Install the current public alpha from GitHub:
 
 ```bash
-pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 ```
 
 Or with uv:
 
 ```bash
-uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 ```
 
 Contributor fallback from this repository:

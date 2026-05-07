@@ -164,6 +164,7 @@ BATCH_RULES = (
             "scripts/check_text_file_hygiene.py",
             ".github/workflows/*.yml",
             ".github/actions/guard/**",
+            ".github/actions/qa-z/**",
             "tests/test_alpha_release_artifact_smoke*.py",
             "tests/test_alpha_release_bundle_manifest*.py",
             "tests/alpha_release_artifact_smoke*_support.py",

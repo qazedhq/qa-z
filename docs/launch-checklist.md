@@ -11,7 +11,7 @@ This checklist maps the full growth brief into repository-owned surfaces. Items 
 
 ## Phase 0 - 0 to 100 stars
 
-1. GitHub prerelease: present for `v0.9.8-alpha`; verify remotely before the next launch wave.
+1. GitHub prerelease: present for `v0.9.9-alpha`; `v0.9.8-alpha` remains unchanged.
 2. README product page: [../README.md](../README.md).
 3. 10-second asciinema: [assets/qa-z-agent-auth-bug.cast](assets/qa-z-agent-auth-bug.cast).
 4. Social preview: [assets/qa-z-social-preview.png](assets/qa-z-social-preview.png).
@@ -96,7 +96,7 @@ This checklist maps the full growth brief into repository-owned surfaces. Items 
 - Public roadmap.
 - 20 good-first-issue seeds.
 - 3 real-world walkthroughs.
-- v0.9.9-alpha plan.
+- v0.9.9-alpha post-release maintenance.
 
 ## Top 10 immediate actions
 

@@ -13,7 +13,7 @@ Input reconciliation note: no separate file literally named "A1 Product Definiti
 - Product name: QA-Z.
 - Product category: local QA control plane for coding-agent workflows.
 - One-sentence description: This product is a local QA control plane for developers and coding-agent operators that helps them decide whether agent-produced code is safe to merge by turning change context into executable contracts, deterministic checks, local artifacts, review packets, repair prompts, and post-repair verification evidence.
-- Current maturity: alpha, with package metadata at `0.9.8a0` and release docs for `v0.9.8-alpha`.
+- Current maturity: alpha; package metadata remains `0.9.8a0`. Latest GitHub prerelease: `v0.9.9-alpha`; `v0.9.8-alpha` remains the first public alpha baseline.
 - Confidence level: high for identity and current capabilities; medium for target user and production metrics; low for hosted/commercial packaging.
 
 ## Confirmed Product Direction

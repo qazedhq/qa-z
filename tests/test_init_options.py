@@ -216,7 +216,7 @@ def test_init_with_github_workflow_creates_workflow(
     assert "name: Validate QA-Z config\n" in workflow_text
     assert "name: Run QA-Z fast gate\n" in workflow_text
     assert (
-        'python -m pip install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"'
+        'python -m pip install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"'
         in workflow_text
     )
     assert "python -m pip install -e .[dev]" not in workflow_text

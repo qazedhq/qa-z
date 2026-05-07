@@ -5,7 +5,7 @@ inputs:
   qa-z-install:
     description: Python package spec used to install QA-Z.
     required: false
-    default: git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha
+    default: git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha
   run-dir:
     description: QA-Z run artifact directory.
     required: false

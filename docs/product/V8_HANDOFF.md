@@ -5,7 +5,7 @@
 - Product name: QA-Z.
 - Product category: local QA control plane for coding-agent workflows.
 - One-sentence description: QA-Z helps developers decide whether agent-produced code is safe to merge by turning change context into QA contracts, deterministic gates, local artifacts, repair handoffs, and post-repair verification evidence.
-- Current maturity: alpha, package metadata `0.9.8a0`, release docs for `v0.9.8-alpha`.
+- Current maturity: alpha, package metadata `0.9.8a0`, latest GitHub prerelease `v0.9.9-alpha`, with `v0.9.8-alpha` preserved as the first public alpha baseline.
 
 ## Authoritative Product Goal
 

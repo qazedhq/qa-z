@@ -81,6 +81,8 @@ def worktree_commit_plan_json_evidence(
                 f"attention={attention}; "
                 f"unassigned={int_value(summary.get('unassigned_source_path_count'))}; "
                 f"cross_cutting={int_value(summary.get('cross_cutting_count'))}; "
+                f"patch_add_groups={int_value(summary.get('cross_cutting_group_count'))}; "
+                f"shared_patch_add={int_value(summary.get('shared_patch_add_count'))}; "
                 f"generated={int_value(summary.get('generated_artifact_count'))}"
             ),
         }

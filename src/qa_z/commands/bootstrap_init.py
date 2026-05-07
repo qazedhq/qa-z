@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install QA-Z
-        run: python -m pip install "git+https://github.com/qazedhq/qa-z.git@v0.9.8-alpha"
+        run: python -m pip install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
       - name: Validate QA-Z config
         run: python -m qa_z doctor --json
       - name: Run QA-Z fast gate

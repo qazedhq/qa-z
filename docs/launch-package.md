@@ -84,7 +84,8 @@ See [docs/issues/good-first-issues.md](issues/good-first-issues.md) for 20 detai
 
 ## Release Checklist
 
-- GitHub prerelease exists for `v0.9.8-alpha`.
+- GitHub prerelease exists for `v0.9.9-alpha`; `v0.9.8-alpha` remains the
+  historical first public alpha baseline.
 - README first screen uses the safety-belt positioning.
 - The five-minute auth-bug demo is runnable locally.
 - Quickstart, comparison, GitHub Action, Codex, Claude Code, and Cursor docs are linked from the docs index.

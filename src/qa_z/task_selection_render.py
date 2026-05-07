@@ -127,6 +127,18 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
     if recommendation == "reduce_integration_risk":
         area_phrase = join_action_areas(worktree_action_areas(item))
         if area_phrase:
+            patch_add_group_count = worktree_patch_add_group_count(item)
+            if patch_add_group_count > 0:
+                group_label = (
+                    "cross-cutting group"
+                    if patch_add_group_count == 1
+                    else "cross-cutting groups"
+                )
+                return (
+                    f"triage {area_phrase} changes first, patch-add "
+                    f"{patch_add_group_count} {group_label}, rerun "
+                    f"{worktree_plan_review}, then rerun self-inspection"
+                )
             return (
                 f"triage {area_phrase} changes first, run {cleanup_review} plus "
                 f"{worktree_plan_review}, then rerun self-inspection"
@@ -252,6 +264,36 @@ def item_evidence_entries(item: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(evidence, list):
         return []
     return [entry for entry in evidence if isinstance(entry, dict)]
+
+
+def worktree_patch_add_group_count(item: dict[str, Any]) -> int:
+    """Return patch-add group count when strict worktree evidence is otherwise clean."""
+    fields: dict[str, int] = {}
+    for entry in item_evidence_entries(item):
+        if str(entry.get("source") or "").strip() != "worktree_commit_plan_json":
+            continue
+        fields = summary_int_fields(str(entry.get("summary") or ""))
+        break
+    if not fields:
+        return 0
+    if fields.get("generated", 0) or fields.get("unassigned", 0):
+        return 0
+    return fields.get("patch_add_groups", 0)
+
+
+def summary_int_fields(summary: str) -> dict[str, int]:
+    """Parse key=value integer fields from compact evidence summaries."""
+    fields: dict[str, int] = {}
+    for segment in summary.split(";"):
+        if "=" not in segment:
+            continue
+        key, value = segment.strip().split("=", maxsplit=1)
+        value = value.strip().split(maxsplit=1)[0]
+        try:
+            fields[key.strip()] = int(value)
+        except ValueError:
+            continue
+    return fields
 
 
 def join_action_areas(areas: list[str], *, limit: int = 2) -> str:

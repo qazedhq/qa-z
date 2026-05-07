@@ -54,6 +54,7 @@ CRITICAL_MIN_LINES = {
     ".editorconfig": 8,
     ".github/workflows/ci.yml": 30,
     ".github/actions/guard/action.yml": 30,
+    ".github/actions/qa-z/action.yml": 30,
     ".github/actions/guard/README.md": 15,
     ".github/workflows/qa-z-example.yml.example": 15,
     "skills/qa-z-merge-safety/SKILL.md": 40,

@@ -648,6 +648,7 @@ def test_commit_plan_assigns_release_workflow_gate_and_operator_action_helper() 
 
     result = module.analyze_status_lines(
         [
+            " M .github/actions/qa-z/action.yml",
             " M src/qa_z/operator_action_render.py",
             " M tests/test_github_workflow.py",
         ]
@@ -658,6 +659,7 @@ def test_commit_plan_assigns_release_workflow_gate_and_operator_action_helper() 
         "src/qa_z/operator_action_render.py",
     ]
     assert batches["alpha_release_closure"]["changed_paths"] == [
+        ".github/actions/qa-z/action.yml",
         "tests/test_github_workflow.py",
     ]
     assert result["unassigned_source_paths"] == []
