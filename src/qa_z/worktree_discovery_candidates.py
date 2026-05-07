@@ -28,6 +28,7 @@ from qa_z.worktree_discovery_evidence import (
     deferred_cleanup_evidence,
     evidence_freshness_evidence,
     integration_gap_evidence,
+    worktree_commit_plan_json_evidence,
 )
 
 
@@ -69,6 +70,12 @@ def discover_worktree_risk_candidates(
             generated_at=generated_at,
             current_branch=str(live_signals.get("current_branch") or "").strip()
             or None,
+            current_head=str(live_signals.get("current_head") or "").strip() or None,
+        )
+    )
+    evidence.extend(
+        worktree_commit_plan_json_evidence(
+            root,
             current_head=str(live_signals.get("current_head") or "").strip() or None,
         )
     )

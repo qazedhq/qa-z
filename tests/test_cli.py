@@ -193,6 +193,9 @@ def test_parser_registers_core_subcommands() -> None:
         "deep",
         "review",
         "repair-prompt",
+        "guard",
+        "skill",
+        "demo",
         "repair-session",
         "github-summary",
         "verify",
@@ -237,6 +240,9 @@ def test_all_command_registrars_cover_public_root_surface() -> None:
         "plan",
         "review",
         "github-summary",
+        "guard",
+        "skill",
+        "demo",
         "fast",
         "deep",
         "repair-prompt",
@@ -312,6 +318,8 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     output = render_select_next_stdout(
         {
             "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+            "source_self_inspection_loop_id": "inspect-loop",
+            "source_self_inspection_generated_at": "2026-04-17T00:00:00Z",
             "live_repository": {
                 "modified_count": 25,
                 "untracked_count": 346,
@@ -352,6 +360,9 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     )
 
     assert "Selected task details:" in output
+    assert "Source self-inspection: .qa-z/loops/latest/self_inspect.json" in output
+    assert "Source loop: inspect-loop (2026-04-17T00:00:00Z)" in output
+    assert "Refresh hint: run `qa-z select-next --refresh`" in output
     assert (
         "Live repository: modified=25; untracked=346; staged=0; "
         "runtime_artifacts=2; benchmark_results=1; dirty_benchmark_results=0; "
@@ -368,10 +379,14 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     assert (
         "action: triage docs and source changes first, run "
         "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection" in output
     )
-    assert "validation: python -m qa_z self-inspect" in output
+    assert (
+        "validation: python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting "
+        "--output .qa-z/tmp/worktree-commit-plan.json" in output
+    )
     assert "selection score: 60" in output
     assert (
         "selection penalty: 5 (recent_task_reselected, recent_category_reselected)"
@@ -450,10 +465,14 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
     assert (
         "action: triage docs and source changes first, run "
         "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection" in output
     )
-    assert "validation: python -m qa_z self-inspect" in output
+    assert (
+        "validation: python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting "
+        "--output .qa-z/tmp/worktree-commit-plan.json" in output
+    )
     assert "priority score: 65" in output
     assert (
         "evidence: git_status: modified=25; untracked=346; staged=0; "
@@ -997,10 +1016,14 @@ def test_backlog_plain_output_focuses_on_open_items(
     assert (
         "action: triage docs and source changes first, run "
         "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection" in output
     )
-    assert "validation: python -m qa_z self-inspect" in output
+    assert (
+        "validation: python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting "
+        "--output .qa-z/tmp/worktree-commit-plan.json" in output
+    )
     assert (
         "evidence: git_status: modified=25; untracked=346; staged=0; "
         "areas=docs:2, source:1" in output

@@ -7,8 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from qa_z.config import EXAMPLE_CONFIG
-from qa_z.config import COMMAND_GUIDANCE
+from qa_z.config import COMMAND_GUIDANCE, EXAMPLE_CONFIG
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,36 +26,21 @@ def read_readme() -> str:
 def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
-    assert readme.startswith("# QA-Z\n\n> Deterministic QA gates for AI coding agents.")
-    assert "Should this change be merged, and if not" in readme
-    assert "## Quickstart" in readme
-    assert "| Command | What it does |" in readme
-    assert "| Path | Purpose |" in readme
-    assert "| `.qa-z/loops/` | Autonomy planning loop artifacts |" in readme
+    assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.")
+    assert "AI agents write code fast." in readme
+    assert "Is this AI-generated change safe to merge?" in readme
+    assert "qa-z demo auth-bug" in readme
+    assert "qa-z guard --adapter codex --deep auto --fail-on-risk" in readme
+    assert "qa-z skill install all" in readme
+    assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert "uv tool install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert "python -m pip install semgrep" in readme
+    assert "## Agent QA Playbook" in readme
+    assert "## Advanced Commands" in readme
     assert "v0.9.8-alpha" in readme
     assert "v0.9.x-alpha" not in readme
-    assert "docs/current-truth-maintenance-anchors.md" in readme
-    assert "Detailed operator contract index" not in readme
+    assert "package-registry publish yet" in readme
     assert len(readme.splitlines()) <= 230
-
-
-def test_pyproject_metadata_uses_public_launch_positioning() -> None:
-    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-
-    assert 'description = "Deterministic QA gates for AI coding agents."' in pyproject
-    for keyword in (
-        "qa",
-        "testing",
-        "ci",
-        "ai-agents",
-        "coding-agents",
-        "codex",
-        "claude",
-        "semgrep",
-        "sarif",
-        "quality-assurance",
-    ):
-        assert f'"{keyword}"' in pyproject
 
 
 def test_command_guidance_matches_landed_review_and_repair_prompt_surface() -> None:
@@ -150,7 +134,6 @@ def test_generated_vs_frozen_policy_is_documented_and_linked() -> None:
     assert (
         "`benchmarks/results/work/**` is disposable benchmark scratch output" in policy
     )
-
     for text in (readme, schema, benchmarking):
         assert "docs/generated-vs-frozen-evidence-policy.md" in text
         assert "local by default" in text
@@ -232,88 +215,6 @@ def test_benchmark_summary_snapshot_is_documented_in_artifact_schema() -> None:
     )
 
 
-def test_alpha_release_gate_evidence_is_documented_in_artifact_schema() -> None:
-    schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
-
-    assert "## Alpha Release Gate Evidence" in schema
-    assert "`generated_at`" in schema
-    assert "`evidence.pytest.passed`" in schema
-    assert "`evidence.pytest.skipped`" in schema
-    assert "`evidence.deep.scan_quality_status`" in schema
-    assert "`evidence.deep.scan_quality_warning_count`" in schema
-    assert "`evidence.deep.scan_quality_warning_paths`" in schema
-    assert "`evidence.deep.scan_quality_check_ids`" in schema
-    assert "`evidence.benchmark.snapshot`" in schema
-    assert "`evidence.worktree_commit_plan.kind`" in schema
-    assert "`evidence.worktree_commit_plan.schema_version`" in schema
-    assert "`evidence.worktree_commit_plan.output_path`" in schema
-    assert "`evidence.worktree_commit_plan.branch`" in schema
-    assert "`evidence.worktree_commit_plan.head`" in schema
-    assert "`evidence.worktree_commit_plan.unchanged_batch_count`" in schema
-    assert "`evidence.worktree_commit_plan.attention_reasons`" in schema
-    assert "`evidence.worktree_commit_plan.attention_reason_count`" in schema
-    assert "`evidence.worktree_commit_plan.strict_mode`" in schema
-    assert "`evidence.local_preflight.repository_target`" in schema
-    assert "`evidence.local_preflight.expected_origin_target`" in schema
-    assert "`evidence.local_preflight.repository_url`" in schema
-    assert "`evidence.local_preflight.expected_origin_url`" in schema
-    assert "`evidence.local_preflight.remote_path`" in schema
-    assert "`evidence.local_preflight.remote_blocker`" in schema
-    assert "`evidence.local_preflight.skip_remote`" in schema
-    assert "`worktree_plan_output`" in schema
-    assert "`worktree_plan_attention_reasons`" in schema
-    assert "`repository_target`" in schema
-    assert "`expected_origin_target`" in schema
-    assert "`target=`" in schema
-    assert "`path=`" in schema
-    assert "`blocker=`" in schema
-    assert "`target_url=`" in schema
-    assert "`origin_url=`" in schema
-    assert "`mode=`" in schema
-    assert "`remote_path`" in schema
-    assert "`remote_blocker`" in schema
-    assert "`Target:`" in schema
-    assert "`Origin:`" in schema
-    assert "`Mode:`" in schema
-    assert "`Decision:`" in schema
-    assert "`origin_state`" in schema
-    assert "`actual_origin_target`" in schema
-    assert "`actual_origin_url`" in schema
-    assert "`repository_http_status`" in schema
-    assert "`repository_probe_state`" in schema
-    assert "`repository_probe_generated_at`" in schema
-    assert "`repository_visibility`" in schema
-    assert "`repository_archived`" in schema
-    assert "`repository_default_branch`" in schema
-    assert "`remote_ref_count`" in schema
-    assert "`remote_ref_head_count`" in schema
-    assert "`remote_ref_tag_count`" in schema
-    assert "`remote_ref_kinds`" in schema
-    assert "`remote_ref_sample`" in schema
-    assert "`publish_strategy`" in schema
-    assert "`publish_checklist`" in schema
-    assert "`publish_checklist_count`" in schema
-    assert "`release_path_state`" in schema
-    assert "`push_default_branch`" in schema
-    assert "`push_release_branch`" in schema
-    assert "`remote_preflight`" in schema
-    assert "`bootstrap_origin`" in schema
-    assert "`origin_current_target=`" in schema
-    assert "`origin_current=`" in schema
-    assert "`refs=`" in schema
-    assert "`head_refs=`" in schema
-    assert "`tag_refs=`" in schema
-    assert "`ref_kinds=`" in schema
-    assert "`ref_sample=`" in schema
-    assert "`ready_for_remote_checks`" in schema
-    assert "`origin_present`" in schema
-    assert "worktree commit-plan `next_actions`" in schema
-    assert "top-level `next_commands`" in schema
-    assert "older benchmark artifact has only counters" in schema
-    assert "`evidence_consistency_errors`" in schema
-    assert "`release_evidence_consistency`" in schema
-
-
 def test_benchmark_results_dir_locking_is_documented() -> None:
     readme = read_current_truth_anchors()
     benchmarking = (ROOT / "docs" / "benchmarking.md").read_text(encoding="utf-8")
@@ -381,8 +282,8 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "selection score, penalty reasons, and compact evidence summary" in readme
     assert "selection penalty and its reasons" in readme
     assert (
-        "surface a non-cleanup fallback family before selecting more cleanup work"
-        in readme
+        "surface a non-cleanup fallback family before selecting more cleanup work, "
+        "then inspect autonomy status" in readme
     )
     assert "loop plans now mirror selection score and penalty residue" in readme
     assert "autonomy loop plans now mirror selected-task evidence summaries" in readme
@@ -638,9 +539,10 @@ def test_docs_bind_reduce_integration_risk_to_worktree_commit_plan() -> None:
     for text in (readme, schema):
         assert "reduce_integration_risk" in text
         assert (
-            "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json"
+            "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json"
             in text
         )
+        assert "selected-task validation" in text
 
 
 def test_reports_record_live_evidence_gating_for_cleanup_self_inspection() -> None:

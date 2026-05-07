@@ -27,10 +27,19 @@ def tail_text(value: str | None, limit: int = TAIL_LIMIT) -> str:
     return value[-limit:]
 
 
+def subprocess_output_text(value: str | bytes | None) -> str:
+    """Return subprocess output as UTF-8 text while preserving failure evidence."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return ""
+
+
 def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
     """Run a configured check and capture a normalized result."""
     started = time.perf_counter()
-    if not spec.command:
+    if not spec.command or not spec.command[0].strip():
         return CheckResult(
             id=spec.id,
             tool=spec.tool,
@@ -41,6 +50,19 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             duration_ms=0,
             message="Check command is empty.",
             error_type="invalid_command",
+        )
+    if not cwd.is_dir():
+        return CheckResult(
+            id=spec.id,
+            tool=spec.tool,
+            command=spec.command,
+            kind=spec.kind,
+            status="error",
+            exit_code=None,
+            duration_ms=elapsed_ms(started),
+            stderr_tail=f"Invalid working directory: {cwd}",
+            message=f"Invalid working directory: {cwd}",
+            error_type="invalid_cwd",
         )
 
     try:
@@ -69,8 +91,8 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             error_type="missing_tool",
         )
     except subprocess.TimeoutExpired as exc:
-        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+        stdout = subprocess_output_text(exc.stdout)
+        stderr = subprocess_output_text(exc.stderr)
         return CheckResult(
             id=spec.id,
             tool=spec.tool,
@@ -85,6 +107,19 @@ def run_check(spec: CheckSpec, cwd: Path) -> CheckResult:
             stderr_tail=tail_text(stderr),
             message=f"Check timed out after {spec.timeout_seconds} seconds.",
             error_type="timeout",
+        )
+    except OSError as exc:
+        return CheckResult(
+            id=spec.id,
+            tool=spec.tool,
+            command=spec.command,
+            kind=spec.kind,
+            status="error",
+            exit_code=None,
+            duration_ms=elapsed_ms(started),
+            stderr_tail=str(exc),
+            message=f"Could not execute check command: {spec.command[0]}",
+            error_type="execution_error",
         )
 
     status = "passed" if completed.returncode == 0 else "failed"

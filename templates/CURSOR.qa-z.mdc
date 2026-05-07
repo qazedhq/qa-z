@@ -1,0 +1,16 @@
+---
+description: QA-Z merge-safety rules for AI-generated code
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# QA-Z Merge Safety
+
+- Do not claim code is safe without deterministic evidence.
+- Run or ask for `qa-z guard` before merge.
+- Use deep checks for auth, security, data, API, infra, or public-surface risk.
+- Generate a repair prompt when checks fail.
+- Verify repairs before saying the result improved.
+- Avoid unrelated refactors.
+- Report merge verdict and `.qa-z/runs/latest/` artifact paths.

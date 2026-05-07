@@ -2,6 +2,35 @@
 
 This file tracks the first public slice of work as issue-sized deliverables.
 
+Historical note: the early milestone sections below record the scope at the time
+they were written. For current public capability, product direction, and
+validation gates, use the root README and `docs/product/` documents as the
+current-truth sources.
+
+## Public Launch Productization Slice
+
+Goal: make the public repository immediately legible to developers who use AI
+coding agents and want deterministic merge evidence.
+
+Included:
+
+- README first screen repositioned around "The safety belt for AI-generated
+  code."
+- Five-minute `examples/agent-auth-bug` demo showing an unsafe auth refactor
+  caught by QA-Z.
+- Quickstart, comparison, GitHub Action, Codex, Claude Code, Cursor, launch
+  package, and launch-post docs.
+- Social preview upload asset under `docs/assets/qa-z-social-preview.png`
+  with editable source at `docs/assets/qa-z-social-preview.svg`.
+- Good-first-issue seeds and topic recommendations in `docs/launch-package.md`.
+
+Still external to the local repository:
+
+- GitHub social preview upload.
+- Repository topic mutation.
+- Opening public GitHub issues.
+- Publishing a standalone `qazedhq/qa-z-action@v0` repository.
+
 ## v0.1.0-alpha Scope
 
 Goal: ship a Python-first vertical slice that can reproduce:
@@ -137,7 +166,7 @@ Included:
 - optional `qa-z deep --sarif-output <path>` copy path for CI systems that require a stable SARIF filename
 - severity mapping from QA-Z/Semgrep severities to SARIF levels
 - grouped-finding fallback for older or compact deep artifacts
-- GitHub workflow upload through `github/codeql-action/upload-sarif@v3`
+- GitHub workflow upload through `github/codeql-action/upload-sarif@v4`
 - job-level `security-events: write` permissions in shipped workflow examples
 
 Excluded until later milestones:

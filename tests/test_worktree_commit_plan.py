@@ -180,7 +180,8 @@ def test_commit_plan_next_actions_explain_generated_and_unassigned_work() -> Non
         ),
         (
             "Patch-add cross-cutting docs, report files, or current-truth tests "
-            "with the feature batch they describe instead of staging them wholesale."
+            "with the feature batch they describe instead of staging them wholesale; "
+            "use cross_cutting_groups[].patch_command_text for scoped commands."
         ),
     ]
 
@@ -222,6 +223,48 @@ def test_commit_plan_classifies_helper_and_schema_guard_tests() -> None:
         "tests/test_worktree_commit_plan.py",
     ]
     assert result["cross_cutting_paths"] == ["tests/test_artifact_schema.py"]
+    assert result["unassigned_source_paths"] == []
+
+
+def test_commit_plan_classifies_operator_command_surface() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            "?? src/qa_z/operator_commands.py",
+            "?? tests/test_operator_commands.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["planning_runtime_foundation"]["changed_paths"] == [
+        "src/qa_z/operator_commands.py",
+        "tests/test_operator_commands.py",
+    ]
+    assert any(
+        "tests/test_operator_commands.py" in command
+        for command in batches["planning_runtime_foundation"]["validation_commands"]
+    )
+    assert result["unassigned_source_paths"] == []
+
+
+def test_commit_plan_routes_config_and_fast_runner_surfaces() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M src/qa_z/config.py",
+            " M src/qa_z/runners/fast.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["planning_runtime_foundation"]["changed_paths"] == [
+        "src/qa_z/config.py"
+    ]
+    assert batches["runner_contract_spine"]["changed_paths"] == [
+        "src/qa_z/runners/fast.py"
+    ]
     assert result["unassigned_source_paths"] == []
 
 
@@ -273,21 +316,33 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
             " M scripts/alpha_release_gate.py",
             "?? scripts/worktree_commit_plan.py",
             " M src/qa_z/benchmark.py",
+            " M src/qa_z/autonomy_actions.py",
+            " M src/qa_z/task_selection_render.py",
         ]
     )
     batches = {batch["id"]: batch for batch in result["batches"]}
 
     assert batches["alpha_release_closure"]["validation_commands"] == [
-        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py -q",
+        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
+        "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
         "python scripts/alpha_release_gate.py --allow-dirty --json",
     ]
     assert batches["commit_plan_support"]["validation_commands"] == [
         "python -m pytest tests/test_worktree_commit_plan.py tests/test_current_truth.py -q",
         "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
+        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
     ]
     assert (
         "python -m qa_z benchmark --json"
         in batches["benchmark_coverage"]["validation_commands"]
+    )
+    assert batches["autonomy_loop_planner"]["validation_commands"] == [
+        "python -m pytest tests/test_autonomy.py tests/test_autonomy_action_cleanup.py tests/test_autonomy_action_context.py tests/test_cli.py -q",
+        "python -m qa_z autonomy status --json",
+    ]
+    assert (
+        "tests/test_self_improvement_selection_output.py"
+        in batches["self_inspection_backlog"]["validation_commands"][0]
     )
     assert batches["benchmark_coverage"]["staging_plan"] == {
         "include_paths": ["src/qa_z/benchmark.py"],
@@ -432,6 +487,7 @@ def test_commit_plan_routes_shared_support_paths_to_owned_batches() -> None:
             " M tests/executor_result_test_support.py",
             " M tests/test_runtime_executor_result_architecture.py",
             " M tests/test_repair_signal_inputs.py",
+            "?? tests/test_artifact_consistency_discovery.py",
             " M tests/test_worktree_discovery_architecture.py",
             " M tests/test_worktree_discovery_candidates.py",
         ]
@@ -452,9 +508,13 @@ def test_commit_plan_routes_shared_support_paths_to_owned_batches() -> None:
     ]
     assert batches["self_inspection_backlog"]["changed_paths"] == [
         "tests/test_repair_signal_inputs.py",
+        "tests/test_artifact_consistency_discovery.py",
         "tests/test_worktree_discovery_architecture.py",
         "tests/test_worktree_discovery_candidates.py",
     ]
+    validation = " ".join(batches["self_inspection_backlog"]["validation_commands"])
+    assert "tests/test_repair_signal_inputs.py" in validation
+    assert "tests/test_artifact_consistency_discovery.py" in validation
     assert result["unassigned_source_paths"] == []
 
 
@@ -467,6 +527,33 @@ def test_commit_plan_routes_fast_gate_environment_into_planning_runtime_batch() 
     assert batches["planning_runtime_foundation"]["changed_paths"] == [
         "tests/test_fast_gate_environment.py"
     ]
+    assert result["unassigned_source_paths"] == []
+
+
+def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M tests/test_examples.py",
+            "?? tests/test_public_docs_current_truth.py",
+            " M tests/test_sarif_reporter.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["current_truth_release_surface"]["changed_paths"] == [
+        "tests/test_examples.py",
+        "tests/test_public_docs_current_truth.py",
+    ]
+    assert batches["repair_session_publish"]["changed_paths"] == [
+        "tests/test_sarif_reporter.py"
+    ]
+    validation = " ".join(
+        batches["current_truth_release_surface"]["validation_commands"]
+    )
+    assert "tests/test_examples.py" in validation
+    assert "tests/test_public_docs_current_truth.py" in validation
     assert result["unassigned_source_paths"] == []
 
 

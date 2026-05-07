@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
+import shutil
 from typing import Any
 
 from qa_z import executor_bridge as executor_bridge_module
@@ -24,6 +26,8 @@ from qa_z.executor_bridge_summary import (
     bridge_safety_package_summary,
 )
 from qa_z.executor_bridge_support import (
+    bridge_output_policy,
+    bridge_output_warnings,
     default_bridge_id,
     ensure_session_exists,
     normalize_bridge_id,
@@ -81,64 +85,72 @@ def create_executor_bridge(
             f"Executor bridge already exists: {format_path(bridge_dir, root)}"
         )
 
-    bridge_dir.mkdir(parents=True, exist_ok=False)
-    inputs_dir = bridge_dir / "inputs"
-    inputs_dir.mkdir(parents=True, exist_ok=True)
+    created_bridge_dir = False
+    try:
+        bridge_dir.mkdir(parents=True, exist_ok=False)
+        created_bridge_dir = True
+        inputs_dir = bridge_dir / "inputs"
+        inputs_dir.mkdir(parents=True, exist_ok=True)
 
-    copied_inputs = copy_bridge_inputs(
-        root=root,
-        inputs_dir=inputs_dir,
-        loop_outcome=loop_outcome,
-        action=action,
-        session=session,
-    )
-    safety_policy = read_json_object(
-        resolve_path(root, session.safety_artifacts["policy_json"])
-    )
-    handoff = read_json_object(
-        resolve_path(root, session.handoff_artifacts["handoff_json"])
-    )
-    validation_commands = bridge_validation_commands(session)
-    manifest = bridge_manifest(
-        root=root,
-        bridge_dir=bridge_dir,
-        bridge_id=resolved_bridge_id,
-        generated_at=generated_at,
-        loop_outcome=loop_outcome,
-        action=action,
-        session=session,
-        handoff=handoff,
-        safety_policy=safety_policy,
-        copied_inputs=copied_inputs,
-        validation_commands=validation_commands,
-    )
-
-    manifest_path = bridge_dir / "bridge.json"
-    executor_guide_path = bridge_dir / "executor_guide.md"
-    codex_path = bridge_dir / "codex.md"
-    claude_path = bridge_dir / "claude.md"
-    result_template_path = bridge_dir / "result_template.json"
-    write_json(manifest_path, manifest)
-    write_json(
-        result_template_path,
-        executor_result_template(
+        copied_inputs = copy_bridge_inputs(
+            root=root,
+            inputs_dir=inputs_dir,
+            loop_outcome=loop_outcome,
+            action=action,
+            session=session,
+        )
+        safety_policy = read_json_object(
+            resolve_path(root, session.safety_artifacts["policy_json"])
+        )
+        handoff = read_json_object(
+            resolve_path(root, session.handoff_artifacts["handoff_json"])
+        )
+        validation_commands = bridge_validation_commands(session)
+        manifest = bridge_manifest(
+            root=root,
+            bridge_dir=bridge_dir,
             bridge_id=resolved_bridge_id,
-            created_at=generated_at,
-            source_session_id=session.session_id,
-            source_loop_id=source_loop_id,
+            generated_at=generated_at,
+            loop_outcome=loop_outcome,
+            action=action,
+            session=session,
+            handoff=handoff,
+            safety_policy=safety_policy,
+            copied_inputs=copied_inputs,
             validation_commands=validation_commands,
-            verification_hint="rerun",
-        ),
-    )
-    executor_guide_path.write_text(
-        render_executor_bridge_guide(manifest, handoff), encoding="utf-8"
-    )
-    codex_path.write_text(
-        render_executor_specific_guide(manifest, "Codex"), encoding="utf-8"
-    )
-    claude_path.write_text(
-        render_executor_specific_guide(manifest, "Claude"), encoding="utf-8"
-    )
+        )
+
+        manifest_path = bridge_dir / "bridge.json"
+        executor_guide_path = bridge_dir / "executor_guide.md"
+        codex_path = bridge_dir / "codex.md"
+        claude_path = bridge_dir / "claude.md"
+        result_template_path = bridge_dir / "result_template.json"
+        write_json(manifest_path, manifest)
+        write_json(
+            result_template_path,
+            executor_result_template(
+                bridge_id=resolved_bridge_id,
+                created_at=generated_at,
+                source_session_id=session.session_id,
+                source_loop_id=source_loop_id,
+                validation_commands=validation_commands,
+                verification_hint="rerun",
+            ),
+        )
+        executor_guide_path.write_text(
+            render_executor_bridge_guide(manifest, handoff), encoding="utf-8"
+        )
+        codex_path.write_text(
+            render_executor_specific_guide(manifest, "Codex"), encoding="utf-8"
+        )
+        claude_path.write_text(
+            render_executor_specific_guide(manifest, "Claude"), encoding="utf-8"
+        )
+    except Exception:
+        if created_bridge_dir:
+            with suppress(OSError):
+                shutil.rmtree(bridge_dir)
+        raise
     return executor_bridge_module.ExecutorBridgePaths(
         bridge_dir=bridge_dir,
         manifest_path=manifest_path,
@@ -200,6 +212,8 @@ def bridge_manifest(
         ),
         "non_goals": list(executor_bridge_module.DEFAULT_NON_GOALS),
         "safety_constraints": list(executor_bridge_module.DEFAULT_SAFETY_CONSTRAINTS),
+        "output_policy": bridge_output_policy(root=root, bridge_dir=bridge_dir),
+        "warnings": bridge_output_warnings(root=root, bridge_dir=bridge_dir),
         "return_contract": {
             "expected_next_step": "run repair-session verify after edits",
             "candidate_worktree": "repository working tree edited by external executor",

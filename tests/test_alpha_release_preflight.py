@@ -98,6 +98,30 @@ def test_preflight_fails_on_existing_tag_and_tracked_generated_artifacts(tmp_pat
     assert "generated_local_by_default_tracked_paths=benchmarks/results-l11/" in detail
 
 
+def test_preflight_can_skip_historical_release_tag_for_quality_mode(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "tag", "--list", "v0.9.8-alpha")] = (
+        0,
+        "v0.9.8-alpha\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        skip_remote=True,
+        check_release_tag=False,
+        runner=FakeRunner(responses),
+    )
+
+    assert result.exit_code == 0
+    assert result.by_name["release_tag_absent"].status == "skipped"
+    assert "quality mode" in result.by_name["release_tag_absent"].detail
+    payload = module.result_payload(result, check_release_tag=False)
+    assert payload["check_release_tag"] is False
+    assert payload["skipped_count"] == 4
+
+
 def test_preflight_payload_splits_tracked_generated_artifacts_by_policy_bucket(
     tmp_path,
 ):

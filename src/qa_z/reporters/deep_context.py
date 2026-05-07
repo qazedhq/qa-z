@@ -68,6 +68,11 @@ class DeepContext:
     affected_files: list[str]
     highest_severity: str | None
     policy: dict[str, Any]
+    scan_quality_status: str | None
+    scan_warning_count: int
+    scan_warning_types: list[str]
+    scan_warning_paths: list[str]
+    scan_warning_check_ids: list[str]
 
     @property
     def execution_mode(self) -> str:
@@ -113,6 +118,11 @@ class DeepContext:
             "top_findings": self.findings[:TOP_FINDINGS_LIMIT],
             "top_grouped_findings": self.grouped_findings[:TOP_FINDINGS_LIMIT],
             "policy": self.policy,
+            "scan_quality_status": self.scan_quality_status,
+            "scan_warning_count": self.scan_warning_count,
+            "scan_warning_types": self.scan_warning_types,
+            "scan_warning_paths": self.scan_warning_paths,
+            "scan_warning_check_ids": self.scan_warning_check_ids,
         }
 
 
@@ -169,6 +179,10 @@ def _build_deep_context_impl(summary: RunSummary | None) -> DeepContext | None:
     )
     filter_reasons = aggregate_filter_reasons(summary.checks)
     policy = primary_policy(summary, primary_check)
+    scan_warning_count = deep_scan_warning_count(summary)
+    scan_warning_types = deep_scan_warning_types(summary)
+    scan_warning_paths = deep_scan_warning_paths(summary)
+    scan_warning_check_ids = deep_scan_warning_check_ids(summary)
 
     return DeepContext(
         summary=summary,
@@ -183,7 +197,96 @@ def _build_deep_context_impl(summary: RunSummary | None) -> DeepContext | None:
         affected_files=affected_files,
         highest_severity=highest_severity(severity_summary),
         policy=policy,
+        scan_quality_status=deep_scan_quality_status(summary),
+        scan_warning_count=scan_warning_count,
+        scan_warning_types=scan_warning_types,
+        scan_warning_paths=scan_warning_paths,
+        scan_warning_check_ids=scan_warning_check_ids,
     )
+
+
+def deep_scan_quality(summary: RunSummary) -> dict[str, Any]:
+    """Return the summary-level scan-quality diagnostics when present."""
+    scan_quality = summary.diagnostics.get("scan_quality")
+    return dict(scan_quality) if isinstance(scan_quality, dict) else {}
+
+
+def deep_scan_quality_status(summary: RunSummary) -> str | None:
+    """Return the deep scan-quality status, if one was captured."""
+    status = str(deep_scan_quality(summary).get("status") or "").strip()
+    return status or None
+
+
+def deep_scan_warning_count(summary: RunSummary) -> int:
+    """Return scan-warning count from diagnostics, falling back to checks."""
+    scan_quality = deep_scan_quality(summary)
+    warning_count = nonnegative_int(scan_quality.get("warning_count"))
+    if warning_count:
+        return warning_count
+    return sum(check.scan_warning_count or 0 for check in summary.checks)
+
+
+def deep_scan_warning_types(summary: RunSummary) -> list[str]:
+    """Return unique scan-warning types from diagnostics or check warnings."""
+    scan_quality = deep_scan_quality(summary)
+    warning_types = string_list(scan_quality.get("warning_types"))
+    if warning_types:
+        return unique_preserve_order(warning_types)
+    return unique_preserve_order(
+        [
+            str(warning.get("error_type") or "").strip()
+            for check in summary.checks
+            for warning in check.scan_warnings
+            if isinstance(warning, dict)
+        ]
+    )
+
+
+def deep_scan_warning_paths(summary: RunSummary) -> list[str]:
+    """Return unique scan-warning paths from diagnostics or check warnings."""
+    scan_quality = deep_scan_quality(summary)
+    warning_paths = string_list(scan_quality.get("warning_paths"))
+    if warning_paths:
+        return unique_preserve_order(warning_paths)
+    return unique_preserve_order(
+        [
+            str(warning.get("path") or "").strip()
+            for check in summary.checks
+            for warning in check.scan_warnings
+            if isinstance(warning, dict)
+        ]
+    )
+
+
+def deep_scan_warning_check_ids(summary: RunSummary) -> list[str]:
+    """Return check ids that produced scan-warning diagnostics."""
+    scan_quality = deep_scan_quality(summary)
+    check_ids = string_list(scan_quality.get("check_ids"))
+    if check_ids:
+        return unique_preserve_order(check_ids)
+    return [
+        check.id
+        for check in summary.checks
+        if check.scan_warning_count or check.scan_warnings
+    ]
+
+
+def string_list(value: object) -> list[str]:
+    """Return a list of non-empty strings."""
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def nonnegative_int(value: object) -> int:
+    """Return a non-negative integer or 0 for malformed values."""
+    if not isinstance(value, (int, float, str)):
+        return 0
+    try:
+        number = int(value)
+    except ValueError:
+        return 0
+    return max(number, 0)
 
 
 def _format_severity_summary_impl(severity_summary: dict[str, int]) -> str:

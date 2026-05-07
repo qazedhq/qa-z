@@ -1014,6 +1014,51 @@ def test_load_autonomy_status_reports_runtime_progress(tmp_path: Path) -> None:
     assert status["min_loop_seconds"] == 120
 
 
+def test_load_autonomy_status_ignores_generated_scratch_verify_summaries(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path
+        / ".qa-z"
+        / "tmp"
+        / "benchmark-final"
+        / "work"
+        / "fixture"
+        / "repo"
+        / ".qa-z"
+        / "runs"
+        / "candidate"
+        / "verify"
+        / "summary.json",
+        {
+            "kind": "qa_z.verify_summary",
+            "schema_version": 1,
+            "verdict": "mixed",
+        },
+    )
+
+    status = load_autonomy_status(tmp_path)
+
+    assert status["recent_verify_verdict"] is None
+
+
+def test_load_autonomy_status_keeps_live_session_verify_summaries(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "sessions" / "session-one" / "verify" / "summary.json",
+        {
+            "kind": "qa_z.verify_summary",
+            "schema_version": 1,
+            "verdict": "regressed",
+        },
+    )
+
+    status = load_autonomy_status(tmp_path)
+
+    assert status["recent_verify_verdict"] == "regressed"
+
+
 def test_action_mapping_is_grounded_by_task_category(tmp_path: Path) -> None:
     assert (
         action_for_task(
@@ -1179,7 +1224,7 @@ def test_render_autonomy_loop_plan_includes_action_context_paths() -> None:
                 "commands": [
                     "git status --short",
                     "python scripts/runtime_artifact_cleanup.py --json",
-                    "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
+                    "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
                     "python -m qa_z backlog --json",
                 ],
                 "context_paths": [
@@ -1279,12 +1324,17 @@ def test_autonomy_prepares_repair_session_for_verify_regression(
     session_dir = tmp_path / ".qa-z" / "sessions" / session_id
 
     assert summary["created_session_ids"] == [session_id]
+    assert outcome["state"] == "fallback_selected"
+    assert outcome["loop_health"]["fallback_selected"] is True
     assert action["type"] == "repair_session"
     assert action["session_id"] == session_id
     assert action["baseline_run"] == ".qa-z/runs/baseline"
     assert outcome["state_transitions"] == [
         "inspected",
         "selected",
+        "empty_backlog_detected",
+        "reseeded",
+        "fallback_selected",
         "verification_observed",
         "session_prepared",
         "awaiting_repair",
@@ -1303,6 +1353,8 @@ def test_autonomy_prepares_repair_session_for_verify_regression(
         .read_text(encoding="utf-8")
         .splitlines()[0]
     )
+    assert history["state"] == "fallback_selected"
+    assert history["selected_fallback_families"] == ["verification_remediation"]
     assert history["verify_verdict"] == "regressed"
 
 
@@ -1338,6 +1390,7 @@ def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> Non
     clock = FakeClock()
     monkeypatch.setattr("qa_z.autonomy.time.monotonic", clock.monotonic)
     monkeypatch.setattr("qa_z.autonomy.time.sleep", clock.sleep)
+    monkeypatch.setattr("qa_z.autonomy.utc_now", lambda: NOW)
 
     exit_code = main(
         [
@@ -1372,11 +1425,22 @@ def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> Non
     assert status["kind"] == "qa_z.autonomy_status"
     assert status["latest_loop_id"] == output["latest_loop_id"]
     assert status["latest_selected_tasks"] == ["benchmark_gap-py_type_error"]
+    assert status["latest_source_self_inspection"] == (
+        f".qa-z/loops/{status['latest_loop_id']}/self_inspect.json"
+    )
+    assert status["latest_source_self_inspection_loop_id"] == status["latest_loop_id"]
+    assert status["latest_source_self_inspection_generated_at"] == NOW
     assert status["latest_selected_task_details"][0]["title"] == (
         "Fix benchmark fixture failure: py_type_error"
     )
     assert status["latest_selected_task_details"][0]["recommendation"] == (
         "add_benchmark_fixture"
+    )
+    assert status["latest_selected_task_details"][0]["action_hint"] == (
+        "turn add benchmark fixture into a scoped repair plan"
+    )
+    assert status["latest_selected_task_details"][0]["validation_command"] == (
+        "python -m qa_z benchmark --json"
     )
     assert "selection_penalty" in status["latest_selected_task_details"][0]
     assert status["latest_prepared_actions"][0]["type"] == "benchmark_fixture_plan"
@@ -1388,6 +1452,12 @@ def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> Non
         == "Fix benchmark fixture failure: py_type_error"
     )
     assert status["backlog_top_items"][0]["recommendation"] == "add_benchmark_fixture"
+    assert status["backlog_top_items"][0]["action_hint"] == (
+        "turn add benchmark fixture into a scoped repair plan"
+    )
+    assert status["backlog_top_items"][0]["validation_command"] == (
+        "python -m qa_z benchmark --json"
+    )
     assert "benchmark" in status["backlog_top_items"][0]["evidence_summary"]
     assert status["runtime_target_seconds"] == 4
     assert status["runtime_elapsed_seconds"] == 4
@@ -1407,6 +1477,127 @@ def test_load_autonomy_status_without_previous_loop(tmp_path: Path) -> None:
     assert "Live repository:" not in render_autonomy_status(status)
 
 
+def test_load_autonomy_status_reports_selection_outcome_loop_mismatch(
+    tmp_path: Path,
+) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    write_json(
+        latest_dir / "autonomy_summary.json",
+        {
+            "kind": "qa_z.autonomy_summary",
+            "loops_completed": 1,
+            "runtime_target_seconds": 0,
+            "runtime_elapsed_seconds": 0,
+            "runtime_remaining_seconds": 0,
+            "runtime_budget_met": True,
+            "min_loop_seconds": 0,
+        },
+    )
+    write_json(
+        latest_dir / "outcome.json",
+        {
+            "kind": "qa_z.autonomy_outcome",
+            "loop_id": "loop-old",
+            "state": "completed",
+            "actions_prepared": [],
+            "next_recommendations": [],
+        },
+    )
+    write_json(
+        latest_dir / "selected_tasks.json",
+        {
+            "kind": "qa_z.selected_tasks",
+            "loop_id": "loop-new",
+            "selected_tasks": [
+                {
+                    "id": "worktree_risk-dirty-worktree",
+                    "title": "Reduce dirty worktree integration risk",
+                    "category": "worktree_risk",
+                    "recommendation": "reduce_integration_risk",
+                    "priority_score": 65,
+                    "status": "open",
+                    "evidence": [{"source": "git_status", "summary": "dirty"}],
+                }
+            ],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {"kind": "qa_z.improvement_backlog", "items": []},
+    )
+
+    status = load_autonomy_status(tmp_path)
+    output = render_autonomy_status(status)
+
+    assert status["latest_loop_id"] == "loop-old"
+    assert status["latest_selected_loop_id"] == "loop-new"
+    assert status["latest_outcome_loop_id"] == "loop-old"
+    assert status["latest_selection_outcome_mismatch"] is True
+    assert status["latest_prepared_actions_loop_id"] is None
+    assert status["latest_prepared_actions_stale_for_selection"] is False
+    assert "Selected task loop: loop-new" in output
+    assert "Outcome loop: loop-old" in output
+    assert "Selection/outcome loop mismatch: true" in output
+
+
+def test_autonomy_status_marks_prepared_actions_stale_for_newer_selection(
+    tmp_path: Path,
+) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    write_json(
+        latest_dir / "autonomy_summary.json",
+        {"kind": "qa_z.autonomy_summary", "loops_completed": 1},
+    )
+    write_json(
+        latest_dir / "outcome.json",
+        {
+            "kind": "qa_z.autonomy_outcome",
+            "loop_id": "loop-old",
+            "state": "completed",
+            "actions_prepared": [
+                {
+                    "type": "integration_cleanup_plan",
+                    "task_id": "worktree_risk-dirty-worktree",
+                }
+            ],
+            "next_recommendations": [],
+        },
+    )
+    write_json(
+        latest_dir / "selected_tasks.json",
+        {
+            "kind": "qa_z.selected_tasks",
+            "loop_id": "loop-new",
+            "selected_tasks": [
+                {
+                    "id": "benchmark_gap-new",
+                    "title": "Expand benchmark coverage",
+                    "category": "benchmark_gap",
+                    "recommendation": "add_benchmark_fixture",
+                    "priority_score": 55,
+                    "status": "open",
+                    "evidence_summary": "stored compact benchmark evidence",
+                }
+            ],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {"kind": "qa_z.improvement_backlog", "items": []},
+    )
+
+    status = load_autonomy_status(tmp_path)
+    output = render_autonomy_status(status)
+
+    assert status["latest_prepared_actions_loop_id"] == "loop-old"
+    assert status["latest_prepared_actions_stale_for_selection"] is True
+    assert status["latest_selected_task_details"][0]["evidence_summary"] == (
+        "stored compact benchmark evidence"
+    )
+    assert "Prepared actions loop: loop-old" in output
+    assert "Prepared actions may not match the latest selected task artifact." in output
+
+
 def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() -> None:
     output = render_autonomy_status(
         {
@@ -1416,6 +1607,9 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
                 "worktree_risk-dirty-worktree",
                 "integration_gap-worktree-integration-risk",
             ],
+            "latest_source_self_inspection": (".qa-z/loops/loop-one/self_inspect.json"),
+            "latest_source_self_inspection_loop_id": "loop-one",
+            "latest_source_self_inspection_generated_at": NOW,
             "latest_selected_fallback_families": ["cleanup"],
             "runtime_elapsed_seconds": 1,
             "runtime_target_seconds": 0,
@@ -1434,7 +1628,7 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
                     "commands": [
                         "git status --short",
                         "python scripts/runtime_artifact_cleanup.py --json",
-                        "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
+                        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
                         "python -m qa_z backlog --json",
                     ],
                     "context_paths": [
@@ -1462,6 +1656,8 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
     )
 
     assert "Prepared actions:" in output
+    assert "Self-inspection source: .qa-z/loops/loop-one/self_inspect.json" in output
+    assert "Self-inspection loop: loop-one (2026-04-15T00:00:00Z)" in output
     assert "Runtime: 1 seconds elapsed (no minimum budget)" in output
     assert "Selected fallback families: cleanup" in output
     assert (
@@ -1474,7 +1670,7 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
     assert (
         "commands: git status --short; "
         "python scripts/runtime_artifact_cleanup.py --json; "
-        "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json; "
+        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json; "
         "python -m qa_z backlog --json" in output
     )
     assert (
@@ -1570,6 +1766,10 @@ def test_render_autonomy_status_shows_open_sessions_and_backlog_details() -> Non
                     "title": "Resume existing repair session",
                     "category": "session_gap",
                     "recommendation": "create_repair_session",
+                    "action_hint": "turn selected evidence into a repair session",
+                    "validation_command": (
+                        "python -m qa_z repair-session status --session session-one"
+                    ),
                     "selection_priority_score": 40,
                     "selection_penalty": 2,
                     "selection_penalty_reasons": [
@@ -1604,6 +1804,10 @@ def test_render_autonomy_status_shows_open_sessions_and_backlog_details() -> Non
                     "status": "open",
                     "title": "Reduce dirty worktree integration risk",
                     "recommendation": "reduce_integration_risk",
+                    "action_hint": "inspect the dirty worktree",
+                    "validation_command": (
+                        "python scripts/worktree_commit_plan.py --summary-only"
+                    ),
                     "evidence_summary": (
                         "git_status: modified=25; untracked=346; staged=0"
                     ),
@@ -1620,6 +1824,11 @@ def test_render_autonomy_status_shows_open_sessions_and_backlog_details() -> Non
     assert "Selected task details:" in output
     assert "- session_gap-existing: Resume existing repair session" in output
     assert "recommendation: create_repair_session" in output
+    assert "action: turn selected evidence into a repair session" in output
+    assert (
+        "validation: python -m qa_z repair-session status --session session-one"
+        in output
+    )
     assert "selection score: 40" in output
     assert (
         "selection penalty: 2 (recent_category_reselected, "
@@ -1627,6 +1836,8 @@ def test_render_autonomy_status_shows_open_sessions_and_backlog_details() -> Non
     )
     assert "title: Reduce dirty worktree integration risk" in output
     assert "next: reduce_integration_risk" in output
+    assert "action: inspect the dirty worktree" in output
+    assert "validation: python scripts/worktree_commit_plan.py --summary-only" in output
     assert "evidence: git_status: modified=25; untracked=346; staged=0" in output
 
 

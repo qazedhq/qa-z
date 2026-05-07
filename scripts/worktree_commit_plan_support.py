@@ -138,6 +138,7 @@ OWNER_OVERRIDES = (
             "src/qa_z/executor_history_signals.py",
             "src/qa_z/executor_signals.py",
             "src/qa_z/report_signals.py",
+            "tests/test_artifact_consistency_discovery.py",
             "tests/test_repair_signal_inputs.py",
             "tests/test_worktree_discovery_architecture.py",
             "tests/test_worktree_discovery_candidates.py",
@@ -159,6 +160,10 @@ BATCH_RULES = (
             "scripts/alpha_release_bundle_manifest_*.py",
             "scripts/alpha_release_preflight.py",
             "scripts/alpha_release_preflight_*.py",
+            "scripts/check_public_raw_urls.py",
+            "scripts/check_text_file_hygiene.py",
+            ".github/workflows/*.yml",
+            ".github/actions/guard/**",
             "tests/test_alpha_release_artifact_smoke*.py",
             "tests/test_alpha_release_bundle_manifest*.py",
             "tests/alpha_release_artifact_smoke*_support.py",
@@ -167,10 +172,13 @@ BATCH_RULES = (
             "tests/alpha_release_gate*_support.py",
             "tests/test_alpha_release_preflight*.py",
             "tests/alpha_release_preflight*_support.py",
+            "tests/test_public_raw_urls.py",
+            "tests/test_text_file_hygiene.py",
             "docs/releases/**",
         ),
         validation_commands=(
-            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py -q",
+            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
+            "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
             "python scripts/alpha_release_gate.py --allow-dirty --json",
         ),
     ),
@@ -180,12 +188,14 @@ BATCH_RULES = (
         message="Keep release-facing docs and current-truth guards aligned with the shipped surface.",
         patterns=(
             "tests/test_current_truth*.py",
+            "tests/test_*current_truth*.py",
+            "tests/test_examples.py",
             "docs/superpowers/plans/*github*release*.md",
             "docs/superpowers/plans/*github*launch*.md",
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(
-            "python -m pytest tests/test_current_truth.py tests/test_current_truth_release_surfaces.py -q",
+            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_examples.py -q",
             "python -m qa_z --help",
         ),
     ),
@@ -202,6 +212,7 @@ BATCH_RULES = (
         validation_commands=(
             "python -m pytest tests/test_worktree_commit_plan.py tests/test_current_truth.py -q",
             "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
+            "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
         ),
     ),
     BatchRule(
@@ -213,14 +224,18 @@ BATCH_RULES = (
         patterns=(
             "src/qa_z/cli.py",
             "src/qa_z/artifacts.py",
+            "src/qa_z/config.py",
             "src/qa_z/config_validation.py",
             "src/qa_z/commands",
             "src/qa_z/commands/**",
             "src/qa_z/execution_*.py",
             "src/qa_z/git_runtime.py",
+            "src/qa_z/guard",
+            "src/qa_z/guard/**",
             "src/qa_z/improvement_state.py",
             "src/qa_z/live_repository*.py",
             "src/qa_z/loop_history_candidates.py",
+            "src/qa_z/operator_commands.py",
             "src/qa_z/report_*.py",
             "tests/__init__.py",
             "tests/ast_test_support.py",
@@ -231,16 +246,20 @@ BATCH_RULES = (
             "tests/test_contract_planner.py",
             "tests/test_contract_resolution.py",
             "tests/test_coverage_gap_discovery.py",
+            "tests/test_demo_guard_action_package.py",
             "tests/test_execution*.py",
             "tests/test_git_runtime*.py",
+            "tests/test_guard_cli.py",
             "tests/test_live_repository*.py",
             "tests/test_loop_health*.py",
+            "tests/test_operator_commands.py",
             "tests/test_planning_commands.py",
             "tests/test_report*.py",
             "tests/test_runtime_commands.py",
             "tests/test_init_options.py",
             "tests/test_selection_context*.py",
             "tests/test_session_commands.py",
+            "tests/test_skill_install_cli.py",
             "tests/test_surface_discovery*.py",
             "tests/test_task_selection*.py",
             "src/qa_z/planner/contracts.py",
@@ -250,6 +269,7 @@ BATCH_RULES = (
         ),
         validation_commands=(
             "python -m pytest tests/test_coverage_gap_discovery.py tests/test_execution_discovery_architecture.py tests/test_execution_executor_candidates_architecture.py tests/test_execution_followup_candidates_architecture.py tests/test_fast_gate_environment.py tests/test_git_runtime_signal_inputs.py tests/test_live_repository_architecture.py tests/test_loop_health_architecture.py tests/test_loop_health_signal_inputs.py tests/test_report_freshness.py tests/test_report_freshness_architecture.py tests/test_report_signal_architecture.py tests/test_report_signal_inputs.py tests/test_selection_context_architecture.py tests/test_surface_discovery_architecture.py tests/test_task_selection_architecture.py tests/test_task_selection_evidence_architecture.py -q",
+            "python -m pytest tests/test_operator_commands.py -q",
             "python -m qa_z self-inspect --json",
         ),
     ),
@@ -286,6 +306,7 @@ BATCH_RULES = (
         patterns=(
             "src/qa_z/runners/models.py",
             "src/qa_z/runners/checks.py",
+            "src/qa_z/runners/fast.py",
             "src/qa_z/runners/python.py",
             "src/qa_z/runners/selection.py",
             "src/qa_z/runners/selection_common.py",
@@ -338,7 +359,11 @@ BATCH_RULES = (
             "tests/test_cli.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_self_improvement.py tests/test_cli.py -q",
+            "python -m pytest tests/test_self_improvement.py "
+            "tests/test_self_improvement_inspection.py "
+            "tests/test_self_improvement_selection_output.py "
+            "tests/test_repair_signal_inputs.py "
+            "tests/test_artifact_consistency_discovery.py tests/test_cli.py -q",
             "python -m qa_z self-inspect --json",
         ),
     ),
@@ -352,7 +377,9 @@ BATCH_RULES = (
             "tests/test_autonomy*.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_autonomy.py tests/test_cli.py -q",
+            "python -m pytest tests/test_autonomy.py "
+            "tests/test_autonomy_action_cleanup.py "
+            "tests/test_autonomy_action_context.py tests/test_cli.py -q",
             "python -m qa_z autonomy status --json",
         ),
     ),
@@ -378,6 +405,7 @@ BATCH_RULES = (
             "tests/test_repair_prompt*.py",
             "tests/test_review_packet*.py",
             "tests/test_run_summary*.py",
+            "tests/test_sarif*.py",
             "tests/test_review_commands.py",
             "tests/test_review_*.py",
             "tests/verification*_support.py",
@@ -513,6 +541,8 @@ CROSS_CUTTING_GROUP_RULES = (
 )
 
 SOURCE_PATTERNS = (
+    ".github/actions/**",
+    ".github/workflows/**",
     "src/**",
     "scripts/**",
     "tests/**",
@@ -696,7 +726,12 @@ def cross_cutting_group_rollup(paths: Sequence[str]) -> list[dict[str, object]]:
 
 def render_command_part(part: object) -> str:
     text = str(part)
-    if not text or any(character.isspace() for character in text) or '"' in text:
+    shell_sensitive_characters = set('"&;|<>()')
+    if (
+        not text
+        or any(character.isspace() for character in text)
+        or any(character in shell_sensitive_characters for character in text)
+    ):
         return '"' + text.replace('"', '\\"') + '"'
     return text
 
@@ -748,7 +783,8 @@ def next_actions(
         actions.append(
             (
                 "Patch-add cross-cutting docs, report files, or current-truth tests "
-                "with the feature batch they describe instead of staging them wholesale."
+                "with the feature batch they describe instead of staging them wholesale; "
+                "use cross_cutting_groups[].patch_command_text for scoped commands."
             )
         )
     return actions
@@ -939,7 +975,14 @@ def filter_payload_for_batch(
         if isinstance(batch, dict) and batch.get("id") == batch_id
     ]
     if not selected:
-        raise ValueError(f"unknown batch {batch_id}")
+        known_batches = [
+            str(batch.get("id"))
+            for batch in batches
+            if isinstance(batch, dict) and batch.get("id")
+        ]
+        raise ValueError(
+            f"unknown batch {batch_id}; known batches: {', '.join(known_batches)}"
+        )
     filtered = dict(payload)
     global_status = payload.get("status")
     global_attention_reasons = payload.get("attention_reasons")
@@ -980,9 +1023,8 @@ def filter_payload_for_batch(
     filtered["selected_batch"] = batch_id
     filtered["batches"] = [selected_batch]
     validation_commands = selected_batch.get("validation_commands")
-    selected_status = (
-        "attention_required" if selected_batch.get("changed_count") == 0 else "ready"
-    )
+    selected_is_empty = selected_batch.get("changed_count") == 0
+    selected_status = "attention_required" if selected_is_empty else "ready"
     selected_staging_plan = selected_batch.get("staging_plan")
     include_path_count = 0
     patch_add_candidate_count = 0
@@ -1002,12 +1044,9 @@ def filter_payload_for_batch(
         if isinstance(global_attention_reasons, list)
         else []
     )
-    preserved_global_blockers = [
-        reason
-        for reason in global_reasons
-        if reason in {"generated_artifacts_present", "cross_cutting_paths_present"}
-    ]
-    selected_attention_reasons = list(preserved_global_blockers)
+    selected_attention_reasons = list(global_reasons)
+    if selected_is_empty:
+        selected_attention_reasons.append("selected_batch_empty")
     filtered_status = (
         "attention_required" if selected_attention_reasons else selected_status
     )
@@ -1016,6 +1055,17 @@ def filter_payload_for_batch(
     filtered["global_attention_reason_count"] = len(global_reasons)
     filtered["status"] = filtered_status
     filtered["attention_reasons"] = selected_attention_reasons
+    if selected_is_empty:
+        next_action_items = filtered.get("next_actions")
+        actions = (
+            [action for action in next_action_items if isinstance(action, str)]
+            if isinstance(next_action_items, list)
+            else []
+        )
+        actions.append(
+            "Select a batch with changed paths or rerun without --batch to inspect changed_batches."
+        )
+        filtered["next_actions"] = unique_strings(actions)
     filtered["selected_batch_summary"] = {
         "id": batch_id,
         "changed_count": selected_batch.get("changed_count", 0),
@@ -1093,17 +1143,52 @@ def compact_payload(payload: dict[str, object]) -> dict[str, object]:
             if not isinstance(changed_count, int) or changed_count <= 0:
                 continue
             validation_commands = batch.get("validation_commands")
-            changed_batches.append(
-                {
-                    "id": batch.get("id"),
-                    "title": batch.get("title"),
-                    "changed_count": changed_count,
-                    "validation_commands": validation_commands
-                    if isinstance(validation_commands, list)
-                    else [],
-                }
-            )
+            staging_plan = batch.get("staging_plan")
+            compact_batch: dict[str, object] = {
+                "id": batch.get("id"),
+                "title": batch.get("title"),
+                "message": batch.get("message"),
+                "changed_count": changed_count,
+                "validation_commands": validation_commands
+                if isinstance(validation_commands, list)
+                else [],
+            }
+            if isinstance(staging_plan, dict):
+                compact_batch["staging_plan"] = compact_staging_plan(staging_plan)
+            changed_batches.append(compact_batch)
     compact["changed_batches"] = changed_batches
+    return compact
+
+
+def compact_staging_plan(staging_plan: dict[str, object]) -> dict[str, object]:
+    """Return summary-only staging guidance without incomplete commands."""
+    compact: dict[str, object] = {}
+    include_paths = staging_plan.get("include_paths")
+    if isinstance(include_paths, list):
+        compact["include_path_count"] = len(include_paths)
+        compact["include_paths"] = include_paths[:20]
+        if len(include_paths) > 20:
+            compact["include_paths_truncated_count"] = len(include_paths) - 20
+        else:
+            git_add_command = staging_plan.get("git_add_command")
+            if isinstance(git_add_command, list):
+                compact["git_add_command"] = git_add_command
+                compact["git_add_command_text"] = render_command(git_add_command)
+    candidate_patch_add_paths = staging_plan.get("candidate_patch_add_paths")
+    if isinstance(candidate_patch_add_paths, list) and candidate_patch_add_paths:
+        compact["candidate_patch_add_count"] = len(candidate_patch_add_paths)
+        compact["candidate_patch_add_paths"] = candidate_patch_add_paths[:20]
+        if len(candidate_patch_add_paths) > 20:
+            compact["candidate_patch_add_paths_truncated_count"] = (
+                len(candidate_patch_add_paths) - 20
+            )
+        else:
+            git_add_patch_command = staging_plan.get("git_add_patch_command")
+            if isinstance(git_add_patch_command, list) and git_add_patch_command:
+                compact["git_add_patch_command"] = git_add_patch_command
+                compact["git_add_patch_command_text"] = render_command(
+                    git_add_patch_command
+                )
     return compact
 
 
@@ -1123,17 +1208,24 @@ def compact_cross_cutting_groups(groups: list[object]) -> list[dict[str, object]
             compact_group["paths"] = paths[:20]
             if len(paths) > 20:
                 compact_group["paths_truncated_count"] = len(paths) - 20
+        patch_command = group.get("patch_command")
+        if isinstance(patch_command, list):
+            compact_group["patch_command"] = patch_command
+            compact_group["patch_command_text"] = render_command(patch_command)
         compact_groups.append(compact_group)
     return compact_groups
 
 
 def render_human(payload: dict[str, object]) -> str:
+    summary = payload.get("summary")
+    changed_path_count = payload.get("changed_path_count")
+    if changed_path_count is None and isinstance(summary, dict):
+        changed_path_count = summary.get("changed_path_count")
     lines = [
         f"Generated at: {payload['generated_at']}",
         f"Status: {payload['status']}",
-        f"Changed paths: {payload['changed_path_count']}",
+        f"Changed paths: {changed_path_count or 0}",
     ]
-    summary = payload.get("summary")
     if isinstance(summary, dict):
         changed_batches = summary.get("changed_batch_count")
         unchanged_batches = summary.get("unchanged_batch_count")
@@ -1188,7 +1280,8 @@ def render_human(payload: dict[str, object]) -> str:
             lines.append(f"Attention reasons: {', '.join(reasons)}")
     batches = payload.get("batches")
     if not isinstance(batches, list):
-        batches = []
+        changed_batches = payload.get("changed_batches")
+        batches = changed_batches if isinstance(changed_batches, list) else []
     for batch in batches:
         if not isinstance(batch, dict):
             continue

@@ -85,6 +85,7 @@ def test_preflight_cli_can_emit_json_summary(monkeypatch, capsys):
         "skip_remote": True,
         "allow_existing_refs": False,
         "allow_dirty": False,
+        "check_release_tag": True,
         "remote_path": "skipped",
         "repository_probe_state": "skipped",
         "release_path_state": "local_only_preflight",

@@ -9,7 +9,15 @@ import yaml
 
 from qa_z.cli import main
 from qa_z.diffing.models import ChangedFile, ChangeSet
+from qa_z.runners.checks import resolve_check_item
+from qa_z.runners.deep import resolve_deep_check_item
+from qa_z.runners.deep_policy import fail_on_missing_tool as deep_fail_on_missing_tool
+from qa_z.runners.deep_policy import full_run_threshold as deep_full_run_threshold
+from qa_z.runners.fast import fail_on_missing_tool as fast_fail_on_missing_tool
+from qa_z.runners.fast import full_run_threshold as fast_full_run_threshold
+from qa_z.runners.fast import strict_no_tests_enabled
 from qa_z.runners.models import CheckSpec
+from qa_z.runners.python import coerce_timeout
 from qa_z.runners.selection import build_fast_selection
 
 
@@ -32,6 +40,112 @@ def typescript_checks() -> list[CheckSpec]:
         CheckSpec(id="ts_type", command=["tsc", "--noEmit"], kind="typecheck"),
         CheckSpec(id="ts_test", command=["vitest", "run"], kind="test"),
     ]
+
+
+def test_runner_numeric_config_helpers_reject_boolean_values() -> None:
+    assert coerce_timeout(True) is None
+    assert (
+        fast_full_run_threshold({"fast": {"selection": {"full_run_threshold": True}}})
+        == 40
+    )
+    assert (
+        fast_full_run_threshold({"checks": {"selection": {"max_changed_files": True}}})
+        == 40
+    )
+    assert (
+        deep_full_run_threshold({"deep": {"selection": {"full_run_threshold": True}}})
+        == 15
+    )
+    assert (
+        deep_full_run_threshold({"checks": {"selection": {"max_changed_files": True}}})
+        == 15
+    )
+
+
+def test_missing_tool_policy_only_disables_on_explicit_false() -> None:
+    assert fast_fail_on_missing_tool({}) is True
+    assert fast_fail_on_missing_tool({"fast": {"fail_on_missing_tool": False}}) is False
+    assert fast_fail_on_missing_tool({"fast": {"fail_on_missing_tool": 0}}) is True
+    assert (
+        fast_fail_on_missing_tool({"fast": {"fail_on_missing_tool": "false"}}) is True
+    )
+
+    assert deep_fail_on_missing_tool({}) is True
+    assert deep_fail_on_missing_tool({"deep": {"fail_on_missing_tool": False}}) is False
+    assert deep_fail_on_missing_tool({"deep": {"fail_on_missing_tool": 0}}) is True
+    assert (
+        deep_fail_on_missing_tool({"deep": {"fail_on_missing_tool": "false"}}) is True
+    )
+
+
+def test_strict_no_tests_only_enables_on_explicit_true() -> None:
+    assert strict_no_tests_enabled({}, explicit=False) is False
+    assert strict_no_tests_enabled({}, explicit=True) is True
+    assert strict_no_tests_enabled({"fast": {"strict_no_tests": True}}, explicit=False)
+    assert (
+        strict_no_tests_enabled({"fast": {"strict_no_tests": "true"}}, explicit=False)
+        is False
+    )
+    assert (
+        strict_no_tests_enabled({"fast": {"strict_no_tests": 1}}, explicit=False)
+        is False
+    )
+
+
+def test_check_enabled_only_disables_on_explicit_false() -> None:
+    default_fast = resolve_check_item({"id": "custom", "run": ["tool"]})
+    disabled_fast = resolve_check_item(
+        {"id": "custom", "run": ["tool"], "enabled": False}
+    )
+    zero_fast = resolve_check_item({"id": "custom", "run": ["tool"], "enabled": 0})
+    string_fast = resolve_check_item(
+        {"id": "custom", "run": ["tool"], "enabled": "false"}
+    )
+    assert default_fast is not None and default_fast.enabled is True
+    assert disabled_fast is not None and disabled_fast.enabled is False
+    assert zero_fast is not None and zero_fast.enabled is True
+    assert string_fast is not None and string_fast.enabled is True
+
+    default_deep = resolve_deep_check_item({"id": "custom", "run": ["tool"]})
+    disabled_deep = resolve_deep_check_item(
+        {"id": "custom", "run": ["tool"], "enabled": False}
+    )
+    zero_deep = resolve_deep_check_item({"id": "custom", "run": ["tool"], "enabled": 0})
+    string_deep = resolve_deep_check_item(
+        {"id": "custom", "run": ["tool"], "enabled": "false"}
+    )
+    assert default_deep is not None and default_deep.enabled is True
+    assert disabled_deep is not None and disabled_deep.enabled is False
+    assert zero_deep is not None and zero_deep.enabled is True
+    assert string_deep is not None and string_deep.enabled is True
+
+
+def test_no_tests_policy_is_normalized_for_fast_check_specs() -> None:
+    fail_policy = resolve_check_item(
+        {"id": "custom", "run": ["tool"], "kind": "test", "no_tests": "FAIL"}
+    )
+    invalid_policy = resolve_check_item(
+        {"id": "custom", "run": ["tool"], "kind": "test", "no_tests": "ignore"}
+    )
+    non_string_policy = resolve_check_item(
+        {"id": "custom", "run": ["tool"], "kind": "test", "no_tests": True}
+    )
+
+    assert fail_policy is not None and fail_policy.no_tests == "fail"
+    assert invalid_policy is not None and invalid_policy.no_tests == "warn"
+    assert non_string_policy is not None and non_string_policy.no_tests == "warn"
+
+
+def test_check_kind_falls_back_when_config_value_is_invalid() -> None:
+    custom_fast = resolve_check_item({"id": "custom", "run": ["tool"], "kind": True})
+    builtin_fast = resolve_check_item({"id": "py_test", "kind": ["test"]})
+    custom_deep = resolve_deep_check_item({"id": "custom", "run": ["tool"], "kind": ""})
+    builtin_deep = resolve_deep_check_item({"id": "sg_scan", "kind": True})
+
+    assert custom_fast is not None and custom_fast.kind == "custom"
+    assert builtin_fast is not None and builtin_fast.kind == "test"
+    assert custom_deep is not None and custom_deep.kind == "custom"
+    assert builtin_deep is not None and builtin_deep.kind == "static-analysis"
 
 
 def changed(

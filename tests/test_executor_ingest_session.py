@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,6 +12,7 @@ from qa_z.executor_ingest_session import (
     record_loop_executor_result,
     resume_verification_if_ready,
 )
+from qa_z.executor_ingest_checks import verify_resume_status_for_result
 from qa_z.executor_result import (
     ExecutorChangedFile,
     ExecutorResult,
@@ -38,6 +40,7 @@ def executor_result(
     *,
     status: str = "completed",
     verification_hint: str = "rerun",
+    candidate_run_dir: str | None = None,
 ) -> ExecutorResult:
     """Build a deterministic executor-result fixture."""
     return ExecutorResult(
@@ -48,9 +51,13 @@ def executor_result(
         status=status,
         summary="Completed deterministic repair work.",
         verification_hint=verification_hint,
-        candidate_run_dir=".qa-z/runs/candidate"
-        if verification_hint == "candidate_run"
-        else None,
+        candidate_run_dir=(
+            candidate_run_dir
+            if candidate_run_dir is not None
+            else ".qa-z/runs/candidate"
+            if verification_hint == "candidate_run"
+            else None
+        ),
         changed_files=[
             ExecutorChangedFile(
                 path="src/qa_z/executor_ingest.py",
@@ -130,6 +137,83 @@ def test_resume_verification_if_ready_runs_verify_flow_when_allowed(
     assert recommendation == "publish verification"
     assert calls["candidate_run"] == ".qa-z/runs/candidate"
     assert calls["rerun"] is False
+
+
+def test_verify_resume_blocks_candidate_run_outside_repository(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    outside_candidate = tmp_path / "outside-candidate"
+    (root / ".qa-z" / "runs" / "baseline").mkdir(parents=True)
+    outside_candidate.mkdir()
+    warnings: list[str] = []
+
+    status = verify_resume_status_for_result(
+        root=root,
+        result=executor_result(
+            status="completed",
+            verification_hint="candidate_run",
+            candidate_run_dir=str(outside_candidate),
+        ),
+        session=repair_session(),
+        warnings=warnings,
+    )
+
+    assert status == "verify_blocked"
+    assert warnings == ["candidate_run_outside_repository"]
+
+
+def test_verify_resume_blocks_candidate_run_without_fast_summary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    (root / ".qa-z" / "runs" / "baseline").mkdir(parents=True)
+    (root / ".qa-z" / "runs" / "candidate").mkdir(parents=True)
+    warnings: list[str] = []
+
+    status = verify_resume_status_for_result(
+        root=root,
+        result=executor_result(status="completed", verification_hint="candidate_run"),
+        session=repair_session(),
+        warnings=warnings,
+    )
+
+    assert status == "verify_blocked"
+    assert warnings == ["candidate_run_fast_summary_missing"]
+
+
+def test_verify_resume_blocks_baseline_run_outside_repository(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    outside_baseline = tmp_path / "outside-baseline"
+    (outside_baseline / "fast").mkdir(parents=True)
+    (outside_baseline / "fast" / "summary.json").write_text("{}", encoding="utf-8")
+    warnings: list[str] = []
+
+    status = verify_resume_status_for_result(
+        root=root,
+        result=executor_result(status="completed", verification_hint="rerun"),
+        session=replace(repair_session(), baseline_run_dir=str(outside_baseline)),
+        warnings=warnings,
+    )
+
+    assert status == "verify_blocked"
+    assert warnings == ["baseline_run_outside_repository"]
+
+
+def test_verify_resume_blocks_baseline_run_without_fast_summary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    (root / ".qa-z" / "runs" / "baseline").mkdir(parents=True)
+    warnings: list[str] = []
+
+    status = verify_resume_status_for_result(
+        root=root,
+        result=executor_result(status="completed", verification_hint="rerun"),
+        session=repair_session(),
+        warnings=warnings,
+    )
+
+    assert status == "verify_blocked"
+    assert warnings == ["baseline_run_fast_summary_missing"]
 
 
 def test_record_loop_executor_result_updates_matching_history_entry(

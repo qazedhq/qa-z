@@ -41,6 +41,13 @@ def benchmark_results_lock(results_dir: Path):
             unlink_with_retries(lock_path)
         except FileNotFoundError:
             pass
+        except OSError as exc:
+            raise _benchmark_error(
+                "Could not remove benchmark results lock "
+                f"{lock_path}. Remove stale lock only after confirming no "
+                "benchmark is running, or use a different --results-dir. "
+                f"results_dir={results_dir}. error={exc}"
+            ) from exc
 
 
 def _benchmark_error(message: str) -> Exception:

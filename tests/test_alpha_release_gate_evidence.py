@@ -194,6 +194,81 @@ def test_alpha_release_gate_preserves_preflight_next_counts_in_evidence():
     }
 
 
+def test_alpha_release_gate_classifies_existing_local_release_tag(tmp_path):
+    gate = load_gate_module()
+    commands_by_name = {
+        command.name: command.command for command in gate.default_gate_commands()
+    }
+    preflight_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["release_tag_absent"],
+        "checks": [
+            {
+                "name": "release_tag_absent",
+                "status": "failed",
+                "detail": "v0.9.8-alpha",
+            }
+        ],
+    }
+    runner = RecordingRunner(
+        {
+            tuple(commands_by_name["local_preflight"]): (
+                1,
+                json.dumps(preflight_payload),
+                "",
+            ),
+        }
+    )
+
+    result = gate.run_alpha_release_gate(tmp_path, runner=runner)
+
+    assert result.payload["environment_failure_count"] == 1
+    assert result.payload["product_failure_count"] == 0
+    assert result.payload["evidence"]["gate_failures"] == {
+        "local_preflight": {
+            "kind": "local_release_tag_exists",
+            "summary": "local release tag already exists: v0.9.8-alpha",
+            "tag": "v0.9.8-alpha",
+        }
+    }
+
+
+def test_alpha_release_gate_local_tag_guidance_uses_observed_tag(tmp_path):
+    gate = load_gate_module()
+    commands_by_name = {
+        command.name: command.command for command in gate.default_gate_commands()
+    }
+    preflight_payload = {
+        "summary": "release preflight failed",
+        "exit_code": 1,
+        "failed_checks": ["release_tag_absent"],
+        "checks": [
+            {
+                "name": "release_tag_absent",
+                "status": "failed",
+                "detail": "v1.2.3-alpha",
+            }
+        ],
+    }
+    runner = RecordingRunner(
+        {
+            tuple(commands_by_name["local_preflight"]): (
+                1,
+                json.dumps(preflight_payload),
+                "",
+            ),
+        }
+    )
+
+    result = gate.run_alpha_release_gate(tmp_path, runner=runner)
+
+    assert result.payload["evidence"]["gate_failures"]["local_preflight"]["tag"] == (
+        "v1.2.3-alpha"
+    )
+    assert "git tag --list v1.2.3-alpha" in result.payload["next_commands"]
+
+
 def test_alpha_release_gate_preserves_preflight_generated_policy_split_counts():
     gate = load_gate_module()
 

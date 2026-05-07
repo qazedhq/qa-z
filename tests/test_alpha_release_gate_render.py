@@ -86,10 +86,41 @@ def test_alpha_release_gate_human_output_prints_failure_scope_details():
     assert "  scope=product" in output
 
 
+def test_alpha_release_gate_human_output_prints_quick_mode():
+    module = load_gate_module()
+    output = module.render_alpha_release_gate_human(
+        {
+            "summary": "alpha release gate failed",
+            "quick": True,
+            "checks": [],
+        }
+    )
+
+    assert "Mode: quick source-only gate; not final publish evidence" in output
+
+
+def test_alpha_release_gate_human_output_prints_quick_with_deps_skip():
+    module = load_gate_module()
+    output = module.render_alpha_release_gate_human(
+        {
+            "summary": "alpha release gate failed",
+            "quick": True,
+            "with_deps": False,
+            "with_deps_requested": True,
+            "checks": [],
+        }
+    )
+
+    assert "Dependency smoke: requested but skipped by quick mode" in output
+
+
 def test_alpha_release_gate_summarizes_release_evidence(tmp_path):
     module = load_gate_module()
     commands_by_name = {
-        command.name: command.command for command in module.default_gate_commands()
+        command.name: command.command
+        for command in module.default_gate_commands(
+            mode="release", target_tag="v0.10.0"
+        )
     }
     deep_payload = {
         "status": "passed",
@@ -211,7 +242,9 @@ def test_alpha_release_gate_summarizes_release_evidence(tmp_path):
         }
     )
 
-    result = module.run_alpha_release_gate(tmp_path, runner=runner)
+    result = module.run_alpha_release_gate(
+        tmp_path, mode="release", target_tag="v0.10.0", runner=runner
+    )
 
     assert result.payload["evidence"] == {
         "benchmark": {
@@ -234,7 +267,7 @@ def test_alpha_release_gate_summarizes_release_evidence(tmp_path):
             "artifacts": ["qa_z-0.9.8a0.tar.gz", "qa_z-0.9.8a0-py3-none-any.whl"],
             "summary": "Successfully built qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl",
         },
-        "cli_help": {"check_count": 17, "failed_count": 0},
+        "cli_help": {"check_count": 20, "failed_count": 0},
         "deep": {
             "scan_quality_check_ids": ["sg_scan"],
             "scan_quality_status": "warning",

@@ -78,7 +78,6 @@ deep:
 
 checks:
   selection:
-    mode: diff-aware
     max_changed_files: 40
 
 gates:

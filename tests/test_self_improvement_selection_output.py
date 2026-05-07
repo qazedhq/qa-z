@@ -144,7 +144,7 @@ def test_selected_task_action_hint_uses_dirty_worktree_area_evidence() -> None:
     ) == (
         "triage benchmark and docs changes first, run "
         "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection"
     )
 
@@ -158,7 +158,7 @@ def test_selected_task_action_hint_keeps_fallback_without_area_evidence() -> Non
     ) == (
         "inspect the dirty worktree, run "
         "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection"
     )
 
@@ -268,11 +268,44 @@ def test_selected_task_action_hint_specializes_fallback_diversity_recommendation
         }
     ) == (
         "surface a non-cleanup fallback family before selecting more cleanup "
-        "work, then rerun autonomy"
+        "work, then rerun autonomy and inspect autonomy status"
+    )
+
+
+def test_selected_task_action_hint_specializes_verification_surface_context() -> None:
+    assert selected_task_action_hint(
+        {
+            "recommendation": "stabilize_verification_surface",
+            "evidence": [
+                {
+                    "source": "verification",
+                    "path": ".qa-z/runs/candidate/verify/summary.json",
+                    "compare_path": ".qa-z/runs/candidate/verify/compare.json",
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "candidate_run": ".qa-z/runs/candidate",
+                    "not_comparable_reason": (
+                        "Deep comparison requires both baseline and candidate "
+                        "deep/summary.json artifacts, or neither."
+                    ),
+                }
+            ],
+        }
+    ) == (
+        "inspect `.qa-z/runs/candidate/verify/compare.json`, restore comparable "
+        "baseline/candidate fast and deep evidence, then rerun verification; "
+        "not comparable: Deep comparison requires both baseline and candidate "
+        "deep/summary.json artifacts, or neither."
     )
 
 
 def test_selected_task_validation_command_specializes_known_recommendations() -> None:
+    assert selected_task_validation_command(
+        {"recommendation": "reduce_integration_risk"}
+    ) == (
+        "python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting "
+        "--output .qa-z/tmp/worktree-commit-plan.json"
+    )
     assert (
         selected_task_validation_command(
             {"recommendation": "isolate_foundation_commit"}
@@ -288,6 +321,26 @@ def test_selected_task_validation_command_specializes_known_recommendations() ->
     assert (
         selected_task_validation_command({"recommendation": "add_benchmark_fixture"})
         == "python -m qa_z benchmark --json"
+    )
+    assert (
+        selected_task_validation_command(
+            {"recommendation": "improve_fallback_diversity"}
+        )
+        == "python -m qa_z autonomy --loops 1 --json"
+    )
+    assert selected_task_validation_command(
+        {
+            "recommendation": "stabilize_verification_surface",
+            "evidence": [
+                {
+                    "baseline_run": ".qa-z/runs/baseline",
+                    "candidate_run": ".qa-z/runs/candidate",
+                }
+            ],
+        }
+    ) == (
+        "python -m qa_z verify --baseline-run .qa-z/runs/baseline "
+        "--candidate-run .qa-z/runs/candidate"
     )
 
 
@@ -395,6 +448,33 @@ def test_compact_evidence_summary_does_not_duplicate_primary_area_summary() -> N
     )
 
 
+def test_compact_evidence_summary_appends_commit_plan_json_basis() -> None:
+    item = {
+        "recommendation": "reduce_integration_risk",
+        "evidence": [
+            {
+                "source": "git_status",
+                "summary": "modified=10; untracked=1; areas=source:10",
+            },
+            {
+                "source": "worktree_commit_plan_json",
+                "summary": (
+                    "strict commit-plan status=attention_required; "
+                    "attention=cross_cutting_paths_present; unassigned=0; "
+                    "cross_cutting=3; generated=0"
+                ),
+            },
+        ],
+    }
+
+    assert compact_backlog_evidence_summary(item) == (
+        "git_status: modified=10; untracked=1; areas=source:10; action basis: "
+        "worktree_commit_plan_json: strict commit-plan status=attention_required; "
+        "attention=cross_cutting_paths_present; unassigned=0; cross_cutting=3; "
+        "generated=0"
+    )
+
+
 def test_compact_evidence_summary_appends_generated_action_basis() -> None:
     item = {
         "id": "deferred_cleanup_gap-worktree-deferred-items",
@@ -424,6 +504,33 @@ def test_compact_evidence_summary_appends_generated_action_basis() -> None:
         "outputs to isolate; action basis: generated_outputs: generated "
         "benchmark outputs still present: benchmarks/results/report.md, "
         "benchmarks/results/summary.json"
+    )
+
+
+def test_compact_evidence_summary_appends_verification_compare_reason() -> None:
+    item = {
+        "recommendation": "stabilize_verification_surface",
+        "evidence": [
+            {
+                "source": "verification",
+                "path": ".qa-z/runs/candidate/verify/summary.json",
+                "summary": (
+                    "verdict=verification_failed; regressions=0; "
+                    "new_issues=0; not_comparable=1"
+                ),
+                "not_comparable_reason": (
+                    "Deep comparison requires both baseline and candidate "
+                    "deep/summary.json artifacts, or neither."
+                ),
+            }
+        ],
+    }
+
+    assert compact_backlog_evidence_summary(item) == (
+        "verification: verdict=verification_failed; regressions=0; "
+        "new_issues=0; not_comparable=1; action basis: not comparable: "
+        "Deep comparison requires both baseline and candidate deep/summary.json "
+        "artifacts, or neither."
     )
 
 

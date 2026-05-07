@@ -57,6 +57,11 @@ def format_code_list(items: list[str]) -> str:
     return ", ".join(f"`{item}`" for item in items)
 
 
+def format_plain_list(items: list[str]) -> str:
+    """Render a compact plain-text list."""
+    return ", ".join(items) if items else "none"
+
+
 def render_deep_qa(deep: DeepContext | None) -> list[str]:
     """Render optional deep QA status for GitHub summaries."""
     if deep is None:
@@ -73,6 +78,7 @@ def render_deep_qa(deep: DeepContext | None) -> list[str]:
         f"- Mode: {deep.execution_mode}",
         f"- Files affected: {len(deep.affected_files)}",
     ]
+    lines.extend(render_scan_warnings(deep))
     if deep.grouped_findings:
         lines.extend(["", "### Top Deep Findings"])
         for finding in deep.grouped_findings[:3]:
@@ -86,6 +92,20 @@ def render_deep_qa(deep: DeepContext | None) -> list[str]:
     else:
         lines.append("- No Semgrep findings were reported.")
     return lines
+
+
+def render_scan_warnings(deep: DeepContext) -> list[str]:
+    """Render non-blocking deep scan-quality warnings."""
+    if not deep.scan_warning_count and not deep.scan_quality_status:
+        return []
+    warning_noun = "warning" if deep.scan_warning_count == 1 else "warnings"
+    status = deep.scan_quality_status or "unknown"
+    return [
+        f"- Scan quality: {status} ({deep.scan_warning_count} {warning_noun})",
+        f"- Warning types: {format_plain_list(deep.scan_warning_types)}",
+        f"- Warning paths: {format_code_list(deep.scan_warning_paths)}",
+        f"- Warning checks: {format_plain_list(deep.scan_warning_check_ids)}",
+    ]
 
 
 def format_grouped_finding(finding: dict[str, object]) -> str:

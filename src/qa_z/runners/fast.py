@@ -67,8 +67,8 @@ def run_fast(
         full_run_threshold=full_run_threshold(config),
         high_risk_paths=high_risk_paths(config),
     )
-    effective_strict_no_tests = strict_no_tests or bool(
-        get_nested(config, "fast", "strict_no_tests", default=False)
+    effective_strict_no_tests = strict_no_tests_enabled(
+        config, explicit=strict_no_tests
     )
     contract_title = extract_contract_title(resolved_contract)
 
@@ -218,7 +218,14 @@ def resolve_run_dir(
 
 def fail_on_missing_tool(config: dict[str, Any]) -> bool:
     """Return whether missing subprocess tools should fail the run."""
-    return bool(get_nested(config, "fast", "fail_on_missing_tool", default=True))
+    return get_nested(config, "fast", "fail_on_missing_tool", default=True) is not False
+
+
+def strict_no_tests_enabled(config: dict[str, Any], *, explicit: bool) -> bool:
+    """Return whether no-tests outcomes should fail the run."""
+    return (
+        explicit or get_nested(config, "fast", "strict_no_tests", default=False) is True
+    )
 
 
 def full_run_threshold(config: dict[str, Any]) -> int:
@@ -228,6 +235,8 @@ def full_run_threshold(config: dict[str, Any]) -> int:
         value = get_nested(
             config, "checks", "selection", "max_changed_files", default=40
         )
+    if isinstance(value, bool):
+        return 40
     try:
         threshold = int(value)
     except (TypeError, ValueError):

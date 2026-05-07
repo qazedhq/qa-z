@@ -49,13 +49,22 @@ def test_commit_plan_compact_payload_omits_full_batch_path_lists() -> None:
             "title": "Public docs and schema contract",
             "path_count": 1,
             "paths": ["README.md"],
+            "patch_command": ["git", "add", "--patch", "--", "README.md"],
+            "patch_command_text": "git add --patch -- README.md",
         }
     ]
     assert compact["changed_batches"] == [
         {
             "id": "benchmark_coverage",
             "title": "Benchmark coverage",
+            "message": "Keep benchmark runtime, fixtures, and regression evidence together.",
             "changed_count": 1,
+            "staging_plan": {
+                "include_path_count": 1,
+                "include_paths": ["src/qa_z/benchmark.py"],
+                "git_add_command": ["git", "add", "--", "src/qa_z/benchmark.py"],
+                "git_add_command_text": "git add -- src/qa_z/benchmark.py",
+            },
             "validation_commands": [
                 "python -m pytest tests/test_benchmark.py -q",
                 "python -m qa_z benchmark --json",
@@ -104,7 +113,81 @@ def test_commit_plan_compact_payload_reports_truncated_previews() -> None:
         f"path-{item}.md" for item in range(20)
     ]
     assert compact["cross_cutting_groups"][0]["paths_truncated_count"] == 5
-    assert "patch_command" not in compact["cross_cutting_groups"][0]
+    assert compact["cross_cutting_groups"][0]["patch_command"] == [
+        "git",
+        "add",
+        "--patch",
+        "--",
+        *[f"path-{item}.md" for item in range(25)],
+    ]
+    assert compact["cross_cutting_groups"][0]["patch_command_text"].startswith(
+        "git add --patch -- path-0.md"
+    )
+
+
+def test_commit_plan_compact_payload_truncates_large_changed_batch_staging() -> None:
+    module = load_plan_module()
+    payload = {
+        "kind": "qa_z.worktree_commit_plan",
+        "schema_version": 1,
+        "generated_at": "2026-04-23T00:00:00Z",
+        "status": "ready",
+        "strict_mode": {},
+        "summary": {},
+        "attention_reasons": [],
+        "next_actions": [],
+        "batches": [
+            {
+                "id": "large-batch",
+                "title": "Large batch",
+                "message": "Large staging surface.",
+                "changed_count": 25,
+                "changed_paths": [f"src/file_{index}.py" for index in range(25)],
+                "validation_commands": ["python -m pytest -q"],
+                "staging_plan": {
+                    "include_paths": [f"src/file_{index}.py" for index in range(25)],
+                    "git_add_command": [
+                        "git",
+                        "add",
+                        "--",
+                        *[f"src/file_{index}.py" for index in range(25)],
+                    ],
+                },
+            }
+        ],
+    }
+
+    compact = module.compact_payload(payload)
+    staging_plan = compact["changed_batches"][0]["staging_plan"]
+
+    assert staging_plan["include_path_count"] == 25
+    assert staging_plan["include_paths"] == [
+        f"src/file_{index}.py" for index in range(20)
+    ]
+    assert staging_plan["include_paths_truncated_count"] == 5
+    assert "git_add_command" not in staging_plan
+    assert "git_add_command_text" not in staging_plan
+
+
+def test_commit_plan_compact_payload_quotes_command_text_paths_with_spaces() -> None:
+    module = load_plan_module()
+    payload = module.analyze_status_lines(
+        [
+            ' M "benchmarks/fixtures/path with space/expected.json"',
+            ' M "docs/reports/path with space.md"',
+        ],
+        fail_on_cross_cutting=True,
+    )
+
+    compact = module.compact_payload(payload)
+
+    assert (
+        compact["changed_batches"][0]["staging_plan"]["git_add_command_text"]
+        == 'git add -- "benchmarks/fixtures/path with space/expected.json"'
+    )
+    assert compact["cross_cutting_groups"][0]["patch_command_text"] == (
+        'git add --patch -- "docs/reports/path with space.md"'
+    )
 
 
 def test_commit_plan_cli_output_file_preserves_strict_artifact_fields(
@@ -199,7 +282,14 @@ def test_commit_plan_cli_summary_only_json_writes_compact_payload(
         {
             "id": "benchmark_coverage",
             "title": "Benchmark coverage",
+            "message": "Keep benchmark runtime, fixtures, and regression evidence together.",
             "changed_count": 1,
+            "staging_plan": {
+                "include_path_count": 1,
+                "include_paths": ["src/qa_z/benchmark.py"],
+                "git_add_command": ["git", "add", "--", "src/qa_z/benchmark.py"],
+                "git_add_command_text": "git add -- src/qa_z/benchmark.py",
+            },
             "validation_commands": [
                 "python -m pytest tests/test_benchmark.py -q",
                 "python -m qa_z benchmark --json",
@@ -232,6 +322,7 @@ def test_commit_plan_cli_reports_output_write_failure(monkeypatch, tmp_path, cap
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "worktree commit plan failed: could not write output" in captured.err
+    assert str(tmp_path / "blocked.json") in captured.err
     assert "permission denied" in captured.err
 
 
@@ -335,6 +426,34 @@ def test_commit_plan_cli_batch_preserves_strict_cross_cutting_exit(
     assert payload["global_attention_reason_count"] == 1
     assert payload["selected_batch_summary"]["status"] == "ready"
     assert payload["selected_batch_summary"]["attention_reason_count"] == 1
+
+
+def test_commit_plan_compact_selected_batch_staging_keeps_patch_add_command() -> None:
+    module = load_plan_module()
+    payload = module.analyze_status_lines(
+        [
+            " M README.md",
+            " M src/qa_z/benchmark.py",
+        ],
+        fail_on_cross_cutting=True,
+    )
+    filtered = module.filter_payload_for_batch(payload, "benchmark_coverage")
+
+    compact = module.compact_payload(filtered)
+    staging_plan = compact["changed_batches"][0]["staging_plan"]
+
+    assert staging_plan["candidate_patch_add_count"] == 1
+    assert staging_plan["candidate_patch_add_paths"] == ["README.md"]
+    assert staging_plan["git_add_patch_command"] == [
+        "git",
+        "add",
+        "--patch",
+        "--",
+        "README.md",
+    ]
+    assert staging_plan["git_add_patch_command_text"] == (
+        "git add --patch -- README.md"
+    )
 
 
 def test_commit_plan_script_entrypoint_prints_json_payload(tmp_path) -> None:

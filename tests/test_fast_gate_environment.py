@@ -61,11 +61,11 @@ def test_mypy_ini_pins_cache_under_temp() -> None:
     assert "cache_dir = $TEMP/qa-z-mypy-cache" in mypy_ini
 
 
-def test_pyproject_pins_ruff_cache_to_safe_local_directory() -> None:
+def test_pyproject_keeps_ruff_cache_out_of_public_metadata() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    assert "[tool.ruff]" in pyproject
-    assert 'cache-dir = "~/AppData/Local/Temp/qa-z-ruff-cache"' in pyproject
+    assert "[tool.ruff]" not in pyproject
+    assert "cache-dir" not in pyproject
 
 
 def test_tool_subprocess_env_sets_utf8_and_safe_ruff_cache() -> None:

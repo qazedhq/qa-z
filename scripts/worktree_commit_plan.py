@@ -203,7 +203,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             write_json_output(output_payload, args.output)
         except OSError as exc:
             print(
-                f"worktree commit plan failed: could not write output: {exc}",
+                "worktree commit plan failed: "
+                f"could not write output {args.output}: {exc}",
                 file=sys.stderr,
             )
             return 2

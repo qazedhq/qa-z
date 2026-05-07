@@ -30,5 +30,5 @@ fast:
       kind: test
       no_tests: fail
 
-checks:
-  deep: []
+deep:
+  checks: []

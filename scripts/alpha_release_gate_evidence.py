@@ -227,6 +227,37 @@ def classify_gate_failure(
         part for part in (stdout_tail.strip(), stderr_tail.strip()) if part
     )
 
+    if name == "local_preflight":
+        payload = parse_json_object(stdout_tail)
+        if payload is not None:
+            failed_checks = payload.get("failed_checks")
+            has_release_tag_failure = (
+                isinstance(failed_checks, list)
+                and "release_tag_absent" in failed_checks
+            )
+            failed_check = first_failed_nested_check(payload)
+            failed_check_name = (
+                str(failed_check.get("name") or "") if failed_check is not None else ""
+            )
+            if has_release_tag_failure or failed_check_name == "release_tag_absent":
+                tag = (
+                    str(failed_check.get("detail") or "").strip()
+                    if failed_check is not None
+                    else ""
+                )
+                result = {
+                    "kind": "local_release_tag_exists",
+                    "summary": (
+                        f"local release tag already exists: {tag}"
+                        if tag
+                        else "local release tag already exists"
+                    ),
+                    "category": "environment",
+                }
+                if tag:
+                    result["tag"] = tag
+                return result
+
     if name == "mypy" and exit_code == 3221225477:
         return {
             "kind": "mypy_internal_error",
@@ -375,6 +406,11 @@ def next_actions_for_gate_failures(
             "Close any process holding the release bundle file, or choose a new "
             "bundle destination, before rerunning the bundle manifest step."
         )
+    if "local_release_tag_exists" in kinds:
+        actions.append(
+            "Confirm whether the local release tag is intentional; choose the next "
+            "release tag or adjust the local tag only after a release decision."
+        )
     return actions
 
 
@@ -402,6 +438,18 @@ def next_commands_for_gate_failures(
         )
     if "bundle_path_locked" in kinds:
         commands.append("python scripts/alpha_release_bundle_manifest.py --json")
+    if "local_release_tag_exists" in kinds:
+        for failure in gate_failures.values():
+            if not isinstance(failure, Mapping):
+                continue
+            if failure.get("kind") != "local_release_tag_exists":
+                continue
+            tag = failure.get("tag")
+            commands.append(
+                f"git tag --list {tag}"
+                if isinstance(tag, str) and tag
+                else "git tag --list"
+            )
     return unique_strings(commands)
 
 
@@ -861,6 +909,13 @@ def render_alpha_release_gate_human(payload: Mapping[str, object]) -> str:
     generated_at = str(payload.get("generated_at") or "").strip()
     if generated_at:
         lines.append(f"Generated at: {generated_at}")
+    if payload.get("quick") is True:
+        lines.append("Mode: quick source-only gate; not final publish evidence")
+        if (
+            payload.get("with_deps_requested") is True
+            and payload.get("with_deps") is not True
+        ):
+            lines.append("Dependency smoke: requested but skipped by quick mode")
     artifact_lines = render_nested_artifact_lines(payload)
     if artifact_lines:
         if lines:

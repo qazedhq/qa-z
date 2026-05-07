@@ -276,7 +276,7 @@ def semgrep_command_with_config(command: list[str], config: str) -> list[str]:
         if skip_next:
             skip_next = False
             continue
-        if part == "--config":
+        if part in {"--config", "-c"}:
             skip_next = True
             continue
         if part.startswith("--config="):
@@ -341,7 +341,7 @@ def semgrep_config_from_command(command: list[Any]) -> str | None:
     for index, part in enumerate(command):
         if not isinstance(part, str):
             continue
-        if part == "--config" and index + 1 < len(command):
+        if part in {"--config", "-c"} and index + 1 < len(command):
             next_part = command[index + 1]
             return next_part if isinstance(next_part, str) else None
         if part.startswith("--config="):
@@ -461,14 +461,16 @@ def normalized_semgrep_policy(
     """Normalize policy casing and empty values."""
     if policy is None:
         policy = SemgrepCheckPolicy()
-    return SemgrepCheckPolicy(
-        config=policy.config.strip() if policy.config.strip() else "auto",
-        fail_on_severity=[
+    severities = unique_strings(
+        [
             normalize_severity(item)
             for item in policy.fail_on_severity
             if str(item).strip()
         ]
-        or ["ERROR"],
+    )
+    return SemgrepCheckPolicy(
+        config=policy.config.strip() if policy.config.strip() else "auto",
+        fail_on_severity=severities or ["ERROR"],
         ignore_rules=unique_strings(policy.ignore_rules),
         exclude_paths=unique_strings(policy.exclude_paths),
     )

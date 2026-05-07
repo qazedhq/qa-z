@@ -53,6 +53,28 @@ def list_of_string_lists(value: object, *, field_name: str) -> list[list[str]]:
     if not isinstance(value, list):
         raise ArtifactLoadError(f"Executor result field {field_name} must be a list.")
     commands: list[list[str]] = []
-    for item in value:
-        commands.append(string_list(item, field_name=field_name))
+    for index, item in enumerate(value, start=1):
+        command = string_list(item, field_name=field_name)
+        if not command:
+            raise ArtifactLoadError(
+                f"Executor result field {field_name} entry {index} must "
+                "contain at least one argument."
+            )
+        commands.append(command)
     return commands
+
+
+def list_of_dicts(value: object, *, field_name: str) -> list[dict[str, Any]]:
+    """Return a normalized list of JSON object entries."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ArtifactLoadError(f"Executor result field {field_name} must be a list.")
+    entries: list[dict[str, Any]] = []
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            raise ArtifactLoadError(
+                f"Executor result field {field_name} entry {index} must be an object."
+            )
+        entries.append(item)
+    return entries

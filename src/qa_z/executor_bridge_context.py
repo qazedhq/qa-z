@@ -74,6 +74,12 @@ def bridge_missing_action_context_inputs(manifest: dict[str, Any]) -> list[str]:
 
 def copy_input(*, root: Path, source: Path, target: Path) -> None:
     """Copy one required bridge input."""
+    root = root.resolve()
+    source = source.resolve()
+    if not path_is_within(root, source):
+        raise ArtifactSourceNotFound(
+            f"Required bridge input is outside repository root: {source}"
+        )
     if not source.is_file():
         raise ArtifactSourceNotFound(f"Required bridge input not found: {source}")
     target.parent.mkdir(parents=True, exist_ok=True)

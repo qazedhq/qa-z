@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">QA-Z social preview</title>
+  <desc id="desc">QA-Z, the safety belt for AI-generated code. Contracts, checks, repair prompts, verification.</desc>
+  <rect width="1280" height="640" fill="#101418"/>
+  <rect x="72" y="72" width="1136" height="496" rx="28" fill="#151d24" stroke="#2b3b47" stroke-width="2"/>
+  <text x="112" y="190" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="92" font-weight="800">QA-Z</text>
+  <text x="112" y="262" fill="#d7e1ea" font-family="Segoe UI, Arial, sans-serif" font-size="38" font-weight="600">The safety belt for AI-generated code.</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="600">
+    <text x="112" y="376" fill="#a8d5ff">AI writes code</text>
+    <path d="M350 366 H590" stroke="#647889" stroke-width="6" stroke-linecap="round"/>
+    <path d="M570 346 L604 366 L570 386" fill="none" stroke="#647889" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="648" y="376" fill="#7ee787">QA-Z verifies before merge</text>
+  </g>
+  <text x="112" y="462" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="32" font-weight="700">Contracts. Checks. Repair prompts. Verification.</text>
+  <text x="112" y="522" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif" font-size="26">github.com/qazedhq/qa-z</text>
+</svg>

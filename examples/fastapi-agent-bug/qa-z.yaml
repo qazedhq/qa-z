@@ -1,0 +1,43 @@
+project:
+  name: qa-z-fastapi-agent-bug
+  languages:
+    - python
+  roots:
+    - app
+    - tests
+  critical_paths:
+    - app/main.py
+
+contracts:
+  output_dir: qa/contracts
+
+fast:
+  output_dir: .qa-z/runs
+  strict_no_tests: false
+  fail_on_missing_tool: true
+  checks:
+    - id: py_lint
+      enabled: true
+      run: ["ruff", "check", "app", "tests"]
+      kind: lint
+    - id: py_format
+      enabled: true
+      run: ["ruff", "format", "--check", "app", "tests"]
+      kind: format
+    - id: py_test
+      enabled: true
+      run: ["python", "-m", "pytest", "-q", "tests/test_main.py"]
+      kind: test
+      no_tests: fail
+
+deep:
+  fail_on_missing_tool: true
+  checks:
+    - id: sg_scan
+      enabled: true
+      run: ["semgrep", "--config", "semgrep-rules/auth-bypass.yml", "--json", "app"]
+      kind: static-analysis
+      semgrep:
+        config: semgrep-rules/auth-bypass.yml
+        fail_on_severity:
+          - ERROR

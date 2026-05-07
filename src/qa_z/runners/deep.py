@@ -37,7 +37,7 @@ from qa_z.runners.models import (
     RunSummary,
     SemgrepCheckPolicy,
 )
-from qa_z.runners.python import coerce_timeout
+from qa_z.runners.python import coerce_check_kind, coerce_timeout
 from qa_z.runners.selection_deep import build_deep_selection
 from qa_z.runners.semgrep import (
     SEMGREP_CHECK_ID,
@@ -259,6 +259,9 @@ def _configured_deep_checks_impl(config: dict[str, Any]) -> list[Any]:
     if isinstance(deep_config, dict) and "checks" in deep_config:
         checks = deep_config.get("checks") or []
         return checks if isinstance(checks, list) else []
+    legacy_checks = get_nested(config, "checks", "deep", default=[]) or []
+    if isinstance(legacy_checks, list):
+        return legacy_checks
     return []
 
 
@@ -280,9 +283,10 @@ def resolve_deep_check_item(
     if not check_id:
         return None
 
+    default = default_semgrep_spec_for_name(check_id)
+    resolved_check_id = default.id if default else check_id
     command = item.get("run")
     if command is None:
-        default = default_semgrep_spec_for_name(check_id)
         command = default.command if default else None
     if not isinstance(command, list) or not all(
         isinstance(part, str) for part in command
@@ -291,7 +295,7 @@ def resolve_deep_check_item(
 
     semgrep_policy = None
     resolved_command = list(command)
-    if check_id == SEMGREP_CHECK_ID:
+    if resolved_check_id == SEMGREP_CHECK_ID:
         semgrep_policy = semgrep_policy_from_config(
             item, global_exclude_paths=global_exclude_paths
         )
@@ -300,10 +304,12 @@ def resolve_deep_check_item(
         )
 
     return CheckSpec(
-        id=check_id,
+        id=resolved_check_id,
         command=resolved_command,
-        kind=str(item.get("kind", default_deep_kind(check_id))),
-        enabled=bool(item.get("enabled", True)),
+        kind=coerce_check_kind(
+            item.get("kind"), default.kind if default else default_deep_kind(check_id)
+        ),
+        enabled=item.get("enabled", True) is not False,
         timeout_seconds=coerce_timeout(item.get("timeout_seconds")),
         semgrep_policy=semgrep_policy,
     )
@@ -432,7 +438,7 @@ def unique_diagnostic_strings(values: Any) -> list[str]:
 
 def _fail_on_missing_tool_impl(config: dict[str, Any]) -> bool:
     """Return whether missing deep tools should fail the run."""
-    return bool(get_nested(config, "deep", "fail_on_missing_tool", default=True))
+    return get_nested(config, "deep", "fail_on_missing_tool", default=True) is not False
 
 
 def _full_run_threshold_impl(config: dict[str, Any]) -> int:
@@ -442,6 +448,8 @@ def _full_run_threshold_impl(config: dict[str, Any]) -> int:
         value = get_nested(
             config, "checks", "selection", "max_changed_files", default=15
         )
+    if isinstance(value, bool):
+        return 15
     try:
         threshold = int(value)
     except (TypeError, ValueError):

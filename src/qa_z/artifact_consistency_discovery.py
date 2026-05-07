@@ -7,6 +7,7 @@ from typing import Any
 
 from qa_z.artifacts import format_path
 from qa_z.backlog_core import BacklogCandidate, slugify
+from qa_z.repair_signals import iter_live_verification_summary_paths
 
 __all__ = [
     "discover_artifact_consistency_candidates",
@@ -16,10 +17,7 @@ __all__ = [
 def discover_artifact_consistency_candidates(root: Path) -> list[Any]:
     """Create candidates when related local artifacts are missing."""
     candidates: list[Any] = []
-    qa_root = root / ".qa-z"
-    if not qa_root.exists():
-        return candidates
-    for summary_path in sorted(qa_root.rglob("verify/summary.json")):
+    for summary_path in iter_live_verification_summary_paths(root):
         missing = [
             sibling.name
             for sibling in (

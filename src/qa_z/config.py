@@ -126,10 +126,10 @@ EXAMPLE_CONFIG = (
             fail_on_severity:
               - ERROR
             ignore_rules: []
+            exclude_paths: []
 
     checks:
       selection:
-        mode: diff-aware
         max_changed_files: 40
 
     gates:

@@ -417,6 +417,7 @@ def run_preflight(
     expected_origin_url: str | None = None,
     expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
+    check_release_tag: bool = True,
     skip_remote: bool = False,
     allow_existing_refs: bool = False,
     allow_dirty: bool = False,
@@ -474,18 +475,27 @@ def run_preflight(
         detail = f"expected origin {expected_origin_url}, got {origin_url}"
         checks.append(CheckResult("origin_matches_expected", "failed", detail))
 
-    exit_code, stdout, stderr = check_git(
-        "release_tag_absent",
-        ("git", "tag", "--list", expected_tag),
-        repo_root,
-        runner,
-    )
-    tag_output = stdout.strip()
-    if exit_code == 0 and not tag_output:
-        checks.append(CheckResult("release_tag_absent", "passed", expected_tag))
+    if not check_release_tag:
+        checks.append(
+            CheckResult(
+                "release_tag_absent",
+                "skipped",
+                f"{expected_tag} check skipped for quality mode",
+            )
+        )
     else:
-        detail = tag_output or stderr.strip() or f"{expected_tag} lookup failed"
-        checks.append(CheckResult("release_tag_absent", "failed", detail))
+        exit_code, stdout, stderr = check_git(
+            "release_tag_absent",
+            ("git", "tag", "--list", expected_tag),
+            repo_root,
+            runner,
+        )
+        tag_output = stdout.strip()
+        if exit_code == 0 and not tag_output:
+            checks.append(CheckResult("release_tag_absent", "passed", expected_tag))
+        else:
+            detail = tag_output or stderr.strip() or f"{expected_tag} lookup failed"
+            checks.append(CheckResult("release_tag_absent", "failed", detail))
 
     exit_code, stdout, stderr = check_git(
         "generated_artifacts_untracked",
@@ -581,7 +591,7 @@ def run_preflight(
                     (ref_name for ref_name in ref_names if ref_name == release_tag_ref),
                     "",
                 )
-                if remote_tag_ref:
+                if remote_tag_ref and check_release_tag:
                     ref_sample = [
                         remote_tag_ref,
                         *[name for name in ref_names if name != remote_tag_ref],
@@ -596,13 +606,18 @@ def run_preflight(
                             ),
                         )
                     )
-                elif allow_existing_refs:
+                elif allow_existing_refs or not check_release_tag:
+                    detail_prefix = (
+                        "existing refs allowed for quality mode"
+                        if not check_release_tag
+                        else "existing refs allowed for release PR path"
+                    )
                     checks.append(
                         CheckResult(
                             "remote_empty",
                             "passed",
                             format_remote_ref_detail(
-                                "existing refs allowed for release PR path",
+                                detail_prefix,
                                 ref_names,
                             ),
                         )
@@ -670,6 +685,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         help=f"Release tag that must not exist yet. Defaults to {DEFAULT_TAG}.",
     )
     parser.add_argument(
+        "--skip-release-tag-check",
+        action="store_true",
+        help=(
+            "Skip local and remote release-tag absence checks. "
+            "Use for feature-quality validation, not release tagging."
+        ),
+    )
+    parser.add_argument(
         "--skip-remote",
         action="store_true",
         help=(
@@ -713,6 +736,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_origin_url=args.expected_origin_url,
         expected_branch=args.expected_branch,
         expected_tag=args.expected_tag,
+        check_release_tag=not args.skip_release_tag_check,
         skip_remote=args.skip_remote,
         allow_existing_refs=args.allow_existing_refs,
         allow_dirty=args.allow_dirty,
@@ -725,6 +749,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         expected_origin_url=args.expected_origin_url,
         expected_branch=args.expected_branch,
         expected_tag=args.expected_tag,
+        check_release_tag=not args.skip_release_tag_check,
         skip_remote=args.skip_remote,
         allow_existing_refs=args.allow_existing_refs,
         allow_dirty=args.allow_dirty,

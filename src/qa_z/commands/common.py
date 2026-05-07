@@ -20,7 +20,10 @@ def write_text_if_missing(path: Path, content: str) -> bool:
 
 def format_relative_path(path: Path, root: Path) -> str:
     """Render a stable relative path for CLI output."""
-    return path.relative_to(root).as_posix()
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def resolve_cli_path(root: Path, value: str) -> Path:

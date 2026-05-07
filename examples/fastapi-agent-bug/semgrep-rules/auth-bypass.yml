@@ -1,0 +1,8 @@
+rules:
+  - id: qa-z.fastapi-auth-bypass-any-signed-in-user
+    message: FastAPI authorization must compare user_id to invoice.owner_id, not only check that the user is signed in.
+    severity: ERROR
+    languages:
+      - python
+    pattern: |
+      return $USER is not None

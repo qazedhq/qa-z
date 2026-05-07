@@ -71,10 +71,15 @@ def _has_compact_deep_counts_without_details(
 ) -> bool:
     if summary is None or extracted_findings:
         return False
-    return any(
-        (check.findings_count or 0) > 0 or (check.blocking_findings_count or 0) > 0
-        for check in summary.checks
-    )
+    for check in summary.checks:
+        blocking_count = check.blocking_findings_count or 0
+        if blocking_count > 0:
+            return True
+        findings_count = check.findings_count or 0
+        filtered_count = check.filtered_findings_count or 0
+        if max(findings_count - filtered_count, 0) > 0:
+            return True
+    return False
 
 
 __all__ = ["compare_deep_findings_impl"]

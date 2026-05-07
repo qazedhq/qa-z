@@ -94,6 +94,7 @@ def validation_code(expected_version: str) -> str:
     return "\n".join(
         [
             "import importlib.metadata as metadata",
+            "from importlib.resources import files",
             "import qa_z",
             f"expected = {expected_version!r}",
             "assert metadata.version('qa-z') == expected, metadata.version('qa-z')",
@@ -103,6 +104,12 @@ def validation_code(expected_version: str) -> str:
             "    entry.name == 'qa-z' and entry.value == 'qa_z.cli:main'",
             "    for entry in entry_points",
             "), 'missing qa-z console script entry point'",
+            "template_root = files('qa_z.templates')",
+            "assert template_root.joinpath('AGENTS.qa-z.md').is_file(), 'missing packaged AGENTS.qa-z.md'",
+            "assert template_root.joinpath('CURSOR.qa-z.mdc').is_file(), 'missing packaged Cursor template'",
+            "assert template_root.joinpath('skills/qa-z-merge-safety/SKILL.md').is_file(), 'missing packaged qa-z-merge-safety skill'",
+            "assert template_root.joinpath('examples/agent-auth-bug/qa-z.yaml').is_file(), 'missing packaged auth-bug demo config'",
+            "assert template_root.joinpath('examples/agent-auth-bug/app/auth.py').is_file(), 'missing packaged auth-bug demo app'",
             "print(f'qa-z {expected} artifact smoke ok')",
         ]
     )
@@ -229,6 +236,49 @@ def smoke_artifact(
                 )
 
             for step, command in (
+                (
+                    "qa-z guard help smoke",
+                    (
+                        str(venv_python),
+                        "-m",
+                        "qa_z",
+                        "guard",
+                        "--help",
+                    ),
+                ),
+                (
+                    "qa-z skill install help smoke",
+                    (
+                        str(venv_python),
+                        "-m",
+                        "qa_z",
+                        "skill",
+                        "install",
+                        "--help",
+                    ),
+                ),
+                (
+                    "qa-z demo help smoke",
+                    (
+                        str(venv_python),
+                        "-m",
+                        "qa_z",
+                        "demo",
+                        "--help",
+                    ),
+                ),
+                (
+                    "qa-z auth-bug demo smoke",
+                    (
+                        str(venv_python),
+                        "-m",
+                        "qa_z",
+                        "demo",
+                        "auth-bug",
+                        "--path",
+                        str(temp_path / "demo-target"),
+                    ),
+                ),
                 (
                     "qa-z doctor smoke",
                     (

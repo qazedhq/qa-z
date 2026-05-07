@@ -12,7 +12,9 @@ import pytest
 import yaml
 
 from qa_z.cli import main
+from qa_z.artifacts import ArtifactSourceNotFound
 from qa_z.config import load_config
+from qa_z.executor_bridge_context import copy_input
 from qa_z.executor_bridge import (
     ExecutorBridgeError,
     create_executor_bridge,
@@ -472,6 +474,24 @@ def test_executor_bridge_copies_repair_action_context_inputs(
     assert ".qa-z/executor/bridge-context/inputs/context/002-summary.json" in codex
 
 
+def test_executor_bridge_rejects_required_inputs_outside_repository(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside.txt"
+    outside.write_text("do not package me\n", encoding="utf-8")
+
+    with pytest.raises(ArtifactSourceNotFound, match="outside repository root"):
+        copy_input(
+            root=tmp_path,
+            source=outside,
+            target=tmp_path / ".qa-z" / "executor" / "bridge" / "inputs" / "x.txt",
+        )
+
+    assert not (
+        tmp_path / ".qa-z" / "executor" / "bridge" / "inputs" / "x.txt"
+    ).exists()
+
+
 def test_executor_bridge_guides_show_missing_action_context_inputs(
     tmp_path: Path,
 ) -> None:
@@ -674,6 +694,125 @@ def test_executor_bridge_cli_stdout_points_to_return_and_safety_entrypoints(
         f".qa-z/sessions/{session_id} --rerun"
     ) in output
     assert "Template summary: replace placeholder before ingest" in output
+
+
+def test_executor_bridge_cli_warns_for_output_dir_outside_qa_z(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+    bridge_dir = tmp_path / "external-bridge-package"
+
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-loop",
+            loop_id,
+            "--bridge-id",
+            "bridge-outside",
+            "--output-dir",
+            str(bridge_dir),
+        ]
+    )
+    output = capsys.readouterr().out
+    manifest = json.loads((bridge_dir / "bridge.json").read_text(encoding="utf-8"))
+    guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
+    codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
+    claude = (bridge_dir / "claude.md").read_text(encoding="utf-8")
+
+    assert exit_code == 0
+    assert manifest["output_policy"] == {
+        "under_repository_root": True,
+        "under_qa_z": False,
+        "under_default_executor_tree": False,
+        "cleanup_managed_by_qaz": False,
+        "contains_copied_evidence": True,
+    }
+    assert manifest["warnings"] == [
+        {
+            "id": "custom_output_dir_outside_qa_z",
+            "message": (
+                "Executor bridge package is outside .qa-z; keep this generated "
+                "executor evidence local or intentionally manage it outside QA-Z "
+                "cleanup and ignore policy."
+            ),
+        }
+    ]
+    assert "Warning: custom_output_dir_outside_qa_z" in output
+    assert "outside .qa-z" in output
+    assert "## Warnings" in guide
+    assert "custom_output_dir_outside_qa_z" in guide
+    assert "custom_output_dir_outside_qa_z" in codex
+    assert "custom_output_dir_outside_qa_z" in claude
+
+
+def test_executor_bridge_cli_warns_for_output_dir_outside_repository(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+    bridge_dir = tmp_path.parent / f"{tmp_path.name}-outside-repo-bridge-package"
+
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-loop",
+            loop_id,
+            "--bridge-id",
+            "bridge-outside-repository",
+            "--output-dir",
+            str(bridge_dir),
+        ]
+    )
+    output = capsys.readouterr().out
+    manifest = json.loads((bridge_dir / "bridge.json").read_text(encoding="utf-8"))
+    guide = (bridge_dir / "executor_guide.md").read_text(encoding="utf-8")
+    codex = (bridge_dir / "codex.md").read_text(encoding="utf-8")
+    claude = (bridge_dir / "claude.md").read_text(encoding="utf-8")
+
+    assert exit_code == 0
+    assert manifest["output_policy"] == {
+        "under_repository_root": False,
+        "under_qa_z": False,
+        "under_default_executor_tree": False,
+        "cleanup_managed_by_qaz": False,
+        "contains_copied_evidence": True,
+    }
+    assert [warning["id"] for warning in manifest["warnings"]] == [
+        "custom_output_dir_outside_repository",
+        "custom_output_dir_outside_qa_z",
+    ]
+    assert "Warning: custom_output_dir_outside_repository" in output
+    assert "Warning: custom_output_dir_outside_qa_z" in output
+    assert "outside the repository root" in output
+    assert "## Warnings" in guide
+    for text in (guide, codex, claude):
+        assert "custom_output_dir_outside_repository" in text
+        assert "custom_output_dir_outside_qa_z" in text
+
+
+def test_executor_bridge_removes_incomplete_custom_package_on_copy_failure(
+    tmp_path: Path,
+) -> None:
+    loop_id, session_id = prepare_autonomy_session(tmp_path)
+    session_dir = tmp_path / ".qa-z" / "sessions" / session_id
+    (session_dir / "handoff" / "handoff.json").unlink()
+    bridge_dir = tmp_path.parent / f"{tmp_path.name}-incomplete-bridge-package"
+
+    with pytest.raises(ArtifactSourceNotFound, match="Required bridge input not found"):
+        create_executor_bridge(
+            root=tmp_path,
+            from_loop=loop_id,
+            bridge_id="bridge-incomplete",
+            output_dir=bridge_dir,
+            now=NOW,
+        )
+
+    assert not bridge_dir.exists()
 
 
 def test_executor_bridge_cli_stdout_surfaces_missing_action_context(

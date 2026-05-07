@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from qa_z.worktree_discovery import discover_worktree_risk_candidates
@@ -84,6 +85,73 @@ def test_worktree_risk_candidates_attach_fresh_commit_plan_evidence(
             f"head={HEAD}"
         ),
     } in evidence
+
+
+def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / ".qa-z" / "tmp" / "worktree-commit-plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.worktree_commit_plan",
+                "status": "attention_required",
+                "attention_reasons": ["cross_cutting_paths_present"],
+                "summary": {
+                    "unassigned_source_path_count": 0,
+                    "cross_cutting_count": 3,
+                    "generated_artifact_count": 0,
+                },
+                "repository": {
+                    "branch": "codex/qa-z-bootstrap",
+                    "head": HEAD,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = discover_worktree_risk_candidates(
+        tmp_path, live_signals(), generated_at=UTC_LATE
+    )
+
+    assert {
+        "source": "worktree_commit_plan_json",
+        "path": ".qa-z/tmp/worktree-commit-plan.json",
+        "summary": (
+            "strict commit-plan status=attention_required; "
+            "attention=cross_cutting_paths_present; unassigned=0; "
+            "cross_cutting=3; generated=0"
+        ),
+    } in candidates[0].evidence
+
+
+def test_worktree_risk_candidates_skip_stale_commit_plan_json_evidence(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / ".qa-z" / "tmp" / "worktree-commit-plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.worktree_commit_plan",
+                "status": "ready",
+                "summary": {"unassigned_source_path_count": 0},
+                "repository": {"head": "old-head"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = discover_worktree_risk_candidates(
+        tmp_path, live_signals(), generated_at=UTC_LATE
+    )
+
+    assert all(
+        evidence["source"] != "worktree_commit_plan_json"
+        for evidence in candidates[0].evidence
+    )
 
 
 def test_worktree_risk_candidates_skip_stale_commit_plan_evidence(

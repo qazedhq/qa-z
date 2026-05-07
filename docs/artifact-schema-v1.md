@@ -468,7 +468,7 @@ Recommendation mapping is deterministic and uses only recorded verdicts:
 - `verification_failed`: `rerun_required`
 - `unchanged`: `continue_repair`
 
-The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v3`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
+The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
 
 TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeScript lint or test entry records `execution_mode: targeted`, the resolved `eslint` or `vitest run` command, and the selected `target_paths`.
 
@@ -508,14 +508,26 @@ Fixture contracts may execute the local executor return path through `run.execut
 
 ## Alpha Release Gate Evidence
 
-`scripts/alpha_release_gate.py --json --output dist/alpha-release-gate.json`
-writes a local generated release-readiness artifact. It is publish evidence, not
-a committed runtime contract, unless an operator intentionally freezes it with
-surrounding release notes.
+`scripts/alpha_release_gate.py --mode quality --json --output dist/alpha-release-gate.json`
+writes a local generated feature-quality artifact. It is validation evidence,
+not a committed runtime contract, unless an operator intentionally freezes it
+with surrounding release notes.
+
+Use `scripts/alpha_release_gate.py --mode release --target-tag <tag> --json`
+only for new release-tag preflight. Release mode checks the requested target tag
+instead of assuming every local validation run is preparing the historical
+`v0.9.8-alpha` tag.
 
 The top-level gate JSON includes:
 
 - `summary`, `exit_code`, `generated_at`, `check_count`, `passed_count`, `failed_count`, and `failed_checks`
+- `quick`: whether the gate ran the source-only quick loop instead of the full
+  publish-evidence loop; quick mode keeps preflight, worktree plan,
+  format/lint/type/test, and CLI help checks, but skips deep, benchmark, build,
+  artifact smoke, and bundle checks
+- `with_deps`: whether the stronger dependency-resolving artifact smoke actually
+  ran, and `with_deps_requested`: whether the operator requested it; in quick
+  mode `with_deps_requested` may be true while `with_deps` remains false
 - `checks`: ordered command results with `name`, `label`, `status`, `exit_code`, `stdout_tail`, and `stderr_tail`
 - `worktree_commit_plan`: the gate command name for
   `python scripts/worktree_commit_plan.py --include-ignored --json`, which
@@ -606,9 +618,13 @@ The top-level gate JSON includes:
   blocker classifier for known environment-sensitive failures such as
   `mypy_internal_error`, `semgrep_x509_store_failure`,
   `benchmark_results_lock`, `offline_build_dependency_failure`, or
-  `bundle_path_locked`
+  `bundle_path_locked`, plus release-state blockers such as
+  `local_release_tag_exists`
 - optional `evidence.gate_failures.<check>.summary`: compact operator-facing
   explanation paired with that blocker kind
+- optional `evidence.gate_failures.<check>.tag`: observed release tag for
+  release-state blockers such as `local_release_tag_exists`; next-command
+  guidance uses this value when available
 - optional top-level `environment_failure_count` and `product_failure_count`:
   counts of failed gate checks that were classified as environment/toolchain
   blockers versus unclassified product/QA failures
@@ -781,6 +797,14 @@ docs, tests, or report paths require patch-add ownership. Human output prints
 `Strict mode:` when either strict flag is active and `Attention reasons:` when
 attention blockers are present. Attention reasons are de-duplicated in human
 output.
+Batch-filtered payloads add `selected_batch_empty` to `attention_reasons` when
+the requested batch has no changed paths, so a non-ready selected-batch result
+always carries a machine-readable reason. The same condition appends a
+`next_actions` hint to select a changed batch or rerun without `--batch`.
+Batch-filtered top-level `attention_reasons` preserve global blockers such as
+`generated_artifacts_present`, `cross_cutting_paths_present`,
+`unassigned_source_paths`, or `multi_batch_paths`; use
+`selected_batch_summary.status` when only the selected batch readiness matters.
 Next actions are de-duplicated in human output.
 Next commands are de-duplicated in human output.
 Human output prints `Batches: changed=` when changed and unchanged batch counts
@@ -800,8 +824,24 @@ one review surface at a time. Alpha release gate evidence copies
 `cross_cutting_group_count` and human gate output prints it as
 `patch_add_groups=` when present.
 `--summary-only` keeps `cross_cutting_groups` compact by preserving group ids,
-titles, `path_count`, and path previews, but omitting full `patch_command`
-arrays; oversized group path lists add `paths_truncated_count`.
+titles, `path_count`, path previews, and the full `patch_command` argv array.
+Oversized group path lists add `paths_truncated_count`, but the command stays
+complete so compact handoff artifacts remain directly actionable.
+Summary-only `changed_batches[]` entries also preserve the batch `message`,
+validation commands, and `staging_plan.include_path_count`. For batches with at
+most 20 included paths, `staging_plan.git_add_command` and
+`staging_plan.git_add_command_text` are complete. Larger batches keep
+`staging_plan.include_paths` as a preview and add
+`staging_plan.include_paths_truncated_count` instead of emitting an incomplete
+stage command. Compact `cross_cutting_groups[]` also include
+`patch_command_text`, a rendered companion to the argv-style `patch_command`;
+rendered command text quotes paths with whitespace or common shell separator
+characters.
+When `--batch <id>` attaches shared patch-add candidates to the selected batch,
+summary-only `changed_batches[].staging_plan` preserves
+`candidate_patch_add_count`, `candidate_patch_add_paths`,
+`git_add_patch_command`, and `git_add_patch_command_text` for complete small
+candidate sets.
 Batch-filtered human output prints `Selected batch:` and
 `Global attention reasons:` when those fields are present.
 Strict batch filters preserve
@@ -858,12 +898,15 @@ opening the JSON artifact.
 
 The self-inspection pass is a planning layer. It does not edit files, call Codex or Claude APIs, run remote jobs, or create autonomous repair loops. Candidate tasks must be grounded in local artifacts or repository files, such as benchmark summaries, verification summaries, repair-session manifests, stored executor-result artifacts, session-local executor-result history artifacts, publish companion artifacts, README/schema docs, committed benchmark fixture contracts, report files under `docs/reports/`, recent loop history, and local worktree signals such as modified/untracked/staged counts plus generated benchmark result files where those files exist.
 
+Only root live run/session verification summaries are eligible for verification backlog candidates: `.qa-z/runs/*/verify/summary.json` and `.qa-z/sessions/*/verify/summary.json`. Nested QA-Z repositories copied into generated scratch roots, including `.qa-z/tmp/**/work/**` and `benchmarks/results/work/**`, are ignored by verification discovery and autonomy status so benchmark fixture residue does not become a false live regression.
+
 When self-inspection evidence is derived from executor dry-run residue, candidate evidence summaries keep the same dry-run provenance inline as `source=materialized` or `source=history_fallback`. That keeps backlog review auditable even when the operator only reads `self_inspect.json` or `backlog.json`. benchmark-gap evidence preserves the generated benchmark `snapshot` from `benchmarks/results/summary.json`, so failed-fixture backlog entries can show the fixture failure together with the overall benchmark pass-rate line.
 
 For legacy benchmark summaries that predate `snapshot`, benchmark-gap evidence synthesizes the same compact text from `fixtures_passed`, `fixtures_total`, and `overall_rate` when those fields are present.
 If a failed benchmark summary has only aggregate failure counts and no per-fixture details, self-inspection creates a summary-level benchmark-gap item instead of dropping the failure evidence.
 
 Plain `qa-z self-inspect` output is an operator summary over this artifact. It prints artifact paths, total candidate count, and up to three top candidates with title, recommendation, deterministic action hint, deterministic validation command hint, priority score, and compact evidence summary. `qa-z self-inspect --json` remains the full machine-readable report.
+Each `self-inspect --json` candidate also carries additive `action_hint`, `validation_command`, and `evidence_summary` fields so automation can recover the same deterministic next step without first running `select-next`.
 
 Self-inspection JSON includes a top-level `live_repository` object so candidate decisions can be compared against the live state that produced them:
 
@@ -881,7 +924,7 @@ Self-inspection JSON includes a top-level `live_repository` object so candidate 
 
 Dirty-worktree candidate evidence keeps the existing `git_status` source but now includes deterministic repository-area counts, for example `areas=benchmark:271, docs:160, source:42`, before the compact sample path list. The counts are derived from dirty modified plus untracked paths and do not add a new artifact schema field.
 When `areas=` is present on a dirty-worktree item, human action hints use the first one or two rendered areas to name the first triage surface, for example `triage benchmark and docs changes first`. Without area evidence, the generic dirty-worktree action hint remains unchanged.
-When a loop-health item with recommendation `improve_fallback_diversity` carries `recent_fallback_family=<family>` evidence, the human action hint now tells operators to surface a non-`<family>` fallback family before selecting more work from that same family. This keeps `self-inspect`, `backlog`, `select-next`, and `loop_plan.md` aligned without changing the JSON candidate shape.
+When a loop-health item with recommendation `improve_fallback_diversity` carries `recent_fallback_family=<family>` evidence, the human action hint now tells operators to surface a non-`<family>` fallback family before selecting more work from that same family, then inspect autonomy status after rerunning autonomy. This keeps `self-inspect`, `backlog`, `select-next`, `autonomy status`, and `loop_plan.md` aligned without changing the JSON candidate shape.
 Commit-isolation candidates also reuse `areas=` when their existing `git_status` evidence is present. The `isolate_foundation_commit` human action hint can then name the first one or two dirty areas to isolate into the foundation split, while the machine-readable candidate shape remains unchanged.
 Deferred cleanup and commit-isolation candidates now rely on dirty generated-artifact pressure rather than the mere presence of local benchmark summaries. `benchmark_result_count` stays as operator context, while `dirty_benchmark_result_count` explains whether those artifacts are actually contributing live cleanup pressure. When the current inspection also knows the live `HEAD` revision, those structural report seeds require an explicit report `Head:` line before they are treated as fresh enough to reopen backlog work.
 When the generated-artifact ignore rules and policy document are already explicit, live runtime artifact paths can still justify `artifact_hygiene_gap` or `runtime_artifact_cleanup_gap`, but they do not reopen `evidence_freshness_gap` on their own. That keeps cleanup work actionable without re-labeling the policy itself as ambiguous. In that explicit-policy state, `runtime_artifact_cleanup_gap` now scores above the broader `artifact_hygiene_gap`, so the next operator clears policy-managed runtime artifacts before revisiting longer-lived source/evidence separation work.
@@ -963,6 +1006,12 @@ The current bonuses are:
 .qa-z/loops/history.jsonl
 ```
 
+Run local planner artifact writers serially. Commands such as
+`qa-z self-inspect`, `qa-z backlog --refresh`, `qa-z select-next`, and
+`qa-z autonomy --loops` share `.qa-z/loops/latest/` and
+`.qa-z/improvement/backlog.json`, so concurrent local runs can observe stale
+latest-loop context even though each individual command is deterministic.
+
 `selected_tasks.json` has:
 
 - `kind`: stable artifact kind, currently `qa_z.selected_tasks`
@@ -977,6 +1026,9 @@ The current bonuses are:
 
 Each selected task may include:
 
+- `action_hint`: deterministic first operator action derived from the task recommendation and evidence
+- `validation_command`: deterministic command for refreshing evidence after the selected work
+- `evidence_summary`: compact operator summary derived from the selected task evidence
 - `selection_penalty`: small immediate-reselection penalty derived from the last two loop-history entries
 - `selection_penalty_reasons`: compact reasons such as exact-task reselection, category reselection, fallback-family reselection, or current-batch fallback-family reselection
 - `selection_priority_score`: `priority_score` after the selection penalty is applied
@@ -1126,7 +1178,8 @@ Each prepared action includes:
 Recommendation-aware worktree and integration packets now keep the existing action types but narrow their follow-up guidance:
 
 - loop-health recommendations such as `improve_fallback_diversity` keep the `loop_health_plan` type but carry selected task evidence paths, loop-local self-inspection, and report references through `context_paths`
-- cleanup recommendations such as `reduce_integration_risk` or `isolate_foundation_commit` attach stable commands like `git status --short`, `python scripts/runtime_artifact_cleanup.py --json`, `python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json`, and `python -m qa_z self-inspect --json`, and now also carry loop-local self-inspection through `context_paths`
+- cleanup recommendations such as `reduce_integration_risk` or `isolate_foundation_commit` attach stable commands like `git status --short`, `python scripts/runtime_artifact_cleanup.py --json`, `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, and `python -m qa_z self-inspect --json`, and now also carry loop-local self-inspection through `context_paths`
+- `reduce_integration_risk` selected-task validation surfaces the strict worktree commit-plan command, so `select-next`, `backlog`, and `self-inspect` human output point operators at the deterministic split gate instead of a generic self-inspection rerun
 - runtime-artifact cleanup packets that keep the `triage_and_isolate_changes` recommendation add `python scripts/runtime_artifact_cleanup.py --apply --json` and change `next_recommendation` to clear policy-managed runtime artifacts before rerunning self-inspection
 - `audit_worktree_integration` keeps the `workflow_gap_plan` type but carries the current-state, worktree-triage, and worktree-commit reports plus loop-local self-inspection through `context_paths`
 - deferred generated cleanup through `triage_and_isolate_changes` keeps the `integration_cleanup_plan` type but carries `docs/generated-vs-frozen-evidence-policy.md` and `scripts/runtime_artifact_cleanup.py` through `context_paths` alongside worktree triage and commit-plan reports
@@ -1141,7 +1194,9 @@ For repair-session actions, QA-Z calls the existing local `repair-session` creat
 - latest selected task ids
 - `latest_selected_fallback_families`: additive copy of the latest outcome `selected_fallback_families` list, used for repeated fallback-family diagnostics
 - `latest_live_repository`: compact live repository context from the stored latest selected-task artifact or outcome when available
-- `latest_selected_task_details`: additive compact copies of the latest selected task entries as they were written to `selected_tasks.json`, including `id`, `title`, `category`, `recommendation`, `evidence_summary`, optional `selection_priority_score`, and optional `selection_penalty` and `selection_penalty_reasons`
+- `latest_selected_task_details`: additive compact copies of the latest selected task entries as they were written to `selected_tasks.json`, including `id`, `title`, `category`, `recommendation`, `action_hint`, `validation_command`, `evidence_summary`, optional `selection_priority_score`, and optional `selection_penalty` and `selection_penalty_reasons`
+- `latest_selected_loop_id`, `latest_outcome_loop_id`, and `latest_selection_outcome_mismatch`: provenance fields that reveal when a standalone `select-next` refresh updated the latest selected-task artifact after the most recent autonomy outcome
+- `latest_prepared_actions_loop_id` and `latest_prepared_actions_stale_for_selection`: provenance fields that show whether prepared action packets still belong to the latest selected-task artifact
 - `latest_prepared_actions`: additive compact copies of the latest prepared action packets, including `type`, `task_id`, `next_recommendation`, optional `commands`, optional `context_paths`, and any session-specific pointers
 - `latest_next_recommendations`: additive compact next-step list copied from the latest loop outcome
 - optional `latest_selection_gap_reason`
@@ -1165,7 +1220,8 @@ The action hint on those human surfaces also reuses the same area evidence, so b
 For commit-isolation items, the same area evidence informs the human action hint even when compact evidence prioritizes the alpha closure snapshot. When that happens, the compact human summary can append an `action basis:` suffix with the area-bearing `git_status` summary. Consumers that need the full detail should read the unchanged `evidence` array from the JSON artifact.
 Paths under `benchmarks/results/` and sibling snapshot directories matching `benchmarks/results-*` are treated as local-by-default benchmark result evidence for dirty-worktree classification. They stay visible through `benchmark_result_paths` and `dirty_benchmark_result_count`, not `runtime_artifact_paths`, unless a commit intentionally freezes them as evidence with surrounding context. The `triage_and_isolate_changes` action hint now names that local-only versus intentional frozen evidence decision while keeping the JSON recommendation id unchanged. For `runtime_artifact_cleanup_gap`, the same recommendation id now tells operators to clear policy-managed runtime artifacts before source integration and to keep frozen evidence only when intentional.
 When a `triage_and_isolate_changes` item has secondary `generated_outputs` or `runtime_artifacts` evidence but compact evidence leads with a report summary, the human compact summary can append that secondary evidence as `action basis:`. This is presentation-only; the unchanged JSON `evidence` array remains the source of truth.
-The matching autonomy prepared action also carries `docs/generated-vs-frozen-evidence-policy.md` through `context_paths`, so external operators receive the policy context with the deterministic cleanup packet.
+The matching autonomy prepared action also carries `docs/generated-vs-frozen-evidence-policy.md` through `context_paths`, so external operators receive the policy context with the deterministic cleanup packet. Loop-health prepared actions for fallback diversity include the same JSON autonomy loop command exposed as the selected-task validation command, keeping prepared actions, selected tasks, and status output aligned.
+When `.qa-z/tmp/worktree-commit-plan.json` exists and matches the current `HEAD`, dirty-worktree candidates may also include `worktree_commit_plan_json` evidence with the strict commit-plan status, attention reasons, unassigned source count, cross-cutting count, and generated artifact count. This closes the loop between the selected validation command and the next `self-inspect` pass without treating `.qa-z/tmp/**` as source.
 
 `qa-z backlog --json` prints the current `backlog.json` shape. If no backlog exists yet, it prints an empty backlog object rather than inventing candidates.
 
@@ -1220,8 +1276,12 @@ The command writes:
 - `safety_package`: copied safety package summary with `package_id`, `status`, copied policy paths, ordered rule ids, and safety rule count
 - `non_goals`: executor safety boundaries such as no unrelated refactors, no broadened scope, no weakened checks, no live API calls from QA-Z, and no commit/push/GitHub bot behavior
 - `safety_constraints`: short operational guardrails for scoped execution
+- `output_policy`: whether the bridge package is under the repository root, under `.qa-z`, under the default `.qa-z/executor` tree, managed by QA-Z cleanup policy, and known to contain copied evidence
+- `warnings`: each non-blocking warning for the operator, such as `custom_output_dir_outside_qa_z` when `--output-dir` writes generated bridge evidence outside `.qa-z`, or `custom_output_dir_outside_repository` when the bridge package is also outside the repository root
 - `return_contract`: expected post-repair handoff back to QA-Z
 - `evidence_summary`: compact loop/session/handoff context
+
+Custom `--output-dir` paths are allowed so operators can place bridge packages deliberately, but paths outside `.qa-z` are no longer silent. The manifest records `output_policy` booleans and `custom_output_dir_outside_qa_z`; paths outside the repository root also record `custom_output_dir_outside_repository`. Non-JSON stdout plus `executor_guide.md`, `codex.md`, and `claude.md` repeat the warning so operators can keep that generated evidence local or manage it intentionally outside QA-Z cleanup and repository ignore policy.
 
 The return contract records:
 

@@ -22,21 +22,35 @@ def discover_verification_candidates(root: Path) -> list[Any]:
     """Create candidates from problematic verification verdicts."""
     candidates: list[Any] = []
     for candidate_input in discover_verification_candidate_inputs(root):
+        run_id = str(candidate_input["run_id"])
+        verdict = str(candidate_input["verdict"])
+        candidate_id, title, category = verification_candidate_identity(
+            verdict=verdict,
+            run_id=run_id,
+        )
+        evidence = {
+            "source": "verification",
+            "path": format_path(candidate_input["path"], root),
+            "summary": str(candidate_input["summary"]),
+        }
+        for field in (
+            "compare_path",
+            "baseline_run",
+            "candidate_run",
+            "not_comparable_reason",
+        ):
+            value = candidate_input.get(field)
+            if not value:
+                continue
+            evidence[field] = (
+                format_path(value, root) if isinstance(value, Path) else str(value)
+            )
         candidates.append(
             BacklogCandidate(
-                id=f"verify_regression-{slugify(str(candidate_input['run_id']))}",
-                title=(
-                    "Stabilize verification verdict: "
-                    f"{candidate_input['verdict']} in {candidate_input['run_id']}"
-                ),
-                category="verify_regression",
-                evidence=[
-                    {
-                        "source": "verification",
-                        "path": format_path(candidate_input["path"], root),
-                        "summary": str(candidate_input["summary"]),
-                    }
-                ],
+                id=candidate_id,
+                title=title,
+                category=category,
+                evidence=[evidence],
                 impact=int(candidate_input["impact"]),
                 likelihood=4,
                 confidence=4,
@@ -46,6 +60,24 @@ def discover_verification_candidates(root: Path) -> list[Any]:
             )
         )
     return unique_candidates(candidates)
+
+
+def verification_candidate_identity(
+    *, verdict: str, run_id: str
+) -> tuple[str, str, str]:
+    """Return id, title, and category for one verification candidate."""
+    run_slug = slugify(run_id)
+    if verdict == "verification_failed":
+        return (
+            f"verify_failure-{run_slug}",
+            f"Stabilize failed verification artifacts: {run_id}",
+            "verification_failure",
+        )
+    return (
+        f"verify_regression-{run_slug}",
+        f"Stabilize verification verdict: {verdict} in {run_id}",
+        "verify_regression",
+    )
 
 
 def discover_session_candidates(root: Path) -> list[Any]:

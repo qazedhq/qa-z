@@ -89,6 +89,28 @@ def test_run_benchmark_removes_results_lock_after_success(tmp_path: Path) -> Non
     assert not (results_dir / ".benchmark.lock").exists()
 
 
+def test_run_benchmark_reports_results_lock_cleanup_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir()
+    results_dir = tmp_path / "results"
+
+    def fail_unlink(_path: Path) -> None:
+        raise PermissionError("lock still held")
+
+    monkeypatch.setattr("qa_z.benchmark_workspace.unlink_with_retries", fail_unlink)
+
+    with pytest.raises(BenchmarkError) as exc_info:
+        run_benchmark(fixtures_dir=fixtures_dir, results_dir=results_dir)
+
+    message = str(exc_info.value)
+    assert "Could not remove benchmark results lock" in message
+    assert str(results_dir / ".benchmark.lock") in message
+    assert "use a different --results-dir" in message
+    assert (results_dir / "summary.json").exists()
+
+
 def test_benchmark_cli_reports_locked_results_dir(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

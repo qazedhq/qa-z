@@ -11,6 +11,11 @@ from qa_z.autonomy_action_context import (
     task_context_paths,
 )
 from qa_z.autonomy_action_packets import prepared_action
+from qa_z.operator_commands import BACKLOG_JSON_COMMAND
+from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_APPLY_COMMAND
+from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_COMMAND
+from qa_z.operator_commands import SELF_INSPECT_JSON_COMMAND
+from qa_z.operator_commands import STRICT_WORKTREE_COMMIT_PLAN_COMMAND
 
 __all__ = ["cleanup_action", "workflow_gap_action"]
 
@@ -25,12 +30,9 @@ def cleanup_action(
 ) -> dict[str, object]:
     """Build a recommendation-aware cleanup action packet."""
     default_next = "reduce integration risk and rerun self-inspection"
-    cleanup_review_command = "python scripts/runtime_artifact_cleanup.py --json"
-    cleanup_apply_command = "python scripts/runtime_artifact_cleanup.py --apply --json"
-    worktree_plan_command = (
-        "python scripts/worktree_commit_plan.py --json "
-        "--output .qa-z/tmp/worktree-commit-plan.json"
-    )
+    cleanup_review_command = RUNTIME_ARTIFACT_CLEANUP_COMMAND
+    cleanup_apply_command = RUNTIME_ARTIFACT_CLEANUP_APPLY_COMMAND
+    worktree_plan_command = STRICT_WORKTREE_COMMIT_PLAN_COMMAND
     category = str(task.get("category") or "")
     titles = {
         "isolate_foundation_commit": "Prepare a deterministic commit-isolation plan.",
@@ -90,10 +92,10 @@ def cleanup_action(
         if category == "runtime_artifact_cleanup_gap":
             commands.append(cleanup_apply_command)
         else:
-            commands.append("python -m qa_z backlog --json")
+            commands.append(BACKLOG_JSON_COMMAND)
     if recommendation == "separate_runtime_from_source_artifacts":
         commands.append(cleanup_apply_command)
-    commands.append("python -m qa_z self-inspect --json")
+    commands.append(SELF_INSPECT_JSON_COMMAND)
     return prepared_action(
         task_id=task_id,
         action_type="integration_cleanup_plan",
@@ -138,8 +140,8 @@ def workflow_gap_action(
         ),
         commands=[
             "git status --short",
-            "python -m qa_z backlog --json",
-            "python -m qa_z self-inspect --json",
+            BACKLOG_JSON_COMMAND,
+            SELF_INSPECT_JSON_COMMAND,
         ],
         context_paths=merge_context_paths(
             loop_local_self_inspection_context_paths(root, loop_id),

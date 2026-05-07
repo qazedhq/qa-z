@@ -21,6 +21,7 @@ answer three questions:
 The current repository surface supports a coherent local QA control-plane flow:
 
 - repository bootstrap with `init`
+- config and onboarding validation with `doctor`
 - contract generation with `plan`
 - deterministic fast QA for Python and TypeScript with `fast`
 - Semgrep-backed deep QA with `deep`
@@ -514,8 +515,9 @@ recommendation id, so closure work such as `isolate_foundation_commit` points at
 the commit plan before the operator reruns self-inspection. The fallback-diversity
 action hint now also says to surface a non-cleanup fallback family before
 selecting more cleanup work when loop-history evidence names cleanup as the
-repeated family, so loop-health plans stay aligned with the batch-diversity
-selection contract. Plain `qa-z backlog`
+repeated family, then inspect autonomy status after rerunning autonomy, so
+loop-health plans stay aligned with the batch-diversity selection contract.
+Plain `qa-z backlog`
 output now reuses that same action hint, so active backlog review and task
 selection show the same first operator move without changing the JSON artifact.
 The worktree commit-plan helper no longer leaves the shared subprocess/tooling

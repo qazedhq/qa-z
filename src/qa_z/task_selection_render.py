@@ -5,7 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from qa_z.live_repository import render_live_repository_summary
+from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
+from qa_z.operator_commands import BENCHMARK_JSON_COMMAND
+from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_COMMAND
+from qa_z.operator_commands import SELF_INSPECT_COMMAND
+from qa_z.operator_commands import STRICT_WORKTREE_COMMIT_PLAN_COMMAND
 from qa_z.task_selection_core import repeated_fallback_family_from_item
+from qa_z.task_selection_evidence import verification_not_comparable_reason
 from qa_z.task_selection_evidence import worktree_action_areas
 
 
@@ -104,21 +110,19 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
     """Return a deterministic first action hint for a selected task."""
     category = str(item.get("category") or "").strip()
     recommendation = str(item.get("recommendation") or "").strip()
-    cleanup_review = "`python scripts/runtime_artifact_cleanup.py --json`"
-    worktree_plan_review = (
-        "`python scripts/worktree_commit_plan.py --json "
-        "--output .qa-z/tmp/worktree-commit-plan.json`"
-    )
+    cleanup_review = f"`{RUNTIME_ARTIFACT_CLEANUP_COMMAND}`"
+    worktree_plan_review = f"`{STRICT_WORKTREE_COMMIT_PLAN_COMMAND}`"
     if recommendation == "improve_fallback_diversity":
         repeated_family = repeated_fallback_family_from_item(item)
         if repeated_family:
             return (
                 f"surface a non-{repeated_family} fallback family before selecting "
-                f"more {repeated_family} work, then rerun autonomy"
+                f"more {repeated_family} work, then rerun autonomy and inspect "
+                "autonomy status"
             )
         return (
             "surface a non-repeated fallback family before selecting more of the "
-            "same family, then rerun autonomy"
+            "same family, then rerun autonomy and inspect autonomy status"
         )
     if recommendation == "reduce_integration_risk":
         area_phrase = join_action_areas(worktree_action_areas(item))
@@ -139,6 +143,19 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
         area_phrase = join_action_areas(worktree_action_areas(item), limit=4)
         if area_phrase:
             return f"audit {area_phrase} integration first, then rerun self-inspection"
+    if recommendation == "stabilize_verification_surface":
+        compare_path = verification_compare_path(item)
+        reason = verification_not_comparable_reason(item)
+        suffix = f"; not comparable: {reason}" if reason else ""
+        if compare_path:
+            return (
+                f"inspect `{compare_path}`, restore comparable baseline/candidate "
+                f"fast and deep evidence, then rerun verification{suffix}"
+            )
+        return (
+            "inspect the verification report, restore comparable baseline/candidate "
+            f"fast and deep evidence, then rerun verification{suffix}"
+        )
     if (
         recommendation == "triage_and_isolate_changes"
         and category == "runtime_artifact_cleanup_gap"
@@ -185,12 +202,20 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
 def selected_task_validation_command(item: dict[str, Any]) -> str:
     """Return the deterministic command for refreshing evidence after a task."""
     recommendation = str(item.get("recommendation") or "").strip()
+    if recommendation == "stabilize_verification_surface":
+        run_pair = verification_run_pair(item)
+        if run_pair is not None:
+            baseline_run, candidate_run = run_pair
+            return (
+                f"python -m qa_z verify --baseline-run {baseline_run} "
+                f"--candidate-run {candidate_run}"
+            )
     commands = {
-        "add_benchmark_fixture": "python -m qa_z benchmark --json",
-        "reduce_integration_risk": "python -m qa_z self-inspect",
-        "isolate_foundation_commit": "python -m qa_z self-inspect",
-        "audit_worktree_integration": "python -m qa_z self-inspect",
-        "improve_fallback_diversity": "python -m qa_z autonomy --loops 1",
+        "add_benchmark_fixture": BENCHMARK_JSON_COMMAND,
+        "reduce_integration_risk": STRICT_WORKTREE_COMMIT_PLAN_COMMAND,
+        "isolate_foundation_commit": SELF_INSPECT_COMMAND,
+        "audit_worktree_integration": SELF_INSPECT_COMMAND,
+        "improve_fallback_diversity": AUTONOMY_ONE_LOOP_COMMAND,
         "stabilize_verification_surface": (
             "python -m qa_z verify --baseline-run <baseline> "
             "--candidate-run <candidate>"
@@ -199,7 +224,34 @@ def selected_task_validation_command(item: dict[str, Any]) -> str:
             "python -m qa_z repair-session status --session <session>"
         ),
     }
-    return commands.get(recommendation, "python -m qa_z self-inspect")
+    return commands.get(recommendation, SELF_INSPECT_COMMAND)
+
+
+def verification_compare_path(item: dict[str, Any]) -> str:
+    """Return the compare artifact path referenced by verification evidence."""
+    for entry in item_evidence_entries(item):
+        compare_path = str(entry.get("compare_path") or "").strip()
+        if compare_path:
+            return compare_path
+    return ""
+
+
+def verification_run_pair(item: dict[str, Any]) -> tuple[str, str] | None:
+    """Return baseline and candidate runs referenced by verification evidence."""
+    for entry in item_evidence_entries(item):
+        baseline_run = str(entry.get("baseline_run") or "").strip()
+        candidate_run = str(entry.get("candidate_run") or "").strip()
+        if baseline_run and candidate_run:
+            return baseline_run, candidate_run
+    return None
+
+
+def item_evidence_entries(item: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return typed evidence entries from a selected task."""
+    evidence = item.get("evidence")
+    if not isinstance(evidence, list):
+        return []
+    return [entry for entry in evidence if isinstance(entry, dict)]
 
 
 def join_action_areas(areas: list[str], *, limit: int = 2) -> str:

@@ -26,6 +26,9 @@ def test_github_workflow_builds_package_artifacts_after_tests() -> None:
     test_position = runs.index("python -m pytest")
     build_position = runs.index("python -m build --sdist --wheel")
     smoke_position = runs.index("python scripts/alpha_release_artifact_smoke.py --json")
+    benchmark_position = runs.index(
+        "python -m qa_z benchmark --results-dir benchmarks/results-ci --json"
+    )
 
     assert (
         install_position
@@ -35,6 +38,217 @@ def test_github_workflow_builds_package_artifacts_after_tests() -> None:
         < test_position
         < build_position
         < smoke_position
+        < benchmark_position
+    )
+
+
+def test_github_workflow_runs_benchmark_into_ignored_results_dir() -> None:
+    """The release benchmark gate should not create tracked runtime evidence."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    )
+    steps: list[dict[str, Any]] = workflow["jobs"]["test"]["steps"]
+    runs = [step.get("run", "") for step in steps]
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert "python -m qa_z benchmark --results-dir benchmarks/results-ci --json" in (
+        runs
+    )
+    assert "benchmarks/results-*" in gitignore
+
+
+def test_github_workflow_uploads_benchmark_report_artifacts() -> None:
+    """Benchmark failures should leave concise CI evidence for operators."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    )
+    steps: list[dict[str, Any]] = workflow["jobs"]["test"]["steps"]
+
+    artifact_step = next(
+        step
+        for step in steps
+        if step.get("name") == "Upload benchmark report artifacts"
+    )
+
+    assert artifact_step.get("if") == "${{ always() }}"
+    assert artifact_step.get("uses") == "actions/upload-artifact@v4"
+    artifact_config = artifact_step.get("with", {})
+    assert artifact_config.get("name") == "qa-z-benchmark-report"
+    assert artifact_config.get("path", "").strip() == (
+        "benchmarks/results-ci/summary.json\nbenchmarks/results-ci/report.md"
+    )
+    assert artifact_config.get("retention-days") == 7
+    assert artifact_config.get("if-no-files-found") == "warn"
+
+
+def test_codex_review_prep_uses_read_only_permissions() -> None:
+    """Review prep only writes a job summary, so PR write permission is unnecessary."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "codex-review.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    permissions = workflow["jobs"]["review-prep"]["permissions"]
+
+    assert permissions == {"contents": "read", "pull-requests": "read"}
+
+
+def test_ci_jobs_use_explicit_least_privilege_permissions() -> None:
+    """Every CI job should declare the workflow token scope it needs."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    )
+
+    assert workflow["jobs"]["test"]["permissions"] == {"contents": "read"}
+    assert workflow["jobs"]["qa-z"]["permissions"] == {
+        "actions": "read",
+        "contents": "read",
+        "security-events": "write",
+    }
+
+
+def test_public_raw_hygiene_workflow_checks_branch_and_commit_urls() -> None:
+    """Public raw hygiene should verify GitHub raw bytes, not only local files."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "public-raw-hygiene.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    triggers = workflow.get("on", workflow.get(True, {}))
+    job = workflow["jobs"]["public-raw-hygiene"]
+    steps: list[dict[str, Any]] = job["steps"]
+    runs = [step.get("run", "") for step in steps]
+    combined_runs = "\n".join(runs)
+
+    assert {"push", "pull_request", "workflow_dispatch"} <= set(triggers)
+    assert workflow["permissions"] == {"contents": "read"}
+    assert job["timeout-minutes"] == 10
+    assert "python scripts/check_text_file_hygiene.py --source working-tree" in runs
+    assert 'current_commit="$(git rev-parse HEAD)"' in combined_runs
+    assert "github.event.pull_request.head.ref || github.ref_name" in str(workflow)
+    assert "github.event.pull_request.head.sha || github.sha" in str(workflow)
+    assert "python scripts/check_public_raw_urls.py" in combined_runs
+    assert '--repo "${{ steps.raw-target.outputs.repo }}"' in combined_runs
+    assert '--ref "${{ steps.raw-target.outputs.ref }}"' in combined_runs
+    assert '--commit "${{ steps.raw-target.outputs.commit }}"' in combined_runs
+
+
+def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
+    """The reusable action should publish evidence before applying the verdict."""
+    action = yaml.safe_load(
+        (ROOT / ".github" / "actions" / "qa-z" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps: list[dict[str, Any]] = action["runs"]["steps"]
+    step_names = [step.get("name", "") for step in steps]
+    expected_order = [
+        "Validate QA-Z config",
+        "Run fast checks",
+        "Run deep checks",
+        "Generate review and repair artifacts",
+        "Publish QA-Z job summary",
+        "Upload QA-Z SARIF to code scanning",
+        "Upload QA-Z run artifacts",
+        "Fail if QA-Z fast or deep failed",
+    ]
+
+    positions = [step_names.index(name) for name in expected_order]
+    assert positions == sorted(positions)
+
+    for name in expected_order[2:]:
+        step = steps[step_names.index(name)]
+        assert step.get("if") == "${{ always() }}"
+
+    combined_runs = "\n".join(step.get("run", "") for step in steps)
+    assert "qa-z doctor --json" in combined_runs
+    assert "fast_exit=${PIPESTATUS[0]}" in combined_runs
+    assert "deep_exit=${PIPESTATUS[0]}" in combined_runs
+    assert "${{ inputs.run-dir }}/fast-exit-code" in combined_runs
+    assert "${{ inputs.run-dir }}/deep-exit-code" in combined_runs
+
+    sarif_step = steps[step_names.index("Upload QA-Z SARIF to code scanning")]
+    assert sarif_step.get("uses") == "github/codeql-action/upload-sarif@v4"
+    assert sarif_step.get("continue-on-error") is True
+    assert sarif_step.get("with", {}).get("sarif_file") == (
+        "${{ inputs.run-dir }}/deep/results.sarif"
+    )
+
+    artifact_step = steps[step_names.index("Upload QA-Z run artifacts")]
+    assert artifact_step.get("uses") == "actions/upload-artifact@v4"
+    assert artifact_step.get("with", {}).get("retention-days") == 7
+    assert artifact_step.get("with", {}).get("if-no-files-found") == "warn"
+
+    verdict_step = steps[step_names.index("Fail if QA-Z fast or deep failed")]
+    assert "QA-Z checks failed: fast=$fast_exit deep=$deep_exit" in verdict_step["run"]
+    assert "exit 1" in verdict_step["run"]
+
+
+def test_github_action_docs_explain_composite_action_operational_contract() -> None:
+    """Docs should describe the action evidence and permission behavior."""
+    docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+
+    assert (
+        "The composite action validates `qa-z doctor --json`, runs the guard verdict "
+        "step, then preserves the summary, optional SARIF, and QA-Z run artifacts with "
+        "`always()` cleanup steps."
+    ) in docs
+    assert (
+        "SARIF upload is disabled by default because code scanning permissions can be "
+        "repository-specific."
+    ) in docs
+    assert 'upload-sarif: "true"' in docs
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        ".github/workflows/ci.yml",
+        ".github/workflows/public-raw-hygiene.yml",
+        ".github/workflows/codex-review.yml",
+        ".github/workflows/scorecard.yml",
+        "templates/.github/workflows/vibeqa.yml",
+        "templates/.github/workflows/qa-z-pr-comment.yml",
+    ],
+)
+def test_github_workflow_jobs_have_explicit_timeouts(workflow_path: str) -> None:
+    """CI jobs should fail boundedly instead of waiting on the platform default."""
+    workflow = yaml.safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+
+    assert all(
+        isinstance(job.get("timeout-minutes"), int)
+        and 1 <= job["timeout-minutes"] <= 60
+        for job in workflow["jobs"].values()
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        ".github/workflows/ci.yml",
+        ".github/workflows/public-raw-hygiene.yml",
+        ".github/workflows/codex-review.yml",
+        ".github/workflows/scorecard.yml",
+        "templates/.github/workflows/vibeqa.yml",
+        "templates/.github/workflows/qa-z-pr-comment.yml",
+    ],
+)
+def test_github_workflow_checkout_steps_do_not_persist_credentials(
+    workflow_path: str,
+) -> None:
+    """Checkout tokens should not remain in git config after source checkout."""
+    workflow = yaml.safe_load((ROOT / workflow_path).read_text(encoding="utf-8"))
+    checkout_steps = [
+        step
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if step.get("uses") == "actions/checkout@v4"
+    ]
+
+    assert checkout_steps
+    assert all(
+        step.get("with", {}).get("persist-credentials") is False
+        for step in checkout_steps
     )
 
 
@@ -67,6 +281,7 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     assert "does not perform autonomous repair" in workflow_text
 
     expected_commands = [
+        f"{runner_command} doctor --json",
         f"{runner_command} fast",
         f"{runner_command} deep",
         f"{runner_command} review",
@@ -79,6 +294,13 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     assert f"{run_dir}/fast-exit-code" in combined_runs
     assert f"{run_dir}/deep-exit-code" in combined_runs
     assert f"{run_dir}/deep/results.sarif" in workflow_text
+    assert f"{runner_command} doctor --json" in combined_runs
+    assert f"{runner_command} deep --selection smart --from-run {run_dir} --json" in (
+        combined_runs
+    )
+    assert f"{runner_command} review --from-run {run_dir}" in combined_runs
+    assert f"{runner_command} repair-prompt --from-run {run_dir}" in combined_runs
+    assert f"{runner_command} github-summary --from-run {run_dir}" in combined_runs
     assert "fast_exit" in combined_runs
     assert "deep_exit" in combined_runs
 
@@ -97,6 +319,9 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
         step for step in steps if step.get("uses") == "actions/upload-artifact@v4"
     )
     assert artifact_step.get("if") == "${{ always() }}"
+    artifact_config = artifact_step.get("with", {})
+    assert artifact_config.get("path").strip() == run_dir
+    assert artifact_config.get("retention-days") == 7
 
     verdict_step = steps[-1]
     assert verdict_step.get("if") == "${{ always() }}"
