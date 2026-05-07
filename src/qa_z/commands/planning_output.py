@@ -96,6 +96,11 @@ def render_select_next_stdout(
     ]
     if refreshed:
         lines.insert(4, "Refreshed: yes")
+    selection_gap_reason = str(selected.get("selection_gap_reason") or "").strip()
+    if selection_gap_reason:
+        lines.append(f"Selection gap reason: {selection_gap_reason}")
+    if selected.get("open_backlog_count") is not None:
+        lines.append(f"Open backlog items: {selected.get('open_backlog_count')}")
     source_self_inspection = str(selected.get("source_self_inspection") or "").strip()
     if source_self_inspection:
         lines.append(f"Source self-inspection: {source_self_inspection}")

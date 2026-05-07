@@ -114,6 +114,52 @@ def test_self_improvement_selection_module_writes_selected_task_artifacts(
     assert "worktree_risk-dirty-worktree" in history
 
 
+def test_select_next_records_reason_when_no_backlog_tasks_are_open(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-04-22T00:00:00Z",
+            "items": [],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json",
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-empty",
+            "generated_at": "2026-04-22T00:00:00Z",
+            "live_repository": {"modified_count": 0, "untracked_count": 0},
+        },
+    )
+
+    paths = self_improvement_selection_module.select_next_tasks(
+        root=tmp_path,
+        count=1,
+        now="2026-04-22T03:04:05Z",
+        loop_id="loop-empty",
+    )
+
+    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    plan = paths.loop_plan_path.read_text(encoding="utf-8")
+    history = json.loads(
+        (tmp_path / ".qa-z" / "loops" / "history.jsonl").read_text(encoding="utf-8")
+    )
+
+    assert selected["selected_tasks"] == []
+    assert selected["selection_gap_reason"] == "no_open_backlog_after_inspection"
+    assert selected["open_backlog_count"] == 0
+    assert "- Selection gap reason: `no_open_backlog_after_inspection`" in plan
+    assert "- Open backlog items: 0" in plan
+    assert "- Open backlog items: 0\n\n## Verification After External Repair" in plan
+    assert history["selection_gap_reason"] == "no_open_backlog_after_inspection"
+    assert history["open_backlog_count"] == 0
+
+
 def test_self_improvement_module_keeps_selection_defs_out_of_monolith() -> None:
     source = Path(self_improvement_module.__file__).read_text(encoding="utf-8")
     tree = compile(

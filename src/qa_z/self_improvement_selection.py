@@ -76,6 +76,11 @@ def select_next_tasks(
     selected_items = [
         selected_task_with_operator_hints(item) for item in selected_items
     ]
+    open_backlog_count = len(open_items)
+    selection_gap_reason = selection_gap_reason_for_selected_items(
+        selected_items=selected_items,
+        open_backlog_count=open_backlog_count,
+    )
     selection_context = latest_self_inspection_selection_context(root)
 
     latest_dir = root / ".qa-z" / "loops" / "latest"
@@ -91,6 +96,9 @@ def select_next_tasks(
         "source_backlog": format_path(backlog_file(root), root),
         "selected_tasks": selected_items,
     }
+    if selection_gap_reason:
+        selected_artifact["selection_gap_reason"] = selection_gap_reason
+        selected_artifact["open_backlog_count"] = open_backlog_count
     selected_artifact.update(selection_context)
     write_json(selected_tasks_path, selected_artifact)
     loop_plan_path.write_text(
@@ -99,6 +107,10 @@ def select_next_tasks(
             generated_at=generated_at,
             selected_items=selected_items,
             live_repository=selection_context.get("live_repository"),
+            selection_gap_reason=selection_gap_reason,
+            open_backlog_count=(
+                open_backlog_count if selection_gap_reason is not None else None
+            ),
         ),
         encoding="utf-8",
     )
@@ -109,6 +121,10 @@ def select_next_tasks(
         selected_items=selected_items,
         open_items=scored_items,
         selection_context=selection_context,
+        selection_gap_reason=selection_gap_reason,
+        open_backlog_count=(
+            open_backlog_count if selection_gap_reason is not None else None
+        ),
     )
     return SelectionArtifactPaths(
         selected_tasks_path=selected_tasks_path,
@@ -124,3 +140,16 @@ def selected_task_with_operator_hints(item: dict[str, object]) -> dict[str, obje
     enriched["validation_command"] = selected_task_validation_command(enriched)
     enriched["evidence_summary"] = compact_backlog_evidence_summary(enriched)
     return enriched
+
+
+def selection_gap_reason_for_selected_items(
+    *,
+    selected_items: list[dict[str, object]],
+    open_backlog_count: int,
+) -> str | None:
+    """Return a compact reason when select-next cannot emit a task."""
+    if selected_items:
+        return None
+    if open_backlog_count <= 0:
+        return "no_open_backlog_after_inspection"
+    return "open_backlog_items_not_selected"

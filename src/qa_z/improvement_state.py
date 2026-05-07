@@ -46,6 +46,8 @@ def append_history(
     selected_items: list[dict[str, Any]],
     open_items: list[dict[str, Any]],
     selection_context: dict[str, Any] | None = None,
+    selection_gap_reason: str | None = None,
+    open_backlog_count: int | None = None,
 ) -> None:
     """Append one JSONL loop-memory record."""
     history_path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,6 +84,10 @@ def append_history(
             if str(item.get("id")) not in selected_id_set
         ],
     }
+    if selection_gap_reason:
+        entry["selection_gap_reason"] = selection_gap_reason
+    if open_backlog_count is not None:
+        entry["open_backlog_count"] = open_backlog_count
     if selection_context:
         source_self_inspection = str(
             selection_context.get("source_self_inspection") or ""
