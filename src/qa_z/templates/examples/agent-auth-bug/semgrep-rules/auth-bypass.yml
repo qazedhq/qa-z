@@ -1,0 +1,8 @@
+rules:
+  - id: qa-z.auth-bypass-any-authenticated-user
+    message: Authorization must compare the actor to the invoice owner, not only check that the actor is signed in.
+    severity: ERROR
+    languages:
+      - python
+    pattern: |
+      return $ACTOR is not None

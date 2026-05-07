@@ -1,0 +1,7 @@
+rules:
+  - id: qa-z-demo-auth-bypass
+    message: Signed-in users must still match the invoice owner unless they are admins.
+    severity: ERROR
+    languages:
+      - python
+    pattern: return actor_id is not None

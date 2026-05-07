@@ -68,6 +68,14 @@ qa_z = [
   "templates/*.mdc",
   "templates/skills/qa-z-merge-safety/*.md",
   "templates/skills/qa-z-merge-safety/examples/*.md",
+  "templates/examples/agent-auth-bug/*",
+  "templates/examples/agent-auth-bug/app/*",
+  "templates/examples/agent-auth-bug/repo/*",
+  "templates/examples/agent-auth-bug/repo/app/*",
+  "templates/examples/agent-auth-bug/repo/semgrep-rules/*",
+  "templates/examples/agent-auth-bug/repo/tests/*",
+  "templates/examples/agent-auth-bug/semgrep-rules/*",
+  "templates/examples/agent-auth-bug/tests/*",
 ]
 
 [tool.pytest.ini_options]

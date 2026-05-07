@@ -19,6 +19,7 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     output = capsys.readouterr().out
     demo = tmp_path / ".qa-z" / "demo" / "auth-bug"
     verdict_path = demo / ".qa-z" / "runs" / "latest" / "guard" / "verdict.json"
+    summary_path = demo / ".qa-z" / "runs" / "latest" / "fast" / "summary.json"
 
     assert exit_code == 0
     assert "AI wrote a risky auth change. QA-Z caught it before merge." in output
@@ -26,6 +27,17 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     assert json.loads(verdict_path.read_text(encoding="utf-8"))["status"] == (
         "do_not_merge"
     )
+    failed_checks = {
+        check["id"]: check
+        for check in json.loads(summary_path.read_text(encoding="utf-8"))["checks"]
+        if check["status"] == "failed"
+    }
+    assert "auth_policy" in failed_checks
+    failure_output = (
+        failed_checks["auth_policy"]["stdout_tail"]
+        + failed_checks["auth_policy"]["stderr_tail"]
+    )
+    assert "can_view_invoice" in failure_output
     assert (demo / ".qa-z" / "runs" / "latest" / "repair" / "codex.md").exists()
 
 
@@ -81,6 +93,27 @@ def test_packaged_skill_pack_matches_public_source_pack() -> None:
     for relative in relative_paths:
         assert (packaged_skill / relative).read_text(encoding="utf-8") == (
             public_skill / relative
+        ).read_text(encoding="utf-8")
+
+
+def test_packaged_auth_bug_demo_matches_public_source_demo() -> None:
+    public_demo = ROOT / "examples" / "agent-auth-bug"
+    packaged_demo = ROOT / "src" / "qa_z" / "templates" / "examples" / "agent-auth-bug"
+    relative_paths = [
+        "README.md",
+        "issue.md",
+        "spec.md",
+        "qa-z.yaml",
+        "app/__init__.py",
+        "app/auth.py",
+        "app/auth.fixed.py",
+        "tests/test_auth.py",
+        "semgrep-rules/auth-bypass.yml",
+    ]
+
+    for relative in relative_paths:
+        assert (packaged_demo / relative).read_text(encoding="utf-8") == (
+            public_demo / relative
         ).read_text(encoding="utf-8")
 
 

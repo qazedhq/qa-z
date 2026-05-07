@@ -108,6 +108,8 @@ def validation_code(expected_version: str) -> str:
             "assert template_root.joinpath('AGENTS.qa-z.md').is_file(), 'missing packaged AGENTS.qa-z.md'",
             "assert template_root.joinpath('CURSOR.qa-z.mdc').is_file(), 'missing packaged Cursor template'",
             "assert template_root.joinpath('skills/qa-z-merge-safety/SKILL.md').is_file(), 'missing packaged qa-z-merge-safety skill'",
+            "assert template_root.joinpath('examples/agent-auth-bug/qa-z.yaml').is_file(), 'missing packaged auth-bug demo config'",
+            "assert template_root.joinpath('examples/agent-auth-bug/app/auth.py').is_file(), 'missing packaged auth-bug demo app'",
             "print(f'qa-z {expected} artifact smoke ok')",
         ]
     )
@@ -263,6 +265,18 @@ def smoke_artifact(
                         "qa_z",
                         "demo",
                         "--help",
+                    ),
+                ),
+                (
+                    "qa-z auth-bug demo smoke",
+                    (
+                        str(venv_python),
+                        "-m",
+                        "qa_z",
+                        "demo",
+                        "auth-bug",
+                        "--path",
+                        str(temp_path / "demo-target"),
                     ),
                 ),
                 (
