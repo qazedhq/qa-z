@@ -96,6 +96,9 @@ def render_select_next_stdout(
     ]
     if refreshed:
         lines.insert(4, "Refreshed: yes")
+    state = str(selected.get("state") or "").strip()
+    if state:
+        lines.append(f"State: {state}")
     selection_gap_reason = str(selected.get("selection_gap_reason") or "").strip()
     if selection_gap_reason:
         lines.append(f"Selection gap reason: {selection_gap_reason}")

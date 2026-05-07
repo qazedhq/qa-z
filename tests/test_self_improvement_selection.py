@@ -151,11 +151,14 @@ def test_select_next_records_reason_when_no_backlog_tasks_are_open(
     )
 
     assert selected["selected_tasks"] == []
+    assert selected["state"] == "blocked_no_candidates"
     assert selected["selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert selected["open_backlog_count"] == 0
+    assert "- State: `blocked_no_candidates`" in plan
     assert "- Selection gap reason: `no_open_backlog_after_inspection`" in plan
     assert "- Open backlog items: 0" in plan
     assert "- Open backlog items: 0\n\n## Verification After External Repair" in plan
+    assert history["state"] == "blocked_no_candidates"
     assert history["selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert history["open_backlog_count"] == 0
 

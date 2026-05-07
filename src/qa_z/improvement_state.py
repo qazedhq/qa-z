@@ -46,6 +46,7 @@ def append_history(
     selected_items: list[dict[str, Any]],
     open_items: list[dict[str, Any]],
     selection_context: dict[str, Any] | None = None,
+    state: str | None = None,
     selection_gap_reason: str | None = None,
     open_backlog_count: int | None = None,
 ) -> None:
@@ -84,6 +85,8 @@ def append_history(
             if str(item.get("id")) not in selected_id_set
         ],
     }
+    if state:
+        entry["state"] = state
     if selection_gap_reason:
         entry["selection_gap_reason"] = selection_gap_reason
     if open_backlog_count is not None:

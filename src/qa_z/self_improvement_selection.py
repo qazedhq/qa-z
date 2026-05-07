@@ -81,6 +81,9 @@ def select_next_tasks(
         selected_items=selected_items,
         open_backlog_count=open_backlog_count,
     )
+    selection_state = (
+        "blocked_no_candidates" if selection_gap_reason is not None else None
+    )
     selection_context = latest_self_inspection_selection_context(root)
 
     latest_dir = root / ".qa-z" / "loops" / "latest"
@@ -97,6 +100,7 @@ def select_next_tasks(
         "selected_tasks": selected_items,
     }
     if selection_gap_reason:
+        selected_artifact["state"] = selection_state
         selected_artifact["selection_gap_reason"] = selection_gap_reason
         selected_artifact["open_backlog_count"] = open_backlog_count
     selected_artifact.update(selection_context)
@@ -107,6 +111,7 @@ def select_next_tasks(
             generated_at=generated_at,
             selected_items=selected_items,
             live_repository=selection_context.get("live_repository"),
+            state=selection_state,
             selection_gap_reason=selection_gap_reason,
             open_backlog_count=(
                 open_backlog_count if selection_gap_reason is not None else None
@@ -121,6 +126,7 @@ def select_next_tasks(
         selected_items=selected_items,
         open_items=scored_items,
         selection_context=selection_context,
+        state=selection_state,
         selection_gap_reason=selection_gap_reason,
         open_backlog_count=(
             open_backlog_count if selection_gap_reason is not None else None

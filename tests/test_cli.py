@@ -645,6 +645,7 @@ def test_select_next_refresh_runs_self_inspection_before_selection(
     assert exit_code == 0
     assert "Count: 0" in output
     assert "Refreshed: yes" in output
+    assert "State: blocked_no_candidates" in output
     assert "Selection gap reason: no_open_backlog_after_inspection" in output
     assert "Open backlog items: 0" in output
     assert "Selected task details:\n- none" in output

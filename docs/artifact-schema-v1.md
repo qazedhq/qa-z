@@ -1023,6 +1023,7 @@ latest-loop context even though each individual command is deterministic.
 - `source_self_inspection_loop_id` and `source_self_inspection_generated_at`: provenance copied from that self-inspection artifact when present
 - `live_repository`: compact live git/generated-artifact snapshot copied from the latest self-inspection pass when present
 - `selected_tasks`: the top 1 to 3 open backlog items sorted by selection priority score and stable tie-breakers
+- `state`: optional taskless selection state, currently `blocked_no_candidates` when no task is selected
 - `selection_gap_reason`: optional compact reason when no open task is selected, such as `no_open_backlog_after_inspection`
 - `open_backlog_count`: optional open-backlog count recorded alongside `selection_gap_reason`
 
@@ -1059,6 +1060,7 @@ The plain-text `qa-z select-next` output now mirrors compact selected-task detai
 - `selected_fallback_families`: selected fallback families such as `cleanup`, `loop_health`, `workflow_remediation`, `docs_sync`, or `benchmark_expansion`
 - `evidence_used`: unique evidence paths for the selected tasks
 - `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, and `live_repository`: latest self-inspection path, provenance, and compact live repository snapshot when selection had that context
+- optional `state`, currently `blocked_no_candidates` for taskless selection records
 - optional `selection_gap_reason` and `open_backlog_count` when no task survived selection
 - `resulting_session_id`: `null` until a later workflow creates and records a session
 - `verify_verdict`: `null` until a later workflow records verification results

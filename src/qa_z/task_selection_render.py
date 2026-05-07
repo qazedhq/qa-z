@@ -21,6 +21,7 @@ def render_loop_plan(
     generated_at: str,
     selected_items: list[dict[str, Any]],
     live_repository: object | None = None,
+    state: str | None = None,
     selection_gap_reason: str | None = None,
     open_backlog_count: int | None = None,
 ) -> str:
@@ -51,6 +52,8 @@ def render_loop_plan(
     )
     if not selected_items:
         lines.append("- No open backlog tasks were selected.")
+        if state:
+            lines.append(f"- State: `{state}`")
         if selection_gap_reason:
             lines.append(f"- Selection gap reason: `{selection_gap_reason}`")
         if open_backlog_count is not None:
