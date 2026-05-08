@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from qa_z.live_repository import render_live_repository_summary
+from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
+from qa_z.task_selection import worktree_patch_add_command_texts
 
 __all__ = [
     "build_loop_health",
@@ -202,6 +204,16 @@ def render_autonomy_loop_plan(
                 f"   - priority score: {task.get('priority_score', 0)}",
             ]
         )
+        action_hint = str(task.get("action_hint") or "").strip()
+        if action_hint:
+            lines.append(f"   - action hint: {action_hint}")
+        validation_command = str(task.get("validation_command") or "").strip()
+        if validation_command:
+            lines.append(f"   - validation: `{validation_command}`")
+        patch_commands = worktree_patch_add_command_texts(task)
+        if patch_commands:
+            lines.append("   - patch-add commands:")
+            lines.extend(f"     - `{command}`" for command in patch_commands)
         if task.get("selection_priority_score") is not None:
             lines.append(
                 f"   - selection score: {task.get('selection_priority_score', 0)}"
@@ -264,7 +276,7 @@ def render_autonomy_loop_plan(
             "## Next Loop Input",
             "",
             "- After external repair or docs/fixture work, rerun verification or benchmark evidence.",
-            "- Run `python -m qa_z autonomy --loops 1` to record the next planning step.",
+            f"- Run `{AUTONOMY_ONE_LOOP_COMMAND}` to record the next planning step.",
         ]
     )
     return "\n".join(lines).strip() + "\n"

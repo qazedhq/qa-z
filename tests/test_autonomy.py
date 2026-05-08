@@ -16,6 +16,7 @@ import qa_z.autonomy_plan as autonomy_plan_module
 import qa_z.autonomy_records as autonomy_records_module
 import qa_z.autonomy_selection as autonomy_selection_module
 import qa_z.autonomy_status as autonomy_status_module
+import pytest
 import yaml
 
 from qa_z.autonomy import (
@@ -30,6 +31,8 @@ from qa_z.autonomy import (
 )
 from qa_z.cli import main
 from qa_z.config import load_config
+from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
+from qa_z.operator_commands import AUTONOMY_STATUS_JSON_COMMAND
 from qa_z.self_improvement import SelectionArtifactPaths, SelfInspectionArtifactPaths
 
 
@@ -86,6 +89,94 @@ def test_autonomy_plan_module_exports_match_autonomy_surface() -> None:
 def test_autonomy_status_module_exports_match_autonomy_surface() -> None:
     assert autonomy_status_module.render_autonomy_status is render_autonomy_status
     assert autonomy_status_module.render_autonomy_summary is render_autonomy_summary
+
+
+def test_load_autonomy_status_surfaces_backlog_updated_at(tmp_path: Path) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    write_json(
+        latest_dir / "autonomy_summary.json",
+        {
+            "loops_completed": 1,
+            "runtime_target_seconds": 0,
+            "runtime_elapsed_seconds": 0,
+            "runtime_remaining_seconds": 0,
+            "runtime_budget_met": True,
+            "min_loop_seconds": 0,
+        },
+    )
+    write_json(
+        latest_dir / "outcome.json",
+        {
+            "loop_id": "loop-one",
+            "state": "completed",
+            "actions_prepared": [],
+            "next_recommendations": [],
+        },
+    )
+    write_json(
+        latest_dir / "selected_tasks.json",
+        {
+            "loop_id": "loop-one",
+            "selected_tasks": [],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-05-08T13:56:00Z",
+            "items": [],
+        },
+    )
+
+    status = load_autonomy_status(tmp_path)
+    output = render_autonomy_status(status)
+
+    assert status["backlog_updated_at"] == "2026-05-08T13:56:00Z"
+    assert "Backlog updated: 2026-05-08T13:56:00Z" in output
+
+
+def test_load_autonomy_status_uses_one_backlog_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    write_json(latest_dir / "autonomy_summary.json", {"loops_completed": 1})
+    write_json(latest_dir / "outcome.json", {"loop_id": "loop-one"})
+    write_json(latest_dir / "selected_tasks.json", {"selected_tasks": []})
+    calls = {"count": 0}
+
+    def fake_load_backlog(_root: Path) -> dict[str, object]:
+        calls["count"] += 1
+        return {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-05-08T14:00:00Z",
+            "items": [
+                {
+                    "id": "worktree_risk-dirty-worktree",
+                    "title": "Reduce dirty worktree integration risk",
+                    "category": "worktree_risk",
+                    "status": "open",
+                    "priority_score": 65,
+                    "recommendation": "reduce_integration_risk",
+                    "evidence": [],
+                }
+            ],
+        }
+
+    monkeypatch.setattr(autonomy_status_module, "load_backlog", fake_load_backlog)
+
+    status = load_autonomy_status(tmp_path)
+
+    assert calls["count"] == 1
+    assert status["backlog_updated_at"] == "2026-05-08T14:00:00Z"
+    assert [item["id"] for item in status["backlog_top_items"]] == [
+        "worktree_risk-dirty-worktree"
+    ]
 
 
 def test_autonomy_module_keeps_extracted_helper_defs_out_of_orchestrator() -> None:
@@ -1225,7 +1316,7 @@ def test_render_autonomy_loop_plan_includes_action_context_paths() -> None:
                     "git status --short",
                     "python scripts/runtime_artifact_cleanup.py --json",
                     "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
-                    "python -m qa_z backlog --json",
+                    "python -m qa_z backlog --refresh --json",
                 ],
                 "context_paths": [
                     "docs/reports/worktree-commit-plan.md",
@@ -1238,6 +1329,88 @@ def test_render_autonomy_loop_plan_includes_action_context_paths() -> None:
 
     assert "context:" in plan
     assert "`docs/reports/worktree-triage.md`" in plan
+
+
+def test_render_autonomy_loop_plan_uses_json_first_next_loop_command() -> None:
+    plan = render_autonomy_loop_plan(
+        loop_id="loop-one",
+        generated_at=NOW,
+        selected_tasks=[],
+        actions=[],
+    )
+
+    assert f"Run `{AUTONOMY_ONE_LOOP_COMMAND}`" in plan
+    assert "Run `python -m qa_z autonomy --loops 1`" not in plan
+
+
+def test_render_autonomy_loop_plan_includes_selected_task_operator_hints() -> None:
+    plan = render_autonomy_loop_plan(
+        loop_id="loop-hints",
+        generated_at=NOW,
+        selected_tasks=[
+            {
+                "id": "worktree_risk-dirty-worktree",
+                "title": "Reduce dirty worktree integration risk",
+                "category": "worktree_risk",
+                "recommendation": "reduce_integration_risk",
+                "priority_score": 65,
+                "action_hint": (
+                    "triage source changes, rerun strict worktree plan, then rerun "
+                    "self-inspection"
+                ),
+                "validation_command": (
+                    "python scripts/worktree_commit_plan.py --summary-only --json "
+                    "--fail-on-generated --fail-on-cross-cutting"
+                ),
+            }
+        ],
+        actions=[],
+    )
+
+    assert (
+        "action hint: triage source changes, rerun strict worktree plan, "
+        "then rerun self-inspection" in plan
+    )
+    assert (
+        "validation: `python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting`" in plan
+    )
+
+
+def test_render_autonomy_loop_plan_lists_selected_task_patch_commands() -> None:
+    plan = render_autonomy_loop_plan(
+        loop_id="loop-patch-commands",
+        generated_at=NOW,
+        selected_tasks=[
+            {
+                "id": "worktree_risk-dirty-worktree",
+                "title": "Reduce dirty worktree integration risk",
+                "category": "worktree_risk",
+                "recommendation": "reduce_integration_risk",
+                "priority_score": 65,
+                "evidence": [
+                    {
+                        "source": "worktree_commit_plan_json",
+                        "path": ".qa-z/tmp/worktree-commit-plan.json",
+                        "summary": (
+                            "strict commit-plan status=attention_required; "
+                            "attention=cross_cutting_paths_present; unassigned=0; "
+                            "cross_cutting=3; patch_add_groups=2; generated=0"
+                        ),
+                        "patch_command_texts": [
+                            "git add --patch -- README.md docs/artifact-schema-v1.md",
+                            "git add --patch -- tests/test_current_truth.py",
+                        ],
+                    }
+                ],
+            }
+        ],
+        actions=[],
+    )
+
+    assert "   - patch-add commands:" in plan
+    assert "     - `git add --patch -- README.md docs/artifact-schema-v1.md`" in plan
+    assert "     - `git add --patch -- tests/test_current_truth.py`" in plan
 
 
 def test_render_autonomy_loop_plan_preserves_selection_penalty_residue() -> None:
@@ -1444,9 +1617,13 @@ def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> Non
     )
     assert "selection_penalty" in status["latest_selected_task_details"][0]
     assert status["latest_prepared_actions"][0]["type"] == "benchmark_fixture_plan"
+    assert status["latest_prepared_actions_stale_for_selection"] is False
+    assert status["latest_prepared_actions_refresh_commands"] == []
     assert status["latest_next_recommendations"] == [
         "run qa-z benchmark after fixture updates"
     ]
+    assert status["latest_next_recommendations_stale_for_selection"] is False
+    assert status["latest_next_recommendations_refresh_commands"] == []
     assert (
         status["backlog_top_items"][0]["title"]
         == "Fix benchmark fixture failure: py_type_error"
@@ -1472,9 +1649,90 @@ def test_load_autonomy_status_without_previous_loop(tmp_path: Path) -> None:
     assert status["latest_selected_tasks"] == []
     assert status["latest_selected_task_details"] == []
     assert status["latest_prepared_actions"] == []
+    assert status["latest_prepared_actions_refresh_commands"] == []
     assert status["latest_next_recommendations"] == []
+    assert status["latest_next_recommendations_refresh_commands"] == []
     assert status["open_session_count"] == 0
     assert "Live repository:" not in render_autonomy_status(status)
+
+
+def test_load_autonomy_status_surfaces_selected_task_patch_commands(
+    tmp_path: Path,
+) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    selected_item = {
+        "id": "worktree_risk-dirty-worktree",
+        "title": "Reduce dirty worktree integration risk",
+        "category": "worktree_risk",
+        "recommendation": "reduce_integration_risk",
+        "evidence": [
+            {
+                "source": "git_status",
+                "path": ".",
+                "summary": "modified=20; areas=docs:2, tests:1",
+            },
+            {
+                "source": "worktree_commit_plan_json",
+                "path": ".qa-z/tmp/worktree-commit-plan.json",
+                "summary": (
+                    "strict commit-plan status=attention_required; "
+                    "attention=cross_cutting_paths_present; unassigned=0; "
+                    "cross_cutting=3; patch_add_groups=2; generated=0"
+                ),
+                "patch_command_texts": [
+                    "git add --patch -- README.md docs/artifact-schema-v1.md",
+                    "git add --patch -- tests/test_current_truth.py",
+                ],
+            },
+        ],
+    }
+    write_json(
+        latest_dir / "autonomy_summary.json",
+        {
+            "kind": "qa_z.autonomy_summary",
+            "loops_completed": 1,
+            "runtime_target_seconds": 0,
+            "runtime_elapsed_seconds": 0,
+            "runtime_remaining_seconds": 0,
+            "runtime_budget_met": True,
+            "min_loop_seconds": 0,
+        },
+    )
+    write_json(
+        latest_dir / "outcome.json",
+        {
+            "loop_id": "loop-patch",
+            "state": "completed",
+            "actions_prepared": [],
+            "next_recommendations": [],
+        },
+    )
+    write_json(
+        latest_dir / "selected_tasks.json",
+        {
+            "loop_id": "loop-patch",
+            "selected_tasks": [selected_item],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {"kind": "qa_z.improvement_backlog", "items": [selected_item]},
+    )
+
+    status = load_autonomy_status(tmp_path)
+    output = render_autonomy_status(status)
+
+    assert status["latest_selected_task_details"][0]["patch_commands"] == [
+        "git add --patch -- README.md docs/artifact-schema-v1.md",
+        "git add --patch -- tests/test_current_truth.py",
+    ]
+    assert status["backlog_top_items"][0]["patch_commands"] == [
+        "git add --patch -- README.md docs/artifact-schema-v1.md",
+        "git add --patch -- tests/test_current_truth.py",
+    ]
+    assert "  patch-add commands:\n" in output
+    assert "    - git add --patch -- README.md docs/artifact-schema-v1.md" in output
+    assert "    - git add --patch -- tests/test_current_truth.py" in output
 
 
 def test_load_autonomy_status_reports_selection_outcome_loop_mismatch(
@@ -1535,6 +1793,7 @@ def test_load_autonomy_status_reports_selection_outcome_loop_mismatch(
     assert status["latest_selection_outcome_mismatch"] is True
     assert status["latest_prepared_actions_loop_id"] is None
     assert status["latest_prepared_actions_stale_for_selection"] is False
+    assert status["latest_prepared_actions_refresh_commands"] == []
     assert "Selected task loop: loop-new" in output
     assert "Outcome loop: loop-old" in output
     assert "Selection/outcome loop mismatch: true" in output
@@ -1591,11 +1850,74 @@ def test_autonomy_status_marks_prepared_actions_stale_for_newer_selection(
 
     assert status["latest_prepared_actions_loop_id"] == "loop-old"
     assert status["latest_prepared_actions_stale_for_selection"] is True
+    assert status["latest_prepared_actions_refresh_commands"] == [
+        AUTONOMY_ONE_LOOP_COMMAND,
+        AUTONOMY_STATUS_JSON_COMMAND,
+    ]
     assert status["latest_selected_task_details"][0]["evidence_summary"] == (
         "stored compact benchmark evidence"
     )
     assert "Prepared actions loop: loop-old" in output
     assert "Prepared actions may not match the latest selected task artifact." in output
+    assert "Prepared action refresh commands:" in output
+    assert f"  - {AUTONOMY_ONE_LOOP_COMMAND}" in output
+    assert f"  - {AUTONOMY_STATUS_JSON_COMMAND}" in output
+
+
+def test_autonomy_status_marks_next_recommendations_stale_for_newer_selection(
+    tmp_path: Path,
+) -> None:
+    latest_dir = tmp_path / ".qa-z" / "loops" / "latest"
+    write_json(
+        latest_dir / "autonomy_summary.json",
+        {"kind": "qa_z.autonomy_summary", "loops_completed": 1},
+    )
+    write_json(
+        latest_dir / "outcome.json",
+        {
+            "kind": "qa_z.autonomy_outcome",
+            "loop_id": "loop-old",
+            "state": "completed",
+            "actions_prepared": [],
+            "next_recommendations": ["rerun stale old task"],
+        },
+    )
+    write_json(
+        latest_dir / "selected_tasks.json",
+        {
+            "kind": "qa_z.selected_tasks",
+            "loop_id": "loop-new",
+            "selected_tasks": [
+                {
+                    "id": "benchmark_gap-new",
+                    "title": "Expand benchmark coverage",
+                    "category": "benchmark_gap",
+                    "recommendation": "add_benchmark_fixture",
+                    "priority_score": 55,
+                    "status": "open",
+                }
+            ],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {"kind": "qa_z.improvement_backlog", "items": []},
+    )
+
+    status = load_autonomy_status(tmp_path)
+    output = render_autonomy_status(status)
+
+    assert status["latest_next_recommendations_stale_for_selection"] is True
+    assert status["latest_next_recommendations_refresh_commands"] == [
+        AUTONOMY_ONE_LOOP_COMMAND,
+        AUTONOMY_STATUS_JSON_COMMAND,
+    ]
+    assert "Next recommendations may not match the latest selected task artifact." in (
+        output
+    )
+    assert "Next recommendation refresh commands:" in output
+    assert f"  - {AUTONOMY_ONE_LOOP_COMMAND}" in output
+    assert f"  - {AUTONOMY_STATUS_JSON_COMMAND}" in output
 
 
 def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() -> None:
@@ -1629,7 +1951,7 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
                         "git status --short",
                         "python scripts/runtime_artifact_cleanup.py --json",
                         "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
-                        "python -m qa_z backlog --json",
+                        "python -m qa_z backlog --refresh --json",
                     ],
                     "context_paths": [
                         "docs/reports/worktree-commit-plan.md",
@@ -1667,16 +1989,19 @@ def test_render_autonomy_status_surfaces_prepared_actions_and_context_paths() ->
         "generated_policy=false; areas=docs:1, source:1, tests:1" in output
     )
     assert "integration_cleanup_plan for worktree_risk-dirty-worktree" in output
+    assert "  commands:\n" in output
+    assert "    - git status --short" in output
+    assert "    - python scripts/runtime_artifact_cleanup.py --json" in output
     assert (
-        "commands: git status --short; "
-        "python scripts/runtime_artifact_cleanup.py --json; "
-        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json; "
-        "python -m qa_z backlog --json" in output
+        "    - python scripts/worktree_commit_plan.py --summary-only --json "
+        "--fail-on-generated --fail-on-cross-cutting --output "
+        ".qa-z/tmp/worktree-commit-plan.json" in output
     )
-    assert (
-        "context: docs/reports/worktree-commit-plan.md, "
-        "docs/reports/worktree-triage.md, scripts/runtime_artifact_cleanup.py" in output
-    )
+    assert "    - python -m qa_z backlog --refresh --json" in output
+    assert "  context:\n" in output
+    assert "    - docs/reports/worktree-commit-plan.md" in output
+    assert "    - docs/reports/worktree-triage.md" in output
+    assert "    - scripts/runtime_artifact_cleanup.py" in output
 
 
 def test_render_autonomy_loop_plan_includes_selected_fallback_families() -> None:

@@ -33,6 +33,50 @@ def test_preflight_fails_when_configured_origin_does_not_match_expected_url(tmp_
     )
 
 
+def test_preflight_remote_rerun_preserves_quality_mode_branch(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "branch", "--show-current")] = (0, "main\n", "")
+    responses[("git", "remote", "get-url", "origin")] = (
+        0,
+        "https://github.com/qazedhq/qa-z.git\n",
+        "",
+    )
+    responses[("git", "tag", "--list", "v0.9.8-alpha")] = (
+        0,
+        "v0.9.8-alpha\n",
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        expected_branch="main",
+        check_release_tag=False,
+        skip_remote=True,
+        runner=FakeRunner(responses),
+    )
+    payload = module.result_payload(
+        result,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_origin_url="https://github.com/qazedhq/qa-z.git",
+        expected_branch="main",
+        check_release_tag=False,
+        skip_remote=True,
+    )
+
+    assert result.exit_code == 0
+    assert payload["next_commands"] == [
+        (
+            "python scripts/alpha_release_preflight.py --repository-url "
+            "https://github.com/qazedhq/qa-z.git --expected-origin-url "
+            "https://github.com/qazedhq/qa-z.git --expected-branch main "
+            "--skip-release-tag-check --json"
+        )
+    ]
+
+
 def test_preflight_fails_when_remote_has_any_refs(tmp_path):
     module = load_preflight_module()
     responses = base_responses()

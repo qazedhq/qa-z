@@ -14,6 +14,7 @@ from qa_z.self_improvement import (
     selected_task_action_hint,
     selected_task_validation_command,
 )
+from qa_z.task_selection import worktree_patch_add_command_texts
 
 __all__ = [
     "render_backlog",
@@ -63,6 +64,7 @@ def render_self_inspect_stdout(
                 f"- {item.get('id')}: {item.get('title', item.get('id', 'untitled'))}",
                 f"  recommendation: {item.get('recommendation', '')}",
                 f"  action: {selected_task_action_hint(item)}",
+                *patch_command_lines(item),
                 f"  validation: {selected_task_validation_command(item)}",
                 f"  priority score: {item.get('priority_score', 0)}",
                 f"  evidence: {compact_backlog_evidence_summary(item)}",
@@ -134,6 +136,10 @@ def render_select_next_stdout(
         if item.get("recommendation"):
             lines.append(f"  recommendation: {item['recommendation']}")
         lines.append(f"  action: {selected_task_action_hint(item)}")
+        patch_commands = worktree_patch_add_command_texts(item)
+        if patch_commands:
+            lines.append("  patch-add commands:")
+            lines.extend(f"    - {command}" for command in patch_commands)
         lines.append(f"  validation: {selected_task_validation_command(item)}")
         selection_score = item.get(
             "selection_priority_score", item.get("priority_score")
@@ -181,6 +187,11 @@ def render_backlog(backlog: dict[str, Any], *, refreshed: bool = False) -> str:
     ]
     if refreshed:
         lines.insert(2, "Refreshed: yes")
+    elif open_items:
+        lines.append(
+            "Refresh hint: run `qa-z backlog --refresh` before acting on a "
+            "rapidly changing worktree."
+        )
     if not open_items:
         lines.append("- none")
     for item in open_items:
@@ -192,6 +203,7 @@ def render_backlog(backlog: dict[str, Any], *, refreshed: bool = False) -> str:
                 f"priority: {item.get('priority_score', 0)} | "
                 f"recommendation: {item.get('recommendation', '')}",
                 f"  action: {selected_task_action_hint(item)}",
+                *patch_command_lines(item),
                 f"  validation: {selected_task_validation_command(item)}",
                 f"  evidence: {compact_backlog_evidence_summary(item)}",
             ]
@@ -205,3 +217,11 @@ def render_backlog(backlog: dict[str, Any], *, refreshed: bool = False) -> str:
         else "- no closed history recorded"
     )
     return "\n".join(lines)
+
+
+def patch_command_lines(item: dict[str, Any]) -> list[str]:
+    """Return human stdout lines for selected worktree patch-add commands."""
+    commands = worktree_patch_add_command_texts(item)
+    if not commands:
+        return []
+    return ["  patch-add commands:", *(f"    - {command}" for command in commands)]

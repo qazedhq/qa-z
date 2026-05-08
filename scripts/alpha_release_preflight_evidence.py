@@ -837,6 +837,9 @@ def preflight_rerun_command(
     repository_url: str,
     expected_repository: str,
     expected_origin_url: str | None = None,
+    expected_branch: str = DEFAULT_BRANCH,
+    expected_tag: str = DEFAULT_TAG,
+    check_release_tag: bool = True,
     skip_remote: bool = False,
     allow_existing_refs: bool = False,
     allow_dirty: bool = False,
@@ -854,6 +857,13 @@ def preflight_rerun_command(
         if skip_remote and "--repository-url" not in command:
             command.extend(["--repository-url", repository_url])
         command.extend(["--expected-origin-url", expected_origin_url])
+    if expected_branch != DEFAULT_BRANCH:
+        command.extend(["--expected-branch", expected_branch])
+    if check_release_tag:
+        if expected_tag != DEFAULT_TAG:
+            command.extend(["--expected-tag", expected_tag])
+    else:
+        command.append("--skip-release-tag-check")
     if allow_dirty:
         command.append("--allow-dirty")
     command.append("--json")
@@ -866,7 +876,9 @@ def next_commands_for_result(
     repository_url: str = DEFAULT_REPOSITORY_URL,
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
+    expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
+    check_release_tag: bool = True,
     skip_remote: bool = False,
     allow_existing_refs: bool = False,
     allow_dirty: bool = False,
@@ -894,6 +906,9 @@ def next_commands_for_result(
                 repository_url=repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=intended_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=skip_remote,
                 allow_existing_refs=allow_existing_refs,
                 allow_dirty=allow_dirty,
@@ -912,6 +927,9 @@ def next_commands_for_result(
                 repository_url=repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=intended_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=False,
                 allow_existing_refs=allow_existing_refs,
                 allow_dirty=allow_dirty,
@@ -929,6 +947,9 @@ def next_commands_for_result(
                 repository_url=repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=remote_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=False,
                 allow_existing_refs=allow_existing_refs,
                 allow_dirty=allow_dirty,
@@ -942,6 +963,9 @@ def next_commands_for_result(
                     repository_url=repository_url,
                     expected_repository=expected_repository,
                     expected_origin_url=actual_origin_url,
+                    expected_branch=expected_branch,
+                    expected_tag=expected_tag,
+                    check_release_tag=check_release_tag,
                     skip_remote=skip_remote,
                     allow_existing_refs=allow_existing_refs,
                     allow_dirty=allow_dirty,
@@ -959,6 +983,9 @@ def next_commands_for_result(
                 repository_url=repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=expected_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=skip_remote,
                 allow_existing_refs=allow_existing_refs,
                 allow_dirty=allow_dirty,
@@ -971,6 +998,9 @@ def next_commands_for_result(
                 repository_url=repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=expected_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=False,
                 allow_existing_refs=True,
                 allow_dirty=allow_dirty,
@@ -987,6 +1017,9 @@ def next_commands_for_result(
                 repository_url=corrected_repository_url,
                 expected_repository=expected_repository,
                 expected_origin_url=expected_origin_url,
+                expected_branch=expected_branch,
+                expected_tag=expected_tag,
+                check_release_tag=check_release_tag,
                 skip_remote=False,
                 allow_existing_refs=allow_existing_refs,
                 allow_dirty=allow_dirty,
@@ -1144,7 +1177,9 @@ def result_payload(
         repository_url=repository_url,
         expected_repository=expected_repository,
         expected_origin_url=expected_origin_url,
+        expected_branch=expected_branch,
         expected_tag=expected_tag,
+        check_release_tag=check_release_tag,
         skip_remote=skip_remote,
         allow_existing_refs=allow_existing_refs,
         allow_dirty=allow_dirty,

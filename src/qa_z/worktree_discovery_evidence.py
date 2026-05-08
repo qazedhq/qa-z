@@ -72,21 +72,38 @@ def worktree_commit_plan_json_evidence(
         if isinstance(reason, str) and reason.strip()
     ]
     attention = ", ".join(attention_reasons) if attention_reasons else "none"
-    return [
-        {
-            "source": "worktree_commit_plan_json",
-            "path": format_path(path, root),
-            "summary": (
-                f"strict commit-plan status={payload.get('status', 'unknown')}; "
-                f"attention={attention}; "
-                f"unassigned={int_value(summary.get('unassigned_source_path_count'))}; "
-                f"cross_cutting={int_value(summary.get('cross_cutting_count'))}; "
-                f"patch_add_groups={int_value(summary.get('cross_cutting_group_count'))}; "
-                f"shared_patch_add={int_value(summary.get('shared_patch_add_count'))}; "
-                f"generated={int_value(summary.get('generated_artifact_count'))}"
-            ),
-        }
-    ]
+    evidence: dict[str, Any] = {
+        "source": "worktree_commit_plan_json",
+        "path": format_path(path, root),
+        "summary": (
+            f"strict commit-plan status={payload.get('status', 'unknown')}; "
+            f"attention={attention}; "
+            f"unassigned={int_value(summary.get('unassigned_source_path_count'))}; "
+            f"cross_cutting={int_value(summary.get('cross_cutting_count'))}; "
+            f"patch_add_groups={int_value(summary.get('cross_cutting_group_count'))}; "
+            f"shared_patch_add={int_value(summary.get('shared_patch_add_count'))}; "
+            f"generated={int_value(summary.get('generated_artifact_count'))}"
+        ),
+    }
+    patch_command_texts = cross_cutting_patch_command_texts(payload)
+    if patch_command_texts:
+        evidence["patch_command_texts"] = patch_command_texts
+    return [evidence]
+
+
+def cross_cutting_patch_command_texts(payload: dict[str, Any]) -> list[str]:
+    """Return scoped patch-add commands from strict worktree plan evidence."""
+    groups = payload.get("cross_cutting_groups")
+    if not isinstance(groups, list):
+        return []
+    commands: list[str] = []
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        command = str(group.get("patch_command_text") or "").strip()
+        if command:
+            commands.append(command)
+    return commands
 
 
 def int_value(value: object) -> int:

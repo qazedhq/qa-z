@@ -535,16 +535,20 @@ def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
 
     result = module.analyze_status_lines(
         [
+            " M docs/launch/issues-to-open.md",
             " M tests/test_examples.py",
             "?? tests/test_public_docs_current_truth.py",
+            " M tests/test_launch_growth_package.py",
             " M tests/test_sarif_reporter.py",
         ]
     )
     batches = {batch["id"]: batch for batch in result["batches"]}
 
     assert batches["current_truth_release_surface"]["changed_paths"] == [
+        "docs/launch/issues-to-open.md",
         "tests/test_examples.py",
         "tests/test_public_docs_current_truth.py",
+        "tests/test_launch_growth_package.py",
     ]
     assert batches["repair_session_publish"]["changed_paths"] == [
         "tests/test_sarif_reporter.py"

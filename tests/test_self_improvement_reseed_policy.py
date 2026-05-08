@@ -276,6 +276,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_empty_loop_history(
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "blocked_no_candidates",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -289,6 +290,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_empty_loop_history(
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "blocked_no_candidates",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -302,6 +304,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_empty_loop_history(
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "blocked_no_candidates",
+                "loop_elapsed_seconds": 1,
             },
         ],
     )
