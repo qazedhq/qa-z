@@ -25,7 +25,7 @@ def discover_empty_loop_candidate_inputs(root: Path) -> list[dict[str, Any]]:
     if len(entries) < EMPTY_LOOP_CHAIN_LENGTH:
         return []
     recent = entries[-EMPTY_LOOP_CHAIN_LENGTH:]
-    if not all(is_empty_loop_entry(entry) for entry in recent):
+    if not all(is_autonomy_empty_loop_entry(entry) for entry in recent):
         return []
     loop_ids = recent_loop_ids(recent)
     states = [str(entry.get("state") or "unknown") for entry in recent]
@@ -60,10 +60,16 @@ def discover_repeated_fallback_family_candidate_inputs(
 ) -> list[dict[str, Any]]:
     """Return candidate packets from repeated fallback-family reuse."""
     history_path = root / ".qa-z" / "loops" / "history.jsonl"
-    entries = load_history_entries(history_path)
+    entries = [
+        entry
+        for entry in load_history_entries(history_path)
+        if has_autonomy_outcome_marker(entry)
+    ]
     if len(entries) < FALLBACK_REPEAT_WINDOW:
         return []
     recent = entries[-FALLBACK_REPEAT_WINDOW:]
+    if not all(is_autonomy_fallback_family_entry(entry) for entry in recent):
+        return []
     families = [
         selected_task_fallback_families(entry, open_items=[]) for entry in recent
     ]
@@ -107,3 +113,31 @@ def recent_loop_ids(entries: list[dict[str, Any]]) -> list[str]:
         for entry in entries
         if str(entry.get("loop_id") or "").strip()
     ]
+
+
+def is_autonomy_empty_loop_entry(entry: dict[str, Any]) -> bool:
+    """Return whether an empty-loop history entry came from an autonomy outcome."""
+    if not is_empty_loop_entry(entry):
+        return False
+    return has_autonomy_outcome_marker(entry)
+
+
+def is_autonomy_fallback_family_entry(entry: dict[str, Any]) -> bool:
+    """Return whether a fallback-family history entry came from an autonomy outcome."""
+    if str(entry.get("state") or "") != "fallback_selected":
+        return False
+    if not selected_task_fallback_families(entry, open_items=[]):
+        return False
+    return has_autonomy_outcome_marker(entry)
+
+
+def has_autonomy_outcome_marker(entry: dict[str, Any]) -> bool:
+    """Return whether a loop-history entry has fields merged from autonomy outcome."""
+    return any(
+        key in entry
+        for key in (
+            "loop_elapsed_seconds",
+            "loop_health",
+            "state_transitions",
+        )
+    )

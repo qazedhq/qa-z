@@ -277,6 +277,11 @@ within-batch fallback-family penalty
 recommendation-specific commands plus additive `context_paths`
 `python scripts/runtime_artifact_cleanup.py --json`
 `python scripts/runtime_artifact_cleanup.py --apply --json`
+`python -m qa_z backlog --refresh --json`
+`latest_prepared_actions_refresh_commands`
+`latest_next_recommendations_stale_for_selection`
+`latest_next_recommendations_refresh_commands`
+`python -m qa_z autonomy status --json`
 Deferred generated cleanup packets
 `docs/generated-vs-frozen-evidence-policy.md` through `context_paths`
 `scripts/runtime_artifact_cleanup.py` through `context_paths`

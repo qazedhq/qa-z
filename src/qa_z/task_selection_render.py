@@ -15,6 +15,9 @@ from qa_z.task_selection_evidence import verification_not_comparable_reason
 from qa_z.task_selection_evidence import worktree_action_areas
 
 
+INLINE_PATCH_COMMAND_LIMIT = 3
+
+
 def render_loop_plan(
     *,
     loop_id: str,
@@ -71,6 +74,10 @@ def render_loop_plan(
                 f"   - priority score: {item.get('priority_score', 0)}",
             ]
         )
+        patch_commands = worktree_patch_add_command_texts(item)
+        if patch_commands:
+            lines.append("   - patch-add commands:")
+            lines.extend(f"     - `{command}`" for command in patch_commands)
         if item.get("selection_priority_score") is not None:
             lines.append(
                 f"   - selection score: {item.get('selection_priority_score', 0)}"
@@ -134,6 +141,13 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
             "surface a non-repeated fallback family before selecting more of the "
             "same family, then rerun autonomy and inspect autonomy status"
         )
+    if recommendation == "improve_empty_loop_handling":
+        history_path = loop_history_evidence_path(item)
+        return (
+            f"inspect `{history_path}`, confirm whether the repeated empty-loop "
+            f"chain still has no open backlog, then run "
+            f"`{AUTONOMY_ONE_LOOP_COMMAND}` and inspect autonomy status"
+        )
     if recommendation == "reduce_integration_risk":
         area_phrase = join_action_areas(worktree_action_areas(item))
         if area_phrase:
@@ -144,9 +158,11 @@ def selected_task_action_hint(item: dict[str, Any]) -> str:
                     if patch_add_group_count == 1
                     else "cross-cutting groups"
                 )
+                patch_command_hint = worktree_patch_add_command_hint(item)
                 return (
                     f"triage {area_phrase} changes first, patch-add "
-                    f"{patch_add_group_count} {group_label}, rerun "
+                    f"{patch_add_group_count} {group_label}, using "
+                    f"{patch_command_hint}, rerun "
                     f"{worktree_plan_review}, then rerun self-inspection"
                 )
             return (
@@ -237,6 +253,7 @@ def selected_task_validation_command(item: dict[str, Any]) -> str:
         "reduce_integration_risk": STRICT_WORKTREE_COMMIT_PLAN_COMMAND,
         "isolate_foundation_commit": SELF_INSPECT_COMMAND,
         "audit_worktree_integration": SELF_INSPECT_COMMAND,
+        "improve_empty_loop_handling": AUTONOMY_ONE_LOOP_COMMAND,
         "improve_fallback_diversity": AUTONOMY_ONE_LOOP_COMMAND,
         "stabilize_verification_surface": (
             "python -m qa_z verify --baseline-run <baseline> "
@@ -247,6 +264,17 @@ def selected_task_validation_command(item: dict[str, Any]) -> str:
         ),
     }
     return commands.get(recommendation, SELF_INSPECT_COMMAND)
+
+
+def loop_history_evidence_path(item: dict[str, Any]) -> str:
+    """Return the loop-history path referenced by empty-loop evidence."""
+    for entry in item_evidence_entries(item):
+        if str(entry.get("source") or "").strip() != "loop_history":
+            continue
+        path = str(entry.get("path") or "").strip()
+        if path:
+            return path
+    return ".qa-z/loops/history.jsonl"
 
 
 def verification_compare_path(item: dict[str, Any]) -> str:
@@ -289,6 +317,52 @@ def worktree_patch_add_group_count(item: dict[str, Any]) -> int:
     if fields.get("generated", 0) or fields.get("unassigned", 0):
         return 0
     return fields.get("patch_add_groups", 0)
+
+
+def worktree_commit_plan_json_path(item: dict[str, Any]) -> str:
+    """Return the strict worktree commit-plan evidence path for operator hints."""
+    for entry in item_evidence_entries(item):
+        if str(entry.get("source") or "").strip() != "worktree_commit_plan_json":
+            continue
+        path = str(entry.get("path") or "").strip()
+        if path:
+            return path
+    return ".qa-z/tmp/worktree-commit-plan.json"
+
+
+def worktree_patch_add_command_hint(item: dict[str, Any]) -> str:
+    """Return inline patch-add commands, falling back to the JSON evidence path."""
+    commands = worktree_patch_add_command_texts(item)
+    if commands:
+        visible_commands = commands[:INLINE_PATCH_COMMAND_LIMIT]
+        hint = "; ".join(f"`{command}`" for command in visible_commands)
+        truncated_count = len(commands) - len(visible_commands)
+        if truncated_count > 0:
+            hint = (
+                f"{hint}; plus {truncated_count} more in "
+                f"`{worktree_commit_plan_json_path(item)}`"
+            )
+        return hint
+    return (
+        f"`{worktree_commit_plan_json_path(item)}` "
+        "`cross_cutting_groups[].patch_command_text`"
+    )
+
+
+def worktree_patch_add_command_texts(item: dict[str, Any]) -> list[str]:
+    """Return structured patch-add command text from strict worktree evidence."""
+    for entry in item_evidence_entries(item):
+        if str(entry.get("source") or "").strip() != "worktree_commit_plan_json":
+            continue
+        commands = entry.get("patch_command_texts")
+        if not isinstance(commands, list):
+            return []
+        return [
+            str(command).strip()
+            for command in commands
+            if isinstance(command, str) and command.strip()
+        ]
+    return []
 
 
 def summary_int_fields(summary: str) -> dict[str, int]:

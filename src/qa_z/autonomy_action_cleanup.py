@@ -11,7 +11,7 @@ from qa_z.autonomy_action_context import (
     task_context_paths,
 )
 from qa_z.autonomy_action_packets import prepared_action
-from qa_z.operator_commands import BACKLOG_JSON_COMMAND
+from qa_z.operator_commands import BACKLOG_REFRESH_JSON_COMMAND
 from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_APPLY_COMMAND
 from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_COMMAND
 from qa_z.operator_commands import SELF_INSPECT_JSON_COMMAND
@@ -85,6 +85,7 @@ def cleanup_action(
         commands.append(cleanup_review_command)
     if recommendation == "reduce_integration_risk":
         commands.append(worktree_plan_command)
+        commands.extend(patch_add_commands_from_task_evidence(task))
     if recommendation in {
         "reduce_integration_risk",
         "triage_and_isolate_changes",
@@ -92,7 +93,7 @@ def cleanup_action(
         if category == "runtime_artifact_cleanup_gap":
             commands.append(cleanup_apply_command)
         else:
-            commands.append(BACKLOG_JSON_COMMAND)
+            commands.append(BACKLOG_REFRESH_JSON_COMMAND)
     if recommendation == "separate_runtime_from_source_artifacts":
         commands.append(cleanup_apply_command)
     commands.append(SELF_INSPECT_JSON_COMMAND)
@@ -114,6 +115,28 @@ def cleanup_action(
             recommendation_context_paths(recommendation),
         ),
     )
+
+
+def patch_add_commands_from_task_evidence(task: dict[str, object]) -> list[str]:
+    """Return scoped patch-add commands carried by strict worktree evidence."""
+    evidence = task.get("evidence")
+    if not isinstance(evidence, list):
+        return []
+    commands: list[str] = []
+    for entry in evidence:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("source") or "").strip() != "worktree_commit_plan_json":
+            continue
+        patch_commands = entry.get("patch_command_texts")
+        if not isinstance(patch_commands, list):
+            continue
+        commands.extend(
+            str(command).strip()
+            for command in patch_commands
+            if isinstance(command, str) and command.strip()
+        )
+    return commands
 
 
 def workflow_gap_action(
@@ -140,7 +163,7 @@ def workflow_gap_action(
         ),
         commands=[
             "git status --short",
-            BACKLOG_JSON_COMMAND,
+            BACKLOG_REFRESH_JSON_COMMAND,
             SELF_INSPECT_JSON_COMMAND,
         ],
         context_paths=merge_context_paths(

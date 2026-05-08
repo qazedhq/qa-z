@@ -5,6 +5,7 @@ from __future__ import annotations
 AUTONOMY_ONE_LOOP_COMMAND = "python -m qa_z autonomy --loops 1 --json"
 AUTONOMY_STATUS_JSON_COMMAND = "python -m qa_z autonomy status --json"
 BACKLOG_JSON_COMMAND = "python -m qa_z backlog --json"
+BACKLOG_REFRESH_JSON_COMMAND = "python -m qa_z backlog --refresh --json"
 BENCHMARK_COMMAND = "python -m qa_z benchmark"
 BENCHMARK_JSON_COMMAND = "python -m qa_z benchmark --json"
 RUNTIME_ARTIFACT_CLEANUP_COMMAND = "python scripts/runtime_artifact_cleanup.py --json"
@@ -25,6 +26,7 @@ __all__ = [
     "AUTONOMY_ONE_LOOP_COMMAND",
     "AUTONOMY_STATUS_JSON_COMMAND",
     "BACKLOG_JSON_COMMAND",
+    "BACKLOG_REFRESH_JSON_COMMAND",
     "BENCHMARK_COMMAND",
     "BENCHMARK_JSON_COMMAND",
     "RUNTIME_ARTIFACT_CLEANUP_APPLY_COMMAND",

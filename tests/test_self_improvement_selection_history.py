@@ -603,6 +603,7 @@ def test_select_next_treats_verification_failure_as_repeat_recovery_alternative(
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -618,6 +619,7 @@ def test_select_next_treats_verification_failure_as_repeat_recovery_alternative(
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
         ],
     )
@@ -813,6 +815,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_repeated_fallback_f
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -828,6 +831,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_repeated_fallback_f
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -843,6 +847,7 @@ def test_self_inspection_derives_autonomy_selection_gap_from_repeated_fallback_f
                 "benchmark_delta": None,
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
         ],
     )

@@ -149,6 +149,7 @@ def test_alpha_release_preflight_remote_ref_contracts_live_in_split_pack() -> No
         "test_preflight_fails_when_remote_has_any_refs",
         "test_preflight_allows_existing_refs_when_explicitly_requested",
         "test_preflight_fails_when_existing_refs_include_release_tag_even_if_allowed",
+        "test_preflight_remote_rerun_preserves_quality_mode_branch",
         "test_preflight_fails_for_wrong_github_repository_target",
         "test_preflight_fails_for_non_github_repository_url",
         "test_preflight_missing_repository_payload_handles_github_error_body",

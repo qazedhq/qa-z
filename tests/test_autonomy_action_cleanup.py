@@ -91,7 +91,7 @@ def test_action_mapping_specializes_cleanup_packets_by_recommendation(
         "git status --short",
         "python scripts/runtime_artifact_cleanup.py --json",
         "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
-        "python -m qa_z backlog --json",
+        "python -m qa_z backlog --refresh --json",
         "python -m qa_z self-inspect --json",
     ]
     assert cleanup_packet["context_paths"] == [
@@ -104,6 +104,46 @@ def test_action_mapping_specializes_cleanup_packets_by_recommendation(
     assert isolation_packet["context_paths"] == [
         ".qa-z/loops/loop-one/self_inspect.json",
         "docs/reports/worktree-commit-plan.md",
+    ]
+
+
+def test_reduce_integration_risk_action_includes_scoped_patch_add_commands(
+    tmp_path,
+) -> None:
+    artifact = tmp_path / ".qa-z" / "loops" / "loop-one" / "self_inspect.json"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text('{"kind":"qa_z.self_inspection"}\n', encoding="utf-8")
+
+    action = action_for_task(
+        root=tmp_path,
+        config=None,
+        loop_id="loop-one",
+        task={
+            "id": "worktree_risk-dirty-worktree",
+            "category": "worktree_risk",
+            "recommendation": "reduce_integration_risk",
+            "signals": ["dirty_worktree_large", "worktree_integration_risk"],
+            "evidence": [
+                {
+                    "source": "worktree_commit_plan_json",
+                    "path": ".qa-z/tmp/worktree-commit-plan.json",
+                    "patch_command_texts": [
+                        "git add --patch -- README.md docs/artifact-schema-v1.md",
+                        "git add --patch -- tests/test_current_truth.py",
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert action["commands"] == [
+        "git status --short",
+        "python scripts/runtime_artifact_cleanup.py --json",
+        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
+        "git add --patch -- README.md docs/artifact-schema-v1.md",
+        "git add --patch -- tests/test_current_truth.py",
+        "python -m qa_z backlog --refresh --json",
+        "python -m qa_z self-inspect --json",
     ]
 
 
@@ -207,7 +247,7 @@ def test_action_mapping_specializes_integration_gap_packets_from_reports(
     assert action["type"] == "workflow_gap_plan"
     assert action["commands"] == [
         "git status --short",
-        "python -m qa_z backlog --json",
+        "python -m qa_z backlog --refresh --json",
         "python -m qa_z self-inspect --json",
     ]
     assert action["context_paths"] == [

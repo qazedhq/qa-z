@@ -6,6 +6,7 @@ from qa_z.autonomy import action_for_task
 from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
 from qa_z.operator_commands import AUTONOMY_STATUS_JSON_COMMAND
 from qa_z.operator_commands import BACKLOG_JSON_COMMAND
+from qa_z.operator_commands import BACKLOG_REFRESH_JSON_COMMAND
 from qa_z.operator_commands import BENCHMARK_COMMAND
 from qa_z.operator_commands import BENCHMARK_JSON_COMMAND
 from qa_z.operator_commands import RUNTIME_ARTIFACT_CLEANUP_COMMAND
@@ -14,6 +15,7 @@ from qa_z.operator_commands import SELF_INSPECT_COMMAND
 from qa_z.operator_commands import SELF_INSPECT_JSON_COMMAND
 from qa_z.operator_commands import SELECT_NEXT_COUNT_JSON_COMMAND
 from qa_z.operator_commands import STRICT_WORKTREE_COMMIT_PLAN_COMMAND
+from qa_z.task_selection_render import selected_task_action_hint
 from qa_z.task_selection_render import selected_task_validation_command
 
 
@@ -65,6 +67,7 @@ def test_operator_commands_cover_common_autonomy_action_sequences(
     assert AUTONOMY_ONE_LOOP_COMMAND == "python -m qa_z autonomy --loops 1 --json"
     assert AUTONOMY_STATUS_JSON_COMMAND == "python -m qa_z autonomy status --json"
     assert BACKLOG_JSON_COMMAND == "python -m qa_z backlog --json"
+    assert BACKLOG_REFRESH_JSON_COMMAND == "python -m qa_z backlog --refresh --json"
     assert BENCHMARK_COMMAND == "python -m qa_z benchmark"
     assert BENCHMARK_JSON_COMMAND == "python -m qa_z benchmark --json"
     assert action["commands"] == [
@@ -92,3 +95,23 @@ def test_operator_commands_feed_selected_task_validation_variants() -> None:
         )
         == SELF_INSPECT_COMMAND
     )
+
+
+def test_operator_commands_cover_empty_loop_handling_guidance() -> None:
+    task = {
+        "recommendation": "improve_empty_loop_handling",
+        "evidence": [
+            {
+                "source": "loop_history",
+                "path": ".qa-z/loops/history.jsonl",
+                "summary": "recent_empty_loops=3",
+            }
+        ],
+    }
+
+    assert selected_task_action_hint(task) == (
+        "inspect `.qa-z/loops/history.jsonl`, confirm whether the repeated "
+        "empty-loop chain still has no open backlog, then run "
+        "`python -m qa_z autonomy --loops 1 --json` and inspect autonomy status"
+    )
+    assert selected_task_validation_command(task) == AUTONOMY_ONE_LOOP_COMMAND

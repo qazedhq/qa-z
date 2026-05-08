@@ -160,6 +160,11 @@ def test_selected_task_action_hint_names_patch_add_group_count() -> None:
                 },
                 {
                     "source": "worktree_commit_plan_json",
+                    "path": ".qa-z/tmp/worktree-commit-plan.json",
+                    "patch_command_texts": [
+                        "git add --patch -- docs/artifact-schema-v1.md",
+                        "git add --patch -- tests/test_current_truth.py",
+                    ],
                     "summary": (
                         "strict commit-plan status=attention_required; "
                         "attention=cross_cutting_paths_present; unassigned=0; "
@@ -171,7 +176,46 @@ def test_selected_task_action_hint_names_patch_add_group_count() -> None:
         }
     ) == (
         "triage docs and tests changes first, patch-add 2 cross-cutting groups, "
-        "rerun "
+        "using `git add --patch -- docs/artifact-schema-v1.md`; "
+        "`git add --patch -- tests/test_current_truth.py`, rerun "
+        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
+        "self-inspection"
+    )
+
+
+def test_selected_task_action_hint_truncates_many_patch_add_commands() -> None:
+    assert selected_task_action_hint(
+        {
+            "recommendation": "reduce_integration_risk",
+            "evidence": [
+                {
+                    "source": "git_status",
+                    "summary": "modified=23; areas=docs:9, tests:8, source:2",
+                },
+                {
+                    "source": "worktree_commit_plan_json",
+                    "path": ".qa-z/tmp/worktree-commit-plan.json",
+                    "patch_command_texts": [
+                        "git add --patch -- docs/a.md",
+                        "git add --patch -- docs/b.md",
+                        "git add --patch -- tests/c.py",
+                        "git add --patch -- tests/d.py",
+                    ],
+                    "summary": (
+                        "strict commit-plan status=attention_required; "
+                        "attention=cross_cutting_paths_present; unassigned=0; "
+                        "cross_cutting=4; patch_add_groups=4; "
+                        "shared_patch_add=4; generated=0"
+                    ),
+                },
+            ],
+        }
+    ) == (
+        "triage docs and tests changes first, patch-add 4 cross-cutting groups, "
+        "using `git add --patch -- docs/a.md`; "
+        "`git add --patch -- docs/b.md`; "
+        "`git add --patch -- tests/c.py`; plus 1 more in "
+        "`.qa-z/tmp/worktree-commit-plan.json`, rerun "
         "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
         "self-inspection"
     )
@@ -401,6 +445,46 @@ def test_loop_plan_includes_selected_task_action_hint() -> None:
         "foundation commit, then rerun self-inspection" in plan
     )
     assert "   - validation: `python -m qa_z self-inspect`" in plan
+
+
+def test_loop_plan_lists_selected_task_patch_add_commands() -> None:
+    plan = render_loop_plan(
+        loop_id="loop-patch-add",
+        generated_at=NOW,
+        selected_items=[
+            {
+                "id": "worktree_risk-dirty-worktree",
+                "title": "Reduce dirty worktree integration risk",
+                "category": "worktree_risk",
+                "recommendation": "reduce_integration_risk",
+                "priority_score": 65,
+                "evidence": [
+                    {
+                        "source": "git_status",
+                        "path": ".",
+                        "summary": "modified=20; areas=docs:2, tests:1",
+                    },
+                    {
+                        "source": "worktree_commit_plan_json",
+                        "path": ".qa-z/tmp/worktree-commit-plan.json",
+                        "summary": (
+                            "strict commit-plan status=attention_required; "
+                            "attention=cross_cutting_paths_present; unassigned=0; "
+                            "cross_cutting=3; patch_add_groups=2; generated=0"
+                        ),
+                        "patch_command_texts": [
+                            "git add --patch -- README.md docs/artifact-schema-v1.md",
+                            "git add --patch -- tests/test_current_truth.py",
+                        ],
+                    },
+                ],
+            }
+        ],
+    )
+
+    assert "   - patch-add commands:" in plan
+    assert "     - `git add --patch -- README.md docs/artifact-schema-v1.md`" in plan
+    assert "     - `git add --patch -- tests/test_current_truth.py`" in plan
 
 
 def test_compact_evidence_summary_prioritizes_alpha_closure_snapshot() -> None:

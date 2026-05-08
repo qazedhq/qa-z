@@ -191,8 +191,11 @@ BATCH_RULES = (
             "tests/test_current_truth*.py",
             "tests/test_*current_truth*.py",
             "tests/test_examples.py",
+            "tests/test_launch_growth_package.py",
             "docs/superpowers/plans/*github*release*.md",
             "docs/superpowers/plans/*github*launch*.md",
+            "docs/launch/**",
+            "docs/issues/**",
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(

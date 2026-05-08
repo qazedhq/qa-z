@@ -25,6 +25,7 @@ def test_discover_empty_loop_candidate_inputs_uses_recent_history_chain(
                 "selected_tasks": [],
                 "next_candidates": [],
                 "state": "blocked_no_candidates",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -34,6 +35,7 @@ def test_discover_empty_loop_candidate_inputs_uses_recent_history_chain(
                 "selected_tasks": [],
                 "next_candidates": [],
                 "state": "blocked_no_candidates",
+                "loop_elapsed_seconds": 1,
             },
             {
                 "kind": "qa_z.loop_history_entry",
@@ -43,6 +45,7 @@ def test_discover_empty_loop_candidate_inputs_uses_recent_history_chain(
                 "selected_tasks": [],
                 "next_candidates": [],
                 "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
             },
         ],
     )
@@ -75,6 +78,202 @@ def test_discover_empty_loop_candidate_inputs_uses_recent_history_chain(
             "signals": ["recent_empty_loop_chain", "service_readiness_gap"],
         }
     ]
+
+
+def test_discover_empty_loop_candidate_inputs_ignores_selection_refresh_gaps(
+    tmp_path: Path,
+) -> None:
+    write_loop_history(
+        tmp_path,
+        [
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-1",
+                "created_at": NOW,
+                "selected_tasks": [],
+                "next_candidates": [],
+                "state": "blocked_no_candidates",
+                "selection_gap_reason": "no_open_backlog_after_inspection",
+                "open_backlog_count": 0,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-2",
+                "created_at": NOW,
+                "selected_tasks": [],
+                "next_candidates": [],
+                "state": "blocked_no_candidates",
+                "selection_gap_reason": "no_open_backlog_after_inspection",
+                "open_backlog_count": 0,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-3",
+                "created_at": NOW,
+                "selected_tasks": [],
+                "next_candidates": [],
+                "state": "blocked_no_candidates",
+                "selection_gap_reason": "no_open_backlog_after_inspection",
+                "open_backlog_count": 0,
+            },
+        ],
+    )
+
+    assert (
+        loop_health_signals_module.discover_empty_loop_candidate_inputs(tmp_path) == []
+    )
+
+
+def test_discover_repeated_fallback_family_inputs_use_autonomy_outcomes(
+    tmp_path: Path,
+) -> None:
+    write_loop_history(
+        tmp_path,
+        [
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-1",
+                "created_at": NOW,
+                "selected_tasks": ["worktree_risk-dirty-worktree"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-2",
+                "created_at": NOW,
+                "selected_tasks": ["commit_isolation_gap-foundation-order"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-3",
+                "created_at": NOW,
+                "selected_tasks": ["evidence_freshness_gap-generated-artifacts"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+        ],
+    )
+
+    candidates = (
+        loop_health_signals_module.discover_repeated_fallback_family_candidate_inputs(
+            tmp_path
+        )
+    )
+
+    assert candidates[0]["id"] == "autonomy_selection_gap-repeated-fallback-cleanup"
+    assert candidates[0]["recommendation"] == "improve_fallback_diversity"
+    assert "states=fallback_selected, fallback_selected, fallback_selected" in str(
+        candidates[0]["evidence"][0]["summary"]
+    )
+
+
+def test_discover_repeated_fallback_family_inputs_ignore_selection_refresh_history(
+    tmp_path: Path,
+) -> None:
+    write_loop_history(
+        tmp_path,
+        [
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-1",
+                "created_at": NOW,
+                "selected_tasks": ["worktree_risk-dirty-worktree"],
+                "selected_fallback_families": ["cleanup"],
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-2",
+                "created_at": NOW,
+                "selected_tasks": ["commit_isolation_gap-foundation-order"],
+                "selected_fallback_families": ["cleanup"],
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-3",
+                "created_at": NOW,
+                "selected_tasks": ["evidence_freshness_gap-generated-artifacts"],
+                "selected_fallback_families": ["cleanup"],
+            },
+        ],
+    )
+
+    assert (
+        loop_health_signals_module.discover_repeated_fallback_family_candidate_inputs(
+            tmp_path
+        )
+        == []
+    )
+
+
+def test_discover_repeated_fallback_family_inputs_require_recent_autonomy_window(
+    tmp_path: Path,
+) -> None:
+    write_loop_history(
+        tmp_path,
+        [
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-1",
+                "created_at": NOW,
+                "selected_tasks": ["worktree_risk-dirty-worktree"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-2",
+                "created_at": NOW,
+                "selected_tasks": ["commit_isolation_gap-foundation-order"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-3",
+                "created_at": NOW,
+                "selected_tasks": ["verify_regression-resolved"],
+                "state": "completed",
+                "loop_elapsed_seconds": 1,
+            },
+            {
+                "kind": "qa_z.loop_history_entry",
+                "schema_version": 1,
+                "loop_id": "loop-4",
+                "created_at": NOW,
+                "selected_tasks": ["artifact_hygiene_gap-runtime"],
+                "selected_fallback_families": ["cleanup"],
+                "state": "fallback_selected",
+                "loop_elapsed_seconds": 1,
+            },
+        ],
+    )
+
+    assert (
+        loop_health_signals_module.discover_repeated_fallback_family_candidate_inputs(
+            tmp_path
+        )
+        == []
+    )
 
 
 def test_latest_self_inspection_selection_context_reads_loop_local_provenance(

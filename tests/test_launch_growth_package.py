@@ -149,3 +149,14 @@ def test_good_first_issue_seed_count_and_specificity() -> None:
         "OpenSSF Scorecard",
     ):
         assert text in issues
+
+
+def test_launch_issue_opening_handoff_points_to_full_seed_ledger() -> None:
+    handoff = read("docs/launch/issues-to-open.md")
+    issues = read("docs/issues/good-first-issues.md")
+
+    assert "docs/issues/good-first-issues.md" in handoff
+    assert "20 good-first-issue seeds" in handoff
+    assert "GitHub issue-write access" in handoff
+    assert "out of scope for local source validation" in handoff
+    assert handoff.count("## Issue ") >= issues.count("## Issue ")

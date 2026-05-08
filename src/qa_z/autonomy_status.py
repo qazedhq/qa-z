@@ -9,11 +9,14 @@ from qa_z.artifacts import format_path
 from qa_z.autonomy_records import loops_root, read_json_object
 from qa_z.improvement_state import load_backlog
 from qa_z.live_repository import render_live_repository_summary
+from qa_z.operator_commands import AUTONOMY_ONE_LOOP_COMMAND
+from qa_z.operator_commands import AUTONOMY_STATUS_JSON_COMMAND
 from qa_z.repair_signals import iter_live_verification_summary_paths
 from qa_z.self_improvement import SELF_IMPROVEMENT_SCHEMA_VERSION, int_value
 from qa_z.task_selection import compact_backlog_evidence_summary
 from qa_z.task_selection import selected_task_action_hint
 from qa_z.task_selection import selected_task_validation_command
+from qa_z.task_selection import worktree_patch_add_command_texts
 
 AUTONOMY_STATUS_KIND = "qa_z.autonomy_status"
 
@@ -49,14 +52,27 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
         if isinstance(item, dict) and item.get("id")
     ]
     open_sessions = current_open_sessions(root)
-    backlog_items = backlog_top_items(root)
+    backlog = load_backlog(root)
+    backlog_items = backlog_top_items_from_backlog(backlog)
     recent_verify = latest_verify_observation(root)
     prepared_actions = status_prepared_actions(outcome.get("actions_prepared"))
+    prepared_actions_stale = bool(
+        prepared_actions
+        and selected_loop_id
+        and outcome_loop_id
+        and selected_loop_id != outcome_loop_id
+    )
     next_actions = [
         str(item)
         for item in outcome.get("next_recommendations", [])
         if isinstance(item, str) and item.strip()
     ]
+    next_recommendations_stale = bool(
+        next_actions
+        and selected_loop_id
+        and outcome_loop_id
+        and selected_loop_id != outcome_loop_id
+    )
     return {
         "kind": AUTONOMY_STATUS_KIND,
         "schema_version": SELF_IMPROVEMENT_SCHEMA_VERSION,
@@ -92,13 +108,17 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
         "latest_prepared_actions_loop_id": outcome_loop_id
         if prepared_actions and outcome_loop_id
         else None,
-        "latest_prepared_actions_stale_for_selection": bool(
-            prepared_actions
-            and selected_loop_id
-            and outcome_loop_id
-            and selected_loop_id != outcome_loop_id
+        "latest_prepared_actions_stale_for_selection": prepared_actions_stale,
+        "latest_prepared_actions_refresh_commands": (
+            stale_autonomy_status_refresh_commands() if prepared_actions_stale else []
         ),
         "latest_next_recommendations": next_actions,
+        "latest_next_recommendations_stale_for_selection": (next_recommendations_stale),
+        "latest_next_recommendations_refresh_commands": (
+            stale_autonomy_status_refresh_commands()
+            if next_recommendations_stale
+            else []
+        ),
         "latest_loop_health": outcome.get("loop_health") or {},
         "latest_selection_gap_reason": outcome.get("selection_gap_reason"),
         "latest_backlog_open_count_before_inspection": int_value(
@@ -119,6 +139,9 @@ def load_autonomy_status(root: Path) -> dict[str, Any]:
         "open_session_count": len(open_sessions),
         "open_sessions": open_sessions,
         "recent_verify_verdict": recent_verify,
+        "backlog_updated_at": backlog.get("updated_at")
+        or backlog.get("generated_at")
+        or None,
         "backlog_top_items": backlog_items,
     }
 
@@ -175,8 +198,11 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
         f"Min loop seconds: {status.get('min_loop_seconds', 0)}",
         f"Open sessions: {status.get('open_session_count', 0)}",
         f"Recent verify verdict: {status.get('recent_verify_verdict') or 'none'}",
-        "Selected task details:",
     ]
+    backlog_updated_at = str(status.get("backlog_updated_at") or "").strip()
+    if backlog_updated_at:
+        lines.append(f"Backlog updated: {backlog_updated_at}")
+    lines.append("Selected task details:")
     selected_loop_id = str(status.get("latest_selected_loop_id") or "").strip()
     outcome_loop_id = str(status.get("latest_outcome_loop_id") or "").strip()
     if selected_loop_id:
@@ -258,6 +284,14 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
             lines.append(f"  recommendation: {item['recommendation']}")
         if item.get("action_hint"):
             lines.append(f"  action: {item['action_hint']}")
+        patch_commands = [
+            str(command)
+            for command in item.get("patch_commands", [])
+            if isinstance(command, str) and command.strip()
+        ]
+        if patch_commands:
+            lines.append("  patch-add commands:")
+            lines.extend(f"    - {command}" for command in patch_commands)
         if item.get("validation_command"):
             lines.append(f"  validation: {item['validation_command']}")
         if item.get("selection_priority_score") is not None:
@@ -289,6 +323,16 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
             lines.append(
                 "Prepared actions may not match the latest selected task artifact."
             )
+            refresh_commands = [
+                str(command)
+                for command in status.get(
+                    "latest_prepared_actions_refresh_commands", []
+                )
+                if isinstance(command, str) and command.strip()
+            ]
+            if refresh_commands:
+                lines.append("Prepared action refresh commands:")
+                lines.extend(f"  - {command}" for command in refresh_commands)
     open_sessions = status.get("open_sessions") or []
     if open_sessions:
         lines.append("Open session details:")
@@ -308,13 +352,29 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
             lines.append(f"  next: {action['next_recommendation']}")
         commands = action.get("commands")
         if isinstance(commands, list) and commands:
-            lines.append(f"  commands: {'; '.join(str(item) for item in commands)}")
+            lines.append("  commands:")
+            lines.extend(f"    - {item}" for item in commands)
         context_paths = action.get("context_paths")
         if isinstance(context_paths, list) and context_paths:
-            lines.append(f"  context: {', '.join(str(item) for item in context_paths)}")
+            lines.append("  context:")
+            lines.extend(f"    - {item}" for item in context_paths)
     lines.extend(["Next recommendations:"])
     if not next_steps:
         lines.append("- none")
+    elif status.get("latest_next_recommendations_stale_for_selection"):
+        lines.append(
+            "Next recommendations may not match the latest selected task artifact."
+        )
+        refresh_commands = [
+            str(command)
+            for command in status.get(
+                "latest_next_recommendations_refresh_commands", []
+            )
+            if isinstance(command, str) and command.strip()
+        ]
+        if refresh_commands:
+            lines.append("Next recommendation refresh commands:")
+            lines.extend(f"  - {command}" for command in refresh_commands)
     for recommendation in next_steps:
         lines.append(f"- {recommendation}")
     lines.extend(["Backlog top items:"])
@@ -331,11 +391,24 @@ def render_autonomy_status(status: dict[str, Any]) -> str:
             lines.append(f"  next: {item['recommendation']}")
         if item.get("action_hint"):
             lines.append(f"  action: {item['action_hint']}")
+        patch_commands = [
+            str(command)
+            for command in item.get("patch_commands", [])
+            if isinstance(command, str) and command.strip()
+        ]
+        if patch_commands:
+            lines.append("  patch-add commands:")
+            lines.extend(f"    - {command}" for command in patch_commands)
         if item.get("validation_command"):
             lines.append(f"  validation: {item['validation_command']}")
         if item.get("evidence_summary"):
             lines.append(f"  evidence: {item['evidence_summary']}")
     return "\n".join(lines)
+
+
+def stale_autonomy_status_refresh_commands() -> list[str]:
+    """Return local commands that regenerate stale autonomy status handoff data."""
+    return [AUTONOMY_ONE_LOOP_COMMAND, AUTONOMY_STATUS_JSON_COMMAND]
 
 
 def format_runtime_progress(*, elapsed_seconds: int, target_seconds: int) -> str:
@@ -415,6 +488,9 @@ def status_selected_task_details(items: list[dict[str, Any]]) -> list[dict[str, 
         ]
         if selection_penalty_reasons:
             detail["selection_penalty_reasons"] = selection_penalty_reasons
+        patch_commands = worktree_patch_add_command_texts(item)
+        if patch_commands:
+            detail["patch_commands"] = patch_commands
         details.append(detail)
     return details
 
@@ -443,9 +519,14 @@ def current_open_sessions(root: Path) -> list[dict[str, str]]:
 
 def backlog_top_items(root: Path) -> list[dict[str, Any]]:
     """Return a compact top-five backlog view."""
+    return backlog_top_items_from_backlog(load_backlog(root))
+
+
+def backlog_top_items_from_backlog(backlog: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return a compact top-five backlog view from one backlog snapshot."""
     items = [
         item
-        for item in load_backlog(root).get("items", [])
+        for item in backlog.get("items", [])
         if isinstance(item, dict) and str(item.get("status", "open")) == "open"
     ]
     items = sorted(
@@ -467,6 +548,11 @@ def backlog_top_items(root: Path) -> list[dict[str, Any]]:
             "action_hint": selected_task_action_hint(item),
             "validation_command": selected_task_validation_command(item),
             "evidence_summary": compact_backlog_evidence_summary(item),
+            **(
+                {"patch_commands": patch_commands}
+                if (patch_commands := worktree_patch_add_command_texts(item))
+                else {}
+            ),
         }
         for item in items[:5]
     ]

@@ -12,6 +12,7 @@ __all__ = [
     "selected_task_fallback_families",
     "selected_task_validation_command",
     "worktree_action_areas",
+    "worktree_patch_add_command_texts",
 ]
 from qa_z.task_selection_core import (
     apply_selection_penalty,
@@ -29,4 +30,5 @@ from qa_z.task_selection_render import (
     render_loop_plan,
     selected_task_action_hint,
     selected_task_validation_command,
+    worktree_patch_add_command_texts,
 )

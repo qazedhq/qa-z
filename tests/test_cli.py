@@ -350,7 +350,21 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
                                 "modified=25; untracked=346; staged=0; "
                                 "areas=docs:2, source:1"
                             ),
-                        }
+                        },
+                        {
+                            "source": "worktree_commit_plan_json",
+                            "path": ".qa-z/tmp/worktree-commit-plan.json",
+                            "summary": (
+                                "strict commit-plan status=attention_required; "
+                                "attention=cross_cutting_paths_present; "
+                                "unassigned=0; cross_cutting=3; "
+                                "patch_add_groups=2; generated=0"
+                            ),
+                            "patch_command_texts": [
+                                "git add --patch -- README.md docs/artifact-schema-v1.md",
+                                "git add --patch -- tests/test_current_truth.py",
+                            ],
+                        },
                     ],
                 }
             ],
@@ -377,11 +391,12 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     )
     assert "recommendation: reduce_integration_risk" in output
     assert (
-        "action: triage docs and source changes first, run "
-        "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
-        "self-inspection" in output
+        "action: triage docs and source changes first, patch-add "
+        "2 cross-cutting groups" in output
     )
+    assert "patch-add commands:" in output
+    assert "git add --patch -- README.md docs/artifact-schema-v1.md" in output
+    assert "git add --patch -- tests/test_current_truth.py" in output
     assert (
         "validation: python scripts/worktree_commit_plan.py --summary-only --json "
         "--fail-on-generated --fail-on-cross-cutting "
@@ -433,7 +448,21 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
                                 "modified=25; untracked=346; staged=0; "
                                 "areas=docs:2, source:1"
                             ),
-                        }
+                        },
+                        {
+                            "source": "worktree_commit_plan_json",
+                            "path": ".qa-z/tmp/worktree-commit-plan.json",
+                            "summary": (
+                                "strict commit-plan status=attention_required; "
+                                "attention=cross_cutting_paths_present; "
+                                "unassigned=0; cross_cutting=3; "
+                                "patch_add_groups=2; generated=0"
+                            ),
+                            "patch_command_texts": [
+                                "git add --patch -- README.md docs/artifact-schema-v1.md",
+                                "git add --patch -- tests/test_current_truth.py",
+                            ],
+                        },
                     ],
                 }
             ],
@@ -463,11 +492,12 @@ def test_render_self_inspect_stdout_surfaces_top_candidate_details(
     assert "recommendation: reduce_integration_risk" in output
     assert "Backlog reseeded: yes (2 concrete task(s))" in output
     assert (
-        "action: triage docs and source changes first, run "
-        "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
-        "self-inspection" in output
+        "action: triage docs and source changes first, patch-add "
+        "2 cross-cutting groups" in output
     )
+    assert "patch-add commands:" in output
+    assert "git add --patch -- README.md docs/artifact-schema-v1.md" in output
+    assert "git add --patch -- tests/test_current_truth.py" in output
     assert (
         "validation: python scripts/worktree_commit_plan.py --summary-only --json "
         "--fail-on-generated --fail-on-cross-cutting "
@@ -955,7 +985,21 @@ def test_backlog_plain_output_focuses_on_open_items(
                                     "modified=25; untracked=346; staged=0; "
                                     "areas=docs:2, source:1"
                                 ),
-                            }
+                            },
+                            {
+                                "source": "worktree_commit_plan_json",
+                                "path": ".qa-z/tmp/worktree-commit-plan.json",
+                                "summary": (
+                                    "strict commit-plan status=attention_required; "
+                                    "attention=cross_cutting_paths_present; "
+                                    "unassigned=0; cross_cutting=3; "
+                                    "patch_add_groups=2; generated=0"
+                                ),
+                                "patch_command_texts": [
+                                    "git add --patch -- README.md docs/artifact-schema-v1.md",
+                                    "git add --patch -- tests/test_current_truth.py",
+                                ],
+                            },
                         ],
                     },
                     {
@@ -1009,6 +1053,10 @@ def test_backlog_plain_output_focuses_on_open_items(
     assert "Updated: 2026-04-17T00:00:00Z" in output
     assert "Open items: 2" in output
     assert (
+        "Refresh hint: run `qa-z backlog --refresh` before acting on a rapidly "
+        "changing worktree." in output
+    )
+    assert (
         "- worktree_risk-dirty-worktree: Reduce dirty worktree integration risk"
         in output
     )
@@ -1017,11 +1065,12 @@ def test_backlog_plain_output_focuses_on_open_items(
         in output
     )
     assert (
-        "action: triage docs and source changes first, run "
-        "`python scripts/runtime_artifact_cleanup.py --json` plus "
-        "`python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json`, then rerun "
-        "self-inspection" in output
+        "action: triage docs and source changes first, patch-add "
+        "2 cross-cutting groups" in output
     )
+    assert "patch-add commands:" in output
+    assert "git add --patch -- README.md docs/artifact-schema-v1.md" in output
+    assert "git add --patch -- tests/test_current_truth.py" in output
     assert (
         "validation: python scripts/worktree_commit_plan.py --summary-only --json "
         "--fail-on-generated --fail-on-cross-cutting "
@@ -1084,6 +1133,7 @@ def test_backlog_refresh_runs_self_inspection_before_printing(
     assert "Refreshed: yes" in output
     assert "Updated: 2026-04-17T00:00:00Z" not in output
     assert "Open items: 0" in output
+    assert "Refresh hint:" not in output
     assert "Closed items: 1" in output
 
 

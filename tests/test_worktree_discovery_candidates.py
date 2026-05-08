@@ -105,6 +105,18 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
                     "shared_patch_add_count": 2,
                     "generated_artifact_count": 0,
                 },
+                "cross_cutting_groups": [
+                    {
+                        "id": "public_docs_contract",
+                        "patch_command_text": "git add --patch -- docs/schema.md",
+                    },
+                    {
+                        "id": "current_truth_guards",
+                        "patch_command_text": (
+                            "git add --patch -- tests/test_current_truth.py"
+                        ),
+                    },
+                ],
                 "repository": {
                     "branch": "codex/qa-z-bootstrap",
                     "head": HEAD,
@@ -118,7 +130,7 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
         tmp_path, live_signals(), generated_at=UTC_LATE
     )
 
-    assert {
+    expected_evidence = {
         "source": "worktree_commit_plan_json",
         "path": ".qa-z/tmp/worktree-commit-plan.json",
         "summary": (
@@ -127,7 +139,12 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
             "cross_cutting=3; patch_add_groups=2; "
             "shared_patch_add=2; generated=0"
         ),
-    } in candidates[0].evidence
+        "patch_command_texts": [
+            "git add --patch -- docs/schema.md",
+            "git add --patch -- tests/test_current_truth.py",
+        ],
+    }
+    assert expected_evidence in candidates[0].evidence
 
 
 def test_worktree_risk_candidates_skip_stale_commit_plan_json_evidence(

@@ -37,6 +37,12 @@ def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     assert "python -m pip install semgrep" in readme
     assert "## Agent QA Playbook" in readme
     assert "## Advanced Commands" in readme
+    assert "strict worktree commit-plan evidence" in readme
+    assert "scoped patch-add commands" in readme
+    assert "selected-task patch-add commands" in readme
+    assert "fresh backlog check" in readme
+    assert "qa-z autonomy --loops 1 --json" in readme
+    assert "line-broken" in readme
     assert "v0.9.9-alpha" in readme
     assert "v0.9.x-alpha" not in readme
     assert "package-registry publish yet" in readme
@@ -164,6 +170,31 @@ def test_self_inspection_reseed_contract_is_documented() -> None:
         assert "concrete" in text
 
 
+def test_autonomy_empty_loop_candidate_boundary_is_documented() -> None:
+    schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
+
+    assert (
+        "Only autonomy outcome history entries can trigger the repeated empty-loop backlog candidate"
+        in schema
+    )
+    assert (
+        "`select-next --refresh` taskless selection records do not count as empty autonomy loops"
+        in schema
+    )
+    assert (
+        "Repeated fallback-family candidates follow the same boundary: only autonomy outcome entries with `state=fallback_selected` count"
+        in schema
+    )
+    assert (
+        "the most recent autonomy outcome window must all be fallback selections"
+        in (schema)
+    )
+    assert (
+        "`select-next --refresh` selection records do not count as autonomy fallback loops"
+        in schema
+    )
+
+
 def test_public_github_readiness_files_are_release_aligned() -> None:
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
@@ -259,6 +290,7 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     )
     assert "within-batch fallback-family penalty" in readme
     assert "recommendation-specific commands plus additive `context_paths`" in readme
+    assert "`python -m qa_z backlog --refresh --json`" in readme
     assert "`python scripts/runtime_artifact_cleanup.py --json`" in readme
     assert "`python scripts/runtime_artifact_cleanup.py --apply --json`" in readme
     assert "Deferred generated cleanup packets" in readme
@@ -336,6 +368,15 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`latest_next_recommendations`" in schema
     assert "`evidence_summary`" in schema
     assert "open session details" in schema
+    assert "line-broken prepared action commands" in schema
+    assert "`python -m qa_z backlog --refresh --json`" in schema
+    assert "`latest_prepared_actions_refresh_commands`" in schema
+    assert "`latest_next_recommendations_stale_for_selection`" in schema
+    assert "`latest_next_recommendations_refresh_commands`" in schema
+    assert "`python -m qa_z autonomy --loops 1 --json`" in schema
+    assert "`python -m qa_z autonomy status --json`" in schema
+    assert "line-broken `context_paths`" in schema
+    assert "selected-task patch-add commands" in schema
     assert "plain-text `qa-z backlog` view is intentionally operator-focused" in schema
     assert (
         "plain-text `qa-z select-next` output now mirrors compact selected-task details"
@@ -344,9 +385,11 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`selection_penalty_reasons`" in schema
     assert "`loop_plan.md` now also mirrors `selection_priority_score`" in schema
     assert "`latest_selected_task_details`" in schema
+    assert "`backlog_updated_at`" in schema
     assert "`latest_selected_fallback_families`" in schema
     assert "latest selected-task details" in schema
     assert "selected fallback families" in schema
+    assert "python -m qa_z autonomy --loops 1 --json" in schema
     assert "`improve_fallback_diversity`" in schema
     assert (
         "surface a non-`<family>` fallback family before selecting more work" in schema
@@ -543,6 +586,18 @@ def test_docs_bind_reduce_integration_risk_to_worktree_commit_plan() -> None:
             in text
         )
         assert "selected-task validation" in text
+    assert (
+        "selected-task action hint can point directly at `cross_cutting_groups[].patch_command_text`"
+        in schema
+    )
+    assert (
+        "worktree_commit_plan_json evidence may also carry `patch_command_texts`"
+        in schema
+    )
+    assert (
+        "`reduce_integration_risk` prepared actions can also carry scoped `git add --patch -- ...` commands"
+        in schema
+    )
 
 
 def test_reports_record_live_evidence_gating_for_cleanup_self_inspection() -> None:
