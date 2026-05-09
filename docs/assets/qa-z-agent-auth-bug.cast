@@ -1,4 +1,4 @@
-{"version":2,"width":100,"height":28,"timestamp":1777586400,"env":{"SHELL":"powershell","TERM":"xterm-256color"},"title":"AI wrote a bad auth change. QA-Z caught it."}
+{"version":2,"width":100,"height":28,"env":{"SHELL":"powershell","TERM":"xterm-256color"},"title":"AI wrote a bad auth change. QA-Z caught it."}
 [0.2,"o","$ qa-z plan --title \"AI auth bug caught by QA-Z\" --issue issue.md --spec spec.md --slug ai-auth-bug --overwrite\r\n"]
 [0.7,"o","created contract: qa/contracts/ai-auth-bug.md\r\n"]
 [1.0,"o","$ qa-z fast --output-dir .qa-z/runs/baseline\r\n"]

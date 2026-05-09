@@ -6,6 +6,10 @@ The service exposes pure functions so the demo works without installing a web se
 
 It is a deterministic fast and repair-prompt demo. It does not configure deep checks, does not call live agents, and does not run `repair-session`, `executor-bridge`, or `executor-result`.
 
+## Visual proof
+
+For the public launch terminal proof, see [qa-z-demo.svg](../../docs/assets/qa-z-demo.svg) and [qa-z-agent-auth-bug.cast](../../docs/assets/qa-z-agent-auth-bug.cast). This FastAPI demo remains a runnable fast/review/repair-prompt example; the deep `qa-z verify` proof is covered by the agent-auth-bug casts.
+
 ## Passing Flow
 
 From this directory:

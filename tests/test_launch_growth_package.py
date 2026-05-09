@@ -38,6 +38,8 @@ def test_launch_growth_package_covers_requested_surfaces() -> None:
         "docs/walkthroughs/auth-bug.md",
         "docs/walkthroughs/pr-gate.md",
         "docs/walkthroughs/sarif-code-scanning.md",
+        "docs/assets/qa-z-demo.cast",
+        "docs/assets/qa-z-demo.svg",
         "docs/assets/qa-z-agent-auth-bug.cast",
         "examples/fastapi-agent-bug/README.md",
         "examples/typescript-agent-bug/README.md",
@@ -90,6 +92,58 @@ def test_demo_asciinema_asset_is_real_cast_shape() -> None:
     assert "qa-z deep" in body
     assert "qa-z verify" in body
     assert "verdict: improved" in body
+
+
+def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
+    readme = read("README.md")
+    demo_cast_lines = read("docs/assets/qa-z-demo.cast").splitlines()
+    demo_svg = read("docs/assets/qa-z-demo.svg")
+
+    assert "Planned demo asset" not in readme
+    assert "docs/assets/qa-z-demo.svg" in readme
+    assert "docs/assets/qa-z-demo.cast" in readme
+    assert "See QA-Z catch a risky agent auth change before merge." in readme
+
+    header = json.loads(demo_cast_lines[0])
+    body = "\n".join(demo_cast_lines[1:])
+
+    assert header["version"] == 2
+    assert header["width"] == 100
+    assert header["height"] == 28
+    assert "timestamp" not in header
+    for text in (
+        "pipx install git+https://github.com/qazedhq/qa-z.git",
+        "qa-z init --profile python --with-agent-templates",
+        "qa-z doctor",
+        "qa-z demo auth-bug",
+        "qa-z guard --from-run latest --adapter codex",
+        "Verdict: DO NOT MERGE YET",
+        "qa-z repair-prompt --from-run latest --adapter codex",
+    ):
+        assert text in body
+        assert text in demo_svg
+
+    public_surfaces = "\n".join([readme, body, demo_svg])
+    for forbidden in ("F:\\", "C:\\Users", "SECRET", "TOKEN", "BEGIN PRIVATE"):
+        assert forbidden not in public_surfaces
+
+
+def test_examples_index_links_visual_proof_and_labels_run_status() -> None:
+    examples_index = read("examples/README.md")
+    agent_demo = read("examples/agent-auth-bug/README.md")
+    fastapi_agent = read("examples/fastapi-agent-bug/README.md")
+    ts_agent = read("examples/typescript-agent-bug/README.md")
+
+    assert "## Visual proof" in examples_index
+    assert "../docs/assets/qa-z-demo.svg" in examples_index
+    assert "../docs/assets/qa-z-agent-auth-bug.cast" in examples_index
+    assert "Runnable" in examples_index
+    assert "Placeholder-only" in examples_index
+
+    for doc in (agent_demo, fastapi_agent, ts_agent):
+        assert "Terminal proof" in doc
+        assert "qa-z-agent-auth-bug.cast" in doc
+        assert "qa-z verify" in doc
 
 
 def test_agent_bug_examples_are_documented_and_configured() -> None:
@@ -179,6 +233,9 @@ def test_launch_asset_docs_avoid_fabricated_public_claims() -> None:
     )
 
     assert "qa-z-social-preview.png" in combined
+    assert "qa-z-demo.svg" in combined
+    assert "QA-Z" in combined
+    assert "Make AI coding safe to merge." in combined
     assert "qa-z-agent-auth-bug.cast" in combined
     assert "No package registry publish has happened yet." in combined
     assert "fake adoption" in combined

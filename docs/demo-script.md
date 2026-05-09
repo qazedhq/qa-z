@@ -8,6 +8,11 @@ AI wrote a bad auth change. QA-Z caught it.
 
 This script uses real CLI commands and local artifacts. It does not depend on screenshots, GIFs, generated media, or live model APIs.
 
+Recorded terminal proof:
+
+- [assets/qa-z-agent-auth-bug.cast](assets/qa-z-agent-auth-bug.cast) records `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`.
+- [assets/qa-z-demo.cast](assets/qa-z-demo.cast) is the shorter README launch cast for install, init, doctor, demo, guard, and repair-prompt.
+
 ## Setup
 
 From the repository root:

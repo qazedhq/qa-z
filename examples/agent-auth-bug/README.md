@@ -6,6 +6,10 @@ This five-minute demo shows QA-Z turning an unsafe invoice authorization change 
 
 The demo does not call live agents, does not edit code autonomously, and does not require a web server. It uses local Python functions, pytest, ruff, and an optional Semgrep rule.
 
+## Terminal proof
+
+The checked-in terminal proof is [qa-z-agent-auth-bug.cast](../../docs/assets/qa-z-agent-auth-bug.cast). It shows `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify` without local paths, private artifacts, or live-agent output.
+
 ## Baseline: bad agent change
 
 ```bash
