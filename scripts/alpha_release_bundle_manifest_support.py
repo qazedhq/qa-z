@@ -13,6 +13,8 @@ from typing import Sequence
 from qa_z.subprocess_env import build_tool_subprocess_env
 
 
+# Historical v0.9.8-alpha bootstrap bundle default. Current releases should pass
+# an explicit branch instead of relying on this archived bootstrap branch.
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
 DEFAULT_BUNDLE = Path("dist/qa-z-v0.9.8-alpha-codex-qa-z-bootstrap.bundle")
 DEFAULT_ARTIFACTS = (

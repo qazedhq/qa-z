@@ -15,7 +15,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: qazedhq/qa-z/.github/actions/guard@main
@@ -46,7 +46,7 @@ permissions:
   security-events: write
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v6
   - uses: qazedhq/qa-z/.github/actions/guard@main
     with:
       upload-sarif: "true"

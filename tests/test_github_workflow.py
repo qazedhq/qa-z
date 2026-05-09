@@ -71,7 +71,7 @@ def test_github_workflow_uploads_benchmark_report_artifacts() -> None:
     )
 
     assert artifact_step.get("if") == "${{ always() }}"
-    assert artifact_step.get("uses") == "actions/upload-artifact@v4"
+    assert artifact_step.get("uses") == "actions/upload-artifact@v6"
     artifact_config = artifact_step.get("with", {})
     assert artifact_config.get("name") == "qa-z-benchmark-report"
     assert artifact_config.get("path", "").strip() == (
@@ -178,7 +178,7 @@ def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
     )
 
     artifact_step = steps[step_names.index("Upload QA-Z run artifacts")]
-    assert artifact_step.get("uses") == "actions/upload-artifact@v4"
+    assert artifact_step.get("uses") == "actions/upload-artifact@v6"
     assert artifact_step.get("with", {}).get("retention-days") == 7
     assert artifact_step.get("with", {}).get("if-no-files-found") == "warn"
 
@@ -245,7 +245,7 @@ def test_github_workflow_checkout_steps_do_not_persist_credentials(
         step
         for job in workflow["jobs"].values()
         for step in job.get("steps", [])
-        if step.get("uses") == "actions/checkout@v4"
+        if step.get("uses") == "actions/checkout@v6"
     ]
 
     assert checkout_steps
@@ -319,7 +319,7 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
     assert "security-events" in qa_job.get("permissions", {})
 
     artifact_step = next(
-        step for step in steps if step.get("uses") == "actions/upload-artifact@v4"
+        step for step in steps if step.get("uses") == "actions/upload-artifact@v6"
     )
     assert artifact_step.get("if") == "${{ always() }}"
     artifact_config = artifact_step.get("with", {})
@@ -336,3 +336,37 @@ def test_github_workflow_runs_deep_before_consumers_and_fails_last(
 def has_qa_z_gate(job: dict[str, Any]) -> bool:
     """Return true when a job contains the QA-Z fast gate."""
     return any(" fast" in step.get("run", "") for step in job.get("steps", []))
+
+
+def test_github_actions_use_node24_compatible_action_majors() -> None:
+    """Repo-owned workflows should avoid known Node.js 20 runtime action majors."""
+    checked_paths = [
+        ".github/workflows/ci.yml",
+        ".github/workflows/public-raw-hygiene.yml",
+        ".github/workflows/codex-review.yml",
+        ".github/workflows/scorecard.yml",
+        ".github/workflows/qa-z-example.yml.example",
+        ".github/actions/guard/action.yml",
+        ".github/actions/qa-z/action.yml",
+        "templates/.github/workflows/vibeqa.yml",
+        "templates/.github/workflows/qa-z-pr-comment.yml",
+    ]
+    combined = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8") for path in checked_paths
+    )
+
+    for stale_action in (
+        "actions/checkout@v4",
+        "actions/setup-python@v5",
+        "actions/setup-node@v4",
+        "actions/upload-artifact@v4",
+    ):
+        assert stale_action not in combined
+
+    for current_action in (
+        "actions/checkout@v6",
+        "actions/setup-python@v6",
+        "actions/setup-node@v6",
+        "actions/upload-artifact@v6",
+    ):
+        assert current_action in combined

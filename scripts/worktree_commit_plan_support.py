@@ -163,6 +163,7 @@ BATCH_RULES = (
             "scripts/check_public_raw_urls.py",
             "scripts/check_text_file_hygiene.py",
             ".github/workflows/*.yml",
+            ".github/workflows/*.yml.example",
             ".github/actions/guard/**",
             ".github/actions/qa-z/**",
             "tests/test_alpha_release_artifact_smoke*.py",
