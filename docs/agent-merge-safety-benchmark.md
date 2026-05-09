@@ -49,3 +49,18 @@ qa-z fast --output-dir .qa-z/runs/candidate
 qa-z deep --from-run .qa-z/runs/candidate
 qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
+
+## Monthly Report Provenance
+
+Monthly benchmark reports should connect each published row to both its fixture
+and its QA-Z run artifacts. At minimum, include:
+
+- the tracked fixture path, for example
+  `benchmarks/fixtures/improved_candidate/expected.json`;
+- baseline and candidate run directories under `.qa-z/runs/<run-id>/`;
+- the `qa-z verify` summary or report path that supplied the verdict;
+- the validation command and captured output used before publishing the report.
+
+Avoid unsourced adoption, performance, or user-impact claims. If a result is a
+sample row, label it as a sample and do not present it as monthly production
+evidence.
