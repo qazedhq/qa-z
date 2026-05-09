@@ -12,7 +12,18 @@ qa-z review --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
-Then give Codex the generated repair prompt:
+Then give Codex the generated repair prompt. For the latest run, copy this snippet:
+
+> **Copy this prompt to Codex**
+>
+> ```text
+> Fix the QA-Z repair packet at .qa-z/runs/latest/repair/codex.md.
+> Treat deterministic QA-Z artifacts as the source of truth.
+> Do not replace tests, Semgrep findings, or verification evidence with LLM-only judgment.
+> After editing, rerun the validation commands listed in the packet.
+> ```
+
+For a named baseline run, use the same prompt shape with that run directory:
 
 ```text
 Fix the QA-Z repair packet at .qa-z/runs/baseline/repair/codex.md.

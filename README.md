@@ -26,6 +26,8 @@ qa-z guard --adapter codex --deep auto --fail-on-risk
 qa-z repair-prompt --from-run latest --adapter codex
 ```
 
+Using Codex? Copy the compact handoff from [Use QA-Z With Codex](docs/use-with-codex.md) after QA-Z writes `.qa-z/runs/latest/repair/codex.md`.
+
 If the console script is not on PATH, use `python -m qa_z` as a fallback.
 
 ## GitHub Alpha Install
