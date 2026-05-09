@@ -1,91 +1,55 @@
-# Issues To Open
+# Launch Issue Queue
 
-This is the offline GitHub issue-opening handoff for the launch queue. The
-canonical seed details live in [docs/issues/good-first-issues.md](../issues/good-first-issues.md).
-Opening issues on GitHub requires GitHub issue-write access; that remote
-mutation is out of scope for local source validation until write access is
-available.
+The 20 public-launch issue seeds from
+[docs/issues/good-first-issues.md](../issues/good-first-issues.md) were opened
+or reconciled on GitHub on 2026-05-09. Existing overlapping issues were reused
+instead of duplicated.
 
-Use these 20 good-first-issue seeds as the public launch queue. Keep titles,
-files, acceptance criteria, and validation commands aligned with the canonical
-seed ledger before opening or updating remote issues.
+## Created Or Reused Issues
 
-## Issue 1: Record the agent-auth-bug asciinema
+1. [#2 Record the agent-auth-bug asciinema](https://github.com/qazedhq/qa-z/issues/2)
+2. [#1 Add a GIF generated from the asciinema](https://github.com/qazedhq/qa-z/issues/1)
+3. [#13 Improve the FastAPI agent bug walkthrough](https://github.com/qazedhq/qa-z/issues/13)
+4. [#14 Add a second Semgrep rule to the auth demos](https://github.com/qazedhq/qa-z/issues/14)
+5. [#6 Add a TypeScript agent bug walkthrough](https://github.com/qazedhq/qa-z/issues/6)
+6. [#15 Add a monorepo quickstart](https://github.com/qazedhq/qa-z/issues/15)
+7. [#16 Add GitHub Actions summary screenshot](https://github.com/qazedhq/qa-z/issues/16)
+8. [#17 Add SARIF code scanning screenshot](https://github.com/qazedhq/qa-z/issues/17)
+9. [#18 Expand comparison with aider, OpenHands, and Goose](https://github.com/qazedhq/qa-z/issues/18)
+10. [#19 Wire OpenSSF Scorecard badge docs](https://github.com/qazedhq/qa-z/issues/19)
+11. [#20 Add public roadmap issue template](https://github.com/qazedhq/qa-z/issues/20)
+12. [#21 Add copy-this-prompt-to-Codex snippet card](https://github.com/qazedhq/qa-z/issues/21)
+13. [#22 Add Use with Semgrep examples for custom rules](https://github.com/qazedhq/qa-z/issues/22)
+14. [#5 Add TestPyPI publish rehearsal checklist](https://github.com/qazedhq/qa-z/issues/5)
+15. [#23 Add monthly benchmark report sample](https://github.com/qazedhq/qa-z/issues/23)
+16. [#24 Add hosted demo static page plan](https://github.com/qazedhq/qa-z/issues/24)
+17. [#25 Add community examples guide](https://github.com/qazedhq/qa-z/issues/25)
+18. [#26 Add optional PR comment dry-run screenshot](https://github.com/qazedhq/qa-z/issues/26)
+19. [#27 Add enterprise case study template](https://github.com/qazedhq/qa-z/issues/27)
+20. [#28 Add OpenSSF Scorecard follow-up issue](https://github.com/qazedhq/qa-z/issues/28)
 
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-1-record-the-agent-auth-bug-asciinema)
+## Reused Existing Issues
 
-## Issue 2: Add a GIF generated from the asciinema
+- Seed 1 reused #2, replacing the older broad examples screenshot/cast issue
+  with the canonical asciinema seed.
+- Seed 2 reused #1, replacing the older broad README GIF issue with the
+  canonical GIF-from-asciinema seed.
+- Seed 5 reused #6, replacing the older TypeScript deep-check fixture issue
+  with the canonical TypeScript walkthrough seed.
+- Seed 14 reused #5, replacing the older broad publish-path issue with the
+  canonical TestPyPI rehearsal checklist seed.
 
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-2-add-a-gif-generated-from-the-asciinema)
+## Pre-Existing Extra Issues
 
-## Issue 3: Improve the FastAPI agent bug walkthrough
+These were intentionally left open because they are not duplicates of the
+canonical launch queue:
 
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-3-improve-the-fastapi-agent-bug-walkthrough)
+- [#3 Document verify baseline/candidate workflow with real artifacts](https://github.com/qazedhq/qa-z/issues/3)
+- [#4 Add runnable Next.js demo](https://github.com/qazedhq/qa-z/issues/4)
 
-## Issue 4: Add a second Semgrep rule to the auth demos
+## Operational Notes
 
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-4-add-a-second-semgrep-rule-to-the-auth-demos)
-
-## Issue 5: Add a TypeScript agent bug walkthrough
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-5-add-a-typescript-agent-bug-walkthrough)
-
-## Issue 6: Add a monorepo quickstart
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-6-add-a-monorepo-quickstart)
-
-## Issue 7: Add GitHub Actions summary screenshot
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-7-add-github-actions-summary-screenshot)
-
-## Issue 8: Add SARIF code scanning screenshot
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-8-add-sarif-code-scanning-screenshot)
-
-## Issue 9: Expand comparison with aider, OpenHands, and Goose
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-9-expand-comparison-with-aider-openhands-and-goose)
-
-## Issue 10: Wire OpenSSF Scorecard badge docs
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-10-wire-openssf-scorecard-badge-docs)
-
-## Issue 11: Add public roadmap issue template
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-11-add-public-roadmap-issue-template)
-
-## Issue 12: Add copy-this-prompt-to-Codex snippet card
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-12-add-copy-this-prompt-to-codex-snippet-card)
-
-## Issue 13: Add Use with Semgrep examples for custom rules
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-13-add-use-with-semgrep-examples-for-custom-rules)
-
-## Issue 14: Add TestPyPI publish rehearsal checklist
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-14-add-testpypi-publish-rehearsal-checklist)
-
-## Issue 15: Add monthly benchmark report sample
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-15-add-monthly-benchmark-report-sample)
-
-## Issue 16: Add hosted demo static page plan
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-16-add-hosted-demo-static-page-plan)
-
-## Issue 17: Add community examples guide
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-17-add-community-examples-guide)
-
-## Issue 18: Add optional PR comment dry-run screenshot
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-18-add-optional-pr-comment-dry-run-screenshot)
-
-## Issue 19: Add enterprise case study template
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-19-add-enterprise-case-study-template)
-
-## Issue 20: Add OpenSSF Scorecard follow-up issue
-
-Source: [docs/issues/good-first-issues.md](../issues/good-first-issues.md#issue-20-add-openssf-scorecard-follow-up-issue)
+- All seed issues include a summary, file paths, acceptance criteria,
+  validation command, suggested labels, and an explicit unblocked status.
+- Labels were applied only from existing repository labels.
+- No milestone was applied because the repository currently has no open milestones.

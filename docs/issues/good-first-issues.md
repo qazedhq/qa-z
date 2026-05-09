@@ -1,6 +1,9 @@
 # Good First Issue Seeds
 
-Open these as GitHub issues when issue-write access is available. Each seed names files, acceptance, and validation so contributors can land deterministic improvements.
+These seeds are mirrored to GitHub issues in
+[docs/launch/issues-to-open.md](../launch/issues-to-open.md). Each seed names
+files, acceptance, and validation so contributors can land deterministic
+improvements.
 
 ## Issue 1: Record the agent-auth-bug asciinema
 

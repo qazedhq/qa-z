@@ -1,4 +1,4 @@
-"""Local preflight checks for publishing QA-Z v0.9.8-alpha."""
+"""Historical local preflight checks for publishing QA-Z v0.9.8-alpha."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from urllib.request import urlopen
 from qa_z.subprocess_env import build_tool_subprocess_env
 
 
+# Historical v0.9.8-alpha bootstrap default. Current release checks should pass
+# explicit branch/tag arguments or use alpha_release_gate quality/release modes.
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
 DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"

@@ -1,4 +1,4 @@
-"""Decision, payload, and render helpers for alpha release preflight."""
+"""Decision, payload, and render helpers for historical alpha preflight."""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ from typing import Sequence
 from urllib.parse import urlparse
 
 
+# Historical v0.9.8-alpha bootstrap default. Current release checks should pass
+# explicit branch/tag arguments or use alpha_release_gate quality/release modes.
 DEFAULT_BRANCH = "codex/qa-z-bootstrap"
 DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"

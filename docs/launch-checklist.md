@@ -20,7 +20,7 @@ This checklist maps the full growth brief into repository-owned surfaces. Items 
 7. FastAPI agent bug: [../examples/fastapi-agent-bug/](../examples/fastapi-agent-bug/).
 8. TypeScript agent bug: [../examples/typescript-agent-bug/](../examples/typescript-agent-bug/).
 9. Good first issue guide: [../CONTRIBUTING.md](../CONTRIBUTING.md).
-10. Issue seeds: [issues/good-first-issues.md](issues/good-first-issues.md).
+10. Issue queue: [launch/issues-to-open.md](launch/issues-to-open.md).
 
 ## Phase 1 - 100 to 1,000 stars
 
@@ -127,6 +127,6 @@ This checklist maps the full growth brief into repository-owned surfaces. Items 
 ## External blockers
 
 - GitHub topics and social preview upload require repository settings mutation.
-- Public issues require GitHub issue-write permission.
+- GitHub issue-write access was available for the launch queue; see [launch/issues-to-open.md](launch/issues-to-open.md).
 - PyPI/TestPyPI require package registry credentials.
 - Standalone `qazedhq/qa-z-action@v0` requires a separate repository or marketplace release.

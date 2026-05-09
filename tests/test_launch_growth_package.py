@@ -31,6 +31,10 @@ def test_launch_growth_package_covers_requested_surfaces() -> None:
         "docs/case-studies.md",
         "docs/monthly-benchmark-report-template.md",
         "docs/issues/good-first-issues.md",
+        "docs/launch/actions-runtime-maintenance.md",
+        "docs/launch/demo-gif-plan.md",
+        "docs/launch/launch-post.md",
+        "docs/launch/social-preview.md",
         "docs/walkthroughs/auth-bug.md",
         "docs/walkthroughs/pr-gate.md",
         "docs/walkthroughs/sarif-code-scanning.md",
@@ -156,7 +160,25 @@ def test_launch_issue_opening_handoff_points_to_full_seed_ledger() -> None:
     issues = read("docs/issues/good-first-issues.md")
 
     assert "docs/issues/good-first-issues.md" in handoff
-    assert "20 good-first-issue seeds" in handoff
-    assert "GitHub issue-write access" in handoff
-    assert "out of scope for local source validation" in handoff
-    assert handoff.count("## Issue ") >= issues.count("## Issue ")
+    assert "20 public-launch issue seeds" in handoff
+    assert "https://github.com/qazedhq/qa-z/issues/28" in handoff
+    assert "Existing overlapping issues were reused" in handoff
+    assert "no open milestones" in handoff
+    assert handoff.count("https://github.com/qazedhq/qa-z/issues/") >= issues.count(
+        "## Issue "
+    )
+
+
+def test_launch_asset_docs_avoid_fabricated_public_claims() -> None:
+    combined = "\n".join(
+        [
+            read("docs/launch/social-preview.md"),
+            read("docs/launch/demo-gif-plan.md"),
+            read("docs/launch/launch-post.md"),
+        ]
+    )
+
+    assert "qa-z-social-preview.png" in combined
+    assert "qa-z-agent-auth-bug.cast" in combined
+    assert "No package registry publish has happened yet." in combined
+    assert "fake adoption" in combined

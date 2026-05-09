@@ -65,9 +65,11 @@ github.com/qazedhq/qa-z
 
 ## Good First Issue Seeds
 
-Open issues from this list as the public launch queue:
+The public launch issue queue is open:
 
 See [docs/issues/good-first-issues.md](issues/good-first-issues.md) for 20 detailed good-first-issue seeds with files, acceptance, and validation.
+See [docs/launch/issues-to-open.md](launch/issues-to-open.md) for the GitHub
+issue URLs and reused existing issue mapping.
 
 1. Add a screenshot or asciinema capture for the agent-auth-bug demo.
 2. Add a Python package quickstart that uses `pipx` from a GitHub tag.
@@ -91,4 +93,5 @@ See [docs/issues/good-first-issues.md](issues/good-first-issues.md) for 20 detai
 - Quickstart, comparison, GitHub Action, Codex, Claude Code, and Cursor docs are linked from the docs index.
 - Launch posts are drafted in [launch-posts.md](launch-posts.md).
 - Social preview source exists under `docs/assets/`.
-- Remote GitHub topics, social preview upload, and issue creation require repository settings access and should be verified on GitHub after this local package lands.
+- Remote GitHub topics and social preview upload require repository settings access and should be verified on GitHub after this local package lands.
+- The public launch issue queue has been opened on GitHub; see [docs/launch/issues-to-open.md](launch/issues-to-open.md).
