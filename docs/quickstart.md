@@ -75,6 +75,36 @@ qa-z review --from-run latest
 qa-z repair-prompt --from-run latest --adapter codex
 ```
 
+
+## Mixed Python/TypeScript Monorepos
+
+For repositories that contain both Python and TypeScript packages, initialize QA-Z with the monorepo profile:
+
+```bash
+qa-z init --profile monorepo --with-agent-templates --with-github-workflow
+qa-z doctor
+```
+
+Install the deterministic tools your configured checks call before running the gate. A typical local setup is:
+
+```bash
+python -m pip install -e .[dev]
+npm install
+python -m pip install semgrep
+```
+
+Then run the same local evidence path with smart selection so Python and TypeScript checks are selected from the changed files:
+
+```bash
+qa-z plan --title "Review monorepo agent change" --slug monorepo-agent-change --overwrite
+qa-z fast --selection smart --output-dir .qa-z/runs/monorepo
+qa-z deep --selection smart --from-run .qa-z/runs/monorepo
+qa-z review --from-run .qa-z/runs/monorepo
+qa-z repair-prompt --from-run .qa-z/runs/monorepo --adapter codex
+```
+
+This path stays deterministic and local by default: QA-Z runs the configured subprocess checks, records artifacts under `.qa-z/runs/**`, and does not call live agents or execute repairs. The starter GitHub workflow mirrors that gate by validating `qa-z doctor --json`, installing Node dependencies when a `package.json` is present, and running the QA-Z checks in CI.
+
 If `qa-z` is not on PATH, use `python -m qa_z` for the same commands.
 
 Use `qa-z doctor --json` when automation needs structured config or onboarding errors, and use `qa-z doctor --strict` when warnings such as missing agent instruction templates should fail a handoff gate.

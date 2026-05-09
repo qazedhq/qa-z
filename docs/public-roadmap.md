@@ -9,6 +9,7 @@ QA-Z is aiming to become the AI Code QA layer: deterministic merge evidence befo
 - Publish the social preview.
 - Open clear good-first issues.
 - Share the Show HN and social launch drafts.
+- Document the mixed Python/TypeScript monorepo quickstart path.
 
 ## 100 to 1,000 stars
 
@@ -31,7 +32,8 @@ QA-Z is aiming to become the AI Code QA layer: deterministic merge evidence befo
 - Provide a stable GitHub Action entry point.
 - Add optional PR comment behavior.
 - Improve SARIF/code-scanning examples.
-- Add monorepo, TypeScript-first, and security-focused demos.
+- Add TypeScript-first and security-focused demos.
+- Expand monorepo docs into a recorded walkthrough.
 - Publish the Agent Merge Safety Benchmark.
 
 ## 10,000 to 30,000 stars
