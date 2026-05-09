@@ -4,6 +4,10 @@ AI wrote a bad FastAPI auth check. QA-Z caught it.
 
 This runnable demo mirrors the five-minute safety-belt story with a FastAPI-shaped app. It keeps the test surface dependency-light by testing pure functions directly; if FastAPI is installed, `app/main.py` also exposes a small app object.
 
+## Terminal proof
+
+The shared launch proof [qa-z-agent-auth-bug.cast](../../docs/assets/qa-z-agent-auth-bug.cast) shows the same evidence shape used here: `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`. This FastAPI example is runnable, not placeholder-only.
+
 ## Baseline
 
 ```bash

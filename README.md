@@ -10,12 +10,19 @@
 
 AI agents write code fast. QA-Z turns their changes into deterministic merge evidence: contracts, checks, repair prompts, and verification reports.
 
-Planned demo asset: `docs/assets/qa-z-demo.gif`. Until that GIF lands, run the local demo:
+See QA-Z catch a risky agent auth change before merge.
+
+![QA-Z terminal demo](docs/assets/qa-z-demo.svg)
+
+This is a deterministic terminal cast proof, not a GIF. The checked-in sources are [docs/assets/qa-z-demo.cast](docs/assets/qa-z-demo.cast), [docs/assets/qa-z-demo.svg](docs/assets/qa-z-demo.svg), and the fuller [agent-auth-bug asciinema cast](docs/assets/qa-z-agent-auth-bug.cast).
 
 ```bash
 pipx install git+https://github.com/qazedhq/qa-z.git
+qa-z init --profile python --with-agent-templates
+qa-z doctor
 qa-z demo auth-bug
-qa-z guard
+qa-z guard --from-run latest --adapter codex
+qa-z repair-prompt --from-run latest --adapter codex
 ```
 
 ## Quickstart

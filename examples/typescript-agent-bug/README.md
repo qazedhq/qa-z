@@ -4,6 +4,10 @@ TypeScript agent bug: an agent changed invoice authorization so any signed-in us
 
 This demo is dependency-light. The QA-Z checks run local Node scripts so the example can be replayed without installing npm packages, while the source stays TypeScript-shaped.
 
+## Terminal proof
+
+The shared launch proof [qa-z-agent-auth-bug.cast](../../docs/assets/qa-z-agent-auth-bug.cast) shows the same deterministic flow used here: `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`. This TypeScript example is runnable, not placeholder-only.
+
 ## Baseline
 
 ```bash

@@ -11,6 +11,15 @@ Start here:
 | [fastapi-demo](fastapi-demo/) | Runnable | Passing fast/review flow and intentional failing repair-prompt flow |
 | [nextjs-demo](nextjs-demo/) | Placeholder-only | Planned future Next.js workflow boundary |
 
+## Visual proof
+
+![QA-Z terminal demo](../docs/assets/qa-z-demo.svg)
+
+- README launch proof: [qa-z-demo.cast](../docs/assets/qa-z-demo.cast)
+- Agent auth bug proof: [qa-z-agent-auth-bug.cast](../docs/assets/qa-z-agent-auth-bug.cast)
+- The agent-auth-bug cast shows `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`.
+- Runnable examples are labeled `Runnable`; placeholder examples stay labeled `Placeholder-only` until they include their own config, source, tests, and deterministic commands.
+
 ## Agent Auth Bug
 
 From `examples/agent-auth-bug/`:

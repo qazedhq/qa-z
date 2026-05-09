@@ -150,7 +150,9 @@ def test_public_install_docs_and_readme_reference_guard_and_skill_pack() -> None
 
     assert "Make AI coding safe to merge." in readme
     assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.\n")
-    assert "docs/assets/qa-z-demo.gif" in readme
+    assert "docs/assets/qa-z-demo.svg" in readme
+    assert "docs/assets/qa-z-demo.cast" in readme
+    assert "not a GIF" in readme
     assert "qa-z guard" in readme
     assert "qa-z skill install all" in readme
     assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
