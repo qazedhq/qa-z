@@ -536,12 +536,9 @@ def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
     result = module.analyze_status_lines(
         [
             " M docs/launch/issues-to-open.md",
-            "?? marketing/x/posts/day-00-launch.md",
-            "?? marketing/x/scripts/validate_x_posts.py",
             " M tests/test_examples.py",
             "?? tests/test_public_docs_current_truth.py",
             " M tests/test_launch_growth_package.py",
-            "?? tests/test_x_launch_marketing.py",
             " M tests/test_sarif_reporter.py",
         ]
     )
@@ -549,12 +546,9 @@ def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
 
     assert batches["current_truth_release_surface"]["changed_paths"] == [
         "docs/launch/issues-to-open.md",
-        "marketing/x/posts/day-00-launch.md",
-        "marketing/x/scripts/validate_x_posts.py",
         "tests/test_examples.py",
         "tests/test_public_docs_current_truth.py",
         "tests/test_launch_growth_package.py",
-        "tests/test_x_launch_marketing.py",
     ]
     assert batches["repair_session_publish"]["changed_paths"] == [
         "tests/test_sarif_reporter.py"
@@ -564,8 +558,6 @@ def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
     )
     assert "tests/test_examples.py" in validation
     assert "tests/test_public_docs_current_truth.py" in validation
-    assert "tests/test_x_launch_marketing.py" in validation
-    assert "marketing/x/scripts/validate_x_posts.py" in validation
     assert result["unassigned_source_paths"] == []
 
 
