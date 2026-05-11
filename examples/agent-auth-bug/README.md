@@ -4,7 +4,7 @@ AI wrote a bad auth change. QA-Z caught it.
 
 This five-minute demo shows QA-Z turning an unsafe invoice authorization change into deterministic repair evidence.
 
-The demo does not call live agents, does not edit code autonomously, and does not require a web server. It uses local Python functions, pytest, ruff, and an optional Semgrep rule.
+The demo does not call live agents, does not edit code autonomously, and does not require a web server. It uses local Python functions, pytest, ruff, and optional Semgrep rules.
 
 ## Terminal proof
 
@@ -30,7 +30,7 @@ python -m pip install semgrep
 qa-z deep --from-run .qa-z/runs/baseline
 ```
 
-The local rule in `semgrep-rules/auth-bypass.yml` flags the risky `return actor_id is not None` pattern.
+The local rules in `semgrep-rules/auth-bypass.yml` flag two deterministic auth signals: the risky `return actor_id is not None` shortcut, and an invoice authorization helper that rejects anonymous users but never returns an `actor_id == invoice.owner_id` owner check.
 
 ## Candidate repair and verification
 

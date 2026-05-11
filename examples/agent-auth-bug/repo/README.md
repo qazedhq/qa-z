@@ -9,7 +9,8 @@ Story:
 
 - An AI agent weakened invoice authorization.
 - `pytest` catches the non-owner access regression.
-- QA-Z turns the failure into a repair prompt and merge verdict.
+- Semgrep flags the signed-in-user shortcut and the missing invoice owner comparison.
+- QA-Z turns the deterministic evidence into a repair prompt and merge verdict.
 
 Run from this directory:
 
