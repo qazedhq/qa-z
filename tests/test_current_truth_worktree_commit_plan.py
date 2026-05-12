@@ -120,6 +120,30 @@ def test_docs_warn_planner_artifact_writers_are_serial() -> None:
     assert "local planner artifact writers serially" in schema
 
 
+def test_alpha_rc_packet_keeps_deferred_scope_and_remote_proof_explicit() -> None:
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "## Alpha Release-Candidate Decision Packet - 2026-05-12" in commit_plan
+    assert "`status=ready` with `changed_batch_count=0`" in commit_plan
+    assert "`product_decision_path_count=0`" in commit_plan
+    assert "`cross_cutting_count=0`" in commit_plan
+    assert "`deferred_alpha_scope_path_count=25`" in commit_plan
+    assert "`alpha release gate passed`, `27/27`" in commit_plan
+    assert "`release_path_state=local_only_remote_preflight`" in commit_plan
+    assert "Deferred Marketing/X packet:" in commit_plan
+    assert "Deferred paths are `marketing/x/**` and `tests/test_x_automation.py`" in (
+        commit_plan
+    )
+    assert "Do not stage Marketing/X source" in commit_plan
+    assert "Deferred Claude compatibility mirror packet:" in commit_plan
+    assert "Do not stage, delete, or promote `.claude/**`" in commit_plan
+    assert "Remote and publishing proof packet:" in commit_plan
+    assert "remote checks stayed skipped" in commit_plan
+    assert "Production readiness is not claimed." in commit_plan
+
+
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     readme = read_current_truth_anchors()
