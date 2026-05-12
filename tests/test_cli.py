@@ -377,6 +377,7 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     assert "Source self-inspection: .qa-z/loops/latest/self_inspect.json" in output
     assert "Source loop: inspect-loop (2026-04-17T00:00:00Z)" in output
     assert "Refresh hint: run `qa-z select-next --refresh`" in output
+
     assert (
         "Live repository: modified=25; untracked=346; staged=0; "
         "runtime_artifacts=2; benchmark_results=1; dirty_benchmark_results=0; "
@@ -411,6 +412,35 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
         "evidence: git_status: modified=25; untracked=346; staged=0; "
         "areas=docs:2, source:1" in output
     )
+
+
+def test_render_select_next_stdout_surfaces_stale_self_inspection_refresh_command(
+    tmp_path: Path,
+) -> None:
+    output = render_select_next_stdout(
+        {
+            "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+            "source_self_inspection_loop_id": "inspect-old",
+            "source_self_inspection_generated_at": "2026-04-21T00:00:00Z",
+            "source_self_inspection_stale_for_backlog": True,
+            "source_self_inspection_refresh_commands": [
+                "python -m qa_z select-next --refresh --count 3 --json"
+            ],
+            "selected_tasks": [],
+        },
+        SelectionArtifactPaths(
+            selected_tasks_path=(
+                tmp_path / ".qa-z" / "loops" / "latest" / "selected_tasks.json"
+            ),
+            loop_plan_path=tmp_path / ".qa-z" / "loops" / "latest" / "loop_plan.md",
+            history_path=tmp_path / ".qa-z" / "loops" / "history.jsonl",
+        ),
+        tmp_path,
+    )
+
+    assert "Source self-inspection stale for backlog: true" in output
+    assert "Source self-inspection refresh commands:" in output
+    assert "  - python -m qa_z select-next --refresh --count 3 --json" in output
 
 
 def test_render_self_inspect_stdout_surfaces_top_candidate_details(

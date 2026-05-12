@@ -163,6 +163,76 @@ def test_select_next_records_reason_when_no_backlog_tasks_are_open(
     assert history["open_backlog_count"] == 0
 
 
+def test_select_next_marks_stale_self_inspection_context_after_backlog_update(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-04-22T00:00:00Z",
+            "items": [
+                {
+                    "id": "fresh-work",
+                    "title": "Fresh backlog work",
+                    "category": "workflow_gap",
+                    "evidence": [{"source": "test", "path": "fresh.json"}],
+                    "impact": 4,
+                    "likelihood": 4,
+                    "confidence": 4,
+                    "repair_cost": 2,
+                    "priority_score": 50,
+                    "status": "open",
+                    "recommendation": "create_repair_session",
+                    "signals": [],
+                    "first_seen_at": "2026-04-22T00:00:00Z",
+                    "last_seen_at": "2026-04-22T00:00:00Z",
+                    "recurrence_count": 1,
+                }
+            ],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json",
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-old",
+            "generated_at": "2026-04-21T00:00:00Z",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    paths = self_improvement_selection_module.select_next_tasks(
+        root=tmp_path,
+        count=1,
+        now="2026-04-22T03:04:05Z",
+        loop_id="loop-fresh",
+    )
+
+    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    plan = paths.loop_plan_path.read_text(encoding="utf-8")
+    history = json.loads(
+        (tmp_path / ".qa-z" / "loops" / "history.jsonl").read_text(encoding="utf-8")
+    )
+
+    assert selected["selected_tasks"][0]["id"] == "fresh-work"
+    assert selected["source_self_inspection_stale_for_backlog"] is True
+    assert selected["source_self_inspection_refresh_commands"] == [
+        "python -m qa_z select-next --refresh --count 3 --json"
+    ]
+    assert "live_repository" not in selected
+    assert "- Source self-inspection stale for backlog: true" in plan
+    assert "- Source self-inspection refresh commands:" in plan
+    assert "  - `python -m qa_z select-next --refresh --count 3 --json`" in plan
+    assert history["source_self_inspection_stale_for_backlog"] is True
+    assert history["source_self_inspection_refresh_commands"] == [
+        "python -m qa_z select-next --refresh --count 3 --json"
+    ]
+    assert "live_repository" not in history
+
+
 def test_self_improvement_module_keeps_selection_defs_out_of_monolith() -> None:
     source = Path(self_improvement_module.__file__).read_text(encoding="utf-8")
     tree = compile(

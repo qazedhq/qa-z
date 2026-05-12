@@ -84,7 +84,11 @@ def select_next_tasks(
     selection_state = (
         "blocked_no_candidates" if selection_gap_reason is not None else None
     )
-    selection_context = latest_self_inspection_selection_context(root)
+    backlog_updated_at = str(backlog.get("updated_at") or "").strip()
+    selection_context = latest_self_inspection_selection_context(
+        root,
+        min_generated_at=backlog_updated_at or None,
+    )
 
     latest_dir = root / ".qa-z" / "loops" / "latest"
     latest_dir.mkdir(parents=True, exist_ok=True)
@@ -111,6 +115,23 @@ def select_next_tasks(
             generated_at=generated_at,
             selected_items=selected_items,
             live_repository=selection_context.get("live_repository"),
+            source_self_inspection=selection_context.get("source_self_inspection"),
+            source_self_inspection_loop_id=selection_context.get(
+                "source_self_inspection_loop_id"
+            ),
+            source_self_inspection_generated_at=selection_context.get(
+                "source_self_inspection_generated_at"
+            ),
+            source_self_inspection_stale_for_backlog=bool(
+                selection_context.get("source_self_inspection_stale_for_backlog")
+            ),
+            source_self_inspection_refresh_commands=[
+                str(command)
+                for command in selection_context.get(
+                    "source_self_inspection_refresh_commands", []
+                )
+                if str(command).strip()
+            ],
             state=selection_state,
             selection_gap_reason=selection_gap_reason,
             open_backlog_count=(
