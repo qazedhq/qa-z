@@ -86,3 +86,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can now make a concrete release-scope decision by group instead of reopening a flat 50-path list.
 - Remaining blocker: human release owner must decide whether the operating-model package and Marketing/X surface belong in this alpha release; cross-cutting schema/current-truth/report hunks still need patch-add ownership.
 - Next safe slice: after the release-scope decision, rerun the strict worktree plan and alpha gate; if still blocked only by stale-guard proof, add the direct guard-level stale-current-truth canary.
+
+
+## 2026-05-12 Alpha Release-Candidate Decision Packet
+- Repo: JustTyping
+- Lane: local alpha gate -> release-candidate decision packet -> deferred scope
+- User-facing flow: worktree commit plan, alpha release gate, and release preflight operator handoff
+- Slice type: Evidence / Cleanup
+- Before: four tracked truth files were still modified, Marketing/X and Claude mirror scope remained untracked, and remote/publishing proof was intentionally not run.
+- Root cause: the local alpha gate was green, but release-candidate status still needed one durable packet that separated local readiness from deferred product/network and compatibility surfaces.
+- Change made: closed the four tracked truth files in `c6fac96`, then added a release-candidate packet to `docs/reports/worktree-commit-plan.md` covering the strict plan, include-ignored plan, alpha gate, local no-remote preflight, deferred Marketing/X scope, deferred Claude compatibility mirror, and required remote proof command.
+- Validation run: `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\worktree_commit_plan.py --include-ignored --summary-only --json`; `python scripts\alpha_release_gate.py --quick --allow-dirty --json`; `python scripts\alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json`.
+- Evidence: strict plan returned `ready`, `changed_batch_count=0`, `product_decision_path_count=0`, and `cross_cutting_count=0`; include-ignored plan returned `ready` with `deferred_alpha_scope_path_count=25`; alpha gate returned `27/27`; local preflight returned `release_path_state=local_only_remote_preflight`.
+- Gate delta: tracked modified truth files moved from dirty to committed; deferred out-of-alpha scope remains visible and uncommitted; production readiness is still not claimed.
+- User impact: a maintainer can review the alpha release-candidate boundary without confusing local green gates with remote, publish, Marketing/X, or Claude mirror approval.
+- Remaining blocker: remote proof, package publishing, deployment, and any Marketing/X or Claude mirror promotion require explicit human/nonlocal approval.
+- Next safe slice: add one local regression that locks release-candidate truth-surface consistency without staging deferred Marketing/X or `.claude/**`.

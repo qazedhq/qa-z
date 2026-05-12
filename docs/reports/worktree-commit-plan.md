@@ -181,6 +181,74 @@ with `product_decision_paths_present`, but the current five groups roll up into
 | `marketing_x_surface` | `deferred_out_of_alpha_scope` | Keep out of QA-Z alpha unless a product owner approves the credential-gated network surface. |
 | `marketing_x_tests` | `deferred_out_of_alpha_scope` | Keep with Marketing/X only if that product surface is approved. |
 
+## Alpha Release-Candidate Decision Packet - 2026-05-12
+
+This packet records the release-candidate boundary after the remaining
+truth-file closure commit `c6fac96` and before any remote, package-registry, or
+network proof. It is an operator decision artifact, not production readiness.
+
+Current local evidence:
+
+- Strict worktree plan:
+  `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`
+  returned `status=ready` with `changed_batch_count=0`,
+  `changed_path_count=25`, `product_decision_path_count=0`,
+  `product_decision_group_count=0`, `cross_cutting_count=0`,
+  `release_scope_decision_path_count=25`, and
+  `deferred_alpha_scope_path_count=25`.
+- Include-ignored worktree plan:
+  `python scripts\worktree_commit_plan.py --include-ignored --summary-only --json`
+  returned `status=ready` with `changed_path_count=16255`,
+  `generated_artifact_count=37`, `generated_local_only_count=23`,
+  `generated_local_by_default_count=14`, and the same `25` deferred
+  out-of-alpha paths.
+- Alpha gate:
+  `python scripts\alpha_release_gate.py --quick --allow-dirty --json` returned
+  `alpha release gate passed`, `27/27`, while remote checks stayed skipped.
+- Local no-remote preflight:
+  `python scripts\alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json`
+  returned `release preflight passed`, `6` passed, `4` skipped, and
+  `release_path_state=local_only_remote_preflight`.
+
+Deferred Marketing/X packet:
+
+- Deferred paths are `marketing/x/**` and `tests/test_x_automation.py`.
+- Scope is deferred because the surface is product-owned marketing/network
+  automation that can require X credentials, call X APIs, and mutate posting
+  queue state when enabled.
+- Do not stage Marketing/X source, tests, queue state, credentials, logs, or
+  local runtime state for this QA-Z alpha candidate.
+- Future approval requires an explicit product/network decision plus separate
+  no-credential dry-run proof before any source staging, and live credentialed
+  proof must remain a human/nonlocal release action.
+
+Deferred Claude compatibility mirror packet:
+
+- Deferred paths are `.claude/**`.
+- `.claude/**` is a compatibility mirror. Codex-native source of truth remains
+  `.codex/agents/*.toml`, `.agents/skills/*/SKILL.md`, and `docs/agent/*.md`.
+- Do not stage, delete, or promote `.claude/**` for this QA-Z alpha candidate
+  unless a compatibility release decision says the mirror must be synchronized.
+
+Remote and publishing proof packet:
+
+- Configured origin target is `qazedhq/qa-z`; local preflight can verify the
+  origin string and branch without network.
+- Remote repository checks, remote reachability, remote emptiness, tags,
+  package publish, deployment, and production readiness were not run in this
+  local sweep.
+- Required next human/nonlocal action:
+  run `python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json`
+  from an environment where remote proof is allowed, then decide whether push,
+  tag, GitHub release, TestPyPI, PyPI, or deployment is in scope.
+- Until that proof exists, QA-Z alpha release-candidate readiness is local and
+  partial. Production readiness is not claimed.
+
+The only normal staging candidates after this packet are tracked packet or
+truth-surface edits that improve this decision evidence. The `25` deferred
+out-of-alpha paths must remain untracked for the QA-Z alpha candidate unless
+their owning release decision changes.
+
 ## Preflight
 
 `tests/test_benchmark.py` has already been formatted once during triage, but it is
