@@ -39,6 +39,8 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "changed_batches" in text
         assert "shared_patch_add_paths" in text
         assert "cross_cutting_groups" in text
+        assert "product_decision_paths" in text
+        assert "product_decision_groups" in text
         assert "repository" in text
     assert "--untracked-files=all" in commit_plan
     assert "shared_patch_add_paths" in commit_plan
@@ -74,6 +76,8 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "batch_count" in text
         assert "generated_local_only_count" in text
         assert "generated_local_by_default_count" in text
+        assert "product_decision_path_count" in text
+        assert "product_decision_group_count" in text
 
         assert "generated_exclude_count" in text
         assert "Global attention reasons:" in text
@@ -104,6 +108,7 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "patch_command_text" in text
         assert "batch filters preserve generated_artifacts_present" in text
         assert "cross_cutting_paths_present" in text
+        assert "product_decision_paths_present" in text
         assert "output write failures return exit code `2`" in text
 
 
