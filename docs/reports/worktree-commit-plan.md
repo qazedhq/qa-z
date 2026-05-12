@@ -183,9 +183,16 @@ with `product_decision_paths_present`, but the current five groups roll up into
 
 ## Alpha Release-Candidate Decision Packet - 2026-05-12
 
-This packet records the release-candidate boundary after the remaining
-truth-file closure commit `c6fac96` and before any remote, package-registry, or
-network proof. It is an operator decision artifact, not production readiness.
+This packet refreshes the release-candidate boundary after the local alpha
+closure commits and the read-only remote proof pass. It is an operator decision
+artifact, not production readiness.
+
+- Proof timestamp: `2026-05-12T12:58Z`.
+- Source HEAD at proof time: `aa66625d81bac9437cfe11287a0401abd253f652`.
+- Branch at proof time: `main`.
+- Remote target: `https://github.com/qazedhq/qa-z.git`.
+- Publish mode for this packet: `PROOF_ONLY`; no push, tag, GitHub release,
+  package publish, deployment, credential use, or queue mutation was attempted.
 
 Current local evidence:
 
@@ -208,7 +215,66 @@ Current local evidence:
 - Local no-remote preflight:
   `python scripts\alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json`
   returned `release preflight passed`, `6` passed, `4` skipped, and
-  `release_path_state=local_only_remote_preflight`.
+  `release_path_state=local_only_remote_preflight`. Skip-remote local preflight remains separate from read-only remote proof, and its remote checks stayed skipped by design.
+- Full local proof refresh:
+  `python scripts\alpha_release_gate.py --quick --allow-dirty --json` carried
+  the local proof bundle through `pytest` (`1600 passed`), Ruff check, Ruff
+  format check, mypy (`533` source files), CLI help smoke, text hygiene, and
+  worktree-plan evidence.
+
+Read-only remote proof:
+
+- `python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json`
+  returned `release preflight passed`, `9` passed, `1` skipped,
+  `repository_http_status=200`, `repository_visibility=public`,
+  `repository_archived=false`, `repository_default_branch=main`,
+  `remote_ref_count=24`, `remote_ref_head_count=5`,
+  `remote_ref_tag_count=2`, and
+  `release_path_state=blocked_remote_publish`.
+- `git ls-remote --refs origin` returned remote refs without credentials or
+  mutation. Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`; tags include
+  `v0.9.8-alpha` and `v0.9.9-alpha`.
+- Local proof HEAD is 12 commits ahead of remote `main`, so this is not an
+  empty-remote direct publish. Remote alpha readiness is partial: repository
+  existence and readability are proven, but publishing has not been approved or
+  executed.
+
+Publish decision packet:
+
+- Push allowed: no, not in this `PROOF_ONLY` run. Missing approval: explicit
+  operator approval for branch push or direct main update.
+- Tag creation allowed: no. Missing approval: explicit release tag and signer or
+  annotated-tag policy; existing remote tags `v0.9.8-alpha` and `v0.9.9-alpha`
+  must not be reused.
+- GitHub release creation allowed: no. Missing approval: explicit GitHub release
+  target, release body, and post-CI evidence.
+- Package publishing allowed: no. Missing approval: separate PyPI/TestPyPI or
+  package-registry release plan; `docs/package-publish-plan.md` keeps PyPI for
+  `v0.10.0-beta`, not this alpha RC proof packet.
+- Deployment relevant: no live service deployment is part of QA-Z alpha RC; this
+  product is a local CLI/control-plane package.
+- Push/tag/release/package publish: not executed in PROOF_ONLY mode.
+
+If a human approves publishing later, run the proof commands again first, then
+use one approved path:
+
+```bash
+python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting
+python scripts\alpha_release_gate.py --quick --allow-dirty --json
+python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json
+git push -u origin HEAD:codex/alpha-rc-remote-proof-20260512
+```
+
+Only after remote CI and public raw proof pass on the pushed SHA may a release
+operator choose a new approved tag:
+
+```bash
+git tag -a <approved-alpha-tag> -m "QA-Z <approved-alpha-tag>"
+git push origin <approved-alpha-tag>
+```
+
+Direct `main` push, GitHub release creation, and package-registry publish each
+need separate approval and fresh post-action evidence.
 
 Deferred Marketing/X packet:
 
@@ -221,6 +287,9 @@ Deferred Marketing/X packet:
 - Future approval requires an explicit product/network decision plus separate
   no-credential dry-run proof before any source staging, and live credentialed
   proof must remain a human/nonlocal release action.
+- Later proof must show no accidental queue mutation, no credential leakage, and
+  a reviewed boundary between content drafts, follow targets, local state, and
+  any real X API call.
 
 Deferred Claude compatibility mirror packet:
 
@@ -229,20 +298,22 @@ Deferred Claude compatibility mirror packet:
   `.codex/agents/*.toml`, `.agents/skills/*/SKILL.md`, and `docs/agent/*.md`.
 - Do not stage, delete, or promote `.claude/**` for this QA-Z alpha candidate
   unless a compatibility release decision says the mirror must be synchronized.
+- Later proof must compare mirror contents against the Codex-native assets and
+  identify the exact compatibility audience before `.claude/**` is staged.
 
 Remote and publishing proof packet:
 
-- Configured origin target is `qazedhq/qa-z`; local preflight can verify the
-  origin string and branch without network.
-- Remote repository checks, remote reachability, remote emptiness, tags,
-  package publish, deployment, and production readiness were not run in this
-  local sweep.
-- Required next human/nonlocal action:
-  run `python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json`
-  from an environment where remote proof is allowed, then decide whether push,
-  tag, GitHub release, TestPyPI, PyPI, or deployment is in scope.
-- Until that proof exists, QA-Z alpha release-candidate readiness is local and
-  partial. Production readiness is not claimed.
+- Configured origin target is `qazedhq/qa-z`; local and read-only remote
+  preflight both confirm that target.
+- Remote repository checks and reachability are proven current as of the proof
+  timestamp, but remote publish remains blocked by `PROOF_ONLY` approval
+  boundaries and the non-empty remote state.
+- QA-Z local alpha RC readiness: `Yes` for the local proof packet.
+- QA-Z remote alpha readiness: `Partial`; remote read proof is current, publish
+  action is not approved or executed.
+- Production readiness: `No`. Package registry publishing, deployment,
+  production support policy, and human release approval remain outside this
+  packet. Production readiness is not claimed.
 
 The only normal staging candidates after this packet are tracked packet or
 truth-surface edits that improve this decision evidence. The `25` deferred

@@ -102,3 +102,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: a maintainer can review the alpha release-candidate boundary without confusing local green gates with remote, publish, Marketing/X, or Claude mirror approval.
 - Remaining blocker: remote proof, package publishing, deployment, and any Marketing/X or Claude mirror promotion require explicit human/nonlocal approval.
 - Next safe slice: add one local regression that locks release-candidate truth-surface consistency without staging deferred Marketing/X or `.claude/**`.
+
+
+## 2026-05-12 Alpha RC Remote/Publishing Proof Packet
+- Repo: JustTyping
+- Lane: alpha RC local proof -> read-only remote proof -> publish decision packet
+- User-facing flow: worktree commit plan, alpha release preflight, alpha gate, and release-candidate handoff
+- Slice type: Evidence / Contract
+- Before: the RC packet intentionally stopped at local proof; remote repository checks, publish decisioning, and freshness regression were not yet captured in the tracked truth surface.
+- Root cause: the local alpha RC state was green, but maintainers still needed a timestamped source-head packet that separated skip-remote preflight from read-only remote proof and kept publish actions blocked in `PROOF_ONLY`.
+- Change made: refreshed `docs/reports/worktree-commit-plan.md` with source HEAD, proof timestamp, local/remote preflight evidence, remote ref counts, non-empty remote state, publish approval boundaries, deferred Marketing/X and Claude mirror proof requirements, and final skeptical readiness labels.
+- Validation run: `python -m pytest tests\test_current_truth_worktree_commit_plan.py -q`; strict/final gates recorded in the worktrain closeout.
+- Evidence: local preflight passed with `6` passed / `4` skipped; read-only remote preflight passed with `9` passed / `1` skipped, `repository_http_status=200`, `repository_visibility=public`, `remote_ref_count=24`, and `release_path_state=blocked_remote_publish`; `git ls-remote --refs origin` listed remote `main` plus `v0.9.8-alpha` and `v0.9.9-alpha`.
+- Gate delta: remote existence and reachability moved from unproven to read-only proven; publishing remains intentionally unexecuted; production readiness remains `No`.
+- User impact: a maintainer can now decide push/tag/release/package next steps from one tracked packet without confusing local green proof, read-only remote proof, and publish approval.
+- Remaining blocker: human approval is required for push, tag, GitHub release, and package publish; deferred Marketing/X and `.claude/**` remain untracked and out of alpha.
+- Next safe slice: after human publish approval, push an approved proof branch and capture remote CI plus public raw evidence on the pushed SHA.
