@@ -385,6 +385,14 @@ def test_commit_plan_payload_includes_compact_summary_counts() -> None:
         "shared_patch_add_count": 2,
         "multi_batch_path_count": 0,
         "unassigned_source_path_count": 0,
+        "product_decision_path_count": 0,
+        "product_decision_group_count": 0,
+        "release_scope_decision_path_count": 0,
+        "release_scope_decision_group_count": 0,
+        "approved_alpha_support_path_count": 0,
+        "approved_alpha_support_group_count": 0,
+        "deferred_alpha_scope_path_count": 0,
+        "deferred_alpha_scope_group_count": 0,
         "attention_reason_count": 0,
     }
 
