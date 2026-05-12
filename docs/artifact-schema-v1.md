@@ -642,7 +642,14 @@ The top-level gate JSON includes:
   optional `generated_artifact_dir_count`, optional
   `generated_local_only_count`, optional `generated_local_by_default_count`,
   `cross_cutting_count`, optional `cross_cutting_group_count`,
-  `unassigned_source_path_count`, `multi_batch_path_count`, and
+  `unassigned_source_path_count`, optional `product_decision_path_count`,
+  optional `product_decision_group_count`, optional
+  `release_scope_decision_path_count`, optional
+  `release_scope_decision_group_count`, optional
+  `approved_alpha_support_path_count`, optional
+  `approved_alpha_support_group_count`, optional
+  `deferred_alpha_scope_path_count`, optional
+  `deferred_alpha_scope_group_count`, `multi_batch_path_count`, and
   `next_action_count`: compact
   source/generated commit-split diagnostics from
   `scripts/worktree_commit_plan.py --include-ignored --json`
@@ -657,7 +664,8 @@ The top-level gate JSON includes:
 - optional `evidence.worktree_commit_plan.head`: copied worktree commit-plan
   repository head context, when the helper artifact recorded it
 - optional `evidence.worktree_commit_plan.attention_reasons`: machine-readable
-  strict worktree plan blockers such as `generated_artifacts_present`
+  strict worktree plan blockers such as `generated_artifacts_present` or
+  unresolved `product_decision_paths_present`
 - optional `evidence.worktree_commit_plan.attention_reason_count`: count of
   strict worktree plan blockers summarized from `attention_reasons`
 - optional `evidence.worktree_commit_plan.strict_mode`: copied strict audit
@@ -746,11 +754,17 @@ The JSON includes:
   require attention, such as `generated_artifacts_present`
 - `summary`: compact counts for batches, changed paths, generated artifacts,
   cross-cutting paths, `cross_cutting_group_count`, `report_path_count`,
-  multi-batch paths, and unassigned source paths, plus `batch_count`,
+  multi-batch paths, unassigned source paths, remaining unresolved
+  product-decision paths, release-scope decisions, approved alpha-support
+  paths, and deferred alpha-scope paths, plus `batch_count`,
   `changed_path_count`, `unchanged_batch_count`,
   `generated_artifact_file_count`, `generated_artifact_dir_count`,
   `generated_local_only_count`, `generated_local_by_default_count`,
-  `shared_patch_add_count`, and `attention_reason_count`
+  `shared_patch_add_count`, `product_decision_path_count`,
+  `product_decision_group_count`, `release_scope_decision_path_count`,
+  `release_scope_decision_group_count`, `approved_alpha_support_path_count`,
+  `approved_alpha_support_group_count`, `deferred_alpha_scope_path_count`,
+  `deferred_alpha_scope_group_count`, and `attention_reason_count`
 - `batches`: ordered commit-plan batches with `id`, `title`, commit `message`,
   `validation_commands`, `changed_count`, and `changed_paths`
 - `batches[].staging_plan`: machine-readable staging guidance with
@@ -774,6 +788,25 @@ The JSON includes:
   and current-truth tests that should be patch-added with the feature batch they
   describe
 - `report_paths`: local report files under `docs/reports/**`
+- `release_scope_decision_paths`: source-like paths that are intentionally
+  outside normal release batch rules but now have an explicit alpha-scope
+  decision, such as operating-model assets or credential-gated marketing/network
+  automation under `marketing/x/**`
+- `release_scope_decision_groups`: ownership-sized groups for those paths,
+  including each group's `id`, `title`, `ownership`, `release_scope`,
+  `path_count`, `paths`, and `next_action`; current release scopes are
+  `approved_alpha_support_scope`, `deferred_out_of_alpha_scope`, or
+  `unresolved_product_decision`
+- `approved_alpha_support_paths` and `approved_alpha_support_groups`: the
+  Codex-native operating model and operating-model validator approved as QA-Z
+  alpha support scope
+- `deferred_alpha_scope_paths` and `deferred_alpha_scope_groups`: the Claude
+  compatibility mirror plus Marketing/X surface and tests, deferred out of the
+  QA-Z alpha scope unless a separate product/network or compatibility release
+  decision approves them
+- `product_decision_paths` and `product_decision_groups`: remaining unresolved
+  product/release ownership items only; known approved/deferred groups do not
+  count as unresolved blockers
 - `shared_patch_add_paths`: ordered patch-add candidate list combining
   cross-cutting paths and report paths for selected-batch staging follow-through
 - `cross_cutting_groups`: operator-sized shared patch-add groups, currently

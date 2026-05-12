@@ -41,13 +41,17 @@ The helper reads `git status --short --untracked-files=all`, reports per-batch
 changed paths, and keeps `generated_artifact_paths`,
 `generated_local_only_paths`, `generated_local_by_default_paths`,
 `cross_cutting_paths`, `shared_patch_add_paths`, `cross_cutting_groups`, report
-paths, and `unassigned_source_paths` visible so source batches are not mixed
-with generated release evidence by accident.
+paths, `unassigned_source_paths`, `product_decision_paths`,
+`product_decision_groups`, `release_scope_decision_paths`, and
+`release_scope_decision_groups` visible so source batches are not mixed with
+generated release evidence or unapproved product/network surfaces by accident.
 Its summary now also records `generated_local_only_count` and
-`generated_local_by_default_count` plus `cross_cutting_group_count`, so the
-same helper artifact separates stage-never runtime output from
-local-by-default benchmark evidence and shared patch-add review groups that
-still need an intentional freeze-or-drop or patch-add decision.
+`generated_local_by_default_count` plus `cross_cutting_group_count` and
+`product_decision_path_count`, `release_scope_decision_path_count`,
+`approved_alpha_support_path_count`, and `deferred_alpha_scope_path_count`, so
+the same helper artifact separates stage-never runtime output from
+local-by-default benchmark evidence, shared patch-add review groups, approved
+operating-model support scope, and deferred product/network surfaces.
 Known overlap paths now resolve more deterministically as well: executor fixture
 trees are owned by the executor-return batch, verification/reporter seams fall
 under the verification-and-publish batch, and only genuinely unmapped source
@@ -97,7 +101,9 @@ For long autonomy or release loops, add `--summary-only --json` when the next
 operator only needs compact evidence. That payload omits full per-file `batches`
 details while keeping `summary`, `attention_reasons`, `changed_batches`,
 generated-path previews, `cross_cutting_paths`, `shared_patch_add_paths`,
-`cross_cutting_groups`, and repository context.
+`cross_cutting_groups`, `release_scope_decision_groups`,
+`approved_alpha_support_groups`, `deferred_alpha_scope_groups`, unresolved
+`product_decision_groups`, and repository context.
 Each `changed_batches[]` item keeps the batch `message`, validation commands,
 and compact staging guidance. When a batch has at most 20 included paths, the
 summary preserves a complete `git_add_command` plus `git_add_command_text`;
@@ -156,6 +162,24 @@ Those shared paths now roll up into `cross_cutting_groups`, including
 `command_surface_tests`, and `status_reports`, so an operator can patch-add by
 review surface with a scoped `git add --patch` command instead of treating every
 cross-cutting path as one flat list.
+The helper now applies the explicit alpha release-scope decision to the five
+known ownership groups instead of leaving them as generic unresolved product
+decisions. `codex_operating_model` and `operating_model_validator` are approved
+alpha support scope, while the Claude compatibility mirror plus Marketing/X
+surface and tests are deferred out of the QA-Z alpha scope. For the current X
+launch automation surface, `marketing/x/**` remains deferred because it can use
+credentials, call X APIs, and mutate posting queue state when explicitly
+enabled. Unknown future groups can still appear under `product_decision_paths`
+with `product_decision_paths_present`, but the current five groups roll up into
+`release_scope_decision_groups` and no longer block as unresolved.
+
+| Group | Release scope | Evidence-backed action |
+|---|---|---|
+| `codex_operating_model` | `approved_alpha_support_scope` | Stage only with the operating-model support batch after validator and format proof. |
+| `operating_model_validator` | `approved_alpha_support_scope` | Stage with the operating-model support batch after format and validator checks pass. |
+| `claude_compatibility_mirror` | `deferred_out_of_alpha_scope` | Keep out of QA-Z alpha unless a compatibility release decision approves it. |
+| `marketing_x_surface` | `deferred_out_of_alpha_scope` | Keep out of QA-Z alpha unless a product owner approves the credential-gated network surface. |
+| `marketing_x_tests` | `deferred_out_of_alpha_scope` | Keep with Marketing/X only if that product surface is approved. |
 
 ## Preflight
 
@@ -707,4 +731,3 @@ Use `v0.9.8-alpha` for the current release candidate now that the baseline inclu
 self-improvement, autonomy, executor bridge packaging, executor-result ingest, and
 the live-free safety dry-run. Use `v0.10.0-alpha` only if the team wants a larger
 reset point.
-
