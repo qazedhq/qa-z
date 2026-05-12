@@ -107,6 +107,17 @@ def append_history(
             value = str(selection_context.get(key) or "").strip()
             if value:
                 entry[key] = value
+        if selection_context.get("source_self_inspection_stale_for_backlog"):
+            entry["source_self_inspection_stale_for_backlog"] = True
+            refresh_commands = [
+                str(command)
+                for command in selection_context.get(
+                    "source_self_inspection_refresh_commands", []
+                )
+                if str(command).strip()
+            ]
+            if refresh_commands:
+                entry["source_self_inspection_refresh_commands"] = refresh_commands
     with history_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
