@@ -1,86 +1,46 @@
 # AGENTS.md
 
-## Mission
+## Repository Identity
+- Product: QA-Z.
+- Runtime: local deterministic QA control plane for coding-agent workflows.
+- Critical user flows: diff/input, fast/deep analysis, SARIF/summary, guard decision, repair prompt, external executor handoff, benchmark proof.
+- Release state: alpha. QA-Z must not be treated as an autonomous coding agent.
 
-Build QA-Z as a Codex-first, model-agnostic QA control plane for coding agents.
+## Non-Negotiable Boundaries
+- Do not directly fix target repositories as QA-Z improvement.
+- Do not add hidden network, live model, branch mutation, commit, push, deployment, or GitHub bot-comment behavior.
+- Do not weaken deterministic checks, benchmark expectations, release gates, artifact contracts, or validation criteria to pass.
+- Do not overwrite unrelated dirty work.
 
-The repository should always bias toward:
+## Startup Routing
+1. Confirm this is `F:\JustTyping` and check dirty state.
+2. Read this file plus `README.md`, `docs/product/PRODUCT_DIRECTION.md`, and `docs/agent/agent-operating-manual.md`, and `docs/agent/next-real-slices.md`.
+3. Pick one QA evidence or release-blocking flow.
+4. Use `.agents/skills/project-improvement-loop/SKILL.md` for broad improvement requests, then `.agents/skills/product-code-slice/SKILL.md` once the operating model is already present.
+5. Implement the smallest safe Flow, Contract, Evidence, or Cleanup Slice.
+6. Validate with the narrowest relevant command and report exact evidence.
 
-- executable quality gates over vague advice
-- explicit contracts over implied requirements
-- deterministic evidence over stylistic guesswork
-- repairable feedback over raw failure dumps
+## Slice Card
+- Lane:
+- User-facing flow:
+- Slice type:
+- User-visible outcome:
+- Root cause:
+- Files likely touched:
+- Validation:
+- Evidence:
+- Stop rule:
 
-## Repository expectations
+## Project Priority Flows
+1. Diff/input -> fast/deep analysis -> SARIF/summary -> github-summary -> guard decision.
+2. Finding -> repair prompt -> external executor handoff -> verify.
+3. Benchmark fixture -> risk policy -> regression proof.
+4. Current-truth docs -> stale roadmap/select-next prevention.
 
-- Keep the public README aligned with the actual implementation state.
-- Preserve the core command names: `init`, `plan`, `fast`, `deep`, `review`, `repair-prompt`.
-- Prefer small, composable modules over large framework-heavy abstractions.
-- Treat Codex and Claude integrations as adapters, not the core engine.
-- Do not claim deep QA automation exists unless the runners and tests actually prove it.
+## Codex-Native Operating Assets
+- Primary: `.codex/agents/*.toml`, `.agents/skills/*/SKILL.md`, `docs/agent/*.md`.
+- Compatibility mirror: `.claude/**`. Do not treat it as the Codex source of truth.
+- Full pre-V3 root instructions are archived at `docs/agent/root-agents-before-v3.md`.
 
-## Working agreements
-
-- Write tests before adding behavior to Python code.
-- Run `python -m pytest` after modifying Python sources or tests.
-- If CLI behavior changes, update both tests and README examples.
-- Keep `qa-z.yaml.example` in sync with any config surface changes.
-- When adding workflows or agent templates, favor deterministic gates and explicit permissions.
-
-## Documentation rules
-
-- Update `docs/mvp-issues.md` when roadmap scope materially changes.
-- Put design and planning artifacts under `docs/superpowers/`.
-- Call out bootstrap placeholders honestly in docs and CLI output.
-
-## Default task loop
-
-1. Confirm the task is about QA-Z and identify the affected surface: CLI, planner, adapters, artifacts, benchmark, repair, docs, or release.
-2. Run skill selection before implementation: Superpowers first, Matt Pocock for task routing, Karpathy Guidelines for coding discipline, then any repo-specific workflow implied by the touched surface.
-3. Preserve deterministic QA gates and write tests before changing Python behavior.
-4. Keep Codex and Claude logic behind adapters; do not move agent-specific behavior into the core planner.
-5. Run the smallest relevant pytest/mypy/ruff or CLI verification and report exact evidence.
-
-## Matt Pocock Skills
-
-- Treat the installed Matt Pocock skills as a Codex-first execution accelerator after these repository rules.
-- Every meaningful task must explicitly decide whether a Matt Pocock skill applies; use the smallest applicable skill set.
-- Skill routing:
-  - new feature, unclear scope, terminology alignment, or decision capture -> `grill-with-docs`
-  - bug, regression, failing check, or performance issue -> `diagnose`
-  - behavior-changing Python or CLI code -> `tdd`
-  - unfamiliar subsystem or broad context request -> `zoom-out`
-  - architecture cleanup or module-boundary improvement -> `improve-codebase-architecture`
-  - PRD or issue generation -> `to-prd` or `to-issues`
-  - issue intake or label movement -> `triage`
-  - reusable workflow capture -> `write-a-skill`
-- Repo configuration:
-  - Issue tracker: GitHub Issues for `qazedhq/qa-z`. See `docs/agents/issue-tracker.md`.
-  - Triage labels: default five-role vocabulary. See `docs/agents/triage-labels.md`.
-  - Domain docs: single-context by default, using `README.md`, `docs/`, and any future `CONTEXT.md` or ADRs. See `docs/agents/domain.md`.
-- If a Matt Pocock skill conflicts with these repository rules, deterministic QA-Z gates, explicit user instructions, or current repo evidence, follow the higher-priority instruction and state the adaptation.
-
-## Karpathy Guidelines
-
-- Use `karpathy-guidelines` as the default coding-discipline layer for non-trivial implementation, review, refactor, and debugging work.
-- Apply it with Matt Pocock skills: Matt Pocock chooses the workflow; Karpathy keeps the execution simple, surgical, explicit about assumptions, and tied to verifiable success criteria.
-- Before coding, state assumptions or ask when ambiguity could change the safe implementation.
-- Prefer the simplest implementation that satisfies the request; do not add speculative abstractions, features, configurability, or dependencies.
-- Touch only files and lines needed for the task; mention unrelated cleanup instead of editing it.
-- Define success criteria and run targeted verification before claiming completion.
-- For QA-Z, preserve deterministic gates, CLI contracts, adapter boundaries, and repairable evidence outputs unless the task explicitly changes them.
-
-## Safety rails
-
-- Never replace deterministic pass/fail checks with LLM-only judgments.
-- Never add hidden network dependencies to local QA flows without documenting them.
-- Never introduce agent-specific logic into the core planner if it belongs in `adapters/`.
-
-## Useful commands
-
-```bash
-python -m pip install -e .[dev]
-python -m pytest
-python -m qa_z --help
-python -m qa_z init
-```
+## Completion Rule
+A task is complete only when code, runtime, test, validation, or docs truth moved and fresh evidence is reported. Operating-model or scaffold edits alone do not count as product improvement. External blockers stay blocked, and the next safe local slice must be named.
