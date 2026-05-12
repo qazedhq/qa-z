@@ -28,13 +28,19 @@ every internal operator field.
   records worktree commit-plan evidence including `unassigned_source_paths`,
   `generated_artifact_paths`, `generated_local_only_paths`,
   `generated_local_by_default_paths`, `cross_cutting_paths`, `changed_batches`,
-  `shared_patch_add_paths`, `cross_cutting_groups`, `patch_command_text`,
-  `git_add_command_text`, `git_add_patch_command_text`, and repository context.
+  `shared_patch_add_paths`, `cross_cutting_groups`, `product_decision_paths`,
+  `product_decision_groups`, `release_scope_decision_paths`,
+  `release_scope_decision_groups`, `approved_alpha_support_paths`,
+  `deferred_alpha_scope_paths`, `patch_command_text`, `git_add_command_text`,
+  `git_add_patch_command_text`, and repository context.
 - Gate JSON stores `evidence.worktree_commit_plan`; strict audits use
   `--strict-worktree-plan` with `--fail-on-generated --fail-on-cross-cutting`.
 - `generated_local_only_count`, `generated_local_by_default_count`,
-  `batch_count`, `attention_reason_count`, `global_attention_reason_count`,
-  `attention_reasons`, `selected_batch_empty`, `strict_worktree_plan`,
+  `product_decision_path_count`, `product_decision_group_count`, `batch_count`,
+  `release_scope_decision_path_count`, `release_scope_decision_group_count`,
+  `approved_alpha_support_path_count`, `deferred_alpha_scope_path_count`,
+  `attention_reason_count`, `global_attention_reason_count`, `attention_reasons`,
+  `selected_batch_empty`, `strict_worktree_plan`,
   "Global attention reasons:", "Attention reasons:", "Attention reasons are
   de-duplicated", "Next actions are de-duplicated", and "Next commands are
   de-duplicated" are expected operator evidence fields.
@@ -110,6 +116,23 @@ public_docs_contract
 command_router_spine
 current_truth_guards
 cross_cutting_group_count
+product_decision_path_count
+product_decision_group_count
+product_decision_paths
+product_decision_groups
+product_decision_paths_present
+release_scope_decision_path_count
+release_scope_decision_group_count
+approved_alpha_support_path_count
+approved_alpha_support_group_count
+deferred_alpha_scope_path_count
+deferred_alpha_scope_group_count
+release_scope_decision_paths
+release_scope_decision_groups
+approved_alpha_support_paths
+deferred_alpha_scope_paths
+approved_alpha_support_scope
+deferred_out_of_alpha_scope
 whichever run currently owns `latest`
 Cleanup JSON and human output now include a `reason`
 synthetic `backlog_reseeding_gap`
@@ -291,6 +314,7 @@ prints the backlog `Updated:` timestamp
 `latest_selected_task_details`, derived directly from the stored latest `selected_tasks.json`
 Human `qa-z select-next` output now echoes each selected task's title,
 selection score, penalty reasons, and compact evidence summary
+stale self-inspection provenance and refresh commands when the backlog is newer than the latest self-inspection
 selection penalty and its reasons
 surface a non-cleanup fallback family before selecting more cleanup work, then inspect autonomy status
 loop plans now mirror selection score and penalty residue

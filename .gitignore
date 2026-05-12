@@ -21,6 +21,8 @@ benchmarks/results/work/
 benchmarks/results-*
 benchmarks/results/summary.json
 benchmarks/results/report.md
-marketing/x/
+marketing/x/.state/
+marketing/x/logs/
+marketing/x/*.local.json
 .worktrees/
 worktrees/

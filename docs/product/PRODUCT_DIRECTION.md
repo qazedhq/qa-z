@@ -36,6 +36,18 @@ Input reconciliation note: no separate file literally named "A1 Product Definiti
 - Current state: CI and release workflows preserve fast/deep evidence before applying final verdicts.
 - Confirmed: Public docs and README must stay aligned with actual implementation state.
 
+### QA-Z improvement definition
+
+QA-Z improvement does not mean directly fixing the target repository. Improvement must be one of:
+
+1. More accurate merge-safe/unsafe judgment
+2. More reproducible benchmark fixtures
+3. More actionable repair prompts
+4. Clearer affected files, non-goals, and validation commands
+5. Removal of stale roadmap or current-state recommendations
+
+Every loop should make one of those operator-facing outcomes measurably better and record the validation evidence.
+
 ### Confirmed Non-Goals
 
 - No live Codex, Claude, or other model execution in local QA flows.
