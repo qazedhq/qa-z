@@ -144,6 +144,35 @@ def test_alpha_rc_packet_keeps_deferred_scope_and_remote_proof_explicit() -> Non
     assert "Production readiness is not claimed." in commit_plan
 
 
+def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> None:
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Proof timestamp: `2026-05-12T12:58Z`" in commit_plan
+    assert "Source HEAD at proof time: `aa66625d81bac9437cfe11287a0401abd253f652`" in (
+        commit_plan
+    )
+    assert "Read-only remote proof:" in commit_plan
+    assert "`repository_http_status=200`" in commit_plan
+    assert "`repository_visibility=public`" in commit_plan
+    assert "`remote_ref_count=24`" in commit_plan
+    assert "`remote_ref_tag_count=2`" in commit_plan
+    assert "Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`" in (
+        commit_plan
+    )
+    assert "Local proof HEAD is 12 commits ahead of remote `main`" in commit_plan
+    assert "`release_path_state=blocked_remote_publish`" in commit_plan
+    assert (
+        "Skip-remote local preflight remains separate from read-only remote proof"
+        in (commit_plan)
+    )
+    assert "Push/tag/release/package publish: not executed in PROOF_ONLY mode." in (
+        commit_plan
+    )
+    assert "Production readiness: `No`" in commit_plan
+
+
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:
     schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
     readme = read_current_truth_anchors()
