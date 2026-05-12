@@ -906,6 +906,8 @@ def test_alpha_release_gate_human_output_prints_worktree_strict_mode():
                     "generated_artifact_count": 3,
                     "cross_cutting_count": 1,
                     "unassigned_source_path_count": 0,
+                    "product_decision_path_count": 2,
+                    "product_decision_group_count": 2,
                     "multi_batch_path_count": 0,
                     "strict_mode": {
                         "fail_on_generated": True,
@@ -919,7 +921,8 @@ def test_alpha_release_gate_human_output_prints_worktree_strict_mode():
 
     assert (
         "- worktree commit plan: attention_required; changed_batches=2; "
-        "generated_artifacts=3; cross_cutting=1; unassigned=0; multi_batch=0; "
+        "generated_artifacts=3; cross_cutting=1; unassigned=0; "
+        "product_decision=2; product_decision_groups=2; multi_batch=0; "
         "strict=fail_on_generated,fail_on_cross_cutting; "
         "attention=generated_artifacts_present"
     ) in output

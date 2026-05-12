@@ -48,8 +48,16 @@ def test_alpha_release_gate_extracts_real_worktree_commit_plan_payload() -> None
         "report_path_count": 0,
         "cross_cutting_count": 1,
         "cross_cutting_group_count": 1,
+        "product_decision_group_count": 0,
         "shared_patch_add_count": 1,
         "unassigned_source_path_count": 0,
+        "product_decision_path_count": 0,
+        "release_scope_decision_path_count": 0,
+        "release_scope_decision_group_count": 0,
+        "approved_alpha_support_path_count": 0,
+        "approved_alpha_support_group_count": 0,
+        "deferred_alpha_scope_path_count": 0,
+        "deferred_alpha_scope_group_count": 0,
         "multi_batch_path_count": 0,
         "next_action_count": 2,
         "strict_mode": {
@@ -71,8 +79,10 @@ def test_alpha_release_gate_evidence_preserves_cross_cutting_group_count() -> No
             "report_path_count": 1,
             "cross_cutting_count": 0,
             "cross_cutting_group_count": 1,
+            "product_decision_group_count": 2,
             "shared_patch_add_count": 1,
             "unassigned_source_path_count": 0,
+            "product_decision_path_count": 2,
             "multi_batch_path_count": 0,
         },
         "next_actions": [
@@ -87,7 +97,54 @@ def test_alpha_release_gate_evidence_preserves_cross_cutting_group_count() -> No
     lines = gate.render_release_evidence_lines({"worktree_commit_plan": evidence})
 
     assert evidence["cross_cutting_group_count"] == 1
+    assert evidence["product_decision_group_count"] == 2
+    assert evidence["product_decision_path_count"] == 2
     assert any("patch_add_groups=1" in line for line in lines)
+    assert any("product_decision_groups=2" in line for line in lines)
+    assert any("product_decision=2" in line for line in lines)
+
+
+def test_alpha_release_gate_evidence_preserves_release_scope_decision_counts() -> None:
+    gate = load_gate_module()
+    payload = {
+        "kind": "qa_z.worktree_commit_plan",
+        "schema_version": 1,
+        "status": "attention_required",
+        "summary": {
+            "changed_batch_count": 5,
+            "generated_artifact_count": 0,
+            "report_path_count": 1,
+            "cross_cutting_count": 2,
+            "cross_cutting_group_count": 3,
+            "shared_patch_add_count": 3,
+            "unassigned_source_path_count": 0,
+            "product_decision_path_count": 0,
+            "product_decision_group_count": 0,
+            "release_scope_decision_path_count": 50,
+            "release_scope_decision_group_count": 5,
+            "approved_alpha_support_path_count": 25,
+            "approved_alpha_support_group_count": 2,
+            "deferred_alpha_scope_path_count": 25,
+            "deferred_alpha_scope_group_count": 3,
+            "multi_batch_path_count": 0,
+        },
+    }
+
+    evidence = gate.release_evidence_for_command(
+        "worktree_commit_plan",
+        json.dumps(payload),
+    )
+    lines = gate.render_release_evidence_lines({"worktree_commit_plan": evidence})
+
+    assert evidence["release_scope_decision_path_count"] == 50
+    assert evidence["release_scope_decision_group_count"] == 5
+    assert evidence["approved_alpha_support_path_count"] == 25
+    assert evidence["approved_alpha_support_group_count"] == 2
+    assert evidence["deferred_alpha_scope_path_count"] == 25
+    assert evidence["deferred_alpha_scope_group_count"] == 3
+    assert any("release_scope_decisions=50" in line for line in lines)
+    assert any("approved_alpha_support=25" in line for line in lines)
+    assert any("deferred_alpha_scope=25" in line for line in lines)
 
 
 def test_alpha_release_gate_preserves_preflight_raw_urls_when_targets_unavailable():
