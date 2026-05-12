@@ -136,3 +136,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Next safe slice: if approval is granted, push the current approved `HEAD` to
   an approved proof branch and capture remote CI plus exact-commit public raw
   proof for the pushed SHA.
+
+
+## 2026-05-12 Alpha RC Deep Release Hardening Worktrain
+- Repo: JustTyping
+- Lane: release execution packet -> package dry-run packet -> guard current-truth hardening
+- User-facing flow: release operator handoff, `qa-z guard`, and `qa-z select-next`
+- Slice type: Evidence / Contract
+- Before: the RC packet referenced the previous local proof SHA and ahead count, package publishing was approval-blocked but not dry-run packetized, the current preflight handoff still advertised a bare historical command as if it were current proof, and guard could return `merge_ok` while latest self-inspection context was stale for the backlog.
+- Root cause: local RC proof advanced to `a3e5303` without a matching truth-surface refresh, and self-inspection freshness used string comparison instead of parsed timestamp instants.
+- Change made: refreshed `docs/reports/worktree-commit-plan.md`, `docs/package-publish-plan.md`, and `docs/releases/v0.9.8-alpha-publish-handoff.md` with current HEAD proof, package dry-run/upload blockers, explicit current preflight command, and rollback/yank notes. Added guard `current_truth` verdict handling so stale self-inspection produces `needs_review`, and changed selection-context freshness to parse ISO-like timestamps as UTC instants while failing closed on missing or malformed timestamps.
+- Validation run: focused current-truth packet tests, guard stale-current-truth canary, and selection timestamp edge tests passed; broader closeout gates are recorded in the worktrain final report.
+- Evidence: current local HEAD is `a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`, remote `main` is `8f647619418b884afa3bef3d839326680bec70af`, and the local branch is `15` commits ahead. Remote-main public raw proof passed; current-HEAD exact public raw proof failed with HTTP `404`, proving current HEAD is not remote-visible.
+- Gate delta: release execution readiness is more exact but remains approval-blocked; guard verdicts now avoid treating stale current-truth context as merge-ready.
+- User impact: maintainers can approve push/tag/release/package work from a current packet and can trust `qa-z guard` to ask for review when its local current-truth context trails the backlog.
+- Remaining blocker: push, tag, GitHub release, package publish, deploy, and current-HEAD remote CI/public raw proof require explicit approval and post-action evidence.
+- Next safe slice: after this packet commit, run the final validation stack and leave the top human action as approving a proof-branch push for the current HEAD.

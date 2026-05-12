@@ -61,6 +61,11 @@ def write_contract(root: Path) -> None:
     )
 
 
+def write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 def test_guard_happy_path_writes_merge_ok_verdict(tmp_path: Path, capsys) -> None:
     write_config(tmp_path)
     write_contract(tmp_path)
@@ -75,6 +80,55 @@ def test_guard_happy_path_writes_merge_ok_verdict(tmp_path: Path, capsys) -> Non
     assert output["artifacts"]["verdict_json"] == ".qa-z/runs/latest/guard/verdict.json"
     assert (tmp_path / ".qa-z" / "runs" / "latest" / "guard" / "verdict.json").exists()
     assert (tmp_path / ".qa-z" / "runs" / "latest" / "guard" / "verdict.md").exists()
+
+
+def test_guard_marks_stale_current_truth_context_as_needs_review(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-04-22T00:00:00Z",
+            "items": [
+                {
+                    "id": "fresh-work",
+                    "title": "Fresh backlog work",
+                    "category": "workflow_gap",
+                    "status": "open",
+                    "priority_score": 50,
+                }
+            ],
+        },
+    )
+    write_json(
+        tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json",
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-old",
+            "generated_at": "2026-04-21T00:00:00Z",
+            "live_repository": {"modified_count": 0, "untracked_count": 0},
+        },
+    )
+
+    exit_code = main(["guard", "--path", str(tmp_path), "--deep", "never", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["status"] == "needs_review"
+    assert output["current_truth"]["status"] == "stale"
+    assert output["current_truth"]["source_self_inspection"] == (
+        ".qa-z/loops/latest/self_inspect.json"
+    )
+    assert output["current_truth"]["source_self_inspection_stale_for_backlog"] is True
+    assert (
+        "Current-truth self-inspection is stale for the improvement backlog."
+        in output["reasons"]
+    )
 
 
 def test_guard_failed_fast_check_returns_do_not_merge(tmp_path: Path, capsys) -> None:

@@ -19,6 +19,7 @@ from qa_z.artifacts import (
 )
 from qa_z.guard.risk_classifier import classify_change_risk, detect_changed_files
 from qa_z.guard.verdict import GuardVerdict, write_verdict_artifacts
+from qa_z.improvement_state import load_backlog
 from qa_z.planner.contracts import plan_contract
 from qa_z.reporters.deep_context import load_sibling_deep_summary
 from qa_z.reporters.github_summary import render_github_summary
@@ -37,6 +38,7 @@ from qa_z.reporters.sarif import write_sarif_artifact
 from qa_z.runners.deep import run_deep
 from qa_z.runners.fast import run_fast
 from qa_z.runners.models import RunSummary
+from qa_z.selection_context import latest_self_inspection_selection_context
 
 
 def run_guard(
@@ -116,7 +118,10 @@ def run_guard(
     review_dir = run_source.run_dir / "review"
     write_review_artifacts(review_markdown, review_json, review_dir)
 
-    status, reasons = decide_status(fast_summary, deep_summary)
+    current_truth = guard_current_truth_context(root)
+    status, reasons = decide_status(
+        fast_summary, deep_summary, current_truth=current_truth
+    )
     repair_written = False
     if status == "do_not_merge":
         repair_written = write_guard_repair(
@@ -176,6 +181,7 @@ def run_guard(
         },
         repair={"written": repair_written},
         artifacts=artifacts,
+        extra={"current_truth": current_truth} if current_truth else {},
     )
     write_verdict_artifacts(verdict, guard_dir)
     return verdict
@@ -207,7 +213,10 @@ def should_run_deep(deep_mode: str, risk_categories: list[str]) -> bool:
 
 
 def decide_status(
-    fast_summary: RunSummary, deep_summary: RunSummary | None
+    fast_summary: RunSummary,
+    deep_summary: RunSummary | None,
+    *,
+    current_truth: dict[str, Any] | None = None,
 ) -> tuple[str, list[str]]:
     reasons: list[str] = []
     if fast_summary.status == "unsupported":
@@ -227,7 +236,40 @@ def decide_status(
             reasons.append("Deep checks reported blocking findings.")
     if reasons:
         return "do_not_merge", reasons
+    if current_truth and current_truth.get("status") == "stale":
+        return "needs_review", [
+            "Current-truth self-inspection is stale for the improvement backlog."
+        ]
     return "merge_ok", ["All required guard checks passed."]
+
+
+def guard_current_truth_context(root: Path) -> dict[str, Any]:
+    """Return guard-facing current-truth freshness context when available."""
+    backlog = load_backlog(root)
+    backlog_updated_at = str(backlog.get("updated_at") or "").strip()
+    context = latest_self_inspection_selection_context(
+        root,
+        min_generated_at=backlog_updated_at or None,
+    )
+    if not context:
+        return {}
+    current_truth: dict[str, Any] = {
+        "status": (
+            "stale"
+            if context.get("source_self_inspection_stale_for_backlog")
+            else "fresh"
+        )
+    }
+    for key in (
+        "source_self_inspection",
+        "source_self_inspection_loop_id",
+        "source_self_inspection_generated_at",
+        "source_self_inspection_stale_for_backlog",
+        "source_self_inspection_refresh_commands",
+    ):
+        if key in context:
+            current_truth[key] = context[key]
+    return current_truth
 
 
 def blocking_findings_count(summary: RunSummary | None) -> int:

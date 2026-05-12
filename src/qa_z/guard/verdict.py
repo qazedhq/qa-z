@@ -60,6 +60,7 @@ def write_verdict_artifacts(
 
 def render_verdict_markdown(verdict: GuardVerdict) -> str:
     """Render a compact Markdown verdict."""
+    current_truth = verdict.extra.get("current_truth")
     lines = [
         "# QA-Z Guard Verdict",
         "",
@@ -67,9 +68,12 @@ def render_verdict_markdown(verdict: GuardVerdict) -> str:
         f"- Fast: `{verdict.fast.get('status')}`",
         f"- Deep: `{verdict.deep.get('status', 'not_run')}`",
         f"- Risk: {', '.join(verdict.risk.get('categories', [])) or 'none'}",
-        "",
-        "## Reasons",
-        "",
     ]
+    if isinstance(current_truth, dict) and current_truth.get("status"):
+        lines.append(f"- Current truth: `{current_truth['status']}`")
+        source = current_truth.get("source_self_inspection")
+        if source:
+            lines.append(f"- Current truth source: `{source}`")
+    lines.extend(["", "## Reasons", ""])
     lines.extend(f"- {reason}" for reason in verdict.reasons)
     return "\n".join(lines).rstrip() + "\n"

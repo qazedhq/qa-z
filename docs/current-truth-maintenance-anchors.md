@@ -79,6 +79,13 @@ every internal operator field.
   `executor-bridge`.
 - README repository map honesty:
   `examples/                 runnable Python and TypeScript demos plus placeholder examples`.
+- Guard verdicts may include `current_truth`; if the latest self-inspection is
+  stale for the backlog timestamp, `qa-z guard` returns `needs_review` rather
+  than `merge_ok` and preserves source self-inspection provenance plus refresh
+  commands.
+- Self-inspection freshness compares ISO-like timestamps as UTC instants;
+  missing or malformed timestamps fail closed as stale when a backlog
+  `updated_at` minimum exists.
 - Near-term roadmap anchors:
   1. Preserve generated versus frozen evidence policy as artifact surfaces evolve.
   2. Maintain loop-health summary clarity as autonomy surfaces grow.
@@ -115,6 +122,10 @@ generated-artifact preflight
 public_docs_contract
 command_router_spine
 current_truth_guards
+current_truth
+source_self_inspection_stale_for_backlog
+Current-truth self-inspection is stale for the improvement backlog.
+missing or malformed timestamps fail closed as stale
 cross_cutting_group_count
 product_decision_path_count
 product_decision_group_count

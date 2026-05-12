@@ -149,8 +149,8 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         encoding="utf-8"
     )
 
-    assert "Proof timestamp: `2026-05-12T13:38Z`" in commit_plan
-    assert "Source HEAD at proof time: `1f35eeb7c420842aad78f2bb10b0545a15412cbd`" in (
+    assert "Proof timestamp: `2026-05-12T14:33Z`" in commit_plan
+    assert "Source HEAD at proof time: `a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`" in (
         commit_plan
     )
     assert "`RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`" in commit_plan
@@ -172,7 +172,7 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
     assert "Latest read-only workflow proof for remote `main`" in commit_plan
     assert "public raw checks captured" in commit_plan
     assert "failed exact-commit raw URLs with HTTP `404`" in commit_plan
-    assert "Local proof HEAD is 14 commits ahead of remote `main`" in commit_plan
+    assert "Local proof HEAD is 15 commits ahead of remote `main`" in commit_plan
     assert "`release_path_state=blocked_remote_publish`" in commit_plan
     assert (
         "Skip-remote local preflight remains separate from read-only remote proof"
@@ -193,6 +193,43 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         "git push origin --delete codex/alpha-rc-<approved-sha>-20260512" in commit_plan
     )
     assert "Production readiness is not claimed." in commit_plan
+
+
+def test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contract() -> (
+    None
+):
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+    package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
+        encoding="utf-8"
+    )
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Package publish dry-run packet:" in commit_plan
+    assert "Package metadata version is `0.9.8a0`" in commit_plan
+    assert "`PACKAGE_PUBLISH_ALLOWED` unset" in commit_plan
+    assert "python -m build --sdist --wheel" in commit_plan
+    assert "python -m twine check dist/*" in commit_plan
+    assert "Registry publish remains blocked" in commit_plan
+
+    assert "## Alpha RC package dry-run packet - 2026-05-12" in package_plan
+    assert "Package metadata version: `0.9.8a0`" in package_plan
+    assert (
+        "No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved."
+        in (package_plan)
+    )
+
+    assert "Current quality-mode no-remote rehearsal:" in release_handoff
+    assert (
+        "python scripts/alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json"
+        in release_handoff
+    )
+    assert "The bare historical command is retained only as a legacy blocker check" in (
+        release_handoff
+    )
 
 
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:

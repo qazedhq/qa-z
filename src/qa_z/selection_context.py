@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +27,9 @@ def latest_self_inspection_selection_context(
     if payload.get("kind") != SELF_INSPECTION_KIND:
         return {}
     generated_at = str(payload.get("generated_at") or "").strip()
-    if min_generated_at and (not generated_at or generated_at < min_generated_at):
+    if self_inspection_is_before_minimum(
+        generated_at=generated_at, min_generated_at=min_generated_at
+    ):
         return stale_self_inspection_selection_context(
             root=root,
             path=path,
@@ -81,3 +85,32 @@ def add_self_inspection_provenance(
         )
         if value:
             context[target_key] = value
+
+
+def self_inspection_is_before_minimum(
+    *, generated_at: str, min_generated_at: str | None
+) -> bool:
+    """Return whether self-inspection freshness should fail closed."""
+    if not min_generated_at:
+        return False
+    generated = parse_timestamp(generated_at)
+    minimum = parse_timestamp(min_generated_at)
+    if generated is None or minimum is None:
+        return True
+    return generated < minimum
+
+
+def parse_timestamp(value: str | None) -> datetime | None:
+    """Parse an ISO-like timestamp as a UTC instant."""
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)

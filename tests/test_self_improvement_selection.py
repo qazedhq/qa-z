@@ -9,6 +9,7 @@ from tests.ast_test_support import module_body
 
 import qa_z.self_improvement as self_improvement_module
 import qa_z.self_improvement_selection as self_improvement_selection_module
+from qa_z.selection_context import latest_self_inspection_selection_context
 from tests.self_improvement_test_support import write_json
 
 
@@ -231,6 +232,92 @@ def test_select_next_marks_stale_self_inspection_context_after_backlog_update(
         "python -m qa_z select-next --refresh --count 3 --json"
     ]
     assert "live_repository" not in history
+
+
+def test_selection_context_treats_missing_and_malformed_timestamps_as_stale(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+    write_json(
+        path,
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-missing",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    missing_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert missing_context["source_self_inspection_stale_for_backlog"] is True
+    assert "live_repository" not in missing_context
+
+    write_json(
+        path,
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-malformed",
+            "generated_at": "not-a-timestamp",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    malformed_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert malformed_context["source_self_inspection_stale_for_backlog"] is True
+    assert malformed_context["source_self_inspection_generated_at"] == (
+        "not-a-timestamp"
+    )
+    assert "live_repository" not in malformed_context
+
+
+def test_selection_context_compares_timezone_offsets_by_instant(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+    write_json(
+        path,
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-equal-offset",
+            "generated_at": "2026-04-21T23:30:00-01:00",
+            "live_repository": {"modified_count": 2},
+        },
+    )
+
+    fresh_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert fresh_context["source_self_inspection_loop_id"] == "inspect-equal-offset"
+    assert fresh_context["live_repository"]["modified_count"] == 2
+    assert "source_self_inspection_stale_for_backlog" not in fresh_context
+
+    write_json(
+        path,
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "inspect-older-offset",
+            "generated_at": "2026-04-21T22:30:00-01:00",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    stale_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert stale_context["source_self_inspection_stale_for_backlog"] is True
+    assert stale_context["source_self_inspection_loop_id"] == "inspect-older-offset"
+    assert "live_repository" not in stale_context
 
 
 def test_self_improvement_module_keeps_selection_defs_out_of_monolith() -> None:

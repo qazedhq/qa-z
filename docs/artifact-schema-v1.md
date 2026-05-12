@@ -474,6 +474,37 @@ TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeSc
 
 When the source run includes v2 selection metadata, `qa-z review --from-run` and `qa-z repair-prompt` carry that selection context forward so the next human or agent can see why each check was run, targeted, or skipped. Missing deep summaries are treated as fast-only runs; broken deep summaries are artifact errors.
 
+## Guard Verdict Artifacts
+
+`qa-z guard` writes:
+
+```text
+.qa-z/runs/<run-id>/guard/verdict.json
+.qa-z/runs/<run-id>/guard/verdict.md
+```
+
+`verdict.json` has:
+
+- `kind`: stable artifact kind, currently `qa_z.guard_verdict`
+- `schema_version`: integer schema marker, currently `1`
+- `status`: one of `merge_ok`, `do_not_merge`, `needs_review`, or `error`
+- `reasons`: ordered operator-facing reasons for the verdict
+- `fast`, `deep`, `risk`, `repair`, and `artifacts`: compact evidence blocks for
+  the guard run
+- `current_truth`: optional current-truth freshness block copied from the latest
+  self-inspection context when present
+
+When `current_truth.status` is `stale`, guard returns `needs_review` instead of
+`merge_ok` even if fast and deep checks pass. Stale current-truth means the
+latest `.qa-z/loops/latest/self_inspect.json` is missing, malformed, or older
+than the backlog `updated_at` timestamp, after parsing ISO-like timestamps as
+UTC instants. The stale block preserves `source_self_inspection`,
+`source_self_inspection_loop_id`, `source_self_inspection_generated_at`,
+`source_self_inspection_stale_for_backlog`, and
+`source_self_inspection_refresh_commands` when available. Stale guard verdicts
+do not imply QA-Z edited source or fixed target repositories; they tell the
+operator to refresh local current-truth evidence before trusting a green guard.
+
 ## Benchmark Summary
 
 `qa-z benchmark` runs seeded fixtures and writes:

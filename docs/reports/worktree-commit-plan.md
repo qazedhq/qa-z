@@ -188,8 +188,8 @@ closure commits, read-only remote proof, and the human-approved release
 execution worktrain audit. Approval flags were absent, so the result is an
 execution-ready packet, not a publish.
 
-- Proof timestamp: `2026-05-12T13:38Z`.
-- Source HEAD at proof time: `1f35eeb7c420842aad78f2bb10b0545a15412cbd`.
+- Proof timestamp: `2026-05-12T14:33Z`.
+- Source HEAD at proof time: `a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`.
 - Branch at proof time: `main`.
 - Remote target: `https://github.com/qazedhq/qa-z.git`.
 - Remote `main` at proof time:
@@ -255,15 +255,15 @@ Read-only remote proof:
   `v0.9.9-alpha,v0.9.8-alpha`, and `main_sha=8f647619418b884afa3bef3d839326680bec70af`.
 - Latest read-only workflow proof for remote `main` is for
   `8f647619418b884afa3bef3d839326680bec70af`, not local
-  `1f35eeb7c420842aad78f2bb10b0545a15412cbd`: `CI`, `Public Raw Hygiene`,
+  `a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`: `CI`, `Public Raw Hygiene`,
   and `OpenSSF Scorecard` were completed successfully on the remote-visible
   SHA.
 - `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 8f647619418b884afa3bef3d839326680bec70af`
   passed for branch and exact-commit raw URLs.
-- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 1f35eeb7c420842aad78f2bb10b0545a15412cbd`
+- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`
   passed branch `main` URLs but failed exact-commit raw URLs with HTTP `404`,
   proving the local HEAD is not yet public on the remote.
-- Local proof HEAD is 14 commits ahead of remote `main`, so this is not an
+- Local proof HEAD is 15 commits ahead of remote `main`, so this is not an
   empty-remote direct publish. Remote alpha readiness is partial: repository
   existence and readability are proven, but the current local proof SHA has not
   been pushed, CI-validated, tagged, released, or package-published.
@@ -273,7 +273,7 @@ Approval matrix:
 | Action | Approved? | Executed? | Evidence / blocker |
 |---|---:|---:|---|
 | Read-only remote proof | Yes, safe read-only | Yes | GitHub API, `git ls-remote`, preflight, workflow API, and public raw checks captured. |
-| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 14 commits ahead of remote `main`. |
+| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 15 commits ahead of remote `main`. |
 | Tag | No | No | `TAG_ALLOWED` unset; existing tags `v0.9.8-alpha` and `v0.9.9-alpha` must not be reused. |
 | GitHub release | No | No | `GITHUB_RELEASE_ALLOWED` unset; release requires approved tag, notes, and post-CI evidence. |
 | Package publish | No | No | `PACKAGE_PUBLISH_ALLOWED` unset; `docs/package-publish-plan.md` keeps registry publishing for a later explicit plan. |
@@ -347,6 +347,46 @@ publish is:
 python -m build --sdist --wheel
 python scripts\alpha_release_artifact_smoke.py --with-deps --json
 python -m twine check dist/*
+```
+
+Package publish dry-run packet:
+
+- Package metadata version is `0.9.8a0` in `pyproject.toml`.
+- `PACKAGE_PUBLISH_ALLOWED` unset, so no PyPI, TestPyPI, npm, GitHub Packages,
+  or package-registry publish is approved.
+- Safe local-only dry-run commands:
+
+```bash
+python -m build --sdist --wheel
+python scripts\alpha_release_artifact_smoke.py --with-deps --json
+python -m twine check dist/*
+```
+
+- Expected dry-run evidence: built sdist and wheel names, artifact smoke JSON,
+  `twine check` result, and confirmation that no upload command ran.
+- Registry publish remains blocked until a release owner sets
+  `RELEASE_EXECUTION_APPROVED=true` and `PACKAGE_PUBLISH_ALLOWED=true`, chooses
+  TestPyPI or PyPI, confirms credentials out of band, and records the exact
+  package URL/version after upload.
+- Package rollback/yank policy is registry-owned. QA-Z must not imply a local
+  command can undo a published package without following the selected
+  registry's retention and yank rules.
+
+Guard and timestamp hardening packet:
+
+- `qa-z guard` now carries a `current_truth` verdict block when the latest
+  self-inspection context is available.
+- If `.qa-z/loops/latest/self_inspect.json` is stale for the backlog
+  `updated_at` timestamp, guard returns `needs_review` instead of `merge_ok`
+  even when fast and deep checks pass.
+- Timestamp freshness now parses ISO-like timestamps as UTC instants. Missing or
+  malformed self-inspection timestamps fail closed as stale when a backlog
+  minimum exists, and timezone offsets such as `Z` and `+00:00` are compared by
+  instant rather than lexically.
+- Focused proof:
+
+```bash
+python -m pytest tests\test_guard_cli.py::test_guard_marks_stale_current_truth_context_as_needs_review tests\test_self_improvement_selection.py::test_selection_context_treats_missing_and_malformed_timestamps_as_stale tests\test_self_improvement_selection.py::test_selection_context_compares_timezone_offsets_by_instant -q
 ```
 
 Rollback and incident packet:
