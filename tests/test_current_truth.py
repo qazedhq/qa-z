@@ -373,6 +373,10 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`latest_prepared_actions_refresh_commands`" in schema
     assert "`latest_next_recommendations_stale_for_selection`" in schema
     assert "`latest_next_recommendations_refresh_commands`" in schema
+    assert "`source_self_inspection_stale_for_backlog`" in schema
+    assert "`source_self_inspection_refresh_commands`" in schema
+    assert "`python -m qa_z select-next --refresh --count 3 --json`" in schema
+    assert "stale selection omits `live_repository`" in schema
     assert "`python -m qa_z autonomy --loops 1 --json`" in schema
     assert "`python -m qa_z autonomy status --json`" in schema
     assert "line-broken `context_paths`" in schema
@@ -389,6 +393,10 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`latest_selected_fallback_families`" in schema
     assert "latest selected-task details" in schema
     assert "selected fallback families" in schema
+    assert (
+        "stale self-inspection provenance and refresh commands when the backlog "
+        "is newer than the latest self-inspection"
+    ) in readme
     assert "python -m qa_z autonomy --loops 1 --json" in schema
     assert "`improve_fallback_diversity`" in schema
     assert (

@@ -1052,8 +1052,10 @@ latest-loop context even though each individual command is deterministic.
 - `loop_id`: selected loop id
 - `generated_at`: UTC timestamp
 - `source_backlog`: backlog artifact path
-- `source_self_inspection`: latest self-inspection artifact path when it supplied live repository context
+- `source_self_inspection`: latest self-inspection artifact path when it supplied live repository context or provenance-only stale context
 - `source_self_inspection_loop_id` and `source_self_inspection_generated_at`: provenance copied from that self-inspection artifact when present
+- `source_self_inspection_stale_for_backlog`: optional boolean set when the latest self-inspection timestamp is older than the backlog `updated_at` timestamp
+- `source_self_inspection_refresh_commands`: optional copyable local commands shown when the source self-inspection is stale for the backlog; the current command is `python -m qa_z select-next --refresh --count 3 --json`
 - `live_repository`: compact live git/generated-artifact snapshot copied from the latest self-inspection pass when present
 - `selected_tasks`: the top 1 to 3 open backlog items sorted by selection priority score and stable tie-breakers
 - `state`: optional taskless selection state, currently `blocked_no_candidates` when no task is selected
@@ -1072,6 +1074,7 @@ Each selected task may include:
 The plain-text `qa-z select-next` output now mirrors compact selected-task details for operators:
 
 - live repository context when the latest self-inspection artifact supplied it
+- stale self-inspection provenance and a copyable refresh command when the latest self-inspection artifact is older than the backlog
 - taskless-loop diagnostics, including `selection_gap_reason` and open backlog count when no task is selected
 - selected task id plus title
 - `recommendation`
@@ -1092,7 +1095,8 @@ The plain-text `qa-z select-next` output now mirrors compact selected-task detai
 - `selected_categories`: selected backlog categories when they are known at selection time
 - `selected_fallback_families`: selected fallback families such as `cleanup`, `loop_health`, `workflow_remediation`, `docs_sync`, or `benchmark_expansion`
 - `evidence_used`: unique evidence paths for the selected tasks
-- `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, and `live_repository`: latest self-inspection path, provenance, and compact live repository snapshot when selection had that context
+- `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, and `live_repository`: latest self-inspection path, provenance, and compact live repository snapshot when selection had fresh context
+- `source_self_inspection_stale_for_backlog` and `source_self_inspection_refresh_commands`: optional provenance and copyable local recovery command when selection saw a self-inspection artifact older than the backlog update; stale selection omits `live_repository` rather than copying old live context
 - optional `state`, currently `blocked_no_candidates` for taskless selection records
 - optional `selection_gap_reason` and `open_backlog_count` when no task survived selection
 - `resulting_session_id`: `null` until a later workflow creates and records a session
