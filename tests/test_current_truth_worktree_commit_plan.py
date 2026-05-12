@@ -149,10 +149,17 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         encoding="utf-8"
     )
 
-    assert "Proof timestamp: `2026-05-12T12:58Z`" in commit_plan
-    assert "Source HEAD at proof time: `aa66625d81bac9437cfe11287a0401abd253f652`" in (
+    assert "Proof timestamp: `2026-05-12T13:38Z`" in commit_plan
+    assert "Source HEAD at proof time: `1f35eeb7c420842aad78f2bb10b0545a15412cbd`" in (
         commit_plan
     )
+    assert "`RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`" in commit_plan
+    assert (
+        "`python scripts\\alpha_release_preflight.py --skip-remote --json` returned"
+        in (commit_plan)
+    )
+    assert "not a product regression" in commit_plan
+    assert "`1601 passed`" in commit_plan
     assert "Read-only remote proof:" in commit_plan
     assert "`repository_http_status=200`" in commit_plan
     assert "`repository_visibility=public`" in commit_plan
@@ -161,7 +168,11 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
     assert "Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`" in (
         commit_plan
     )
-    assert "Local proof HEAD is 12 commits ahead of remote `main`" in commit_plan
+    assert "GitHub API proof returned repository `qazedhq/qa-z`" in commit_plan
+    assert "Latest read-only workflow proof for remote `main`" in commit_plan
+    assert "public raw checks captured" in commit_plan
+    assert "failed exact-commit raw URLs with HTTP `404`" in commit_plan
+    assert "Local proof HEAD is 14 commits ahead of remote `main`" in commit_plan
     assert "`release_path_state=blocked_remote_publish`" in commit_plan
     assert (
         "Skip-remote local preflight remains separate from read-only remote proof"
@@ -171,6 +182,17 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         commit_plan
     )
     assert "Production readiness: `No`" in commit_plan
+    assert "Approval matrix:" in commit_plan
+    assert "Publish execution packet:" in commit_plan
+    assert (
+        "git push -u origin HEAD:codex/alpha-rc-<approved-sha>-20260512" in commit_plan
+    )
+    assert "Direct `main` update needs separate explicit approval" in commit_plan
+    assert "Rollback and incident packet:" in commit_plan
+    assert (
+        "git push origin --delete codex/alpha-rc-<approved-sha>-20260512" in commit_plan
+    )
+    assert "Production readiness is not claimed." in commit_plan
 
 
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:

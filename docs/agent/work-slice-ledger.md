@@ -118,3 +118,21 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: a maintainer can now decide push/tag/release/package next steps from one tracked packet without confusing local green proof, read-only remote proof, and publish approval.
 - Remaining blocker: human approval is required for push, tag, GitHub release, and package publish; deferred Marketing/X and `.claude/**` remain untracked and out of alpha.
 - Next safe slice: after human publish approval, push an approved proof branch and capture remote CI plus public raw evidence on the pushed SHA.
+
+
+## 2026-05-12 Human-Approved Alpha Release Execution Packet
+- Repo: JustTyping
+- Lane: release approval -> remote proof -> execution-or-packet handoff -> rollback packet
+- User-facing flow: worktree commit plan, alpha release preflight, public raw proof, and release operator handoff
+- Slice type: Evidence / Cleanup
+- Before: the RC remote proof packet showed the repository was public and reachable, but the packet still carried the earlier source HEAD, ahead count, and no dedicated rollback/incident command packet.
+- Root cause: no release execution approval flags were present, so the safe next improvement was not a push or tag; it was a current execution packet that makes the approval boundary and rollback path exact.
+- Change made: refreshed `docs/reports/worktree-commit-plan.md` with the current HEAD `1f35eeb`, explicit empty approval flags, the literal preflight command's legacy-default failure, current local/remote proof, remote-main CI/public raw evidence, current-HEAD raw 404 proof, exact push/tag/release/package packets, rollback/incident commands, and final skeptical readiness labels.
+- Validation run: `python -m pytest tests\test_current_truth_worktree_commit_plan.py -q`; broader release gates are recorded in the worktrain closeout.
+- Evidence: strict plan stayed `ready`; alpha gate stayed `27/27`; remote repository proof stayed `repository_http_status=200`; public raw proof passed for remote `main` at `8f647619418b884afa3bef3d839326680bec70af`; public raw proof for local `1f35eeb` exact URLs failed with HTTP `404`, proving the current local SHA is not yet public.
+- Gate delta: remote alpha readiness remains `Partial`, but the next human action is now exact and rollback-ready instead of a generic approval blocker.
+- User impact: a maintainer can approve or reject push, tag, GitHub release, package publish, and rollback steps from one tracked packet without accidentally promoting deferred Marketing/X or `.claude/**` scope.
+- Remaining blocker: push/tag/GitHub release/package/deploy actions still require explicit human approval flags and fresh post-action evidence.
+- Next safe slice: if approval is granted, push the current approved `HEAD` to
+  an approved proof branch and capture remote CI plus exact-commit public raw
+  proof for the pushed SHA.
