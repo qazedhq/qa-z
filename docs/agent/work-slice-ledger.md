@@ -377,3 +377,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: local automation can branch on stable error ids when the primary analysis commands cannot start, instead of scraping terminal prose.
 - Remaining blocker: this does not prove target repositories are safe; operators still need fresh fast/deep artifacts from valid inputs before repair, guard, or release decisions.
 - Next safe slice: extend JSON failure-contract coverage to review/github-summary or repair-session, then run a broader validation wave.
+
+
+## 2026-05-13 Review JSON Failure Contract
+- Repo: JustTyping
+- Lane: review packet -> deterministic CLI output
+- User-facing flow: `qa-z review --json`
+- Slice type: Flow / Contract
+- Before: successful review JSON emitted structured packets, but missing run and missing contract failures printed human text even when JSON mode was requested.
+- Root cause: `handle_review` had text-only exception handling for artifact and source failures.
+- Change made: added a `qa_z.review_error` payload with stable `error`, `exit_code`, and `message` fields for JSON failure paths while preserving existing human output.
+- Validation run: `python -m pytest tests\test_review_packet_runtime.py -q -k "review_json_reports_missing"`; `python -m pytest tests\test_review_packet_runtime.py tests\test_review_packet_architecture.py -q`; `python -m ruff check src\qa_z\commands\review_packet.py tests\test_review_packet_runtime.py`; `python -m ruff format --check src\qa_z\commands\review_packet.py tests\test_review_packet_runtime.py`; `python -m qa_z review --path . --from-run .qa-z/runs/missing --json`.
+- Evidence: the focused RED failed with `JSONDecodeError` for both missing run and missing contract paths; after implementation the focused tests passed, the review packet pack passed `17` tests, Ruff check/format passed, and the live missing-run command emitted `kind=qa_z.review_error`.
+- Gate delta: the fast/deep -> review chain now keeps JSON mode parseable even when source artifacts are missing.
+- User impact: external executor and CI wrappers can detect review source failures without scraping Markdown or terminal text.
+- Remaining blocker: review packets still require fresh fast/deep input evidence; missing sources remain hard failures.
+- Next safe slice: harden repair-session JSON failure contracts for the repair/verify loop.
