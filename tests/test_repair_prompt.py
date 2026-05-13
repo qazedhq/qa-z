@@ -189,6 +189,34 @@ def test_repair_prompt_cli_failures_report_expected_codes(
     assert "artifact error" in broken_output
 
 
+def test_repair_prompt_json_failure_reports_machine_payload(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+
+    exit_code = main(
+        [
+            "repair-prompt",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            "latest",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.repair_prompt_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z repair-prompt: source not found:" in output["message"]
+
+
 def test_repair_prompt_json_includes_selection_context(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

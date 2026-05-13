@@ -249,3 +249,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: scripts can branch on `kind=qa_z.verify_error`, `error`, and `exit_code` instead of brittle text parsing when verify cannot load a run.
 - Remaining blocker: this does not prove repair quality by itself; callers still need comparable baseline and candidate run artifacts.
 - Next safe slice: extend the same JSON failure contract to one adjacent command only after confirming its current tests and operator expectations.
+
+
+## 2026-05-13 Repair Prompt JSON Failure Contract
+- Repo: JustTyping
+- Lane: repair prompt -> external executor handoff quality -> deterministic CLI output
+- User-facing flow: `qa-z repair-prompt --json` and `qa-z repair-prompt --handoff-json`
+- Slice type: Flow / Contract
+- Before: successful repair-prompt JSON modes emitted machine-readable packets, but missing-source and artifact-error failures printed plain text.
+- Root cause: `handle_repair_prompt` exception handlers did not branch on JSON output modes.
+- Change made: added a `qa_z.repair_prompt_error` JSON payload for `--json` and `--handoff-json` failure paths while preserving existing plain-text output for legacy/default use.
+- Validation run: `python -m pytest tests\test_repair_prompt.py::test_repair_prompt_json_failure_reports_machine_payload tests\test_repair_prompt.py::test_repair_prompt_cli_failures_report_expected_codes -q`; `python -m pytest tests\test_repair_prompt.py tests\test_repair_handoff.py tests\test_repair_prompt_contracts.py -q`; `python -m ruff check src\qa_z\commands\execution_repair.py tests\test_repair_prompt.py`; `python -m ruff format --check src\qa_z\commands\execution_repair.py tests\test_repair_prompt.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` because output started with `qa-z repair-prompt: source not found`; after the fix the focused pair passed, the repair prompt/handoff/contract pack passed `21` tests, Ruff check exited `0` with the known cache-write warning, and Ruff format passed.
+- Gate delta: external executor handoff failures are parseable in JSON modes without running an executor, mutating a queue, or changing repair prompt success semantics.
+- User impact: automation can treat repair-prompt missing-run and broken-artifact failures as structured error payloads instead of scraping text.
+- Remaining blocker: this still only generates local deterministic repair guidance; it does not execute or approve external repairs.
+- Next safe slice: run a validation wave across the changed release and core CLI packs before selecting another workstream.

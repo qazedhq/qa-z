@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from qa_z.adapters.claude import render_claude_handoff
@@ -83,11 +84,39 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
             print(packet.agent_prompt, end="")
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z repair-prompt: artifact error: {exc}")
-        return 2
+        return _repair_prompt_error(
+            args,
+            error="artifact_error",
+            message=f"qa-z repair-prompt: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-prompt: source not found: {exc}")
-        return 4
+        return _repair_prompt_error(
+            args,
+            error="source_not_found",
+            message=f"qa-z repair-prompt: source not found: {exc}",
+            exit_code=4,
+        )
+
+
+def _repair_prompt_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int
+) -> int:
+    if args.json or args.handoff_json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.repair_prompt_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_repair_prompt_command(subparsers: argparse._SubParsersAction) -> None:
