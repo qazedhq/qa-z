@@ -18,6 +18,27 @@ The manifest contains:
 
 Follow-up commands such as `qa-z review --from-run latest`, `qa-z repair-prompt --from-run latest`, `qa-z github-summary --from-run latest`, and `qa-z deep` prefer this manifest. If it points at stale data, QA-Z falls back to scanning the configured runs directory for `*/fast/summary.json`. `qa-z deep` consumes the manifest for attachment but does not update it.
 
+## Demo Command JSON Summary
+
+`qa-z demo auth-bug --json` writes a single machine-readable stdout payload after
+creating the isolated auth-bug demo under `.qa-z/demo/auth-bug`.
+
+Required success fields:
+
+- `kind`: `qa_z.demo.auth_bug`
+- `demo`: stable demo id, currently `auth-bug`
+- `status`: `created`
+- `demo_root`: absolute path to the isolated generated demo
+- `config`: demo-local runtime config filename, currently `qa-z.demo.yaml`
+- `guard_verdict`: demo-relative guard verdict path
+- `repair_prompt`: demo-relative Codex repair prompt path
+- `next_commands`: ordered follow-up commands for entering the demo root and
+  inspecting guard and repair evidence
+
+JSON-mode failures use `kind` `qa_z.demo.auth_bug_error` with `error`,
+`exit_code`, and `message`. Demo setup persistence failures use
+`artifact_write_error` and include the failing local path in `message`.
+
 ## Fast And Deep Summaries
 
 `qa-z fast` writes `summary.json` to:
