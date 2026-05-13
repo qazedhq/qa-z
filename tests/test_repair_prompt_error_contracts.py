@@ -74,3 +74,42 @@ def test_repair_prompt_json_reports_artifact_write_failure(
     assert output["error"] == "artifact_write_error"
     assert "qa-z repair-prompt: artifact write error:" in output["message"]
     assert "codex.md" in output["message"]
+
+
+def test_repair_prompt_json_reports_prompt_artifact_write_failure(
+    monkeypatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_summary(tmp_path, "2026-04-11T17-38-52Z")
+    blocked_path = (
+        tmp_path / ".qa-z" / "runs" / "2026-04-11T17-38-52Z" / "repair" / "prompt.md"
+    )
+    original_write_text = Path.write_text
+
+    def fail_prompt_artifact(path, *args, **kwargs):
+        if path == blocked_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_prompt_artifact)
+
+    exit_code = main(
+        [
+            "repair-prompt",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            "latest",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.repair_prompt_error"
+    assert output["error"] == "artifact_write_error"
+    assert "qa-z repair-prompt: artifact write error:" in output["message"]
+    assert "could not write repair-prompt artifact" in output["message"]
+    assert str(blocked_path) in output["message"]
+    assert "disk full" in output["message"]

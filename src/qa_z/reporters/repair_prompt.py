@@ -286,15 +286,28 @@ def _write_repair_artifacts_impl(
     packet: RepairPacket, output_dir: Path
 ) -> tuple[Path, Path]:
     """Write packet.json and prompt.md artifacts."""
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create repair-prompt artifact directory {output_dir}: {exc}"
+        ) from exc
     packet_path = output_dir / "packet.json"
     prompt_path = output_dir / "prompt.md"
-    packet_path.write_text(
+    write_repair_artifact_text(
+        packet_path,
         json.dumps(packet.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
-    prompt_path.write_text(packet.agent_prompt, encoding="utf-8")
+    write_repair_artifact_text(prompt_path, packet.agent_prompt)
     return packet_path, prompt_path
+
+
+def write_repair_artifact_text(path: Path, text: str) -> None:
+    """Write one repair-prompt artifact with path-aware errors."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write repair-prompt artifact {path}: {exc}") from exc
 
 
 def _repair_packet_json_impl(packet: RepairPacket) -> str:
