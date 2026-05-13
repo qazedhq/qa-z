@@ -39,6 +39,12 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             error="benchmark_error",
             message=f"qa-z benchmark: benchmark error: {exc}",
         )
+    except OSError as exc:
+        return _benchmark_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z benchmark: artifact error: {exc}",
+        )
 
     if args.json:
         print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
