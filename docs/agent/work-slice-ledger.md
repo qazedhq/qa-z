@@ -777,3 +777,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can tell a local output-store failure from a real generated contract status before review or repair-prompt workflows consume the draft.
 - Remaining blocker: plan remains a local contract draft generator and does not execute checks, mutate repositories, or prove release readiness.
 - Next safe slice: commit plan behavior, then run the bootstrap/planner validation pack before mining another command-contract gap.
+
+
+## 2026-05-13 Backlog Refresh Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: backlog refresh -> self-inspection/current-truth artifact persistence
+- User-facing flow: `qa-z backlog --refresh --json`
+- Slice type: Flow / Contract
+- Before: a failed self-inspection artifact write during backlog refresh could escape as raw `OSError`.
+- Root cause: `handle_backlog()` called the shared refresh helper and then loaded backlog state without a command-owned OSError boundary.
+- Change made: mapped refresh-time persistence failures to `qa_z.backlog_error` with `artifact_write_error`, preserving existing successful plain-text and JSON backlog behavior.
+- Validation run: `python -m pytest tests\test_cli.py::test_backlog_refresh_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_cli.py::test_backlog_refresh_json_reports_artifact_write_failure tests\test_cli.py::test_backlog_refresh_runs_self_inspection_before_printing tests\test_cli.py::test_backlog_plain_output_focuses_on_open_items -q`; `python -m pytest tests\test_planning_commands.py -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the refresh failure regression, existing backlog refresh/plain output tests, and planning seam tests passed.
+- Gate delta: current-truth refresh output now distinguishes local artifact persistence failure from an empty or closed backlog.
+- User impact: operators can rerun or repair the local artifact store instead of acting on a misleading backlog state when refresh writes fail.
+- Remaining blocker: backlog refresh remains a local evidence refresh and does not prove remote release execution readiness.
+- Next safe slice: commit backlog behavior, then run the self-improvement/backlog validation pack before mining another CLI contract gap.
