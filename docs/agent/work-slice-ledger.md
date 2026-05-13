@@ -1353,3 +1353,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish a blocked handoff JSON write from prompt, Codex, Claude, or repair-packet artifact failures.
 - Remaining blocker: repair handoff artifacts remain local deterministic handoff evidence and do not execute repairs, mutate target repositories, or prove remote release readiness.
 - Next safe slice: commit handoff path context, then run final strict plan, truth validator, alpha gate, and wall-clock checks.
+
+
+## 2026-05-13 Demo Runtime Config Artifact Path Contract
+- Repo: JustTyping
+- Lane: init/doctor -> demo -> guard/repair proof
+- User-facing flow: `qa-z demo auth-bug`
+- Slice type: Contract / Evidence
+- Before: demo runtime config write failures said demo artifacts could not be prepared but did not identify `qa-z.demo.yaml`.
+- Root cause: `write_demo_runtime_config()` wrote the runtime config directly and let the raw filesystem error escape to the broad demo artifact boundary.
+- Change made: made runtime demo config persistence path-aware and strengthened the demo failure regression to require the exact config path.
+- Validation run: `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_command_writes_repair_and_guard_artifacts tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure tests\test_demo_guard_action_package.py::test_packaged_auth_bug_demo_matches_public_source_demo -q`; `python -m ruff format src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff format --check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`.
+- Evidence: regression failed first because the message stopped at `disk full`, then passed with `qa-z.demo.yaml`; focused demo pack passed `3` tests; Ruff formatted one file, then format check and Ruff check passed.
+- Gate delta: demo bootstrap failures now identify the exact runtime config artifact before plan/guard/repair proof is rehearsed.
+- User impact: operators can fix demo setup failures without confusing runtime config persistence with packaged resource copy, guard output, or repair artifacts.
+- Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
+- Next safe slice: commit demo path context, then run final latest-HEAD release validation and wall-clock compliance checks.
