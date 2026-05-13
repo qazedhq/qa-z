@@ -29,7 +29,7 @@ def handle_plan(args: argparse.Namespace) -> int:
             overwrite=args.overwrite,
         )
     except OSError as exc:
-        print(f"qa-z plan: artifact write error: could not write contract draft: {exc}")
+        print(f"qa-z plan: artifact write error: {exc}")
         return 2
 
     relative_contract_path = format_relative_path(contract_path, root)

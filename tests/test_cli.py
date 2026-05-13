@@ -876,6 +876,7 @@ def test_plan_reports_artifact_write_failure(
     assert exit_code == 2
     assert "qa-z plan: artifact write error:" in output
     assert "could not write contract draft" in output
+    assert str(contract_path) in output
     assert "disk full" in output
 
 
