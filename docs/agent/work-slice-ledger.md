@@ -425,3 +425,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: local orchestrators can fail closed on configuration errors using stable JSON fields instead of terminal prose.
 - Remaining blocker: commands without JSON modes still intentionally render human text, and release execution remains approval-blocked.
 - Next safe slice: run a broader validation wave, then mine non-JSON CLI surfaces or release-preflight truth gaps.
+
+
+## 2026-05-13 Review Packet Error Contract Test Split
+- Repo: JustTyping
+- Lane: review packet tests -> architecture budget gate
+- User-facing flow: `qa-z review --json`
+- Slice type: Cleanup / Evidence
+- Before: the mid-run alpha gate caught that `tests/test_review_packet_runtime.py` exceeded its architecture budget after JSON failure-contract tests were added.
+- Root cause: review runtime behavior tests and review JSON error-contract tests were sharing one file despite an explicit regression-pack line budget.
+- Change made: moved review JSON failure-contract coverage into `tests/test_review_packet_error_contracts.py`, leaving `tests/test_review_packet_runtime.py` at the enforced budget boundary.
+- Validation run: `python -m pytest tests\test_review_packet_error_contracts.py tests\test_review_packet_runtime.py tests\test_repair_prompt_architecture.py::test_repair_prompt_regression_pack_stays_split -q`; `python -m ruff check tests\test_review_packet_error_contracts.py tests\test_review_packet_runtime.py`; `python -m ruff format --check tests\test_review_packet_error_contracts.py tests\test_review_packet_runtime.py`.
+- Evidence: the architecture budget check now passes, `test_review_packet_runtime.py` is `220` lines, the new error-contract file is `74` lines, and the focused split validation passed `12` tests.
+- Gate delta: full pytest no longer fails on review packet test-pack size while preserving all review JSON error-contract coverage.
+- User impact: future review packet behavior changes can add runtime tests without immediately colliding with JSON error-contract coverage.
+- Remaining blocker: the alpha gate still needs to be rerun after this split to confirm the full release-quality wave returns green.
+- Next safe slice: rerun alpha gate and then continue backlog mining.
