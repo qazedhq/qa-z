@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from qa_z.benchmark import (
+    BenchmarkError,
     BenchmarkExpectation,
     benchmark_results_lock,
     compare_expected,
@@ -723,6 +724,39 @@ def test_benchmark_results_lock_records_operator_metadata(tmp_path: Path) -> Non
     assert f"pid={os.getpid()}" in lock_text
     assert "started_at=" in lock_text
     assert str(results_dir) in lock_text
+    assert f"cwd={Path.cwd()}" in lock_text
+
+
+def test_benchmark_results_lock_conflict_reports_operator_metadata(
+    tmp_path: Path,
+) -> None:
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+    lock_path = results_dir / ".benchmark.lock"
+    lock_path.write_text(
+        "\n".join(
+            [
+                "pid=12345",
+                "started_at=2026-04-20T00:00:00Z",
+                f"results_dir={results_dir}",
+                f"cwd={tmp_path}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BenchmarkError) as excinfo:
+        with benchmark_results_lock(results_dir):
+            pass
+
+    message = str(excinfo.value)
+    assert "already in use" in message
+    assert "use a different --results-dir" in message
+    assert "pid=12345" in message
+    assert "started_at=2026-04-20T00:00:00Z" in message
+    assert f"results_dir={results_dir}" in message
+    assert f"cwd={tmp_path}" in message
 
 
 def test_reset_directory_retries_permission_error_once(

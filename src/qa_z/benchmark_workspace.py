@@ -26,6 +26,7 @@ def benchmark_results_lock(results_dir: Path):
             lock_file.write(f"pid={os.getpid()}\n")
             lock_file.write(f"started_at={_utc_timestamp()}\n")
             lock_file.write(f"results_dir={results_dir}\n")
+            lock_file.write(f"cwd={Path.cwd()}\n")
     except FileExistsError as exc:
         lock_details = _read_benchmark_lock_details(lock_path)
         raise _benchmark_error(
@@ -78,7 +79,7 @@ def _read_benchmark_lock_details(lock_path: Path) -> str:
         if not clean:
             continue
         details.append(clean[:240])
-        if len(details) >= 3:
+        if len(details) >= 4:
             break
     if not details:
         return "empty lock file"
