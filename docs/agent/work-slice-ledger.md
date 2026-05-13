@@ -761,3 +761,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: new QA-Z adopters get a clear local filesystem failure instead of a traceback during repository bootstrap.
 - Remaining blocker: init remains local-only and does not prove any remote, package, or production readiness.
 - Next safe slice: commit init behavior, then run an init/doctor/CLI validation wave before mining the next command-contract gap.
+
+
+## 2026-05-13 Plan Contract Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: plan -> QA contract draft persistence
+- User-facing flow: `qa-z plan`
+- Slice type: Flow / Contract
+- Before: a failed contract draft write could escape as raw `OSError` from `qa-z plan`.
+- Root cause: `handle_plan()` loaded config through a normalized boundary but delegated contract rendering and persistence without catching local filesystem failures.
+- Change made: wrapped contract draft generation in a command-owned OSError boundary that returns exit code `2` and prints a deterministic `qa-z plan: artifact write error` message.
+- Validation run: `python -m pytest tests\test_cli.py::test_plan_reports_artifact_write_failure -q`; `python -m pytest tests\test_cli.py::test_plan_reports_artifact_write_failure tests\test_cli.py::test_plan_creates_a_contract_draft_from_sources tests\test_cli.py::test_plan_uses_custom_contract_output_directory -q`; `python -m pytest tests\test_bootstrap_commands.py -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the plan artifact failure regression, existing plan creation/custom-output tests, and bootstrap seam tests passed.
+- Gate delta: contract-generation failures are now separate from config errors, source inputs, and existing-contract no-op results.
+- User impact: maintainers can tell a local output-store failure from a real generated contract status before review or repair-prompt workflows consume the draft.
+- Remaining blocker: plan remains a local contract draft generator and does not execute checks, mutate repositories, or prove release readiness.
+- Next safe slice: commit plan behavior, then run the bootstrap/planner validation pack before mining another command-contract gap.
