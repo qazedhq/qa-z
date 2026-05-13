@@ -47,15 +47,20 @@ def write_verdict_artifacts(
     verdict: GuardVerdict, output_dir: Path
 ) -> tuple[Path, Path]:
     """Write JSON and Markdown verdict artifacts."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    json_path = output_dir / "verdict.json"
-    markdown_path = output_dir / "verdict.md"
-    json_path.write_text(
-        json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    markdown_path.write_text(render_verdict_markdown(verdict), encoding="utf-8")
-    return json_path, markdown_path
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        json_path = output_dir / "verdict.json"
+        markdown_path = output_dir / "verdict.md"
+        json_path.write_text(
+            json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        markdown_path.write_text(render_verdict_markdown(verdict), encoding="utf-8")
+        return json_path, markdown_path
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard verdict artifacts to {output_dir}: {exc}"
+        ) from exc
 
 
 def render_verdict_markdown(verdict: GuardVerdict) -> str:

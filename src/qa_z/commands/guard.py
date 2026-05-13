@@ -42,6 +42,12 @@ def handle_guard(args: argparse.Namespace) -> int:
             error="guard_error",
             message=f"qa-z guard: error: {exc}",
         )
+    except OSError as exc:
+        return _guard_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z guard: artifact error: {exc}",
+        )
 
     if args.json:
         print(json.dumps(verdict.to_dict(), indent=2, sort_keys=True))
