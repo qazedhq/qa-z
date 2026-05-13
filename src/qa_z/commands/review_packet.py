@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from qa_z.artifacts import (
@@ -83,11 +84,39 @@ def handle_review(args: argparse.Namespace) -> int:
             print(markdown, end="")
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z review: artifact error: {exc}")
-        return 2
+        return _review_error(
+            args,
+            error="artifact_error",
+            message=f"qa-z review: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z review: source not found: {exc}")
-        return 4
+        return _review_error(
+            args,
+            error="source_not_found",
+            message=f"qa-z review: source not found: {exc}",
+            exit_code=4,
+        )
+
+
+def _review_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.review_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_review_command(subparsers: argparse._SubParsersAction) -> None:
