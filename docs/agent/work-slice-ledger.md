@@ -1337,3 +1337,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: new QA-Z users can repair a blocked starter config or template path without guessing which init file failed.
 - Remaining blocker: init bootstrap remains local setup and does not prove remote release, package publish, deployment, or production readiness.
 - Next safe slice: commit init path context, then run latest-HEAD release validation and wall-clock compliance checks.
+
+
+## 2026-05-13 Repair Handoff Artifact Path Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff
+- User-facing flow: `qa-z repair-prompt --handoff-json` and handoff artifact generation
+- Slice type: Contract / Evidence
+- Before: normalized repair handoff write failures named the output directory but not the exact `handoff.json` file.
+- Root cause: `write_repair_handoff_artifact()` wrapped directory creation and JSON persistence in one broad output-dir boundary.
+- Change made: split directory creation from `handoff.json` persistence and strengthened the handoff write regression to require the exact JSON artifact path.
+- Validation run: `python -m pytest tests\test_repair_handoff.py::test_write_repair_handoff_artifact_wraps_write_failures -q`; `python -m pytest tests\test_repair_handoff.py::test_write_repair_handoff_artifact_wraps_write_failures tests\test_repair_handoff.py::test_repair_prompt_cli_writes_handoff_and_adapter_artifacts tests\test_repair_handoff.py::test_repair_prompt_cli_can_print_handoff_json tests\test_repair_prompt_error_contracts.py -q`; `python -m ruff check src\qa_z\repair_handoff.py tests\test_repair_handoff.py tests\test_repair_prompt_error_contracts.py`; `python -m ruff format --check src\qa_z\repair_handoff.py tests\test_repair_handoff.py tests\test_repair_prompt_error_contracts.py`.
+- Evidence: regression failed first because the message stopped at the repair output directory, then passed with `handoff.json`; focused handoff/repair-prompt pack passed `6` tests; Ruff check passed; Ruff format reported `3 files already formatted`.
+- Gate delta: external executor handoff failures now identify the exact normalized handoff JSON artifact before adapters or downstream verification trust the packet.
+- User impact: maintainers can distinguish a blocked handoff JSON write from prompt, Codex, Claude, or repair-packet artifact failures.
+- Remaining blocker: repair handoff artifacts remain local deterministic handoff evidence and do not execute repairs, mutate target repositories, or prove remote release readiness.
+- Next safe slice: commit handoff path context, then run final strict plan, truth validator, alpha gate, and wall-clock checks.
