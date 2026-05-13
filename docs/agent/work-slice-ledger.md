@@ -857,3 +857,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can tell a handoff JSON persistence failure apart from adapter markdown rendering, repair packet generation, or artifact source loading.
 - Remaining blocker: repair handoff remains an external-executor instruction artifact; QA-Z still does not directly edit target repositories.
 - Next safe slice: commit repair handoff behavior, then run a broader repair/guard/benchmark validation wave before mining the next writer gap.
+
+
+## 2026-05-13 Guard GitHub Summary Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: guard -> GitHub summary artifact persistence
+- User-facing flow: `qa-z guard --github-summary --json`
+- Slice type: Flow / Contract
+- Before: a failed optional guard GitHub summary write returned `qa-z guard: artifact error: disk full` without naming the summary artifact path.
+- Root cause: `run_guard()` created the guard directory and wrote `github-summary.md` inline, so the command-level OSError boundary could not add artifact-specific context.
+- Change made: added a path-aware `write_guard_github_summary_artifact()` helper and a focused JSON regression for failed `github-summary.md` persistence.
+- Validation run: `python -m pytest tests\test_guard_cli.py::test_guard_github_summary_json_reports_artifact_write_failure tests\test_guard_cli.py::test_guard_github_summary_option_writes_summary tests\test_guard_cli.py::test_guard_json_reports_verdict_artifact_write_failure -q`.
+- Evidence: the focused RED produced only `qa-z guard: artifact error: disk full`; after implementation the failure payload includes `could not write guard GitHub summary artifact to ...`, and existing summary/verdict artifact tests still pass.
+- Gate delta: guard JSON output now distinguishes optional GitHub-summary persistence failures from verdict artifact failures and source/config errors.
+- User impact: maintainers using guard in CI can identify the exact failing summary path before trusting or rerunning the guard result.
+- Remaining blocker: GitHub summary rendering remains local artifact generation only; no GitHub comment, release, push, or deployment behavior was added.
+- Next safe slice: commit guard summary behavior, then run the guard/GitHub-summary validation pack before mining another writer gap.
