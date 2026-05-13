@@ -69,7 +69,7 @@ def update_history_entry(
             updated = True
         else:
             updated_lines.append(line)
-    history_path.write_text("\n".join(updated_lines).rstrip() + "\n", encoding="utf-8")
+    write_history_lines(history_path, updated_lines)
 
 
 def record_executor_result(
@@ -113,7 +113,17 @@ def record_executor_result(
             updated = True
         else:
             updated_lines.append(line)
-    history_path.write_text("\n".join(updated_lines).rstrip() + "\n", encoding="utf-8")
+    write_history_lines(history_path, updated_lines)
+
+
+def write_history_lines(history_path: Path, lines: list[str]) -> None:
+    """Write autonomy JSONL history with path-aware errors."""
+    try:
+        history_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write autonomy history {history_path}: {exc}"
+        ) from exc
 
 
 def first_verify_verdict(verification_evidence: object) -> str | None:

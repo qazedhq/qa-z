@@ -290,6 +290,94 @@ def test_record_executor_result_updates_matching_history_entry(
     assert entries[1]["next_recommendations"] == ["rerun verify on touched files"]
 
 
+def test_record_executor_result_wraps_history_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    history_path = tmp_path / "history.jsonl"
+    history_path.write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.loop_history_entry",
+                "loop_id": "loop-target",
+                "next_recommendations": ["stale"],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    original_write_text = Path.write_text
+
+    def fail_history(path: Path, *args, **kwargs) -> int:
+        if path == history_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_history)
+
+    with pytest.raises(OSError) as excinfo:
+        record_executor_result(
+            history_path,
+            loop_id="loop-target",
+            result_status="applied",
+            ingest_status="ingested",
+            verify_resume_status="resume_ready",
+            result_path=".qa-z/results/loop-target.json",
+            validation_status="valid",
+            changed_files=["src/qa_z/autonomy.py"],
+            verification_hint="rerun pytest",
+            verification_verdict="pass",
+            next_recommendation="rerun verify on touched files",
+        )
+
+    message = str(excinfo.value)
+    assert "could not write autonomy history" in message
+    assert str(history_path) in message
+    assert "disk full" in message
+
+
+def test_update_history_entry_wraps_history_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    history_path = tmp_path / "history.jsonl"
+    history_path.write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.loop_history_entry",
+                "loop_id": "loop-target",
+                "next_recommendations": ["stale"],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    original_write_text = Path.write_text
+
+    def fail_history(path: Path, *args, **kwargs) -> int:
+        if path == history_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_history)
+
+    with pytest.raises(OSError) as excinfo:
+        autonomy_records_module.update_history_entry(
+            history_path,
+            loop_id="loop-target",
+            outcome={
+                "state": "session_prepared",
+                "artifacts": {"outcome": ".qa-z/loops/loop-target/outcome.json"},
+                "actions_prepared": [{"type": "repair_session"}],
+            },
+        )
+
+    message = str(excinfo.value)
+    assert "could not write autonomy history" in message
+    assert str(history_path) in message
+    assert "disk full" in message
+
+
 def test_run_autonomy_accepts_dependency_bundle(tmp_path: Path) -> None:
     live_repository = {
         "modified_count": 0,
