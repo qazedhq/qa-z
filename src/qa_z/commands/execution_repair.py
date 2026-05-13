@@ -30,11 +30,13 @@ from qa_z.repair_handoff import (
 )
 
 
-def write_handoff_markdown(path: Path, text: str) -> None:
+def write_handoff_markdown(path: Path, text: str, label: str) -> None:
     try:
         path.write_text(text, encoding="utf-8")
     except OSError as exc:
-        raise OSError(f"could not write {path}: {exc}") from exc
+        raise OSError(
+            f"could not write repair-prompt {label} handoff {path}: {exc}"
+        ) from exc
 
 
 def handle_repair_prompt(args: argparse.Namespace) -> int:
@@ -82,8 +84,8 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
         )
         write_repair_artifacts(packet, output_dir)
         write_repair_handoff_artifact(handoff, output_dir)
-        write_handoff_markdown(output_dir / "codex.md", codex_markdown)
-        write_handoff_markdown(output_dir / "claude.md", claude_markdown)
+        write_handoff_markdown(output_dir / "codex.md", codex_markdown, "codex")
+        write_handoff_markdown(output_dir / "claude.md", claude_markdown, "claude")
         if args.handoff_json:
             print(repair_handoff_json(handoff), end="")
             return 0

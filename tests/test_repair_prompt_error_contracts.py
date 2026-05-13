@@ -73,7 +73,9 @@ def test_repair_prompt_json_reports_artifact_write_failure(
     assert output["kind"] == "qa_z.repair_prompt_error"
     assert output["error"] == "artifact_write_error"
     assert "qa-z repair-prompt: artifact write error:" in output["message"]
-    assert "codex.md" in output["message"]
+    assert "could not write repair-prompt codex handoff" in output["message"]
+    assert str(blocked_path) in output["message"]
+    assert "disk full" in output["message"]
 
 
 def test_repair_prompt_json_reports_prompt_artifact_write_failure(
