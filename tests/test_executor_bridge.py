@@ -723,6 +723,8 @@ def test_executor_bridge_cli_json_reports_artifact_write_failure(
     }
     assert "qa-z executor-bridge: artifact error:" in output["message"]
     assert "could not write executor bridge package" in output["message"]
+    assert "could not write executor bridge JSON artifact" in output["message"]
+    assert str(bridge_dir / "bridge.json") in output["message"]
     assert "disk full" in output["message"]
     assert not bridge_dir.exists()
 

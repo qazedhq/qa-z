@@ -30,11 +30,16 @@ BRIDGE_OUTPUT_OUTSIDE_REPOSITORY_WARNING = {
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write a deterministic JSON artifact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    """Write a deterministic JSON artifact with path-aware errors."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor bridge JSON artifact {path}: {exc}"
+        ) from exc
 
 
 def normalize_bridge_id(bridge_id: str) -> str:
