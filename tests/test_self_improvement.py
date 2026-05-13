@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from qa_z.cli import main
 from qa_z.self_improvement import (
     run_self_inspection,
@@ -653,3 +655,64 @@ def test_self_improvement_cli_commands_write_expected_paths(
     ) in inspect_human_output
     assert (tmp_path / ".qa-z" / "loops" / "latest" / "selected_tasks.json").exists()
     assert (tmp_path / ".qa-z" / "loops" / "latest" / "loop_plan.md").exists()
+
+
+def test_self_inspect_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_benchmark_summary(tmp_path)
+    report_path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+    original_write_text = Path.write_text
+
+    def fail_self_inspection_report(path: Path, *args, **kwargs) -> int:
+        if path == report_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_self_inspection_report)
+
+    exit_code = main(["self-inspect", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.self_inspect_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z self-inspect: artifact write error:" in output["message"]
+    assert "could not write self-inspection artifacts" in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_select_next_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    selected_path = tmp_path / ".qa-z" / "loops" / "latest" / "selected_tasks.json"
+    original_write_text = Path.write_text
+
+    def fail_selected_tasks(path: Path, *args, **kwargs) -> int:
+        if path == selected_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_selected_tasks)
+
+    exit_code = main(["select-next", "--path", str(tmp_path), "--count", "1", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.select_next_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z select-next: artifact write error:" in output["message"]
+    assert "could not write selection artifacts" in output["message"]
+    assert "disk full" in output["message"]

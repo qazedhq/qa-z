@@ -15,14 +15,44 @@ def handle_select_next(args: argparse.Namespace) -> int:
     """Select the next highest-priority self-improvement tasks."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    refresh_backlog_if_requested(root=root, refresh=args.refresh)
-    paths = select_next_tasks(root=root, count=args.count)
-    selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    try:
+        refresh_backlog_if_requested(root=root, refresh=args.refresh)
+        paths = select_next_tasks(root=root, count=args.count)
+        selected = json.loads(paths.selected_tasks_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return _select_next_error(
+            args,
+            error="artifact_write_error",
+            message=(
+                "qa-z select-next: artifact write error: "
+                f"could not write selection artifacts: {exc}"
+            ),
+        )
     if args.json:
         print(json.dumps(selected, indent=2, sort_keys=True), end="\n")
     else:
         print(render_select_next_stdout(selected, paths, root, refreshed=args.refresh))
     return 0
+
+
+def _select_next_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.select_next_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_select_next_command(subparsers: argparse._SubParsersAction) -> None:
