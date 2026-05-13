@@ -393,3 +393,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external executor and CI wrappers can detect review source failures without scraping Markdown or terminal text.
 - Remaining blocker: review packets still require fresh fast/deep input evidence; missing sources remain hard failures.
 - Next safe slice: harden repair-session JSON failure contracts for the repair/verify loop.
+
+
+## 2026-05-13 Repair Session JSON Failure Contracts
+- Repo: JustTyping
+- Lane: repair-session -> external executor handoff -> verify
+- User-facing flow: `qa-z repair-session status --json` and `qa-z repair-session verify --json`
+- Slice type: Flow / Contract
+- Before: repair-session success paths emitted structured JSON, but missing session artifacts and verify argument errors printed human text even in JSON mode.
+- Root cause: repair-session handlers used direct text `print` calls for artifact, source, and configuration failures.
+- Change made: added `qa_z.repair_session_error` payloads with `command`, `error`, `exit_code`, and `message` fields for JSON failure paths while preserving existing start/status/verify human output and exit-code semantics.
+- Validation run: `python -m pytest tests\test_repair_session.py -q -k "repair_session_status_json_reports_missing_session or repair_session_verify_json_reports_argument_error or repair_session_verify_json_reports_missing_session"`; `python -m pytest tests\test_repair_session.py -q`; `python -m ruff check src\qa_z\commands\session_repair.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\commands\session_repair.py tests\test_repair_session.py`; `python -m qa_z repair-session status --path . --session .qa-z/sessions/missing --json`; `python -m qa_z repair-session verify --path . --session .qa-z/sessions/missing --json`.
+- Evidence: the focused RED failed with `JSONDecodeError` for all three covered JSON failure paths; after implementation the focused tests passed, the repair-session pack passed `14` tests, Ruff check/format passed, and live missing-session/argument-error commands emitted `kind=qa_z.repair_session_error`.
+- Gate delta: the repair-session loop now stays machine-parseable when handoff state is missing or verify invocation is invalid.
+- User impact: external executor coordinators can distinguish `status` artifact failures from `verify` argument failures using stable fields.
+- Remaining blocker: repair-session evidence still depends on a real failed baseline, external repair attempt, and candidate verification artifacts.
+- Next safe slice: run a wider validation wave across CLI failure-contract surfaces and release truth proof-head mode before mining another workstream.
