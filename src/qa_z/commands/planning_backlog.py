@@ -14,13 +14,43 @@ from qa_z.improvement_state import load_backlog
 def handle_backlog(args: argparse.Namespace) -> int:
     """Print the current improvement backlog."""
     root = Path(args.path).expanduser().resolve()
-    refresh_backlog_if_requested(root=root, refresh=args.refresh)
-    backlog = load_backlog(root)
+    try:
+        refresh_backlog_if_requested(root=root, refresh=args.refresh)
+        backlog = load_backlog(root)
+    except OSError as exc:
+        return _backlog_error(
+            args,
+            error="artifact_write_error",
+            message=(
+                "qa-z backlog: artifact write error: "
+                f"could not refresh backlog artifacts: {exc}"
+            ),
+        )
     if args.json:
         print(json.dumps(backlog, indent=2, sort_keys=True), end="\n")
     else:
         print(render_backlog(backlog, refreshed=args.refresh))
     return 0
+
+
+def _backlog_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.backlog_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_backlog_command(subparsers: argparse._SubParsersAction) -> None:

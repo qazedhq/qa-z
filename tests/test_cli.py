@@ -1227,6 +1227,36 @@ def test_backlog_refresh_runs_self_inspection_before_printing(
     assert "Closed items: 1" in output
 
 
+def test_backlog_refresh_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report_path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+    original_write_text = Path.write_text
+
+    def fail_self_inspection_report(path: Path, *args, **kwargs) -> int:
+        if path == report_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_self_inspection_report)
+
+    exit_code = main(["backlog", "--path", str(tmp_path), "--refresh", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.backlog_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z backlog: artifact write error:" in output["message"]
+    assert "could not refresh backlog artifacts" in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_render_backlog_omits_freshness_guard_line_when_none_are_closed() -> None:
     output = render_backlog(
         {
