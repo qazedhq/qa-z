@@ -889,3 +889,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators see exactly which local repair artifact failed before handing work to an external executor.
 - Remaining blocker: repair artifacts remain local handoff instructions; QA-Z still does not fix target repositories or dispatch live executors.
 - Next safe slice: commit guard repair behavior, then run the guard/repair validation pack and select the next current-truth or artifact writer gap.
+
+
+## 2026-05-13 Latest Run Manifest Write Failure Contract
+- Repo: JustTyping
+- Lane: fast/guard/benchmark/executor ingest -> latest run discovery manifest persistence
+- User-facing flow: `qa-z fast --json` and any workflow that resolves the latest run
+- Slice type: Contract / Evidence
+- Before: a failed `.qa-z/runs/latest-run.json` write returned `qa-z fast: artifact write error: disk full` without naming the latest-run manifest path.
+- Root cause: `write_latest_run_manifest()` created and wrote the manifest without a path-aware filesystem boundary.
+- Change made: wrapped the shared latest-run manifest writer with a deterministic `could not write latest run manifest ...` message and added a focused fast JSON regression.
+- Validation run: `python -m pytest tests\test_execution_runs_error_contracts.py::test_fast_json_reports_latest_run_manifest_write_failure tests\test_execution_runs_error_contracts.py::test_fast_json_reports_run_summary_artifact_write_failure tests\test_cli.py::test_fast_writes_latest_run_manifest -q`.
+- Evidence: the focused RED produced only `qa-z fast: artifact write error: disk full`; after implementation the failure payload includes the exact `latest-run.json` path, while normal latest-run manifest creation still passes.
+- Gate delta: latest-run discovery failures are now distinguishable from run summary write failures before guard, repair-prompt, verify, or executor ingest consumes stale run state.
+- User impact: operators can repair the local latest-run manifest path directly instead of misreading the failure as a check failure or missing run artifact.
+- Remaining blocker: latest-run manifests remain local deterministic state; this does not add remote proof or release execution approval.
+- Next safe slice: commit latest-run manifest behavior, then run fast/executor-ingest validation and mine another shared artifact writer.
