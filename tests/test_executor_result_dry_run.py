@@ -101,6 +101,33 @@ def test_executor_result_dry_run_reports_clear_for_verified_completed_history(
     assert persisted["summary_source"] == "materialized"
 
 
+def test_executor_result_dry_run_json_missing_session_reports_machine_payload(
+    tmp_path: Path, capsys
+) -> None:
+    exit_code = main(
+        [
+            "executor-result",
+            "dry-run",
+            "--path",
+            str(tmp_path),
+            "--session",
+            "missing-session",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.executor_result_error",
+        "command": "dry-run",
+        "error": "artifact_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z executor-result dry-run: artifact error:" in output["message"]
+
+
 def test_executor_result_dry_run_reports_attention_for_repeated_partial_history(
     tmp_path: Path, capsys
 ) -> None:

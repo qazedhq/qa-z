@@ -281,3 +281,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external executor orchestration wrappers can distinguish `source_not_found`, `artifact_error`, and `configuration_error` without brittle stdout parsing.
 - Remaining blocker: executor bridge still only packages local handoff material; it does not run external agents or mutate target repositories.
 - Next safe slice: broaden final validation across all changed CLI failure-contract packs, then pick a non-CLI release gate or benchmark fixture if continuing.
+
+
+## 2026-05-13 Executor Result JSON Failure Contract
+- Repo: JustTyping
+- Lane: external executor return path -> deterministic CLI output
+- User-facing flow: `qa-z executor-result dry-run --json` and `qa-z executor-result ingest --json`
+- Slice type: Flow / Contract
+- Before: executor-result dry-run and ingest success paths were structured, but exception paths printed plain text even in JSON mode.
+- Root cause: the runtime executor-result command handlers had direct exception `print` calls instead of a JSON-aware error renderer.
+- Change made: added a `qa_z.executor_result_error` payload with `command`, `error`, `exit_code`, and `message` for JSON failure paths while preserving text output otherwise.
+- Validation run: `python -m pytest tests\test_executor_result_dry_run.py::test_executor_result_dry_run_json_missing_session_reports_machine_payload -q`; `python -m pytest tests\test_executor_result.py tests\test_executor_result_dry_run.py tests\test_executor_result_parsing.py tests\test_runtime_executor_result_architecture.py -q`; `python -m ruff check src\qa_z\commands\runtime_executor_result.py tests\test_executor_result_dry_run.py`; `python -m ruff format --check src\qa_z\commands\runtime_executor_result.py tests\test_executor_result_dry_run.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` because dry-run output started with `qa-z executor-result dry-run: artifact error`; after the fix the focused test passed, the executor-result pack passed `33` tests, and Ruff check/format passed.
+- Gate delta: executor result return-path failures are now parseable in JSON mode without weakening ingest rejection handling or executing external repair work.
+- User impact: callers can distinguish dry-run versus ingest failures and branch on stable error ids instead of scraping command-prefixed text.
+- Remaining blocker: executor-result artifacts still must come from an approved external process; QA-Z only ingests and evaluates the local evidence.
+- Next safe slice: run final validation across release command contracts plus core JSON failure contracts.
