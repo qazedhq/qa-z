@@ -1241,3 +1241,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators get the exact failed review artifact path when a local review packet cannot be written.
 - Remaining blocker: review packets remain local deterministic evidence and do not publish GitHub comments, push code, or prove production readiness.
 - Next safe slice: commit review packet path context, then continue with SARIF or run-summary output surfaces.
+
+
+## 2026-05-13 Run Summary Artifact Path Contract
+- Repo: JustTyping
+- Lane: diff/input -> fast/deep analysis -> summary evidence
+- User-facing flow: `qa-z fast --json` and `qa-z deep --json`
+- Slice type: Contract / Evidence
+- Before: run summary write failures named the artifact directory but not whether `summary.json`, `summary.md`, or a per-check JSON file failed.
+- Root cause: `_write_run_summary_artifacts_impl()` wrote all run summary artifacts inline inside one broad artifact-directory boundary.
+- Change made: added a path-aware run summary artifact writer and CLI JSON regressions for summary JSON, summary Markdown, per-check JSON, and deep summary JSON failures.
+- Validation run: `python -m pytest tests\test_execution_runs_error_contracts.py tests\test_run_summary_architecture.py -q`; `python -m pytest tests\test_artifact_schema.py tests\test_review_packet_runtime.py tests\test_execution_runs_error_contracts.py -q`; `python -m ruff check src\qa_z\reporters\run_summary.py tests\test_execution_runs_error_contracts.py`; `python -m ruff format --check src\qa_z\reporters\run_summary.py tests\test_execution_runs_error_contracts.py`.
+- Evidence: focused run-summary error/architecture pack passed `9` tests; artifact schema and review runtime consumer pack passed `33` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: fast/deep evidence failures now distinguish machine summary, Markdown summary, and individual check artifact persistence before review, guard, repair, or verify flows consume the run.
+- User impact: operators can repair the exact failed run evidence artifact instead of rerunning blindly after a broad summary-write error.
+- Remaining blocker: run summaries remain local evidence and do not prove remote release, package publish, deployment, or production readiness.
+- Next safe slice: commit run-summary path context, then run another narrow validation wave before selecting the next output surface.
