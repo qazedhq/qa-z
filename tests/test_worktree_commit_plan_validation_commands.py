@@ -16,6 +16,7 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
             " M src/qa_z/autonomy_actions.py",
             " M src/qa_z/guard/verdict.py",
             " M src/qa_z/task_selection_render.py",
+            "?? tests/test_execution_runs_error_contracts.py",
         ]
     )
     batches = {batch["id"]: batch for batch in result["batches"]}
@@ -57,6 +58,10 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
     )
     assert (
         "tests/test_guard_cli.py"
+        in batches["planning_runtime_foundation"]["validation_commands"][1]
+    )
+    assert (
+        "tests/test_execution_runs_error_contracts.py"
         in batches["planning_runtime_foundation"]["validation_commands"][1]
     )
     assert batches["benchmark_coverage"]["staging_plan"] == {
