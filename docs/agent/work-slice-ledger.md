@@ -1305,3 +1305,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can fix manifest persistence failures without confusing them with handoff, summary, safety, or outcome artifact failures.
 - Remaining blocker: repair-session manifests remain local evidence and do not execute repairs, mutate target repositories, or prove remote release readiness.
 - Next safe slice: commit manifest path context, then run latest-HEAD strict plan and alpha/truth validation.
+
+
+## 2026-05-13 Plan Contract Draft Artifact Path Contract
+- Repo: JustTyping
+- Lane: diff/input -> plan -> contract draft
+- User-facing flow: `qa-z plan`
+- Slice type: Contract / Evidence
+- Before: `qa-z plan` write failures said a contract draft could not be written but did not identify the failed draft path.
+- Root cause: `plan_contract()` wrote the draft directly and the CLI wrapped the raw filesystem error with a broad command-level message.
+- Change made: made contract draft directory/write failures path-aware and strengthened the CLI regression to require the exact draft path.
+- Validation run: `python -m pytest tests\test_cli.py::test_plan_reports_artifact_write_failure -q`; `python -m pytest tests\test_cli.py::test_plan_creates_a_contract_draft_from_sources tests\test_cli.py::test_plan_reports_artifact_write_failure tests\test_cli.py::test_plan_uses_custom_contract_output_directory tests\test_cli.py::test_plan_resolves_relative_context_paths_from_repo_root tests\test_cli.py::test_plan_reads_top_level_fast_check_ids -q`; `python -m ruff check src\qa_z\planner\contracts.py src\qa_z\commands\bootstrap_plan.py tests\test_cli.py`; `python -m ruff format --check src\qa_z\planner\contracts.py src\qa_z\commands\bootstrap_plan.py tests\test_cli.py`.
+- Evidence: regression failed first because the output only contained `disk full`, then passed with the draft path; focused plan command pack passed `5` tests; Ruff check passed; Ruff format reported `3 files already formatted`.
+- Gate delta: plan artifact failures now point to the exact contract draft before downstream fast/deep/review flows depend on the generated contract.
+- User impact: operators can fix a bad contract output directory or blocked draft file without guessing which path failed.
+- Remaining blocker: plan contracts remain local deterministic input scaffolding and do not prove remote release, package publish, deployment, or production readiness.
+- Next safe slice: commit plan draft path context, then run final latest-HEAD release validation wave.
