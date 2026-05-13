@@ -166,6 +166,14 @@ Remote and publishing proof packet:
     assert "current_head_pinned" in payload["failed_checks"]
     assert "ahead_count_current" in payload["failed_checks"]
     assert "stale_local_sha_absent" in payload["failed_checks"]
+    assert any(
+        "Regenerate the alpha release decision packet for the current HEAD" in action
+        for action in payload["next_actions"]
+    )
+    assert (
+        "python scripts\\alpha_release_truth_validator.py --proof-head-from-packet --json"
+        in payload["next_commands"]
+    )
 
 
 def test_validator_rejects_missing_release_decision_packet_header() -> None:

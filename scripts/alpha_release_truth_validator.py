@@ -181,6 +181,46 @@ def check(name: str, passed: bool, detail: str) -> TruthCheck:
     return TruthCheck(name=name, passed=passed, detail=detail)
 
 
+def recovery_guidance_for_failed_checks(
+    failed_checks: Sequence[str],
+) -> dict[str, list[str]]:
+    failed = set(failed_checks)
+    next_actions: list[str] = []
+    next_commands: list[str] = []
+
+    stale_packet_checks = {
+        "current_head_pinned",
+        "ahead_count_current",
+        "stale_local_sha_absent",
+        "current_head_remote_not_visible",
+    }
+    if failed & stale_packet_checks:
+        next_actions.extend(
+            [
+                "Regenerate the alpha release decision packet for the current HEAD before treating default validator output as release proof.",
+                "If reviewing the historical proof packet instead of current HEAD, rerun the validator with --proof-head-from-packet.",
+            ]
+        )
+        next_commands.append(
+            "python scripts\\alpha_release_truth_validator.py --proof-head-from-packet --json"
+        )
+
+    if {
+        "release_packet_header_present",
+        "release_packet_header_unique",
+    } & failed:
+        next_actions.append(
+            "Keep exactly one current alpha release decision packet section before validating proof-head or release-command claims."
+        )
+
+    if failed and not next_actions:
+        next_actions.append(
+            "Inspect failed_checks and update the release truth packet, package plan, or handoff before claiming alpha release readiness."
+        )
+
+    return {"next_actions": next_actions, "next_commands": next_commands}
+
+
 def validate_release_truth_texts(
     facts: ReleaseTruthFacts, texts: ReleaseTruthTexts
 ) -> dict[str, object]:
@@ -416,6 +456,7 @@ def validate_release_truth_texts(
     ]
 
     failed = [truth_check.name for truth_check in checks if not truth_check.passed]
+    recovery_guidance = recovery_guidance_for_failed_checks(failed)
     return {
         "kind": "qa_z.alpha_release_truth_validator",
         "schema_version": 1,
@@ -432,6 +473,8 @@ def validate_release_truth_texts(
             }
             for truth_check in checks
         ],
+        "next_actions": recovery_guidance["next_actions"],
+        "next_commands": recovery_guidance["next_commands"],
         "facts": {
             "head": facts.head,
             "current_head": facts.current_head or facts.head,
