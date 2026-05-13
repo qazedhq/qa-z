@@ -277,6 +277,45 @@ def test_selection_context_treats_missing_and_malformed_timestamps_as_stale(
     assert "live_repository" not in malformed_context
 
 
+def test_selection_context_treats_missing_or_wrong_kind_self_inspection_as_stale(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+
+    missing_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert missing_context["source_self_inspection"] == (
+        ".qa-z/loops/latest/self_inspect.json"
+    )
+    assert missing_context["source_self_inspection_stale_for_backlog"] is True
+    assert missing_context["source_self_inspection_refresh_commands"] == [
+        "python -m qa_z select-next --refresh --count 3 --json"
+    ]
+    assert "live_repository" not in missing_context
+
+    write_json(
+        path,
+        {
+            "kind": "qa_z.selected_tasks",
+            "schema_version": 1,
+            "generated_at": "2026-04-22T01:00:00Z",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    wrong_kind_context = latest_self_inspection_selection_context(
+        tmp_path, min_generated_at="2026-04-22T00:00:00Z"
+    )
+
+    assert wrong_kind_context["source_self_inspection_stale_for_backlog"] is True
+    assert wrong_kind_context["source_self_inspection_generated_at"] == (
+        "2026-04-22T01:00:00Z"
+    )
+    assert "live_repository" not in wrong_kind_context
+
+
 def test_selection_context_compares_timezone_offsets_by_instant(
     tmp_path: Path,
 ) -> None:

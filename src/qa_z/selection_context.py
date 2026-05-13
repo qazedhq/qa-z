@@ -25,6 +25,13 @@ def latest_self_inspection_selection_context(
     path = root / ".qa-z" / "loops" / "latest" / "self_inspect.json"
     payload = read_json_object(path)
     if payload.get("kind") != SELF_INSPECTION_KIND:
+        if min_generated_at:
+            return stale_self_inspection_selection_context(
+                root=root,
+                path=path,
+                payload=payload,
+                generated_at=str(payload.get("generated_at") or "").strip(),
+            )
         return {}
     generated_at = str(payload.get("generated_at") or "").strip()
     if self_inspection_is_before_minimum(
