@@ -375,6 +375,7 @@ def test_write_repair_handoff_artifact_wraps_write_failures(
 
     message = str(excinfo.value)
     assert "could not write repair handoff artifact" in message
+    assert str(output_dir / "handoff.json") in message
     assert str(output_dir) in message
     assert "disk full" in message
 
