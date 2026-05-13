@@ -126,19 +126,23 @@ def test_alpha_rc_packet_keeps_deferred_scope_and_remote_proof_explicit() -> Non
     )
 
     assert "## Alpha Release-Candidate Decision Packet - 2026-05-12" in commit_plan
-    assert "`status=attention_required` with `changed_batch_count=5`" in commit_plan
-    assert "`report_path_count=1`" in commit_plan
-    assert "`shared_patch_add_count=1`" in commit_plan
+    assert "`status=ready` with `changed_batch_count=2`" in commit_plan
+    assert "`report_path_count=0`" in commit_plan
+    assert "`shared_patch_add_count=0`" in commit_plan
     assert "`product_decision_path_count=0`" in commit_plan
     assert "`cross_cutting_count=0`" in commit_plan
-    assert "`cross_cutting_group_count=1`" in commit_plan
+    assert "`cross_cutting_group_count=0`" in commit_plan
+    assert "`release_scope_decision_path_count=25`" in commit_plan
+    assert "`approved_alpha_support_path_count=0`" in commit_plan
     assert "`deferred_alpha_scope_path_count=25`" in commit_plan
-    assert "`cross_cutting_paths_present`" in commit_plan
+    assert "owned by the alpha release closure batch" in commit_plan
     assert "`alpha release gate passed`, `28/28`" in commit_plan
     assert (
         "python scripts\\alpha_release_truth_validator.py --proof-head-from-packet --json"
         in commit_plan
     )
+    assert "proof_branch=codex/alpha-rc-1ede65172f77-20260513" in commit_plan
+    assert "current_head_remote_proof=local_only_not_remote_visible" in commit_plan
     assert "`release_path_state=local_only_remote_preflight`" in commit_plan
     assert "Deferred Marketing/X packet:" in commit_plan
     assert "Deferred paths are `marketing/x/**` and `tests/test_x_automation.py`" in (
@@ -157,8 +161,8 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         encoding="utf-8"
     )
 
-    assert "Proof timestamp: `2026-05-12T22:50Z`" in commit_plan
-    assert "Source HEAD at proof time: `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`" in (
+    assert "Proof timestamp: `2026-05-13T14:39Z`" in commit_plan
+    assert "Source HEAD at proof time: `1ede65172f770c66159b2cc5e9e7d4f2063bf634`" in (
         commit_plan
     )
     assert "`RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`" in commit_plan
@@ -167,20 +171,19 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         in (commit_plan)
     )
     assert "not a product regression" in commit_plan
-    assert "`1622 passed`" in commit_plan
+    assert "`1723 passed`" in commit_plan
     assert "Read-only remote proof:" in commit_plan
     assert "`repository_http_status=200`" in commit_plan
     assert "`repository_visibility=public`" in commit_plan
-    assert "`remote_ref_count=24`" in commit_plan
+    assert "`remote_ref_count=26`" in commit_plan
     assert "`remote_ref_tag_count=2`" in commit_plan
-    assert "Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`" in (
-        commit_plan
-    )
+    assert "Remote `main` is" in commit_plan
+    assert "`b9a2504ad07d15776eb900f07d6ee83f22ef9076`; tags include" in commit_plan
     assert "GitHub API proof returned repository `qazedhq/qa-z`" in commit_plan
     assert "Latest read-only workflow proof for remote `main`" in commit_plan
     assert "public raw checks captured" in commit_plan
     assert "failed exact-commit raw URLs with HTTP `404`" in commit_plan
-    assert "Local proof HEAD is 17 commits ahead of remote `main`" in commit_plan
+    assert "Local proof HEAD is 1 commit ahead of remote `main`" in commit_plan
     assert "`release_path_state=blocked_remote_publish`" in commit_plan
     assert (
         "Skip-remote local preflight remains separate from read-only remote proof"
@@ -192,18 +195,24 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
     assert "Production readiness: `No`" in commit_plan
     assert "Approval matrix:" in commit_plan
     assert "Publish execution packet:" in commit_plan
-    assert 'test "$(git rev-parse HEAD)" = "<approved-sha>"' in commit_plan
     assert (
-        "git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512"
+        'test "$(git rev-parse HEAD)" = "1ede65172f770c66159b2cc5e9e7d4f2063bf634"'
         in commit_plan
     )
-    assert "Expected proof branch output must resolve `<approved-sha>`" in commit_plan
+    assert (
+        "git push -u origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:refs/heads/codex/alpha-rc-1ede65172f77-20260513"
+        in commit_plan
+    )
+    assert "Expected proof branch output must resolve" in commit_plan
+    assert "refs/heads/codex/alpha-rc-1ede65172f77-20260513" in commit_plan
     assert "Direct `main` update needs separate explicit approval" in commit_plan
-    assert "git push origin <approved-sha>:main" in commit_plan
+    assert "git push origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:main" in (
+        commit_plan
+    )
     assert "git push origin HEAD:main" not in commit_plan
     assert "Rollback and incident packet:" in commit_plan
     assert (
-        "git push origin --delete codex/alpha-rc-<approved-sha>-20260512" in commit_plan
+        "git push origin --delete codex/alpha-rc-1ede65172f77-20260513" in commit_plan
     )
     assert "Production readiness is not claimed." in commit_plan
 
@@ -231,6 +240,10 @@ def test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contrac
     assert "## Alpha RC package dry-run packet - 2026-05-12" in package_plan
     assert "Package metadata version: `0.9.8a0`" in package_plan
     assert (
+        "Current release proof HEAD: `1ede65172f770c66159b2cc5e9e7d4f2063bf634`"
+        in package_plan
+    )
+    assert (
         "No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved."
         in (package_plan)
     )
@@ -240,6 +253,10 @@ def test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contrac
         "python scripts/alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json"
         in release_handoff
     )
+    assert "Current-head proof alignment addendum:" in release_handoff
+    assert "codex/alpha-rc-1ede65172f77-20260513" in release_handoff
+    assert "RELEASE_EXECUTION_APPROVED=true" in release_handoff
+    assert "PUSH_ALLOWED=true" in release_handoff
     assert "The bare historical command is retained only as a legacy blocker check" in (
         release_handoff
     )

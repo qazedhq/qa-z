@@ -7,12 +7,15 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "alpha_release_truth_validator.py"
 PROOF_HEAD = "9bbd1294d3b25fd45216b6cb14f2d97dd087351a"
 POST_COMMIT_HEAD = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ORIGIN_MAIN = "8f647619418b884afa3bef3d839326680bec70af"
+PROOF_BRANCH = f"codex/alpha-rc-{PROOF_HEAD[:12]}-20260513"
 
 
 def load_truth_validator_module():
@@ -52,14 +55,14 @@ def valid_release_truth_texts(module):
 - Local proof HEAD is 17 commits ahead of remote `main`.
 Push/tag/release/package publish: not executed in PROOF_ONLY mode.
 ```bash
-test "$(git rev-parse HEAD)" = "<approved-sha>"
-git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512
-git ls-remote --heads origin codex/alpha-rc-<approved-sha>-20260512
+test "$(git rev-parse HEAD)" = "{PROOF_HEAD}"
+git push -u origin {PROOF_HEAD}:refs/heads/{PROOF_BRANCH}
+git ls-remote --heads origin {PROOF_BRANCH}
 ```
-Expected proof branch output must resolve `<approved-sha>` to
-`refs/heads/codex/alpha-rc-<approved-sha>-20260512`.
+Expected proof branch output must resolve `{PROOF_HEAD}` to
+`refs/heads/{PROOF_BRANCH}`.
 Direct `main` update needs separate explicit approval.
-Direct `main` update must use `git push origin <approved-sha>:main`, not a
+Direct `main` update must use `git push origin {PROOF_HEAD}:main`, not a
 moving `HEAD:main` refspec.
 ```bash
 git tag -s <approved-alpha-tag> -m "QA-Z <approved-alpha-tag>"
@@ -84,7 +87,7 @@ python -m twine check dist/*
 Registry publish remains blocked until approval.
 Rollback and incident packet:
 - Mistaken proof branch push: if approved by a release owner, delete only the
-  proof branch with `git push origin --delete codex/alpha-rc-<approved-sha>-20260512`.
+  proof branch with `git push origin --delete {PROOF_BRANCH}`.
 - Mistaken remote tag: only after human approval, run
   `git push origin --delete <approved-alpha-tag>`.
 - Package rollback/yank policy is registry-owned.
@@ -110,9 +113,10 @@ Remote and publishing proof packet:
 - Production readiness: `No`. Production readiness is not claimed.
 ## Preflight
 """,
-        package_plan="""
+        package_plan=f"""
 ## Alpha RC package dry-run packet - 2026-05-12
 Package metadata version: `0.9.8a0`.
+Current release proof HEAD: `{PROOF_HEAD}`.
 No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved.
 `RELEASE_EXECUTION_APPROVED` and `PACKAGE_PUBLISH_ALLOWED` must both be set to
 `true` by a human release owner before any upload command is run.
@@ -269,6 +273,34 @@ def test_validator_rejects_duplicate_release_decision_packet_sections() -> None:
     assert "release_packet_header_unique" in payload["failed_checks"]
 
 
+def test_validator_rejects_duplicate_source_head_in_release_packet() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    duplicated = module.ReleaseTruthTexts(
+        worktree_packet=texts.worktree_packet.replace(
+            f"- Source HEAD at proof time: `{PROOF_HEAD}`.",
+            (
+                f"- Source HEAD at proof time: `{PROOF_HEAD}`.\n"
+                f"- Source HEAD at proof time: `{PROOF_HEAD}`."
+            ),
+        ),
+        package_plan=texts.package_plan,
+        release_handoff=texts.release_handoff,
+    )
+
+    payload = module.validate_release_truth_texts(facts, duplicated)
+
+    assert payload["status"] == "failed"
+    assert "source_head_unique" in payload["failed_checks"]
+
+
 def test_validator_accepts_current_release_execution_packet_contract() -> None:
     module = load_truth_validator_module()
     facts = module.ReleaseTruthFacts(
@@ -285,6 +317,97 @@ def test_validator_accepts_current_release_execution_packet_contract() -> None:
     assert payload["status"] == "passed"
     assert payload["check_count"] >= 12
     assert payload["failed_checks"] == []
+
+
+def test_validator_json_facts_include_proof_branch_readiness() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+
+    payload = module.validate_release_truth_texts(
+        facts, valid_release_truth_texts(module)
+    )
+
+    assert payload["status"] == "passed"
+    assert payload["facts"]["proof_branch"] == PROOF_BRANCH
+    assert (
+        payload["facts"]["current_head_remote_proof"] == "local_only_not_remote_visible"
+    )
+
+
+def test_validator_accepts_singular_ahead_count_phrase() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=1,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    packet = texts.worktree_packet.replace(
+        "- Local proof HEAD is 17 commits ahead of remote `main`.",
+        "- Local proof HEAD is 1 commit ahead of remote `main`.",
+    )
+
+    payload = module.validate_release_truth_texts(
+        facts,
+        module.ReleaseTruthTexts(
+            worktree_packet=packet,
+            package_plan=texts.package_plan,
+            release_handoff=texts.release_handoff,
+        ),
+    )
+
+    assert payload["status"] == "passed"
+
+
+def test_validator_accepts_remote_visible_current_head_packet() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=PROOF_HEAD,
+        ahead_count=0,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    packet = (
+        texts.worktree_packet.replace(
+            f"  `{ORIGIN_MAIN}`.",
+            f"  `{PROOF_HEAD}`.",
+        )
+        .replace(
+            "- Local proof HEAD is 17 commits ahead of remote `main`.",
+            "- Local proof HEAD is 0 commits ahead of remote `main`.",
+        )
+        .replace(
+            "passed branch `main` URLs but failed exact-commit raw URLs with HTTP `404`.",
+            "passed for branch and exact-commit raw URLs.",
+        )
+        .replace(
+            f"- local `{PROOF_HEAD}` is not yet remote-visible.",
+            f"- local `{PROOF_HEAD}` is remote-visible.",
+        )
+    )
+
+    payload = module.validate_release_truth_texts(
+        facts,
+        module.ReleaseTruthTexts(
+            worktree_packet=packet,
+            package_plan=texts.package_plan,
+            release_handoff=texts.release_handoff,
+        ),
+    )
+
+    assert payload["status"] == "passed"
+    assert payload["failed_checks"] == []
+    assert payload["facts"]["current_head_remote_proof"] == "remote_visible"
 
 
 def test_validator_explicit_proof_head_mode_survives_later_local_commits() -> None:
@@ -320,6 +443,31 @@ def test_validator_extracts_proof_head_from_packet_for_commit_safe_mode() -> Non
     assert proof_head == PROOF_HEAD
 
 
+def test_truth_validator_cli_rejects_missing_source_head_for_packet_mode(
+    monkeypatch,
+) -> None:
+    module = load_truth_validator_module()
+
+    monkeypatch.setattr(
+        module,
+        "read_release_truth_texts",
+        lambda _repo_root, **_kwargs: module.ReleaseTruthTexts(
+            worktree_packet="""
+## Alpha Release-Candidate Decision Packet - 2026-05-12
+- Branch at proof time: `main`.
+""",
+            package_plan="",
+            release_handoff="",
+        ),
+    )
+
+    with pytest.raises(
+        SystemExit,
+        match="release packet does not contain a Source HEAD at proof time",
+    ):
+        module.main(["--proof-head-from-packet", "--json"])
+
+
 def test_validator_rejects_head_based_proof_branch_push() -> None:
     module = load_truth_validator_module()
     facts = module.ReleaseTruthFacts(
@@ -332,21 +480,67 @@ def test_validator_rejects_head_based_proof_branch_push() -> None:
     texts = valid_release_truth_texts(module)
     packet = (
         texts.worktree_packet.replace(
-            'test "$(git rev-parse HEAD)" = "<approved-sha>"\n', ""
+            f'test "$(git rev-parse HEAD)" = "{PROOF_HEAD}"\n', ""
         )
         .replace(
-            "git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512",
-            "git push -u origin HEAD:codex/alpha-rc-<approved-sha>-20260512",
+            f"git push -u origin {PROOF_HEAD}:refs/heads/{PROOF_BRANCH}",
+            f"git push -u origin HEAD:{PROOF_BRANCH}",
         )
         .replace(
-            "Expected proof branch output must resolve `<approved-sha>` to\n"
-            "`refs/heads/codex/alpha-rc-<approved-sha>-20260512`.\n",
+            f"Expected proof branch output must resolve `{PROOF_HEAD}` to\n"
+            f"`refs/heads/{PROOF_BRANCH}`.\n",
             "",
         )
         .replace(
-            "Direct `main` update must use `git push origin <approved-sha>:main`, not a\n"
+            f"Direct `main` update must use `git push origin {PROOF_HEAD}:main`, not a\n"
             "moving `HEAD:main` refspec.\n",
             "",
+        )
+    )
+    mutated = module.ReleaseTruthTexts(
+        worktree_packet=packet,
+        package_plan=texts.package_plan,
+        release_handoff=texts.release_handoff,
+    )
+
+    payload = module.validate_release_truth_texts(facts, mutated)
+
+    assert payload["status"] == "failed"
+    assert "proof_branch_packet" in payload["failed_checks"]
+
+
+def test_validator_rejects_placeholder_proof_branch_packet() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    packet = (
+        texts.worktree_packet.replace(
+            f'test "$(git rev-parse HEAD)" = "{PROOF_HEAD}"',
+            'test "$(git rev-parse HEAD)" = "<approved-sha>"',
+        )
+        .replace(
+            f"git push -u origin {PROOF_HEAD}:refs/heads/{PROOF_BRANCH}",
+            "git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512",
+        )
+        .replace(
+            f"git ls-remote --heads origin {PROOF_BRANCH}",
+            "git ls-remote --heads origin codex/alpha-rc-<approved-sha>-20260512",
+        )
+        .replace(
+            f"Expected proof branch output must resolve `{PROOF_HEAD}` to\n"
+            f"`refs/heads/{PROOF_BRANCH}`.",
+            "Expected proof branch output must resolve `<approved-sha>` to\n"
+            "`refs/heads/codex/alpha-rc-<approved-sha>-20260512`.",
+        )
+        .replace(
+            f"Direct `main` update must use `git push origin {PROOF_HEAD}:main`, not a",
+            "Direct `main` update must use `git push origin <approved-sha>:main`, not a",
         )
     )
     mutated = module.ReleaseTruthTexts(
@@ -420,6 +614,32 @@ def test_validator_rejects_missing_package_publish_approval_blocker() -> None:
     texts = valid_release_truth_texts(module)
     package_plan = texts.package_plan.replace(
         "No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved.\n",
+        "",
+    )
+    mutated = module.ReleaseTruthTexts(
+        worktree_packet=texts.worktree_packet,
+        package_plan=package_plan,
+        release_handoff=texts.release_handoff,
+    )
+
+    payload = module.validate_release_truth_texts(facts, mutated)
+
+    assert payload["status"] == "failed"
+    assert "package_dry_run_packet" in payload["failed_checks"]
+
+
+def test_validator_rejects_package_plan_without_current_proof_head() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    package_plan = texts.package_plan.replace(
+        f"Current release proof HEAD: `{PROOF_HEAD}`.\n",
         "",
     )
     mutated = module.ReleaseTruthTexts(
