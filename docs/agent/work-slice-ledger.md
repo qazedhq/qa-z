@@ -1017,3 +1017,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can identify whether the selected task, loop plan, or loop history file failed instead of treating the selection as stale or taskless.
 - Remaining blocker: loop history remains local planning evidence and does not prove remote release or production readiness.
 - Next safe slice: commit history append behavior, then mine executor-history and verification publication writers for the next path-aware contract gap.
+
+
+## 2026-05-13 Executor History JSON Write Failure Contract
+- Repo: JustTyping
+- Lane: external executor handoff -> executor-result history persistence
+- User-facing flow: `qa-z executor-result ingest --json`
+- Slice type: Contract / Evidence
+- Before: failed executor-result attempt/history JSON writes could raise raw filesystem errors from the shared executor-history support helper.
+- Root cause: `executor_history_support.write_json()` created parent directories and wrote deterministic JSON without wrapping `OSError` with the affected artifact path.
+- Change made: added `could not write executor history JSON artifact ...` around executor-history JSON persistence and a focused support regression for failed writes.
+- Validation run: `python -m pytest tests\test_executor_history_support.py tests\test_executor_history_architecture.py tests\test_executor_history_dry_run_layout_architecture.py tests\test_executor_result.py::test_executor_result_ingest_warns_when_bridge_timestamp_is_missing tests\test_executor_result.py::test_executor_result_ingest_accepts_no_op_with_warning_when_explanation_is_missing -q`; `python -m ruff check src\qa_z\executor_history_support.py tests\test_executor_history_support.py`; `python -m ruff format --check src\qa_z\executor_history_support.py tests\test_executor_history_support.py`.
+- Evidence: executor-history support, architecture, dry-run layout, and ingest smoke pack passed `17` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor-result ingest can now distinguish history JSON persistence failure from result validation, stale bridge evidence, and no-op warning policy.
+- User impact: maintainers can identify the exact executor history artifact that failed before trusting verify-resume or dry-run history signals.
+- Remaining blocker: executor history remains local evidence and does not authorize remote release or external executor mutation.
+- Next safe slice: commit executor-history helper behavior, then inspect verification publication or repair-session guide writers.
