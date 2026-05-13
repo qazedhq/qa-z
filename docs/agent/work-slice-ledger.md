@@ -233,3 +233,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators using an explicit release branch no longer receive mismatched human checklist and machine `next_commands` guidance.
 - Remaining blocker: actually pushing the release branch still requires explicit approval and remote proof.
 - Next safe slice: check CLI JSON/status contracts for planner, verify, or doctor output where a failure path may still be under-specified.
+
+
+## 2026-05-13 Verify JSON Failure Contract
+- Repo: JustTyping
+- Lane: core verify CLI -> deterministic operator output
+- User-facing flow: `qa-z verify --json`
+- Slice type: Flow / Contract
+- Before: successful `qa-z verify --json` emitted machine-readable comparison JSON, but missing-source and other failure paths still printed plain text, making automation parse failures differently from successes.
+- Root cause: `handle_verify` handled exceptions with direct text `print` calls regardless of `--json`.
+- Change made: added a `qa_z.verify_error` JSON payload for `--json` failure paths while preserving the existing non-JSON text output.
+- Validation run: `python -m pytest tests\test_cli.py::test_verify_cli_json_reports_source_not_found_as_machine_payload tests\test_cli.py::test_verify_cli_returns_source_not_found_for_missing_run -q`; `python -m pytest tests\test_cli.py::test_verify_cli_compares_existing_runs_and_writes_artifacts tests\test_cli.py::test_verify_cli_rerun_creates_candidate_before_comparing tests\test_cli.py::test_verify_cli_returns_source_not_found_for_missing_run tests\test_cli.py::test_verify_cli_json_reports_source_not_found_as_machine_payload tests\test_session_commands.py -q`; `python -m ruff check src\qa_z\commands\session_verify.py tests\test_cli.py`; `python -m ruff format --check src\qa_z\commands\session_verify.py tests\test_cli.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` because output started with `qa-z verify: source not found`; after the fix the focused pair passed, the broader verify/session command pack passed `9` tests, and Ruff check/format passed.
+- Gate delta: verify failure output is now machine-readable in JSON mode without changing verify exit codes or running external executors.
+- User impact: scripts can branch on `kind=qa_z.verify_error`, `error`, and `exit_code` instead of brittle text parsing when verify cannot load a run.
+- Remaining blocker: this does not prove repair quality by itself; callers still need comparable baseline and candidate run artifacts.
+- Next safe slice: extend the same JSON failure contract to one adjacent command only after confirming its current tests and operator expectations.

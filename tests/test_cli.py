@@ -1651,3 +1651,36 @@ def test_verify_cli_returns_source_not_found_for_missing_run(
 
     assert exit_code == 4
     assert "qa-z verify: source not found:" in output
+
+
+def test_verify_cli_json_reports_source_not_found_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+    write_fast_summary_artifact(
+        tmp_path, "candidate", check_id="py_test", status="passed", exit_code=0
+    )
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/missing",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.verify_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z verify: source not found:" in output["message"]
