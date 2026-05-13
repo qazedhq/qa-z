@@ -384,6 +384,59 @@ def test_guard_github_summary_option_writes_summary(tmp_path: Path, capsys) -> N
     ).exists()
 
 
+def test_guard_github_summary_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    summary_path = (
+        tmp_path / ".qa-z" / "runs" / "latest" / "guard" / ("github-summary.md")
+    )
+    original_write_text = Path.write_text
+
+    def fail_github_summary(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == summary_path:
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_github_summary)
+
+    exit_code = main(
+        [
+            "guard",
+            "--path",
+            str(tmp_path),
+            "--deep",
+            "never",
+            "--github-summary",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.guard_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z guard: artifact error:" in output["message"]
+    assert "could not write guard GitHub summary artifact" in output["message"]
+    assert str(summary_path) in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_guard_risk_classifier_detects_auth_api_and_public_surface() -> None:
     risk = classify_change_risk(
         [

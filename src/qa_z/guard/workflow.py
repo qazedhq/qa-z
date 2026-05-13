@@ -141,8 +141,9 @@ def run_guard(
             root=root,
             deep_summary=deep_summary,
         )
-        guard_dir.mkdir(parents=True, exist_ok=True)
-        (guard_dir / "github-summary.md").write_text(summary_markdown, encoding="utf-8")
+        write_guard_github_summary_artifact(
+            guard_dir / "github-summary.md", summary_markdown
+        )
 
     artifacts = {
         "run_dir": format_path(run_source.run_dir, root),
@@ -210,6 +211,17 @@ def should_run_deep(deep_mode: str, risk_categories: list[str]) -> bool:
     if deep_mode == "never":
         return False
     return bool(risk_categories)
+
+
+def write_guard_github_summary_artifact(path: Path, markdown: str) -> None:
+    """Write the optional guard GitHub summary with path-aware errors."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(markdown, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard GitHub summary artifact to {path}: {exc}"
+        ) from exc
 
 
 def decide_status(
