@@ -1641,3 +1641,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: GitHub visitors and CI scripts can automate the packaged demo more confidently because failures stay machine-readable and deterministic.
 - Remaining blocker: current HEAD remains local-only until push approval; release packet stays proof-only and mutation-gated.
 - Next safe slice: continue a product-code slice from stale-current-truth, repair prompt handoff, or benchmark lock coverage, then rerun the relevant focused validator.
+
+
+## 2026-05-13 Select-Next Taskless Recovery Guidance
+- Repo: JustTyping
+- Lane: current truth / self-inspect / select-next
+- User-facing flow: `qa-z select-next --refresh --json` -> no selected tasks -> deterministic follow-through instead of an inferred stop.
+- Slice type: Flow / Contract / Evidence
+- Before: taskless selection artifacts recorded `blocked_no_candidates`, `selection_gap_reason`, and `open_backlog_count`, but JSON and human stdout did not carry copyable next actions or refresh commands.
+- Root cause: empty-backlog selection was treated as loop-health residue, while long-running improvement workflows still need explicit local next steps before claiming safe exhaustion.
+- Change made: added additive `next_actions` and `next_commands` to taskless `selected_tasks.json`, rendered them in human `select-next` output and saved loop plans, and documented the fields in the artifact schema.
+- Validation run: `python -m pytest tests\test_self_improvement_selection.py::test_select_next_records_reason_when_no_backlog_tasks_are_open tests\test_cli.py::test_select_next_refresh_runs_self_inspection_before_selection tests\test_current_truth.py::test_current_truth_docs_cover_dry_run_publish_and_session_residue -q`; `python -m pytest tests\test_self_improvement_selection.py tests\test_self_improvement.py tests\test_cli.py tests\test_current_truth.py::test_current_truth_docs_cover_dry_run_publish_and_session_residue -q`; `python -m ruff check src\qa_z\self_improvement_selection.py src\qa_z\task_selection_render.py src\qa_z\commands\planning_output.py tests\test_self_improvement_selection.py tests\test_cli.py tests\test_current_truth.py`; `python -m ruff format --check src\qa_z\self_improvement_selection.py src\qa_z\task_selection_render.py src\qa_z\commands\planning_output.py tests\test_self_improvement_selection.py tests\test_cli.py tests\test_current_truth.py`; `python -m mypy src\qa_z\self_improvement_selection.py src\qa_z\task_selection_render.py src\qa_z\commands\planning_output.py tests\test_self_improvement_selection.py tests\test_cli.py`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: the focused red test first failed on missing `next_actions`, then passed; broader self-improvement/CLI/current-truth validation passed `78` tests before commit and `93` tests after packet sync; Ruff, mypy, text hygiene, both truth validator modes, and strict worktree plan passed.
+- Gate delta: taskless selection now has deterministic follow-through and does not look like an unexplained early stop during long worktrains.
+- User impact: an operator can distinguish true safe exhaustion from "no backlog item selected yet" and immediately rerun backlog/strict worktree evidence or use `docs/agent/next-real-slices.md`.
+- Remaining blocker: this is local planning evidence only; it does not approve push, release, package publish, Marketing/X, or Claude mirror promotion.
+- Next safe slice: run another backlog expansion pass and choose a product-code or release-proof slice that does not require remote mutation.
