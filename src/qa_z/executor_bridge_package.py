@@ -137,14 +137,17 @@ def create_executor_bridge(
                 verification_hint="rerun",
             ),
         )
-        executor_guide_path.write_text(
-            render_executor_bridge_guide(manifest, handoff), encoding="utf-8"
+        write_markdown(
+            executor_guide_path,
+            render_executor_bridge_guide(manifest, handoff),
         )
-        codex_path.write_text(
-            render_executor_specific_guide(manifest, "Codex"), encoding="utf-8"
+        write_markdown(
+            codex_path,
+            render_executor_specific_guide(manifest, "Codex"),
         )
-        claude_path.write_text(
-            render_executor_specific_guide(manifest, "Claude"), encoding="utf-8"
+        write_markdown(
+            claude_path,
+            render_executor_specific_guide(manifest, "Claude"),
         )
     except (ArtifactSourceNotFound, FileNotFoundError):
         if created_bridge_dir:
@@ -171,6 +174,16 @@ def create_executor_bridge(
         claude_path=claude_path,
         result_template_path=result_template_path,
     )
+
+
+def write_markdown(path: Path, text: str) -> None:
+    """Write an executor bridge Markdown artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor bridge Markdown artifact {path}: {exc}"
+        ) from exc
 
 
 def bridge_manifest(

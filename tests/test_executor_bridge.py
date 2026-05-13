@@ -729,6 +729,59 @@ def test_executor_bridge_cli_json_reports_artifact_write_failure(
     assert not bridge_dir.exists()
 
 
+def test_executor_bridge_cli_json_reports_markdown_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    loop_id, _session_id = prepare_autonomy_session(tmp_path)
+    bridge_dir = tmp_path / ".qa-z" / "executor" / "bridge-guide-write-failure"
+    original_write_text = Path.write_text
+
+    def fail_codex_guide(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == bridge_dir / "codex.md":
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_codex_guide)
+
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-loop",
+            loop_id,
+            "--bridge-id",
+            "bridge-guide-write-failure",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.executor_bridge_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z executor-bridge: artifact error:" in output["message"]
+    assert "could not write executor bridge package" in output["message"]
+    assert "could not write executor bridge Markdown artifact" in output["message"]
+    assert str(bridge_dir / "codex.md") in output["message"]
+    assert "disk full" in output["message"]
+    assert not bridge_dir.exists()
+
+
 def test_executor_bridge_cli_stdout_points_to_return_and_safety_entrypoints(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
