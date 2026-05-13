@@ -537,3 +537,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: CI wrappers and local operators can distinguish deep analysis results from artifact persistence failures without raw tracebacks.
 - Remaining blocker: release execution remains approval-blocked; a full alpha gate rerun is still needed after this slice before claiming the wave remains green.
 - Next safe slice: commit SARIF/deep changes, rerun alpha gate or a focused deep validation wave, then continue mining.
+
+
+## 2026-05-13 Repair Prompt Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: repair-prompt -> external executor handoff artifact writing
+- User-facing flow: `qa-z repair-prompt --json`
+- Slice type: Flow / Contract
+- Before: a failed write of generated handoff markdown could escape as raw `OSError` after the repair packet had been built.
+- Root cause: `handle_repair_prompt()` wrote Codex/Claude handoff markdown directly and only normalized source/artifact-load failures; the repair/session publish validation command also omitted the repair-prompt error-contract file.
+- Change made: added a path-aware handoff markdown writer, normalized OSError to `qa_z.repair_prompt_error` with `artifact_write_error`, and updated the repair/session publish validation command to include `tests/test_repair_prompt_error_contracts.py`.
+- Validation run: `python -m pytest tests\test_repair_prompt_error_contracts.py::test_repair_prompt_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_repair_prompt.py tests\test_repair_prompt_error_contracts.py tests\test_cli_config_error_contracts.py -q`; `python -m pytest tests\test_worktree_commit_plan_validation_commands.py::test_commit_plan_batches_include_targeted_validation_commands tests\test_repair_prompt_error_contracts.py tests\test_repair_prompt.py -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m ruff check src\qa_z\commands\execution_repair.py scripts\worktree_commit_plan_support.py tests\test_repair_prompt_error_contracts.py tests\test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check src\qa_z\commands\execution_repair.py scripts\worktree_commit_plan_support.py tests\test_repair_prompt_error_contracts.py tests\test_worktree_commit_plan_validation_commands.py`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused write-failure test passed, the repair-prompt/config pack passed `16` tests, the validation-command plus repair-prompt pack passed `13` tests, strict worktree plan stayed `ready`, and Ruff check/format passed.
+- Gate delta: repair-prompt JSON mode now remains machine-parseable when local handoff artifacts cannot be written.
+- User impact: external executor handoff automation can fail closed on artifact persistence failures instead of receiving a traceback.
+- Remaining blocker: release execution remains approval-blocked; broader alpha gate should be rerun after this slice.
+- Next safe slice: commit repair-prompt and validation-command updates, rerun a release-quality wave, then continue backlog mining.
