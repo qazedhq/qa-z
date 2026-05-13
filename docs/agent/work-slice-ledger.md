@@ -361,3 +361,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: a terminal-only release operator can recover from stale packet/current-head mismatch without opening JSON.
 - Remaining blocker: actual current-HEAD remote proof and release execution still require explicit approval and external/remote evidence.
 - Next safe slice: run another backlog expansion pass and choose a different workstream instead of repeatedly polishing the same validator surface.
+
+
+## 2026-05-13 Fast/Deep JSON Failure Contracts
+- Repo: JustTyping
+- Lane: fast/deep execution -> deterministic CLI output
+- User-facing flow: `qa-z fast --json` and `qa-z deep --json`
+- Slice type: Flow / Contract
+- Before: successful fast/deep runs emitted structured JSON summaries, but missing-contract, argument, and missing-source failures printed human text even when JSON mode was requested.
+- Root cause: the execution command handlers used direct exception `print` calls instead of a JSON-aware error renderer.
+- Change made: added `qa_z.fast_error` and `qa_z.deep_error` payloads with stable `error`, `exit_code`, and `message` fields for JSON failure paths while preserving existing non-JSON output.
+- Validation run: `python -m pytest tests\test_cli.py -q -k "fast_cli_json_reports_config_error or deep_cli_json_reports_argument_error or deep_cli_json_reports_source_not_found"`; `python -m pytest tests\test_cli.py -q`; `python -m ruff check src\qa_z\commands\execution_runs.py tests\test_cli.py`; `python -m ruff format --check src\qa_z\commands\execution_runs.py tests\test_cli.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` for all three covered failure paths; after implementation the focused tests passed, the CLI pack passed `47` tests, and Ruff check/format passed.
+- Gate delta: core fast/deep workflow failures are now machine-parseable in JSON mode without weakening run summaries, artifact loading, or exit-code semantics.
+- User impact: local automation can branch on stable error ids when the primary analysis commands cannot start, instead of scraping terminal prose.
+- Remaining blocker: this does not prove target repositories are safe; operators still need fresh fast/deep artifacts from valid inputs before repair, guard, or release decisions.
+- Next safe slice: extend JSON failure-contract coverage to review/github-summary or repair-session, then run a broader validation wave.
