@@ -359,3 +359,28 @@ def test_social_preview_copy_matches_asset_and_stays_ascii_safe() -> None:
     assert "QA-Z social preview" in social_svg
     assert "Make AI coding safe to merge." in social_svg
     assert "Contracts. Checks. Repair prompts. Verification." in social_svg
+
+
+def test_launch_package_pins_github_description_and_topics() -> None:
+    launch_package = read("docs/launch-package.md")
+    description = (
+        "Make AI coding safe to merge. Deterministic QA contracts, checks, "
+        "repair prompts, and verification for coding agents."
+    )
+    topics_block = launch_package.split("Recommended topics:", 1)[1].split(
+        "## Social Preview", 1
+    )[0]
+    topics = [
+        line.strip()
+        for line in topics_block.splitlines()
+        if line.strip() and not line.startswith("```")
+    ]
+
+    assert "## Repository Settings" in launch_package
+    assert description in launch_package
+    assert len(topics) == 20
+    assert len(set(topics)) == len(topics)
+    assert all(topic == topic.lower() for topic in topics)
+    assert all(" " not in topic for topic in topics)
+    assert {"ai-agents", "coding-agents", "sarif", "semgrep"} <= set(topics)
+    assert "requires repository settings mutation" in launch_package
