@@ -553,3 +553,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external executor handoff automation can fail closed on artifact persistence failures instead of receiving a traceback.
 - Remaining blocker: release execution remains approval-blocked; broader alpha gate should be rerun after this slice.
 - Next safe slice: commit repair-prompt and validation-command updates, rerun a release-quality wave, then continue backlog mining.
+
+
+## 2026-05-13 Review Packet Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: review packet -> review artifact writing
+- User-facing flow: `qa-z review --json --output-dir <path>`
+- Slice type: Flow / Contract
+- Before: a failed `review.md` or `review.json` write could escape as raw `OSError` after the review packet was rendered.
+- Root cause: `handle_review()` called the review artifact writer outside a command-owned OSError boundary, and the writer did not attach review-specific context to filesystem failures.
+- Change made: added a review artifact write boundary that returns `qa_z.review_error` with `artifact_write_error`, and made the review artifact writer include the target output directory in write-failure details.
+- Validation run: `python -m pytest tests\test_review_packet_error_contracts.py::test_review_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_review_packet_error_contracts.py tests\test_review_packet_runtime.py tests\test_review_packet_architecture.py tests\test_cli_config_error_contracts.py -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\check_text_file_hygiene.py --source working-tree`; `python -m ruff check src\qa_z\commands\review_packet.py src\qa_z\reporters\review_packet.py tests\test_review_packet_error_contracts.py`; `python -m ruff format --check src\qa_z\commands\review_packet.py src\qa_z\reporters\review_packet.py tests\test_review_packet_error_contracts.py`; `git diff --check`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused write-failure test passed, the review/config pack passed `23` tests, strict worktree plan stayed `ready`, text-file hygiene passed, and Ruff check/format plus `git diff --check` passed.
+- Gate delta: review JSON mode now remains machine-parseable when local review artifacts cannot be written.
+- User impact: downstream review packet automation can tell artifact persistence failure apart from missing run/contract inputs without raw tracebacks.
+- Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after this slice.
+- Next safe slice: commit review packet changes, then mine another output-failure surface such as verify or executor bridge.
