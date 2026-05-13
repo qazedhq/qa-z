@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from qa_z.adapters.claude import render_claude_handoff
@@ -29,11 +30,26 @@ from qa_z.repair_handoff import (
 )
 
 
+def write_handoff_markdown(path: Path, text: str, label: str) -> None:
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write repair-prompt {label} handoff {path}: {exc}"
+        ) from exc
+
+
 def handle_repair_prompt(args: argparse.Namespace) -> int:
     """Render deterministic repair artifacts from a failed run."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "repair-prompt")
+    config = load_cli_config(
+        root,
+        args,
+        "repair-prompt",
+        json_error_kind="qa_z.repair_prompt_error",
+        json_error_when=args.json or args.handoff_json,
+    )
     if config is None:
         return 2
 
@@ -68,8 +84,8 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
         )
         write_repair_artifacts(packet, output_dir)
         write_repair_handoff_artifact(handoff, output_dir)
-        (output_dir / "codex.md").write_text(codex_markdown, encoding="utf-8")
-        (output_dir / "claude.md").write_text(claude_markdown, encoding="utf-8")
+        write_handoff_markdown(output_dir / "codex.md", codex_markdown, "codex")
+        write_handoff_markdown(output_dir / "claude.md", claude_markdown, "claude")
         if args.handoff_json:
             print(repair_handoff_json(handoff), end="")
             return 0
@@ -83,11 +99,46 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
             print(packet.agent_prompt, end="")
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z repair-prompt: artifact error: {exc}")
-        return 2
+        return _repair_prompt_error(
+            args,
+            error="artifact_error",
+            message=f"qa-z repair-prompt: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-prompt: source not found: {exc}")
-        return 4
+        return _repair_prompt_error(
+            args,
+            error="source_not_found",
+            message=f"qa-z repair-prompt: source not found: {exc}",
+            exit_code=4,
+        )
+    except OSError as exc:
+        return _repair_prompt_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z repair-prompt: artifact write error: {exc}",
+            exit_code=2,
+        )
+
+
+def _repair_prompt_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int
+) -> int:
+    if args.json or args.handoff_json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.repair_prompt_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_repair_prompt_command(subparsers: argparse._SubParsersAction) -> None:

@@ -49,10 +49,17 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     """Run the bundled auth-bug demo in an isolated temp-style directory."""
     root = Path(args.path).expanduser().resolve()
     demo_root = root / ".qa-z" / "demo" / "auth-bug"
-    if demo_root.exists():
-        shutil.rmtree(demo_root)
-    copy_resource_tree(demo_auth_bug_resource(), demo_root)
-    demo_config = write_demo_runtime_config(demo_root)
+    try:
+        if demo_root.exists():
+            shutil.rmtree(demo_root)
+        copy_resource_tree(demo_auth_bug_resource(), demo_root)
+        demo_config = write_demo_runtime_config(demo_root)
+    except OSError as exc:
+        print(
+            "qa-z demo auth-bug: artifact write error: "
+            f"could not prepare demo artifacts: {exc}"
+        )
+        return 2
     from qa_z.cli import main as qa_z_main
 
     plan_exit = qa_z_main(
@@ -107,7 +114,12 @@ def copy_resource_tree(source: Traversable, destination: Path) -> None:
     """Copy a packaged resource directory to the filesystem."""
     if not source.is_dir():
         raise FileNotFoundError(f"missing packaged demo resource: {source}")
-    destination.mkdir(parents=True, exist_ok=True)
+    try:
+        destination.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create demo resource directory {destination}: {exc}"
+        ) from exc
     for child in source.iterdir():
         if child.name in IGNORED_DEMO_NAMES:
             continue
@@ -115,13 +127,26 @@ def copy_resource_tree(source: Traversable, destination: Path) -> None:
         if child.is_dir():
             copy_resource_tree(child, target)
         else:
-            target.write_bytes(child.read_bytes())
+            write_resource_file(target, child.read_bytes())
+
+
+def write_resource_file(path: Path, content: bytes) -> None:
+    """Write one packaged demo resource with path-aware errors."""
+    try:
+        path.write_bytes(content)
+    except OSError as exc:
+        raise OSError(f"could not write demo resource {path}: {exc}") from exc
 
 
 def write_demo_runtime_config(demo_root: Path) -> Path:
     """Write a dependency-light config for the installed demo command."""
     config_path = demo_root / "qa-z.demo.yaml"
-    config_path.write_text(AUTH_BUG_DEMO_CONFIG, encoding="utf-8", newline="\n")
+    try:
+        config_path.write_text(AUTH_BUG_DEMO_CONFIG, encoding="utf-8", newline="\n")
+    except OSError as exc:
+        raise OSError(
+            f"could not write demo runtime config {config_path}: {exc}"
+        ) from exc
     return config_path
 
 

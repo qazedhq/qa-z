@@ -53,14 +53,21 @@ def handle_skill_install(args: argparse.Namespace) -> int:
             if args.output
             else root / target.default_path
         )
-        action = install_target(
-            root=root,
-            target=target,
-            output_path=output_path,
-            append=args.append,
-            force=args.force,
-            dry_run=args.dry_run,
-        )
+        try:
+            action = install_target(
+                root=root,
+                target=target,
+                output_path=output_path,
+                append=args.append,
+                force=args.force,
+                dry_run=args.dry_run,
+            )
+        except OSError as exc:
+            print(
+                "qa-z skill install: artifact write error: "
+                f"could not write {target.name} instructions: {exc}"
+            )
+            return 2
         print(action)
         if action.startswith("refusing"):
             exit_code = 1
@@ -85,18 +92,32 @@ def install_target(
     if output_path.exists() and not append and not force:
         return f"refusing to overwrite: {relative} (use --append or --force)"
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create skill install directory {output_path.parent}: {exc}"
+        ) from exc
     if append and output_path.exists():
-        existing = output_path.read_text(encoding="utf-8")
-        output_path.write_text(
-            append_section(existing, content),
-            encoding="utf-8",
-            newline="\n",
-        )
+        try:
+            existing = output_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise OSError(
+                f"could not read existing skill install artifact {output_path}: {exc}"
+            ) from exc
+        write_skill_install_text(output_path, append_section(existing, content))
         return f"appended {target.name}: {relative}"
 
-    output_path.write_text(ensure_lf(content), encoding="utf-8", newline="\n")
+    write_skill_install_text(output_path, ensure_lf(content))
     return f"installed {target.name}: {relative}"
+
+
+def write_skill_install_text(path: Path, content: str) -> None:
+    """Write one skill-install artifact with path-aware errors."""
+    try:
+        path.write_text(content, encoding="utf-8", newline="\n")
+    except OSError as exc:
+        raise OSError(f"could not write skill install artifact {path}: {exc}") from exc
 
 
 def template_text(template_name: str) -> str:

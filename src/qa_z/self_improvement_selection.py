@@ -84,7 +84,11 @@ def select_next_tasks(
     selection_state = (
         "blocked_no_candidates" if selection_gap_reason is not None else None
     )
-    selection_context = latest_self_inspection_selection_context(root)
+    backlog_updated_at = str(backlog.get("updated_at") or "").strip()
+    selection_context = latest_self_inspection_selection_context(
+        root,
+        min_generated_at=backlog_updated_at or None,
+    )
 
     latest_dir = root / ".qa-z" / "loops" / "latest"
     latest_dir.mkdir(parents=True, exist_ok=True)
@@ -105,19 +109,36 @@ def select_next_tasks(
         selected_artifact["open_backlog_count"] = open_backlog_count
     selected_artifact.update(selection_context)
     write_json(selected_tasks_path, selected_artifact)
-    loop_plan_path.write_text(
+    write_selection_loop_plan(
+        loop_plan_path,
         render_loop_plan(
             loop_id=resolved_loop_id,
             generated_at=generated_at,
             selected_items=selected_items,
             live_repository=selection_context.get("live_repository"),
+            source_self_inspection=selection_context.get("source_self_inspection"),
+            source_self_inspection_loop_id=selection_context.get(
+                "source_self_inspection_loop_id"
+            ),
+            source_self_inspection_generated_at=selection_context.get(
+                "source_self_inspection_generated_at"
+            ),
+            source_self_inspection_stale_for_backlog=bool(
+                selection_context.get("source_self_inspection_stale_for_backlog")
+            ),
+            source_self_inspection_refresh_commands=[
+                str(command)
+                for command in selection_context.get(
+                    "source_self_inspection_refresh_commands", []
+                )
+                if str(command).strip()
+            ],
             state=selection_state,
             selection_gap_reason=selection_gap_reason,
             open_backlog_count=(
                 open_backlog_count if selection_gap_reason is not None else None
             ),
         ),
-        encoding="utf-8",
     )
     append_history(
         history_path,
@@ -137,6 +158,16 @@ def select_next_tasks(
         loop_plan_path=loop_plan_path,
         history_path=history_path,
     )
+
+
+def write_selection_loop_plan(path: Path, text: str) -> None:
+    """Write select-next loop plans with path-aware errors."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write selection loop plan artifact {path}: {exc}"
+        ) from exc
 
 
 def selected_task_with_operator_hints(item: dict[str, object]) -> dict[str, object]:

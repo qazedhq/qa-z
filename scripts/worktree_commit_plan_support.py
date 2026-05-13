@@ -57,6 +57,7 @@ OWNER_OVERRIDES = (
             "src/qa_z/commands/session_repair.py",
             "src/qa_z/commands/session_verify.py",
             "src/qa_z/commands/sessioning.py",
+            "tests/test_verify_cli_error_contracts.py",
             "tests/test_session_commands.py",
         ),
     ),
@@ -64,7 +65,9 @@ OWNER_OVERRIDES = (
         "deep_runner_foundation",
         (
             "src/qa_z/commands/execution_runs.py",
+            "src/qa_z/reporters/sarif.py",
             "src/qa_z/runners/selection_deep.py",
+            "tests/test_sarif_cli.py",
         ),
     ),
     (
@@ -160,6 +163,7 @@ BATCH_RULES = (
             "scripts/alpha_release_bundle_manifest_*.py",
             "scripts/alpha_release_preflight.py",
             "scripts/alpha_release_preflight_*.py",
+            "scripts/alpha_release_truth_validator.py",
             "scripts/check_public_raw_urls.py",
             "scripts/check_text_file_hygiene.py",
             ".github/workflows/*.yml",
@@ -174,13 +178,15 @@ BATCH_RULES = (
             "tests/alpha_release_gate*_support.py",
             "tests/test_alpha_release_preflight*.py",
             "tests/alpha_release_preflight*_support.py",
+            "tests/test_alpha_release_truth_validator.py",
             "tests/test_public_raw_urls.py",
             "tests/test_text_file_hygiene.py",
             "docs/releases/**",
         ),
         validation_commands=(
-            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
+            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_alpha_release_truth_validator.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
             "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
+            "python scripts/alpha_release_truth_validator.py --proof-head-from-packet --json --output .qa-z/tmp/alpha-release-truth-validator.json",
             "python scripts/alpha_release_gate.py --allow-dirty --json",
         ),
     ),
@@ -215,7 +221,7 @@ BATCH_RULES = (
             "tests/worktree_commit_plan*_support.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_worktree_commit_plan.py tests/test_current_truth.py -q",
+            "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
             "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
             "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
         ),
@@ -246,6 +252,7 @@ BATCH_RULES = (
             "tests/ast_test_support.py",
             "tests/conftest.py",
             "tests/test_bootstrap_commands.py",
+            "tests/test_cli_config_error_contracts.py",
             "tests/test_command_registry_architecture.py",
             "tests/test_config_validation.py",
             "tests/test_contract_planner.py",
@@ -274,7 +281,7 @@ BATCH_RULES = (
         ),
         validation_commands=(
             "python -m pytest tests/test_coverage_gap_discovery.py tests/test_execution_discovery_architecture.py tests/test_execution_executor_candidates_architecture.py tests/test_execution_followup_candidates_architecture.py tests/test_fast_gate_environment.py tests/test_git_runtime_signal_inputs.py tests/test_live_repository_architecture.py tests/test_loop_health_architecture.py tests/test_loop_health_signal_inputs.py tests/test_report_freshness.py tests/test_report_freshness_architecture.py tests/test_report_signal_architecture.py tests/test_report_signal_inputs.py tests/test_selection_context_architecture.py tests/test_surface_discovery_architecture.py tests/test_task_selection_architecture.py tests/test_task_selection_evidence_architecture.py -q",
-            "python -m pytest tests/test_operator_commands.py -q",
+            "python -m pytest tests/test_execution_runs_error_contracts.py tests/test_guard_cli.py tests/test_operator_commands.py -q",
             "python -m qa_z self-inspect --json",
         ),
     ),
@@ -409,6 +416,7 @@ BATCH_RULES = (
             "tests/test_github_summary*.py",
             "tests/test_repair_prompt*.py",
             "tests/test_review_packet*.py",
+            "tests/test_verify_cli_error_contracts.py",
             "tests/test_run_summary*.py",
             "tests/test_sarif*.py",
             "tests/test_review_commands.py",
@@ -418,7 +426,7 @@ BATCH_RULES = (
             "tests/github_summary*_support.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_verification.py tests/test_repair_prompt.py tests/test_review_commands.py tests/test_repair_session.py -q",
+            "python -m pytest tests/test_verification.py tests/test_verify_cli_error_contracts.py tests/test_repair_prompt.py tests/test_repair_prompt_error_contracts.py tests/test_review_commands.py tests/test_repair_session.py tests/test_github_summary_render.py tests/test_github_summary_session.py -q",
             "python -m qa_z verify --help",
         ),
     ),
@@ -434,7 +442,7 @@ BATCH_RULES = (
             "benchmarks/fixtures/**/external-result.json",
         ),
         validation_commands=(
-            "python -m pytest tests/test_executor_bridge.py tests/test_executor_result.py -q",
+            "python -m pytest tests/test_executor_bridge.py tests/test_executor_result.py tests/test_executor_ingest_outcome.py tests/test_executor_result_dry_run.py -q",
             "python -m qa_z executor-result dry-run --session .qa-z/sessions/latest --json",
         ),
     ),
@@ -473,6 +481,11 @@ GENERATED_LOCAL_ONLY_PATTERNS = (
     "tmp_*/**",
     "benchmarks/minlock-*",
     "benchmarks/minlock-*/**",
+    "marketing/x/.state",
+    "marketing/x/.state/**",
+    "marketing/x/logs",
+    "marketing/x/logs/**",
+    "marketing/x/*.local.json",
 )
 
 GENERATED_LOCAL_BY_DEFAULT_PATTERNS = (
@@ -557,6 +570,90 @@ SOURCE_PATTERNS = (
     "mypy.ini",
 )
 
+PRODUCT_DECISION_GROUP_RULES = (
+    (
+        "codex_operating_model",
+        "Codex-native operating model",
+        "operating-model-owned",
+        (
+            "Stage only after approving the operating-model surface as "
+            "alpha-release support, separate from runtime QA-Z changes."
+        ),
+        (
+            ".agents/**",
+            ".codex/**",
+            ".github/copilot-instructions.md",
+            ".github/instructions/**",
+            "docs/agent/**",
+        ),
+    ),
+    (
+        "claude_compatibility_mirror",
+        "Claude compatibility mirror",
+        "compatibility mirror",
+        (
+            "Stage only if the Codex-native operating-model assets are approved "
+            "and the mirror must stay synchronized."
+        ),
+        (".claude/**",),
+    ),
+    (
+        "marketing_x_surface",
+        "Marketing/X network automation",
+        "marketing/product-owned",
+        (
+            "Keep out of QA-Z alpha release unless a product owner approves "
+            "the credential-gated marketing/network surface."
+        ),
+        ("marketing/x/**",),
+    ),
+    (
+        "operating_model_validator",
+        "Operating-model validator",
+        "operating-model-owned",
+        (
+            "Stage with the operating-model support batch after format and "
+            "validator checks pass."
+        ),
+        ("scripts/validate-agent-operating-model.py",),
+    ),
+    (
+        "marketing_x_tests",
+        "Marketing/X automation tests",
+        "marketing/product-owned",
+        "Stage with marketing/X only if that product surface is approved.",
+        ("tests/test_x_automation.py",),
+    ),
+)
+
+PRODUCT_DECISION_PATTERNS = tuple(
+    pattern
+    for _, _, _, _, patterns in PRODUCT_DECISION_GROUP_RULES
+    for pattern in patterns
+)
+
+APPROVED_ALPHA_SUPPORT_GROUP_IDS = frozenset(
+    ("codex_operating_model", "operating_model_validator")
+)
+DEFERRED_ALPHA_SCOPE_GROUP_IDS = frozenset(
+    (
+        "claude_compatibility_mirror",
+        "marketing_x_surface",
+        "marketing_x_tests",
+    )
+)
+APPROVED_ALPHA_SUPPORT_SCOPE = "approved_alpha_support_scope"
+DEFERRED_OUT_OF_ALPHA_SCOPE = "deferred_out_of_alpha_scope"
+UNRESOLVED_PRODUCT_DECISION_SCOPE = "unresolved_product_decision"
+
+
+def release_scope_for_product_group(group_id: str) -> str:
+    if group_id in APPROVED_ALPHA_SUPPORT_GROUP_IDS:
+        return APPROVED_ALPHA_SUPPORT_SCOPE
+    if group_id in DEFERRED_ALPHA_SCOPE_GROUP_IDS:
+        return DEFERRED_OUT_OF_ALPHA_SCOPE
+    return UNRESOLVED_PRODUCT_DECISION_SCOPE
+
 
 def normalize_path(path: str) -> str:
     return path.strip().replace("\\", "/")
@@ -617,6 +714,8 @@ def generated_artifact_bucket(path: str) -> str:
         ".ruff_cache_safe",
         "%TEMP%",
         "benchmarks/results",
+        "marketing/x/.state",
+        "marketing/x/logs",
     ):
         if normalized == prefix or normalized.startswith(f"{prefix}/"):
             return f"{prefix}/"
@@ -729,6 +828,75 @@ def cross_cutting_group_rollup(paths: Sequence[str]) -> list[dict[str, object]]:
     return grouped
 
 
+def product_decision_group_rollup(paths: Sequence[str]) -> list[dict[str, object]]:
+    """Group product-decision paths into ownership surfaces."""
+    grouped: list[dict[str, object]] = []
+    used: set[str] = set()
+    normalized_paths = unique_strings(paths)
+    for (
+        group_id,
+        title,
+        ownership,
+        next_action,
+        patterns,
+    ) in PRODUCT_DECISION_GROUP_RULES:
+        group_paths = [
+            path
+            for path in normalized_paths
+            if path not in used and matches_any(path, patterns)
+        ]
+        if not group_paths:
+            continue
+        used.update(group_paths)
+        grouped.append(
+            {
+                "id": group_id,
+                "title": title,
+                "ownership": ownership,
+                "release_scope": release_scope_for_product_group(group_id),
+                "path_count": len(group_paths),
+                "paths": group_paths,
+                "next_action": next_action,
+            }
+        )
+    remaining_paths = [path for path in normalized_paths if path not in used]
+    if remaining_paths:
+        grouped.append(
+            {
+                "id": "unclassified_product_decision",
+                "title": "Unclassified product-decision paths",
+                "ownership": "requires human/product decision",
+                "release_scope": UNRESOLVED_PRODUCT_DECISION_SCOPE,
+                "path_count": len(remaining_paths),
+                "paths": remaining_paths,
+                "next_action": (
+                    "Assign ownership before staging; these paths matched the "
+                    "product-decision bucket without a narrower group."
+                ),
+            }
+        )
+    return grouped
+
+
+def paths_for_release_scope(
+    groups: Sequence[dict[str, object]], release_scope: str
+) -> list[str]:
+    paths: list[str] = []
+    for group in groups:
+        if group.get("release_scope") != release_scope:
+            continue
+        group_paths = group.get("paths")
+        if isinstance(group_paths, list):
+            paths.extend(path for path in group_paths if isinstance(path, str))
+    return unique_strings(paths)
+
+
+def groups_for_release_scope(
+    groups: Sequence[dict[str, object]], release_scope: str
+) -> list[dict[str, object]]:
+    return [group for group in groups if group.get("release_scope") == release_scope]
+
+
 def render_command_part(part: object) -> str:
     text = str(part)
     shell_sensitive_characters = set('"&;|<>()')
@@ -750,6 +918,9 @@ def next_actions(
     generated_local_only_paths: Sequence[str],
     generated_local_by_default_paths: Sequence[str],
     unassigned_source_paths: Sequence[str],
+    product_decision_paths: Sequence[str],
+    approved_alpha_support_paths: Sequence[str],
+    deferred_alpha_scope_paths: Sequence[str],
     cross_cutting_paths: Sequence[str],
     report_paths: Sequence[str],
     multi_batch_paths: Sequence[dict[str, object]],
@@ -775,6 +946,28 @@ def next_actions(
             (
                 "Add unassigned source paths to an existing commit batch rule or "
                 "split a new explicit batch before release staging."
+            )
+        )
+    if product_decision_paths:
+        actions.append(
+            (
+                "Resolve remaining product decision paths before staging; these "
+                "paths still lack an alpha release-scope decision."
+            )
+        )
+    if approved_alpha_support_paths:
+        actions.append(
+            (
+                "Stage approved alpha support paths only with the operating-model "
+                "support batch after validator and format proof."
+            )
+        )
+    if deferred_alpha_scope_paths:
+        actions.append(
+            (
+                "Keep deferred out-of-alpha paths out of QA-Z alpha staging unless "
+                "a separate product/network or compatibility release decision "
+                "approves them."
             )
         )
     if multi_batch_paths:
@@ -817,10 +1010,42 @@ def analyze_paths(
     source_paths = [
         path for path in normalized_paths if not is_generated_artifact(path)
     ]
-    cross_cutting_paths = [
-        path for path in source_paths if matches_any(path, CROSS_CUTTING_PATTERNS)
+    release_scope_decision_paths = [
+        path for path in source_paths if matches_any(path, PRODUCT_DECISION_PATTERNS)
     ]
-    report_paths = [path for path in source_paths if matches_any(path, REPORT_PATTERNS)]
+    release_scope_decision_groups = product_decision_group_rollup(
+        release_scope_decision_paths
+    )
+    approved_alpha_support_groups = groups_for_release_scope(
+        release_scope_decision_groups, APPROVED_ALPHA_SUPPORT_SCOPE
+    )
+    deferred_alpha_scope_groups = groups_for_release_scope(
+        release_scope_decision_groups, DEFERRED_OUT_OF_ALPHA_SCOPE
+    )
+    product_decision_groups = groups_for_release_scope(
+        release_scope_decision_groups, UNRESOLVED_PRODUCT_DECISION_SCOPE
+    )
+    approved_alpha_support_paths = paths_for_release_scope(
+        release_scope_decision_groups, APPROVED_ALPHA_SUPPORT_SCOPE
+    )
+    deferred_alpha_scope_paths = paths_for_release_scope(
+        release_scope_decision_groups, DEFERRED_OUT_OF_ALPHA_SCOPE
+    )
+    product_decision_paths = paths_for_release_scope(
+        release_scope_decision_groups, UNRESOLVED_PRODUCT_DECISION_SCOPE
+    )
+    cross_cutting_paths = [
+        path
+        for path in source_paths
+        if path not in release_scope_decision_paths
+        and matches_any(path, CROSS_CUTTING_PATTERNS)
+    ]
+    report_paths = [
+        path
+        for path in source_paths
+        if path not in release_scope_decision_paths
+        and matches_any(path, REPORT_PATTERNS)
+    ]
     patch_add_paths = shared_patch_add_paths(
         cross_cutting_paths=cross_cutting_paths,
         report_paths=report_paths,
@@ -829,7 +1054,11 @@ def analyze_paths(
 
     rule_matches_by_path: dict[str, list[str]] = {}
     for path in source_paths:
-        if path in cross_cutting_paths or path in report_paths:
+        if (
+            path in release_scope_decision_paths
+            or path in cross_cutting_paths
+            or path in report_paths
+        ):
             continue
         owner_override = owner_override_for_path(path)
         if owner_override is not None:
@@ -878,6 +1107,7 @@ def analyze_paths(
         path
         for path in source_paths
         if path not in assigned_paths
+        and path not in release_scope_decision_paths
         and path not in cross_cutting_paths
         and path not in report_paths
         and path not in multi_batch_path_set
@@ -886,6 +1116,8 @@ def analyze_paths(
     attention_reasons: list[str] = []
     if unassigned_source_paths:
         attention_reasons.append("unassigned_source_paths")
+    if product_decision_paths:
+        attention_reasons.append("product_decision_paths_present")
     if multi_batch_paths:
         attention_reasons.append("multi_batch_paths")
     if fail_on_generated and generated_paths:
@@ -897,6 +1129,9 @@ def analyze_paths(
         generated_local_only_paths=generated_local_only_paths,
         generated_local_by_default_paths=generated_local_by_default_paths,
         unassigned_source_paths=unassigned_source_paths,
+        product_decision_paths=product_decision_paths,
+        approved_alpha_support_paths=approved_alpha_support_paths,
+        deferred_alpha_scope_paths=deferred_alpha_scope_paths,
         cross_cutting_paths=cross_cutting_paths,
         report_paths=report_paths,
         multi_batch_paths=multi_batch_paths,
@@ -926,6 +1161,14 @@ def analyze_paths(
         "shared_patch_add_count": len(patch_add_paths),
         "multi_batch_path_count": len(multi_batch_paths),
         "unassigned_source_path_count": len(unassigned_source_paths),
+        "product_decision_path_count": len(product_decision_paths),
+        "product_decision_group_count": len(product_decision_groups),
+        "release_scope_decision_path_count": len(release_scope_decision_paths),
+        "release_scope_decision_group_count": len(release_scope_decision_groups),
+        "approved_alpha_support_path_count": len(approved_alpha_support_paths),
+        "approved_alpha_support_group_count": len(approved_alpha_support_groups),
+        "deferred_alpha_scope_path_count": len(deferred_alpha_scope_paths),
+        "deferred_alpha_scope_group_count": len(deferred_alpha_scope_groups),
         "attention_reason_count": len(attention_reasons),
     }
     return {
@@ -950,6 +1193,14 @@ def analyze_paths(
         "cross_cutting_groups": cross_cutting_groups,
         "multi_batch_paths": multi_batch_paths,
         "unassigned_source_paths": unassigned_source_paths,
+        "product_decision_paths": product_decision_paths,
+        "product_decision_groups": product_decision_groups,
+        "release_scope_decision_paths": release_scope_decision_paths,
+        "release_scope_decision_groups": release_scope_decision_groups,
+        "approved_alpha_support_paths": approved_alpha_support_paths,
+        "approved_alpha_support_groups": approved_alpha_support_groups,
+        "deferred_alpha_scope_paths": deferred_alpha_scope_paths,
+        "deferred_alpha_scope_groups": deferred_alpha_scope_groups,
         "next_actions": actions,
     }
 
@@ -1123,6 +1374,10 @@ def compact_payload(payload: dict[str, object]) -> dict[str, object]:
         "shared_patch_add_paths",
         "multi_batch_paths",
         "unassigned_source_paths",
+        "product_decision_paths",
+        "release_scope_decision_paths",
+        "approved_alpha_support_paths",
+        "deferred_alpha_scope_paths",
     ):
         value = payload.get(key)
         if isinstance(value, list):
@@ -1138,6 +1393,34 @@ def compact_payload(payload: dict[str, object]) -> dict[str, object]:
             compact["cross_cutting_groups_truncated_count"] = (
                 len(cross_cutting_groups) - 20
             )
+    product_decision_groups = payload.get("product_decision_groups")
+    if isinstance(product_decision_groups, list):
+        compact["product_decision_groups"] = compact_product_decision_groups(
+            product_decision_groups
+        )
+        if len(product_decision_groups) > 20:
+            compact["product_decision_groups_truncated_count"] = (
+                len(product_decision_groups) - 20
+            )
+    release_scope_decision_groups = payload.get("release_scope_decision_groups")
+    if isinstance(release_scope_decision_groups, list):
+        compact["release_scope_decision_groups"] = compact_product_decision_groups(
+            release_scope_decision_groups
+        )
+        if len(release_scope_decision_groups) > 20:
+            compact["release_scope_decision_groups_truncated_count"] = (
+                len(release_scope_decision_groups) - 20
+            )
+    approved_alpha_support_groups = payload.get("approved_alpha_support_groups")
+    if isinstance(approved_alpha_support_groups, list):
+        compact["approved_alpha_support_groups"] = compact_product_decision_groups(
+            approved_alpha_support_groups
+        )
+    deferred_alpha_scope_groups = payload.get("deferred_alpha_scope_groups")
+    if isinstance(deferred_alpha_scope_groups, list):
+        compact["deferred_alpha_scope_groups"] = compact_product_decision_groups(
+            deferred_alpha_scope_groups
+        )
     changed_batches: list[dict[str, object]] = []
     batches = payload.get("batches")
     if isinstance(batches, list):
@@ -1217,6 +1500,29 @@ def compact_cross_cutting_groups(groups: list[object]) -> list[dict[str, object]
         if isinstance(patch_command, list):
             compact_group["patch_command"] = patch_command
             compact_group["patch_command_text"] = render_command(patch_command)
+        compact_groups.append(compact_group)
+    return compact_groups
+
+
+def compact_product_decision_groups(groups: list[object]) -> list[dict[str, object]]:
+    """Return compact ownership-group previews for summary-only evidence."""
+    compact_groups: list[dict[str, object]] = []
+    for group in groups[:20]:
+        if not isinstance(group, dict):
+            continue
+        compact_group: dict[str, object] = {
+            "id": group.get("id"),
+            "title": group.get("title"),
+            "ownership": group.get("ownership"),
+            "release_scope": group.get("release_scope"),
+            "path_count": group.get("path_count"),
+            "next_action": group.get("next_action"),
+        }
+        paths = group.get("paths")
+        if isinstance(paths, list):
+            compact_group["paths"] = paths[:20]
+            if len(paths) > 20:
+                compact_group["paths_truncated_count"] = len(paths) - 20
         compact_groups.append(compact_group)
     return compact_groups
 
@@ -1410,6 +1716,71 @@ def render_human(payload: dict[str, object]) -> str:
     unassigned_paths = payload["unassigned_source_paths"]
     if isinstance(unassigned_paths, list) and unassigned_paths:
         lines.append(f"Unassigned source paths: {len(unassigned_paths)}")
+    approved_alpha_support_paths = payload.get("approved_alpha_support_paths")
+    if isinstance(approved_alpha_support_paths, list) and approved_alpha_support_paths:
+        lines.append(
+            f"Approved alpha support paths: {len(approved_alpha_support_paths)}"
+        )
+        rendered_paths = ", ".join(
+            str(path) for path in approved_alpha_support_paths[:3]
+        )
+        suffix = " ..." if len(approved_alpha_support_paths) > 3 else ""
+        lines.append(f"Approved alpha support preview: {rendered_paths}{suffix}")
+    deferred_alpha_scope_paths = payload.get("deferred_alpha_scope_paths")
+    if isinstance(deferred_alpha_scope_paths, list) and deferred_alpha_scope_paths:
+        lines.append(f"Deferred out-of-alpha paths: {len(deferred_alpha_scope_paths)}")
+        rendered_paths = ", ".join(str(path) for path in deferred_alpha_scope_paths[:3])
+        suffix = " ..." if len(deferred_alpha_scope_paths) > 3 else ""
+        lines.append(f"Deferred out-of-alpha preview: {rendered_paths}{suffix}")
+    release_scope_decision_groups = payload.get("release_scope_decision_groups")
+    if (
+        isinstance(release_scope_decision_groups, list)
+        and release_scope_decision_groups
+    ):
+        lines.append(
+            f"Release-scope decision groups: {len(release_scope_decision_groups)}"
+        )
+        for group in release_scope_decision_groups:
+            if not isinstance(group, dict):
+                continue
+            group_id = group.get("id", "unknown")
+            release_scope = group.get("release_scope", "unknown")
+            path_count = group.get("path_count", 0)
+            noun = "path" if path_count == 1 else "paths"
+            lines.append(f"- {group_id}: {release_scope} ({path_count} {noun})")
+            paths = group.get("paths")
+            if isinstance(paths, list) and paths:
+                rendered_paths = ", ".join(str(path) for path in paths[:3])
+                suffix = " ..." if len(paths) > 3 else ""
+                lines.append(f"  paths: {rendered_paths}{suffix}")
+            next_action = group.get("next_action")
+            if isinstance(next_action, str) and next_action:
+                lines.append(f"  next action: {next_action}")
+    product_decision_paths = payload.get("product_decision_paths")
+    if isinstance(product_decision_paths, list) and product_decision_paths:
+        lines.append(f"Product decision paths: {len(product_decision_paths)}")
+        rendered_paths = ", ".join(str(path) for path in product_decision_paths[:3])
+        suffix = " ..." if len(product_decision_paths) > 3 else ""
+        lines.append(f"Product decision preview: {rendered_paths}{suffix}")
+    product_decision_groups = payload.get("product_decision_groups")
+    if isinstance(product_decision_groups, list) and product_decision_groups:
+        lines.append(f"Product decision groups: {len(product_decision_groups)}")
+        for group in product_decision_groups:
+            if not isinstance(group, dict):
+                continue
+            group_id = group.get("id", "unknown")
+            ownership = group.get("ownership", "unknown")
+            path_count = group.get("path_count", 0)
+            noun = "path" if path_count == 1 else "paths"
+            lines.append(f"- {group_id}: {ownership} ({path_count} {noun})")
+            paths = group.get("paths")
+            if isinstance(paths, list) and paths:
+                rendered_paths = ", ".join(str(path) for path in paths[:3])
+                suffix = " ..." if len(paths) > 3 else ""
+                lines.append(f"  paths: {rendered_paths}{suffix}")
+            next_action = group.get("next_action")
+            if isinstance(next_action, str) and next_action:
+                lines.append(f"  next action: {next_action}")
     multi_batch_paths = payload.get("multi_batch_paths")
     if isinstance(multi_batch_paths, list) and multi_batch_paths:
         lines.append(f"Multi-batch paths: {len(multi_batch_paths)}")

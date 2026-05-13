@@ -70,6 +70,47 @@ def write_config(tmp_path: Path, checks: list[dict[str, Any]] | None = None) -> 
     )
 
 
+def test_executor_result_ingest_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+
+    def fail_ingest(*args: Any, **kwargs: Any) -> None:
+        raise OSError("could not write executor result ingest artifacts: disk full")
+
+    monkeypatch.setattr(
+        "qa_z.commands.runtime_executor_result.ingest_executor_result_artifact",
+        fail_ingest,
+    )
+
+    exit_code = main(
+        [
+            "executor-result",
+            "ingest",
+            "--path",
+            str(tmp_path),
+            "--result",
+            str(tmp_path / "executor-result.json"),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.executor_result_error",
+        "command": "ingest",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z executor-result ingest: artifact write error:" in output["message"]
+    assert "could not write executor result ingest artifacts" in output["message"]
+    assert "disk full" in output["message"]
+
+
 def write_contract(tmp_path: Path, *, related_files: list[str] | None = None) -> None:
     """Write a contract that repair-session creation can resolve."""
     path = tmp_path / "qa" / "contracts" / "contract.md"

@@ -15,6 +15,9 @@ RUNTIME_ARTIFACT_CLEANUP_APPLY_COMMAND = (
 SELF_INSPECT_COMMAND = "python -m qa_z self-inspect"
 SELF_INSPECT_JSON_COMMAND = "python -m qa_z self-inspect --json"
 SELECT_NEXT_COUNT_JSON_COMMAND = "python -m qa_z select-next --count 3 --json"
+SELECT_NEXT_REFRESH_COUNT_JSON_COMMAND = (
+    "python -m qa_z select-next --refresh --count 3 --json"
+)
 
 STRICT_WORKTREE_COMMIT_PLAN_COMMAND = (
     "python scripts/worktree_commit_plan.py --summary-only --json "
@@ -34,5 +37,6 @@ __all__ = [
     "SELF_INSPECT_COMMAND",
     "SELF_INSPECT_JSON_COMMAND",
     "SELECT_NEXT_COUNT_JSON_COMMAND",
+    "SELECT_NEXT_REFRESH_COUNT_JSON_COMMAND",
     "STRICT_WORKTREE_COMMIT_PLAN_COMMAND",
 ]

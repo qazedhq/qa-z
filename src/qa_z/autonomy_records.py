@@ -69,7 +69,7 @@ def update_history_entry(
             updated = True
         else:
             updated_lines.append(line)
-    history_path.write_text("\n".join(updated_lines).rstrip() + "\n", encoding="utf-8")
+    write_history_lines(history_path, updated_lines)
 
 
 def record_executor_result(
@@ -113,7 +113,17 @@ def record_executor_result(
             updated = True
         else:
             updated_lines.append(line)
-    history_path.write_text("\n".join(updated_lines).rstrip() + "\n", encoding="utf-8")
+    write_history_lines(history_path, updated_lines)
+
+
+def write_history_lines(history_path: Path, lines: list[str]) -> None:
+    """Write autonomy JSONL history with path-aware errors."""
+    try:
+        history_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write autonomy history {history_path}: {exc}"
+        ) from exc
 
 
 def first_verify_verdict(verification_evidence: object) -> str | None:
@@ -187,8 +197,13 @@ def resolve_evidence_path(root: Path, value: str) -> Path:
 
 def copy_artifact(source: Path, target: Path) -> None:
     """Copy an artifact to a loop directory, preserving exact bytes."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, target)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    except OSError as exc:
+        raise OSError(
+            f"could not copy autonomy artifact {source} to {target}: {exc}"
+        ) from exc
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
@@ -202,10 +217,13 @@ def read_json_object(path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     """Write a stable JSON object artifact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        raise OSError(f"could not write autonomy JSON artifact {path}: {exc}") from exc
 
 
 def parse_json_line(line: str) -> dict[str, Any]:

@@ -19,6 +19,10 @@ DEFAULT_BRANCH = "codex/qa-z-bootstrap"
 DEFAULT_REPOSITORY_FULL_NAME = "qazedhq/qa-z"
 DEFAULT_REPOSITORY_URL = "https://github.com/qazedhq/qa-z.git"
 DEFAULT_TAG = "v0.9.8-alpha"
+APPROVED_SHA_PLACEHOLDER = "<approved-sha>"
+APPROVED_SHA_VERIFY_COMMAND = (
+    f'test "$(git rev-parse HEAD)" = "{APPROVED_SHA_PLACEHOLDER}"'
+)
 
 
 class CheckResult(NamedTuple):
@@ -365,6 +369,18 @@ def publish_strategy_for_result(
     return None
 
 
+def approved_sha_push_command(publish_branch: str) -> str:
+    return f"git push origin {APPROVED_SHA_PLACEHOLDER}:{publish_branch}"
+
+
+def approved_sha_publish_checklist_item(publish_branch: str) -> str:
+    return (
+        f"Verify the approved release SHA with `{APPROVED_SHA_VERIFY_COMMAND}`, "
+        "then push the validated release baseline to "
+        f"{publish_branch} with `{approved_sha_push_command(publish_branch)}`."
+    )
+
+
 def publish_checklist_for_result(
     result: "PreflightResult",
     *,
@@ -379,7 +395,7 @@ def publish_checklist_for_result(
     publish_branch = repository_default_branch_from_result(result) or "main"
     if publish_strategy == "push_default_branch":
         return [
-            f"Push the validated release baseline to {publish_branch} with `git push -u origin HEAD:{publish_branch}`.",
+            approved_sha_publish_checklist_item(publish_branch),
             "Wait for remote CI: `test`, `Build package artifacts`, `Smoke test built package artifacts`, and `qa-z` must pass.",
             f"Create and verify `{expected_tag}` from the validated default branch, then `git push origin {expected_tag}`.",
         ]
@@ -684,6 +700,7 @@ def next_actions_for_result(
     repository_url: str = DEFAULT_REPOSITORY_URL,
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
+    expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
     skip_remote: bool = False,
 ) -> list[str]:
@@ -750,7 +767,7 @@ def next_actions_for_result(
         actions.append(
             (
                 "Remote bootstrap refs are present and the release PR path is ready; "
-                "push codex/qa-z-bootstrap, open the release PR, and wait for remote "
+                f"push {expected_branch}, open the release PR, and wait for remote "
                 "CI before tagging."
             )
         )
@@ -890,10 +907,11 @@ def next_commands_for_result(
     publish_branch = repository_default_branch_from_result(result) or "main"
     commands: list[str] = []
     if result.exit_code == 0 and publish_strategy == "push_default_branch":
-        commands.append(f"git push -u origin HEAD:{publish_branch}")
+        commands.append(APPROVED_SHA_VERIFY_COMMAND)
+        commands.append(approved_sha_push_command(publish_branch))
         return commands
     if result.exit_code == 0 and publish_strategy == "push_release_branch":
-        commands.append(f"git push -u origin {DEFAULT_BRANCH}")
+        commands.append(f"git push -u origin {expected_branch}")
         return commands
     if remote_decision.remote_blocker == "origin_target_mismatch":
         intended_origin_url = repository_url
@@ -1073,6 +1091,7 @@ def result_payload(
         repository_url=repository_url,
         expected_repository=expected_repository,
         expected_origin_url=expected_origin_url,
+        expected_branch=expected_branch,
         expected_tag=expected_tag,
         skip_remote=skip_remote,
     )

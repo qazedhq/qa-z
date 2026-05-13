@@ -59,8 +59,11 @@ def sarif_json(summary: RunSummary) -> str:
 
 def write_sarif_artifact(summary: RunSummary, output_path: Path) -> Path:
     """Write a SARIF artifact and return its path."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(sarif_json(summary), encoding="utf-8")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(sarif_json(summary), encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write SARIF output {output_path}: {exc}") from exc
     return output_path
 
 

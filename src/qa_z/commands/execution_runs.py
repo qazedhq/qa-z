@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,7 @@ def handle_fast(args: argparse.Namespace) -> int:
     """Run deterministic fast checks."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "fast")
+    config = load_cli_config(root, args, "fast", json_error_kind="qa_z.fast_error")
     if config is None:
         return 2
 
@@ -41,14 +42,28 @@ def handle_fast(args: argparse.Namespace) -> int:
             selection_mode=resolve_fast_selection_mode(config, args.selection),
         )
     except (FileNotFoundError, ValueError) as exc:
-        print(f"qa-z fast: configuration error: {exc}")
-        return 2
+        return _execution_error(
+            args,
+            command="fast",
+            error="configuration_error",
+            message=f"qa-z fast: configuration error: {exc}",
+            exit_code=2,
+        )
 
     artifact_dir = Path(run.summary.artifact_dir or "")
     if not artifact_dir.is_absolute():
         artifact_dir = root / artifact_dir
-    summary_path = write_run_summary_artifacts(run.summary, artifact_dir)
-    write_latest_run_manifest(root, config, artifact_dir.parent)
+    try:
+        summary_path = write_run_summary_artifacts(run.summary, artifact_dir)
+        write_latest_run_manifest(root, config, artifact_dir.parent)
+    except OSError as exc:
+        return _execution_error(
+            args,
+            command="fast",
+            error="artifact_write_error",
+            message=f"qa-z fast: artifact write error: {exc}",
+            exit_code=2,
+        )
 
     if args.json:
         print(summary_json(run.summary), end="")
@@ -111,16 +126,21 @@ def register_fast_command(subparsers: argparse._SubParsersAction) -> None:
 def handle_deep(args: argparse.Namespace) -> int:
     """Create deep-runner artifacts."""
     if args.from_run and args.output_dir:
-        print(
-            "qa-z deep: argument error: --from-run and --output-dir cannot be "
-            "combined; use --from-run to attach to a fast run or --output-dir "
-            "to create a standalone deep run."
+        return _execution_error(
+            args,
+            command="deep",
+            error="configuration_error",
+            message=(
+                "qa-z deep: argument error: --from-run and --output-dir cannot be "
+                "combined; use --from-run to attach to a fast run or --output-dir "
+                "to create a standalone deep run."
+            ),
+            exit_code=2,
         )
-        return 2
 
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "deep")
+    config = load_cli_config(root, args, "deep", json_error_kind="qa_z.deep_error")
     if config is None:
         return 2
 
@@ -136,19 +156,43 @@ def handle_deep(args: argparse.Namespace) -> int:
             selection_mode=resolve_deep_selection_mode(config, args.selection),
         )
     except ArtifactLoadError as exc:
-        print(f"qa-z deep: artifact error: {exc}")
-        return 2
+        return _execution_error(
+            args,
+            command="deep",
+            error="artifact_error",
+            message=f"qa-z deep: artifact error: {exc}",
+            exit_code=2,
+        )
     except ArtifactSourceNotFound as exc:
-        print(f"qa-z deep: source not found: {exc}")
-        return 4
+        return _execution_error(
+            args,
+            command="deep",
+            error="source_not_found",
+            message=f"qa-z deep: source not found: {exc}",
+            exit_code=4,
+        )
     except (FileNotFoundError, ValueError) as exc:
-        print(f"qa-z deep: configuration error: {exc}")
-        return 2
+        return _execution_error(
+            args,
+            command="deep",
+            error="configuration_error",
+            message=f"qa-z deep: configuration error: {exc}",
+            exit_code=2,
+        )
 
-    summary_path = write_run_summary_artifacts(run.summary, run.resolution.deep_dir)
-    write_sarif_artifact(run.summary, run.resolution.deep_dir / "results.sarif")
-    if args.sarif_output:
-        write_sarif_artifact(run.summary, resolve_cli_path(root, args.sarif_output))
+    try:
+        summary_path = write_run_summary_artifacts(run.summary, run.resolution.deep_dir)
+        write_sarif_artifact(run.summary, run.resolution.deep_dir / "results.sarif")
+        if args.sarif_output:
+            write_sarif_artifact(run.summary, resolve_cli_path(root, args.sarif_output))
+    except OSError as exc:
+        return _execution_error(
+            args,
+            command="deep",
+            error="artifact_write_error",
+            message=f"qa-z deep: artifact write error: {exc}",
+            exit_code=2,
+        )
 
     if args.json:
         print(summary_json(run.summary), end="")
@@ -156,6 +200,31 @@ def handle_deep(args: argparse.Namespace) -> int:
         print(render_deep_stdout(run.summary.status, summary_path, root))
 
     return run.exit_code
+
+
+def _execution_error(
+    args: argparse.Namespace,
+    *,
+    command: str,
+    error: str,
+    message: str,
+    exit_code: int,
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": f"qa_z.{command}_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_deep_command(subparsers: argparse._SubParsersAction) -> None:

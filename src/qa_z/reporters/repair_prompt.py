@@ -33,6 +33,7 @@ from qa_z.reporters.repair_prompt_sections import (
     done_when_items,
     evidence_tail,
     format_command,
+    format_changed_files,
     format_grouped_finding,
     format_inline_code_list,
     format_list,
@@ -63,6 +64,7 @@ __all__ = [
     "failure_context",
     "fix_priority",
     "format_command",
+    "format_changed_files",
     "format_grouped_finding",
     "format_inline_code_list",
     "format_list",
@@ -235,6 +237,8 @@ def _render_repair_prompt_impl(packet: RepairPacket) -> str:
                 "",
                 f"- Mode: {selection.get('mode', 'unknown')}",
                 f"- Input source: {selection.get('input_source', 'none')}",
+                f"- Changed files: {format_changed_files(selection.get('changed_files'))}",
+                f"- High-risk reasons: {format_list(selection.get('high_risk_reasons', []))}",
                 f"- Full checks: {format_list(selection.get('full_checks', []))}",
                 f"- Targeted checks: {format_list(selection.get('targeted_checks', []))}",
                 f"- Skipped checks: {format_list(selection.get('skipped_checks', []))}",
@@ -282,15 +286,28 @@ def _write_repair_artifacts_impl(
     packet: RepairPacket, output_dir: Path
 ) -> tuple[Path, Path]:
     """Write packet.json and prompt.md artifacts."""
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create repair-prompt artifact directory {output_dir}: {exc}"
+        ) from exc
     packet_path = output_dir / "packet.json"
     prompt_path = output_dir / "prompt.md"
-    packet_path.write_text(
+    write_repair_artifact_text(
+        packet_path,
         json.dumps(packet.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
     )
-    prompt_path.write_text(packet.agent_prompt, encoding="utf-8")
+    write_repair_artifact_text(prompt_path, packet.agent_prompt)
     return packet_path, prompt_path
+
+
+def write_repair_artifact_text(path: Path, text: str) -> None:
+    """Write one repair-prompt artifact with path-aware errors."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write repair-prompt artifact {path}: {exc}") from exc
 
 
 def _repair_packet_json_impl(packet: RepairPacket) -> str:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-
 from tests.alpha_release_gate_test_support import (
     RecordingRunner,
     labels_from_result,
@@ -32,6 +31,7 @@ def test_alpha_release_gate_runs_quality_checks_in_validation_order(tmp_path):
         "python -m mypy src tests",
         "python -m pytest",
         "python -m qa_z --help",
+        "python -m qa_z doctor --help",
         "python -m qa_z init --help",
         "python -m qa_z plan --help",
         "python -m qa_z fast --help",

@@ -300,3 +300,33 @@ def test_latest_self_inspection_selection_context_reads_loop_local_provenance(
         "source_self_inspection_loop_id": "loop-42",
         "source_self_inspection_generated_at": NOW,
     }
+
+
+def test_latest_self_inspection_selection_context_flags_stale_backlog_provenance(
+    tmp_path: Path,
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json",
+        {
+            "kind": "qa_z.self_inspection",
+            "schema_version": 1,
+            "loop_id": "loop-old",
+            "generated_at": "2026-04-14T00:00:00Z",
+            "live_repository": {"modified_count": 99},
+        },
+    )
+
+    context = loop_health_signals_module.latest_self_inspection_selection_context(
+        tmp_path,
+        min_generated_at=NOW,
+    )
+
+    assert context == {
+        "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+        "source_self_inspection_loop_id": "loop-old",
+        "source_self_inspection_generated_at": "2026-04-14T00:00:00Z",
+        "source_self_inspection_stale_for_backlog": True,
+        "source_self_inspection_refresh_commands": [
+            "python -m qa_z select-next --refresh --count 3 --json"
+        ],
+    }

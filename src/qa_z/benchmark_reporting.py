@@ -8,6 +8,10 @@ from typing import Any
 
 from qa_z import benchmark as benchmark_module
 from qa_z import benchmark_report_details
+from qa_z.benchmark_artifact_writing import (
+    write_benchmark_report,
+    write_benchmark_summary,
+)
 
 
 def render_benchmark_report(summary: dict[str, Any]) -> str:
@@ -41,11 +45,16 @@ def render_benchmark_report(summary: dict[str, Any]) -> str:
 
 def write_benchmark_artifacts(summary: dict[str, Any], results_dir: Path) -> None:
     """Write benchmark summary JSON and Markdown report artifacts."""
-    results_dir.mkdir(parents=True, exist_ok=True)
-    (results_dir / "summary.json").write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    (results_dir / "report.md").write_text(
-        render_benchmark_report(summary), encoding="utf-8"
-    )
+    try:
+        results_dir.mkdir(parents=True, exist_ok=True)
+        write_benchmark_summary(
+            results_dir / "summary.json",
+            json.dumps(summary, indent=2, sort_keys=True) + "\n",
+        )
+        write_benchmark_report(
+            results_dir / "report.md", render_benchmark_report(summary)
+        )
+    except OSError as exc:
+        raise OSError(
+            f"could not write benchmark artifacts to {results_dir}: {exc}"
+        ) from exc

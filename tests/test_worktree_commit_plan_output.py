@@ -52,6 +52,29 @@ def test_commit_plan_human_output_prints_generated_policy_split() -> None:
     assert "Local-by-default generated preview: benchmarks/results/" in output
 
 
+def test_commit_plan_human_output_prints_release_scope_decision_paths() -> None:
+    module = load_plan_module()
+    result = module.analyze_status_lines(
+        [
+            "?? marketing/x/README.md",
+            "?? tests/test_x_automation.py",
+            " M src/qa_z/selection_context.py",
+        ]
+    )
+
+    output = module.render_human(result)
+
+    assert "Attention reasons: product_decision_paths_present" not in output
+    assert "Product decision paths:" not in output
+    assert "Release-scope decision groups: 2" in output
+    assert "marketing_x_surface: deferred_out_of_alpha_scope (1 path)" in output
+    assert "marketing_x_tests: deferred_out_of_alpha_scope (1 path)" in output
+    assert (
+        "Deferred out-of-alpha preview: marketing/x/README.md, "
+        "tests/test_x_automation.py" in (output)
+    )
+
+
 def test_commit_plan_splits_generated_artifacts_by_policy_bucket() -> None:
     module = load_plan_module()
     result = module.analyze_status_lines(

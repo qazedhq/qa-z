@@ -71,3 +71,48 @@ def test_write_verification_artifacts_writes_summary_compare_and_report(
     assert (
         paths.report_path.read_text(encoding="utf-8") == "# QA-Z Repair Verification\n"
     )
+
+
+def test_write_verification_artifacts_wraps_single_artifact_write_failure(
+    monkeypatch, tmp_path: Path
+) -> None:
+    comparison = cast(
+        VerificationComparison,
+        SimpleNamespace(
+            to_dict=lambda: {"kind": "qa_z.verify_compare"},
+            verdict="improved",
+            summary={
+                "blocking_before": 1,
+                "blocking_after": 0,
+                "resolved_count": 1,
+                "new_issue_count": 0,
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        writing_module,
+        "verification_summary_dict",
+        lambda comparison: {"kind": "qa_z.verify_summary", "verdict": "improved"},
+    )
+    monkeypatch.setattr(
+        writing_module,
+        "render_verification_report_impl",
+        lambda comparison: "# QA-Z Repair Verification\n",
+    )
+    compare_path = tmp_path / "verify" / "compare.json"
+    original_write_text = Path.write_text
+
+    def fail_compare_artifact(path: Path, *args, **kwargs) -> int:
+        if path == compare_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_compare_artifact)
+
+    with pytest.raises(OSError) as excinfo:
+        writing_module.write_verification_artifacts(comparison, tmp_path / "verify")
+
+    message = str(excinfo.value)
+    assert "could not write verification artifact" in message
+    assert str(compare_path) in message
+    assert "disk full" in message

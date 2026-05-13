@@ -26,6 +26,42 @@ uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 
 - Release artifact smoke used `python scripts/alpha_release_artifact_smoke.py --with-deps --json`.
 
+## Alpha RC package dry-run packet - 2026-05-12
+
+Package metadata version: `0.9.8a0`.
+
+No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved.
+`RELEASE_EXECUTION_APPROVED` and `PACKAGE_PUBLISH_ALLOWED` must both be set to
+`true` by a human release owner before any upload command is run.
+
+Safe local-only dry-run packet:
+
+```bash
+git status --short -uall
+python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting
+python scripts\alpha_release_gate.py --quick --allow-dirty --json
+python -m build --sdist --wheel
+python scripts\alpha_release_artifact_smoke.py --with-deps --json
+python -m twine check dist/*
+```
+
+The dry-run is evidence only. Required evidence after a dry-run is the built
+artifact names, artifact smoke result, `twine check` result, and confirmation
+that no registry upload command ran.
+
+Blocked upload packet:
+
+```bash
+python -m twine upload --repository testpypi dist/*
+python -m twine upload dist/*
+```
+
+These upload commands are intentionally blocked until the release owner chooses
+the registry, confirms credentials out of band, confirms the pushed SHA has
+remote CI and public raw proof, and records the resulting package URL/version.
+Rollback is registry-owned: follow the selected registry's yank or retention
+policy instead of assuming a local undo command exists.
+
 ## v0.10.0-beta
 
 - PyPI publish.

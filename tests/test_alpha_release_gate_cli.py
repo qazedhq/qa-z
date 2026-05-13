@@ -140,3 +140,42 @@ def test_alpha_release_gate_cli_forwards_quick_mode(monkeypatch, capsys):
     assert exit_code == 0
     assert seen["quick"] is True
     assert payload["quick"] is True
+
+
+def test_alpha_release_gate_cli_reports_output_write_failure(
+    monkeypatch, tmp_path, capsys
+):
+    module = load_gate_module()
+    output_path = tmp_path / "gate.json"
+    original_write_text = module.Path.write_text
+
+    def fake_run_alpha_release_gate(_repo_root, **_kwargs):
+        return module.AlphaReleaseGateResult(
+            summary="alpha release gate passed",
+            exit_code=0,
+            commands=[],
+            payload={
+                "summary": "alpha release gate passed",
+                "exit_code": 0,
+                "checks": [],
+            },
+        )
+
+    def fail_output_write(path, *args, **kwargs):
+        if path == output_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(module, "run_alpha_release_gate", fake_run_alpha_release_gate)
+    monkeypatch.setattr(module.Path, "write_text", fail_output_write)
+
+    exit_code = module.main(["--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 2
+    assert payload["summary"] == "alpha release gate passed"
+    assert (
+        f"alpha release gate: could not write --output {output_path}: disk full"
+        in captured.err
+    )

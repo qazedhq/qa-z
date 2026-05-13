@@ -123,13 +123,28 @@ def finalized_ingest_outcome(
             else None
         ),
     )
-    write_json(ingest_artifact_path, summary)
-    ingest_report_path.parent.mkdir(parents=True, exist_ok=True)
-    ingest_report_path.write_text(render_ingest_report(summary), encoding="utf-8")
+    try:
+        write_json(ingest_artifact_path, summary)
+        write_ingest_report(ingest_report_path, render_ingest_report(summary))
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor result ingest artifacts to {ingest_dir}: {exc}"
+        ) from exc
     return ExecutorResultIngestOutcome(
         summary=summary,
         verification_verdict=verification_verdict,
     )
+
+
+def write_ingest_report(path: Path, text: str) -> None:
+    """Write the ingest Markdown report with path-aware failures."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor result ingest report {path}: {exc}"
+        ) from exc
 
 
 def rejected_ingest_outcome(

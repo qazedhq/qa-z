@@ -377,6 +377,7 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
     assert "Source self-inspection: .qa-z/loops/latest/self_inspect.json" in output
     assert "Source loop: inspect-loop (2026-04-17T00:00:00Z)" in output
     assert "Refresh hint: run `qa-z select-next --refresh`" in output
+
     assert (
         "Live repository: modified=25; untracked=346; staged=0; "
         "runtime_artifacts=2; benchmark_results=1; dirty_benchmark_results=0; "
@@ -411,6 +412,35 @@ def test_render_select_next_stdout_surfaces_selected_task_details(
         "evidence: git_status: modified=25; untracked=346; staged=0; "
         "areas=docs:2, source:1" in output
     )
+
+
+def test_render_select_next_stdout_surfaces_stale_self_inspection_refresh_command(
+    tmp_path: Path,
+) -> None:
+    output = render_select_next_stdout(
+        {
+            "source_self_inspection": ".qa-z/loops/latest/self_inspect.json",
+            "source_self_inspection_loop_id": "inspect-old",
+            "source_self_inspection_generated_at": "2026-04-21T00:00:00Z",
+            "source_self_inspection_stale_for_backlog": True,
+            "source_self_inspection_refresh_commands": [
+                "python -m qa_z select-next --refresh --count 3 --json"
+            ],
+            "selected_tasks": [],
+        },
+        SelectionArtifactPaths(
+            selected_tasks_path=(
+                tmp_path / ".qa-z" / "loops" / "latest" / "selected_tasks.json"
+            ),
+            loop_plan_path=tmp_path / ".qa-z" / "loops" / "latest" / "loop_plan.md",
+            history_path=tmp_path / ".qa-z" / "loops" / "history.jsonl",
+        ),
+        tmp_path,
+    )
+
+    assert "Source self-inspection stale for backlog: true" in output
+    assert "Source self-inspection refresh commands:" in output
+    assert "  - python -m qa_z select-next --refresh --count 3 --json" in output
 
 
 def test_render_self_inspect_stdout_surfaces_top_candidate_details(
@@ -722,6 +752,31 @@ def test_init_is_idempotent(tmp_path, capsys: pytest.CaptureFixture[str]) -> Non
     assert "Nothing new was written" in second_output
 
 
+def test_init_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "qa-z.yaml"
+    original_write_text = Path.write_text
+
+    def fail_config_write(path: Path, *args, **kwargs) -> int:
+        if path == config_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_config_write)
+
+    exit_code = main(["init", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z init: artifact write error:" in output
+    assert "could not write bootstrap files" in output
+    assert str(config_path) in output
+    assert "disk full" in output
+
+
 def test_plan_creates_a_contract_draft_from_sources(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
@@ -787,6 +842,43 @@ def test_plan_creates_a_contract_draft_from_sources(
     assert (
         "created contract: qa/contracts/protect-billing-auth-guard.md" in captured.out
     )
+
+
+def test_plan_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text(
+        dedent(
+            """
+            project:
+              name: qa-z
+            contracts:
+              output_dir: qa/contracts
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    contract_path = tmp_path / "qa" / "contracts" / "protect-billing.md"
+    original_write_text = Path.write_text
+
+    def fail_contract_write(path: Path, *args, **kwargs) -> int:
+        if path == contract_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_contract_write)
+
+    exit_code = main(["plan", "--path", str(tmp_path), "--title", "Protect billing"])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z plan: artifact write error:" in output
+    assert "could not write contract draft" in output
+    assert str(contract_path) in output
+    assert "disk full" in output
 
 
 def test_plan_uses_custom_contract_output_directory(
@@ -1135,6 +1227,36 @@ def test_backlog_refresh_runs_self_inspection_before_printing(
     assert "Open items: 0" in output
     assert "Refresh hint:" not in output
     assert "Closed items: 1" in output
+
+
+def test_backlog_refresh_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report_path = tmp_path / ".qa-z" / "loops" / "latest" / "self_inspect.json"
+    original_write_text = Path.write_text
+
+    def fail_self_inspection_report(path: Path, *args, **kwargs) -> int:
+        if path == report_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_self_inspection_report)
+
+    exit_code = main(["backlog", "--path", str(tmp_path), "--refresh", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.backlog_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z backlog: artifact write error:" in output["message"]
+    assert "could not refresh backlog artifacts" in output["message"]
+    assert "disk full" in output["message"]
 
 
 def test_render_backlog_omits_freshness_guard_line_when_none_are_closed() -> None:
@@ -1523,6 +1645,124 @@ def test_fast_returns_config_error_for_broken_yaml(
     assert "qa-z fast: configuration error:" in output
 
 
+def test_fast_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("fast: [\n", encoding="utf-8")
+
+    exit_code = main(["fast", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.fast_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z fast: configuration error:" in output["message"]
+
+
+def test_fast_cli_json_reports_config_error_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(
+        tmp_path,
+        [{"id": "py_test", "kind": "test", "run": python_command("")}],
+    )
+
+    exit_code = main(["fast", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.fast_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z fast: configuration error:" in output["message"]
+
+
+def test_deep_cli_json_reports_argument_error_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/baseline",
+            "--output-dir",
+            str(tmp_path / "runs"),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z deep: argument error:" in output["message"]
+
+
+def test_deep_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("deep: [\n", encoding="utf-8")
+
+    exit_code = main(["deep", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z deep: configuration error:" in output["message"]
+
+
+def test_deep_cli_json_reports_source_not_found_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/missing",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z deep: source not found:" in output["message"]
+
+
 def test_verify_cli_compares_existing_runs_and_writes_artifacts(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
@@ -1621,3 +1861,66 @@ def test_verify_cli_returns_source_not_found_for_missing_run(
 
     assert exit_code == 4
     assert "qa-z verify: source not found:" in output
+
+
+def test_verify_cli_json_reports_source_not_found_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+    write_fast_summary_artifact(
+        tmp_path, "candidate", check_id="py_test", status="passed", exit_code=0
+    )
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/missing",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.verify_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z verify: source not found:" in output["message"]
+
+
+def test_verify_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("verify: [\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.verify_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z verify: configuration error:" in output["message"]

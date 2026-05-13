@@ -39,6 +39,8 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "changed_batches" in text
         assert "shared_patch_add_paths" in text
         assert "cross_cutting_groups" in text
+        assert "product_decision_paths" in text
+        assert "product_decision_groups" in text
         assert "repository" in text
     assert "--untracked-files=all" in commit_plan
     assert "shared_patch_add_paths" in commit_plan
@@ -74,6 +76,8 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "batch_count" in text
         assert "generated_local_only_count" in text
         assert "generated_local_by_default_count" in text
+        assert "product_decision_path_count" in text
+        assert "product_decision_group_count" in text
 
         assert "generated_exclude_count" in text
         assert "Global attention reasons:" in text
@@ -104,6 +108,7 @@ def test_docs_document_worktree_commit_plan_helper() -> None:
         assert "patch_command_text" in text
         assert "batch filters preserve generated_artifacts_present" in text
         assert "cross_cutting_paths_present" in text
+        assert "product_decision_paths_present" in text
         assert "output write failures return exit code `2`" in text
 
 
@@ -113,6 +118,131 @@ def test_docs_warn_planner_artifact_writers_are_serial() -> None:
 
     assert "Run local planner artifact writers serially" in readme
     assert "local planner artifact writers serially" in schema
+
+
+def test_alpha_rc_packet_keeps_deferred_scope_and_remote_proof_explicit() -> None:
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "## Alpha Release-Candidate Decision Packet - 2026-05-12" in commit_plan
+    assert "`status=attention_required` with `changed_batch_count=5`" in commit_plan
+    assert "`report_path_count=1`" in commit_plan
+    assert "`shared_patch_add_count=1`" in commit_plan
+    assert "`product_decision_path_count=0`" in commit_plan
+    assert "`cross_cutting_count=0`" in commit_plan
+    assert "`cross_cutting_group_count=1`" in commit_plan
+    assert "`deferred_alpha_scope_path_count=25`" in commit_plan
+    assert "`cross_cutting_paths_present`" in commit_plan
+    assert "`alpha release gate passed`, `28/28`" in commit_plan
+    assert (
+        "python scripts\\alpha_release_truth_validator.py --proof-head-from-packet --json"
+        in commit_plan
+    )
+    assert "`release_path_state=local_only_remote_preflight`" in commit_plan
+    assert "Deferred Marketing/X packet:" in commit_plan
+    assert "Deferred paths are `marketing/x/**` and `tests/test_x_automation.py`" in (
+        commit_plan
+    )
+    assert "Do not stage Marketing/X source" in commit_plan
+    assert "Deferred Claude compatibility mirror packet:" in commit_plan
+    assert "Do not stage, delete, or promote `.claude/**`" in commit_plan
+    assert "Remote and publishing proof packet:" in commit_plan
+    assert "remote checks stayed skipped" in commit_plan
+    assert "Production readiness is not claimed." in commit_plan
+
+
+def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> None:
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Proof timestamp: `2026-05-12T22:50Z`" in commit_plan
+    assert "Source HEAD at proof time: `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`" in (
+        commit_plan
+    )
+    assert "`RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`" in commit_plan
+    assert (
+        "`python scripts\\alpha_release_preflight.py --skip-remote --json` returned"
+        in (commit_plan)
+    )
+    assert "not a product regression" in commit_plan
+    assert "`1622 passed`" in commit_plan
+    assert "Read-only remote proof:" in commit_plan
+    assert "`repository_http_status=200`" in commit_plan
+    assert "`repository_visibility=public`" in commit_plan
+    assert "`remote_ref_count=24`" in commit_plan
+    assert "`remote_ref_tag_count=2`" in commit_plan
+    assert "Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`" in (
+        commit_plan
+    )
+    assert "GitHub API proof returned repository `qazedhq/qa-z`" in commit_plan
+    assert "Latest read-only workflow proof for remote `main`" in commit_plan
+    assert "public raw checks captured" in commit_plan
+    assert "failed exact-commit raw URLs with HTTP `404`" in commit_plan
+    assert "Local proof HEAD is 17 commits ahead of remote `main`" in commit_plan
+    assert "`release_path_state=blocked_remote_publish`" in commit_plan
+    assert (
+        "Skip-remote local preflight remains separate from read-only remote proof"
+        in (commit_plan)
+    )
+    assert "Push/tag/release/package publish: not executed in PROOF_ONLY mode." in (
+        commit_plan
+    )
+    assert "Production readiness: `No`" in commit_plan
+    assert "Approval matrix:" in commit_plan
+    assert "Publish execution packet:" in commit_plan
+    assert 'test "$(git rev-parse HEAD)" = "<approved-sha>"' in commit_plan
+    assert (
+        "git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512"
+        in commit_plan
+    )
+    assert "Expected proof branch output must resolve `<approved-sha>`" in commit_plan
+    assert "Direct `main` update needs separate explicit approval" in commit_plan
+    assert "git push origin <approved-sha>:main" in commit_plan
+    assert "git push origin HEAD:main" not in commit_plan
+    assert "Rollback and incident packet:" in commit_plan
+    assert (
+        "git push origin --delete codex/alpha-rc-<approved-sha>-20260512" in commit_plan
+    )
+    assert "Production readiness is not claimed." in commit_plan
+
+
+def test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contract() -> (
+    None
+):
+    commit_plan = (ROOT / "docs" / "reports" / "worktree-commit-plan.md").read_text(
+        encoding="utf-8"
+    )
+    package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
+        encoding="utf-8"
+    )
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Package publish dry-run packet:" in commit_plan
+    assert "Package metadata version is `0.9.8a0`" in commit_plan
+    assert "`PACKAGE_PUBLISH_ALLOWED` unset" in commit_plan
+    assert "python -m build --sdist --wheel" in commit_plan
+    assert "python -m twine check dist/*" in commit_plan
+    assert "Registry publish remains blocked" in commit_plan
+
+    assert "## Alpha RC package dry-run packet - 2026-05-12" in package_plan
+    assert "Package metadata version: `0.9.8a0`" in package_plan
+    assert (
+        "No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved."
+        in (package_plan)
+    )
+
+    assert "Current quality-mode no-remote rehearsal:" in release_handoff
+    assert (
+        "python scripts/alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json"
+        in release_handoff
+    )
+    assert "The bare historical command is retained only as a legacy blocker check" in (
+        release_handoff
+    )
 
 
 def test_artifact_schema_documents_runtime_artifact_cleanup_contract() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +14,11 @@ def write_text_if_missing(path: Path, content: str) -> bool:
     """Create a text file only when it does not exist yet."""
     if path.exists():
         return False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write {path}: {exc}") from exc
     return True
 
 
@@ -35,12 +39,33 @@ def resolve_cli_path(root: Path, value: str) -> Path:
 
 
 def load_cli_config(
-    root: Path, args: argparse.Namespace, command: str
+    root: Path,
+    args: argparse.Namespace,
+    command: str,
+    *,
+    json_error_kind: str | None = None,
+    json_error_command: str | None = None,
+    json_error_when: bool | None = None,
 ) -> dict[str, Any] | None:
     """Load config for a CLI command and print normalized errors."""
     config_path = resolve_cli_path(root, args.config) if args.config else None
     try:
         return load_config(root, config_path=config_path)
     except ConfigError as exc:
-        print(f"qa-z {command}: configuration error: {exc}")
+        message = f"qa-z {command}: configuration error: {exc}"
+        json_mode = (
+            getattr(args, "json", False) if json_error_when is None else json_error_when
+        )
+        if json_error_kind and json_mode:
+            payload: dict[str, Any] = {
+                "kind": json_error_kind,
+                "error": "configuration_error",
+                "exit_code": 2,
+                "message": message,
+            }
+            if json_error_command:
+                payload["command"] = json_error_command
+            print(json.dumps(payload, sort_keys=True))
+        else:
+            print(message)
         return None

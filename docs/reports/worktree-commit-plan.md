@@ -41,13 +41,17 @@ The helper reads `git status --short --untracked-files=all`, reports per-batch
 changed paths, and keeps `generated_artifact_paths`,
 `generated_local_only_paths`, `generated_local_by_default_paths`,
 `cross_cutting_paths`, `shared_patch_add_paths`, `cross_cutting_groups`, report
-paths, and `unassigned_source_paths` visible so source batches are not mixed
-with generated release evidence by accident.
+paths, `unassigned_source_paths`, `product_decision_paths`,
+`product_decision_groups`, `release_scope_decision_paths`, and
+`release_scope_decision_groups` visible so source batches are not mixed with
+generated release evidence or unapproved product/network surfaces by accident.
 Its summary now also records `generated_local_only_count` and
-`generated_local_by_default_count` plus `cross_cutting_group_count`, so the
-same helper artifact separates stage-never runtime output from
-local-by-default benchmark evidence and shared patch-add review groups that
-still need an intentional freeze-or-drop or patch-add decision.
+`generated_local_by_default_count` plus `cross_cutting_group_count` and
+`product_decision_path_count`, `release_scope_decision_path_count`,
+`approved_alpha_support_path_count`, and `deferred_alpha_scope_path_count`, so
+the same helper artifact separates stage-never runtime output from
+local-by-default benchmark evidence, shared patch-add review groups, approved
+operating-model support scope, and deferred product/network surfaces.
 Known overlap paths now resolve more deterministically as well: executor fixture
 trees are owned by the executor-return batch, verification/reporter seams fall
 under the verification-and-publish batch, and only genuinely unmapped source
@@ -97,7 +101,9 @@ For long autonomy or release loops, add `--summary-only --json` when the next
 operator only needs compact evidence. That payload omits full per-file `batches`
 details while keeping `summary`, `attention_reasons`, `changed_batches`,
 generated-path previews, `cross_cutting_paths`, `shared_patch_add_paths`,
-`cross_cutting_groups`, and repository context.
+`cross_cutting_groups`, `release_scope_decision_groups`,
+`approved_alpha_support_groups`, `deferred_alpha_scope_groups`, unresolved
+`product_decision_groups`, and repository context.
 Each `changed_batches[]` item keeps the batch `message`, validation commands,
 and compact staging guidance. When a batch has at most 20 included paths, the
 summary preserves a complete `git_add_command` plus `git_add_command_text`;
@@ -156,6 +162,327 @@ Those shared paths now roll up into `cross_cutting_groups`, including
 `command_surface_tests`, and `status_reports`, so an operator can patch-add by
 review surface with a scoped `git add --patch` command instead of treating every
 cross-cutting path as one flat list.
+The helper now applies the explicit alpha release-scope decision to the five
+known ownership groups instead of leaving them as generic unresolved product
+decisions. `codex_operating_model` and `operating_model_validator` are approved
+alpha support scope, while the Claude compatibility mirror plus Marketing/X
+surface and tests are deferred out of the QA-Z alpha scope. For the current X
+launch automation surface, `marketing/x/**` remains deferred because it can use
+credentials, call X APIs, and mutate posting queue state when explicitly
+enabled. Unknown future groups can still appear under `product_decision_paths`
+with `product_decision_paths_present`, but the current five groups roll up into
+`release_scope_decision_groups` and no longer block as unresolved.
+
+| Group | Release scope | Evidence-backed action |
+|---|---|---|
+| `codex_operating_model` | `approved_alpha_support_scope` | Stage only with the operating-model support batch after validator and format proof. |
+| `operating_model_validator` | `approved_alpha_support_scope` | Stage with the operating-model support batch after format and validator checks pass. |
+| `claude_compatibility_mirror` | `deferred_out_of_alpha_scope` | Keep out of QA-Z alpha unless a compatibility release decision approves it. |
+| `marketing_x_surface` | `deferred_out_of_alpha_scope` | Keep out of QA-Z alpha unless a product owner approves the credential-gated network surface. |
+| `marketing_x_tests` | `deferred_out_of_alpha_scope` | Keep with Marketing/X only if that product surface is approved. |
+
+## Alpha Release-Candidate Decision Packet - 2026-05-12
+
+This packet refreshes the release-candidate boundary after the local alpha
+closure commits, read-only remote proof, and the human-approved release
+execution worktrain audit. Approval flags were absent, so the result is an
+execution-ready packet, not a publish.
+
+- Proof timestamp: `2026-05-12T22:50Z`.
+- Source HEAD at proof time: `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`.
+- Branch at proof time: `main`.
+- Remote target: `https://github.com/qazedhq/qa-z.git`.
+- Remote `main` at proof time:
+  `8f647619418b884afa3bef3d839326680bec70af`.
+- Publish mode for this packet: `PROOF_ONLY`; approval flags
+  `RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`,
+  `GITHUB_RELEASE_ALLOWED`, `PACKAGE_PUBLISH_ALLOWED`, and `DEPLOY_ALLOWED`
+  were unset. No push, tag, GitHub release, package publish, deployment,
+  credential use, destructive cleanup, or queue mutation was attempted.
+
+Current local evidence:
+
+- Strict worktree plan:
+  `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`
+  returned `status=attention_required` with `changed_batch_count=5`,
+  `changed_path_count=42`, `product_decision_path_count=0`,
+  `product_decision_group_count=0`, `unassigned_source_path_count=0`,
+  `report_path_count=1`, `shared_patch_add_count=1`,
+  `cross_cutting_count=0`, `cross_cutting_group_count=1`, and
+  `deferred_alpha_scope_path_count=25`. The attention reason is the dirty
+  tracked report patch-add review surface: `cross_cutting_paths_present`.
+- Include-ignored worktree plan:
+  `python scripts\worktree_commit_plan.py --include-ignored --summary-only --json`
+  returned `status=ready` with `changed_batch_count=5`,
+  `changed_path_count=16275`, `generated_artifact_count=37`,
+  `generated_local_only_count=23`, `generated_local_by_default_count=14`,
+  and the same `25` deferred out-of-alpha paths.
+- Alpha gate:
+  `python scripts\alpha_release_gate.py --quick --allow-dirty --json` returned
+  `alpha release gate passed`, `28/28`, while remote checks stayed skipped.
+- Alpha preflight/gate output write contract:
+  `--output` write failures now return exit code `2` with deterministic stderr
+  while still printing the JSON evidence payload, so file-system errors do not
+  look like release-check failures.
+- Commit-safe release truth validator:
+  `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`
+  validates this packet against the pinned proof HEAD instead of requiring the
+  packet to pin any later local commit that records or stages the packet.
+- Literal no-argument skip-remote preflight:
+  `python scripts\alpha_release_preflight.py --skip-remote --json` returned
+  `release preflight failed` because the historical defaults still expect
+  `codex/qa-z-bootstrap`, no configured `origin`, a clean worktree, and absent
+  `v0.9.8-alpha`. That is a command-contract blocker for old copy/paste
+  snippets, not a product regression.
+- Current local no-remote preflight:
+  `python scripts\alpha_release_preflight.py --skip-remote --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --allow-dirty --skip-release-tag-check --json`
+  returned `release preflight passed`, `6` passed, `4` skipped, and
+  `release_path_state=local_only_remote_preflight`. Skip-remote local preflight remains separate from read-only remote proof, and its remote checks stayed skipped by design.
+- Full local proof refresh:
+  `python scripts\alpha_release_gate.py --quick --allow-dirty --json` carried
+  the local proof bundle through `pytest` (`1622 passed`), Ruff check, Ruff
+  format check, mypy (`534` source files), CLI help smoke, text hygiene, and
+  worktree-plan evidence.
+
+Read-only remote proof:
+
+- `python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json`
+  returned `release preflight passed`, `9` passed, `1` skipped,
+  `repository_http_status=200`, `repository_visibility=public`,
+  `repository_archived=false`, `repository_default_branch=main`,
+  `remote_ref_count=24`, `remote_ref_head_count=5`,
+  `remote_ref_tag_count=2`, and
+  `release_path_state=blocked_remote_publish`.
+- The same read-only preflight with `--allow-existing-refs` also passed the
+  read checks, but still reported `release_path_state=blocked_remote_publish`
+  because no publish action was approved and existing remote tags/refs need
+  explicit release decisioning.
+- `git ls-remote --refs origin` returned remote refs without credentials or
+  mutation. Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`; tags include
+  `v0.9.8-alpha` and `v0.9.9-alpha`.
+- GitHub API proof returned repository `qazedhq/qa-z`, `private=false`,
+  `archived=false`, `default_branch=main`, release tags
+  `v0.9.9-alpha,v0.9.8-alpha`, and `main_sha=8f647619418b884afa3bef3d839326680bec70af`.
+- Latest read-only workflow proof for remote `main` is for
+  `8f647619418b884afa3bef3d839326680bec70af`, not local
+  `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`: `CI`, `Public Raw Hygiene`,
+  and `OpenSSF Scorecard` were completed successfully on the remote-visible
+  SHA.
+- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 8f647619418b884afa3bef3d839326680bec70af`
+  passed for branch and exact-commit raw URLs.
+- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 9bbd1294d3b25fd45216b6cb14f2d97dd087351a`
+  passed branch `main` URLs but failed exact-commit raw URLs with HTTP `404`,
+  proving the local HEAD is not yet public on the remote.
+- Local proof HEAD is 17 commits ahead of remote `main`, so this is not an
+  empty-remote direct publish. Remote alpha readiness is partial: repository
+  existence and readability are proven, but the current local proof SHA has not
+  been pushed, CI-validated, tagged, released, or package-published.
+
+Approval matrix:
+
+| Action | Approved? | Executed? | Evidence / blocker |
+|---|---:|---:|---|
+| Read-only remote proof | Yes, safe read-only | Yes | GitHub API, `git ls-remote`, preflight, workflow API, and public raw checks captured. |
+| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 17 commits ahead of remote `main`. |
+| Tag | No | No | `TAG_ALLOWED` unset; existing tags `v0.9.8-alpha` and `v0.9.9-alpha` must not be reused. |
+| GitHub release | No | No | `GITHUB_RELEASE_ALLOWED` unset; release requires approved tag, notes, and post-CI evidence. |
+| Package publish | No | No | `PACKAGE_PUBLISH_ALLOWED` unset; `docs/package-publish-plan.md` keeps registry publishing for a later explicit plan. |
+| Deploy | No | No | `DEPLOY_ALLOWED` unset; QA-Z alpha has no live service deployment lane. |
+
+Push/tag/release/package publish: not executed in PROOF_ONLY mode.
+
+Publish execution packet:
+
+If a human approves a push later, run the proof commands again first:
+
+```bash
+git status --short -uall
+python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting
+python scripts\alpha_release_gate.py --quick --allow-dirty --json
+python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json
+```
+
+The conservative push packet is a proof branch, not a direct default-branch
+publish:
+
+```bash
+test "$(git rev-parse HEAD)" = "<approved-sha>"
+git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512
+git ls-remote --heads origin codex/alpha-rc-<approved-sha>-20260512
+```
+
+Expected proof branch output must resolve `<approved-sha>` to
+`refs/heads/codex/alpha-rc-<approved-sha>-20260512`.
+
+Direct `main` update needs separate explicit approval:
+
+```bash
+git push origin <approved-sha>:main
+```
+
+Direct `main` update must use `git push origin <approved-sha>:main`, not a
+moving `HEAD:main` refspec.
+
+After any approved push, capture remote CI and public raw proof for the pushed
+SHA before any tag or release action:
+
+```bash
+python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit <pushed-sha>
+git ls-remote --refs origin
+```
+
+Only after remote CI and public raw proof pass on the pushed SHA may a release
+operator choose a new approved tag. Do not reuse `v0.9.8-alpha` or
+`v0.9.9-alpha`:
+
+```bash
+git tag -s <approved-alpha-tag> -m "QA-Z <approved-alpha-tag>"
+git tag -v <approved-alpha-tag>
+git push origin <approved-alpha-tag>
+git ls-remote --tags origin <approved-alpha-tag>
+```
+
+If tag signing is not available and the release owner approves an annotated tag,
+record the reason and use:
+
+```bash
+git tag -a <approved-alpha-tag> -m "QA-Z <approved-alpha-tag>"
+git push origin <approved-alpha-tag>
+```
+
+GitHub release creation needs a separately approved tag and release body:
+
+```bash
+gh release create <approved-alpha-tag> --repo qazedhq/qa-z --title "QA-Z <approved-alpha-tag>" --notes-file <approved-release-notes.md> --prerelease
+```
+
+Package publishing is outside this alpha packet unless a separate package
+release owner approves it. The minimum dry-run packet before any registry
+publish is:
+
+```bash
+python -m build --sdist --wheel
+python scripts\alpha_release_artifact_smoke.py --with-deps --json
+python -m twine check dist/*
+```
+
+Package publish dry-run packet:
+
+- Package metadata version is `0.9.8a0` in `pyproject.toml`.
+- `PACKAGE_PUBLISH_ALLOWED` unset, so no PyPI, TestPyPI, npm, GitHub Packages,
+  or package-registry publish is approved.
+- Safe local-only dry-run commands:
+
+```bash
+python -m build --sdist --wheel
+python scripts\alpha_release_artifact_smoke.py --with-deps --json
+python -m twine check dist/*
+```
+
+- Expected dry-run evidence: built sdist and wheel names, artifact smoke JSON,
+  `twine check` result, and confirmation that no upload command ran.
+- Registry publish remains blocked until a release owner sets
+  `RELEASE_EXECUTION_APPROVED=true` and `PACKAGE_PUBLISH_ALLOWED=true`, chooses
+  TestPyPI or PyPI, confirms credentials out of band, and records the exact
+  package URL/version after upload.
+- Package rollback/yank policy is registry-owned. QA-Z must not imply a local
+  command can undo a published package without following the selected
+  registry's retention and yank rules.
+
+Guard and timestamp hardening packet:
+
+- `qa-z guard` now carries a `current_truth` verdict block when the latest
+  self-inspection context is available.
+- If `.qa-z/loops/latest/self_inspect.json` is stale for the backlog
+  `updated_at` timestamp, guard returns `needs_review` instead of `merge_ok`
+  even when fast and deep checks pass.
+- Timestamp freshness now parses ISO-like timestamps as UTC instants. Missing or
+  malformed self-inspection timestamps fail closed as stale when a backlog
+  minimum exists, and timezone offsets such as `Z` and `+00:00` are compared by
+  instant rather than lexically.
+- Focused proof:
+
+```bash
+python -m pytest tests\test_guard_cli.py::test_guard_marks_stale_current_truth_context_as_needs_review tests\test_self_improvement_selection.py::test_selection_context_treats_missing_and_malformed_timestamps_as_stale tests\test_self_improvement_selection.py::test_selection_context_compares_timezone_offsets_by_instant -q
+```
+
+Rollback and incident packet:
+
+- Local packet commit rollback: use `git revert <packet-commit>`; do not use
+  `git reset` for shared release history.
+- Mistaken proof branch push: if approved by a release owner, delete only the
+  proof branch with
+  `git push origin --delete codex/alpha-rc-<approved-sha>-20260512`.
+- Mistaken direct `main` push: do not force-push by default. Open a rollback PR
+  or run `git revert <bad-sha>` on a reviewed branch, then rerun the alpha gate
+  and remote proof.
+- Mistaken local tag before push: `git tag -d <approved-alpha-tag>`.
+- Mistaken remote tag: only after human approval, run
+  `git push origin :refs/tags/<approved-alpha-tag>` and record the deletion in
+  release notes.
+- Mistaken GitHub release: mark it draft or delete it through GitHub/`gh`
+  only after release-owner approval; preserve notes and URLs in the incident
+  record.
+- Mistaken package publish: follow the registry owner's yank/unpublish policy;
+  no package-registry publish has happened in this packet.
+- Incident record must include actor, time, affected ref or artifact, command
+  evidence, rollback command, validation rerun, and next approval owner.
+- After any rollback, rerun:
+
+```bash
+git status --short -uall
+python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting
+python scripts\alpha_release_gate.py --quick --allow-dirty --json
+python scripts\alpha_release_preflight.py --repository-url https://github.com/qazedhq/qa-z.git --expected-origin-url https://github.com/qazedhq/qa-z.git --expected-branch main --skip-release-tag-check --allow-dirty --json
+```
+
+Deferred Marketing/X packet:
+
+- Deferred paths are `marketing/x/**` and `tests/test_x_automation.py`.
+- Scope is deferred because the surface is product-owned marketing/network
+  automation that can require X credentials, call X APIs, and mutate posting
+  queue state when enabled.
+- Do not stage Marketing/X source, tests, queue state, credentials, logs, or
+  local runtime state for this QA-Z alpha candidate.
+- No X credentials are required for this alpha RC.
+- Future approval requires an explicit product/network decision plus separate
+  no-credential dry-run proof before any source staging, and live credentialed
+  proof must remain a human/nonlocal release action.
+- Later proof must show no accidental queue mutation, no credential leakage, and
+  a reviewed boundary between content drafts, follow targets, local state, and
+  any real X API call.
+
+Deferred Claude compatibility mirror packet:
+
+- Deferred paths are `.claude/**`.
+- `.claude/**` is a compatibility mirror. Codex-native source of truth remains
+  `.codex/agents/*.toml`, `.agents/skills/*/SKILL.md`, and `docs/agent/*.md`.
+- Do not stage, delete, or promote `.claude/**` for this QA-Z alpha candidate
+  unless a compatibility release decision says the mirror must be synchronized.
+- Later proof must compare mirror contents against the Codex-native assets and
+  identify the exact compatibility audience before `.claude/**` is staged.
+
+Remote and publishing proof packet:
+
+- Configured origin target is `qazedhq/qa-z`; local and read-only remote
+  preflight both confirm that target.
+- Remote repository checks and reachability are proven current as of the proof
+  timestamp, but remote publish remains blocked by `PROOF_ONLY` approval
+  boundaries, the non-empty remote state, and the fact that local `9bbd1294d3b25fd45216b6cb14f2d97dd087351a` is not yet remote-visible.
+- QA-Z local alpha RC readiness: `Yes` for the local proof packet.
+- QA-Z remote alpha readiness: `Partial`; remote read proof is current, but the
+  local proof SHA is not pushed and no current-SHA CI/public raw evidence exists.
+- QA-Z release-execution readiness: `Partial`; exact push, tag, release,
+  package, rollback, and incident packets are prepared, but approval flags are
+  absent.
+- Production readiness: `No`. Package registry publishing, deployment,
+  production support policy, and human release approval remain outside this
+  packet. Production readiness is not claimed.
+
+The only normal staging candidates after this packet are tracked packet or
+truth-surface edits that improve this decision evidence. The `25` deferred
+out-of-alpha paths must remain untracked for the QA-Z alpha candidate unless
+their owning release decision changes.
 
 ## Preflight
 
@@ -707,4 +1034,3 @@ Use `v0.9.8-alpha` for the current release candidate now that the baseline inclu
 self-improvement, autonomy, executor bridge packaging, executor-result ingest, and
 the live-free safety dry-run. Use `v0.10.0-alpha` only if the team wants a larger
 reset point.
-

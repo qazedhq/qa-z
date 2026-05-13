@@ -267,7 +267,7 @@ def test_alpha_release_gate_summarizes_release_evidence(tmp_path):
             "artifacts": ["qa_z-0.9.8a0.tar.gz", "qa_z-0.9.8a0-py3-none-any.whl"],
             "summary": "Successfully built qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl",
         },
-        "cli_help": {"check_count": 20, "failed_count": 0},
+        "cli_help": {"check_count": 21, "failed_count": 0},
         "deep": {
             "scan_quality_check_ids": ["sg_scan"],
             "scan_quality_status": "warning",
@@ -906,6 +906,8 @@ def test_alpha_release_gate_human_output_prints_worktree_strict_mode():
                     "generated_artifact_count": 3,
                     "cross_cutting_count": 1,
                     "unassigned_source_path_count": 0,
+                    "product_decision_path_count": 2,
+                    "product_decision_group_count": 2,
                     "multi_batch_path_count": 0,
                     "strict_mode": {
                         "fail_on_generated": True,
@@ -919,7 +921,8 @@ def test_alpha_release_gate_human_output_prints_worktree_strict_mode():
 
     assert (
         "- worktree commit plan: attention_required; changed_batches=2; "
-        "generated_artifacts=3; cross_cutting=1; unassigned=0; multi_batch=0; "
+        "generated_artifacts=3; cross_cutting=1; unassigned=0; "
+        "product_decision=2; product_decision_groups=2; multi_batch=0; "
         "strict=fail_on_generated,fail_on_cross_cutting; "
         "attention=generated_artifacts_present"
     ) in output

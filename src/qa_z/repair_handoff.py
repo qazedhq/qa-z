@@ -376,7 +376,15 @@ def write_repair_handoff_artifact(
     handoff: RepairHandoffPacket, output_dir: Path
 ) -> Path:
     """Write the normalized handoff JSON artifact."""
-    output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "handoff.json"
-    path.write_text(repair_handoff_json(handoff), encoding="utf-8")
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create repair handoff artifact directory {output_dir}: {exc}"
+        ) from exc
+    try:
+        path.write_text(repair_handoff_json(handoff), encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write repair handoff artifact {path}: {exc}") from exc
     return path

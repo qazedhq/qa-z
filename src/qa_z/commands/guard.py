@@ -6,7 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
-from qa_z.commands.common import load_cli_config
+from qa_z.commands.common import resolve_cli_path
+from qa_z.config import ConfigError, load_config
 from qa_z.guard.renderer import render_guard_stdout
 from qa_z.guard.workflow import run_guard
 
@@ -15,9 +16,15 @@ def handle_guard(args: argparse.Namespace) -> int:
     """Run the guard workflow and print a verdict."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "guard")
-    if config is None:
-        return 2
+    config_path = resolve_cli_path(root, args.config) if args.config else None
+    try:
+        config = load_config(root, config_path=config_path)
+    except ConfigError as exc:
+        return _guard_error(
+            args,
+            error="configuration_error",
+            message=f"qa-z guard: configuration error: {exc}",
+        )
     try:
         verdict = run_guard(
             root=root,
@@ -30,8 +37,17 @@ def handle_guard(args: argparse.Namespace) -> int:
             from_run=args.from_run,
         )
     except (FileNotFoundError, ValueError) as exc:
-        print(f"qa-z guard: error: {exc}")
-        return 2
+        return _guard_error(
+            args,
+            error="guard_error",
+            message=f"qa-z guard: error: {exc}",
+        )
+    except OSError as exc:
+        return _guard_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z guard: artifact error: {exc}",
+        )
 
     if args.json:
         print(json.dumps(verdict.to_dict(), indent=2, sort_keys=True))
@@ -41,6 +57,27 @@ def handle_guard(args: argparse.Namespace) -> int:
     if args.fail_on_risk and verdict.status in {"do_not_merge", "error"}:
         return 1
     return 0
+
+
+def _guard_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.guard_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_guard_command(subparsers: argparse._SubParsersAction) -> None:

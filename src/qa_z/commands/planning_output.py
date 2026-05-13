@@ -118,6 +118,18 @@ def render_select_next_stdout(
                 lines.append(f"Source loop: {source_loop} ({source_generated_at})")
             else:
                 lines.append(f"Source loop: {source_loop or source_generated_at}")
+        if selected.get("source_self_inspection_stale_for_backlog"):
+            lines.append("Source self-inspection stale for backlog: true")
+            refresh_commands = [
+                str(command)
+                for command in selected.get(
+                    "source_self_inspection_refresh_commands", []
+                )
+                if str(command).strip()
+            ]
+            if refresh_commands:
+                lines.append("Source self-inspection refresh commands:")
+                lines.extend(f"  - {command}" for command in refresh_commands)
         if not refreshed:
             lines.append(
                 "Refresh hint: run `qa-z select-next --refresh` before acting on "

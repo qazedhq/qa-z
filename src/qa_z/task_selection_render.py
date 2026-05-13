@@ -24,6 +24,11 @@ def render_loop_plan(
     generated_at: str,
     selected_items: list[dict[str, Any]],
     live_repository: object | None = None,
+    source_self_inspection: str | None = None,
+    source_self_inspection_loop_id: str | None = None,
+    source_self_inspection_generated_at: str | None = None,
+    source_self_inspection_stale_for_backlog: bool = False,
+    source_self_inspection_refresh_commands: list[str] | None = None,
     state: str | None = None,
     selection_gap_reason: str | None = None,
     open_backlog_count: int | None = None,
@@ -46,6 +51,19 @@ def render_loop_plan(
                 f"- {render_live_repository_summary(live_repository)}",
             ]
         )
+    source_context_lines = source_self_inspection_lines(
+        source_self_inspection=source_self_inspection,
+        source_self_inspection_loop_id=source_self_inspection_loop_id,
+        source_self_inspection_generated_at=source_self_inspection_generated_at,
+        source_self_inspection_stale_for_backlog=(
+            source_self_inspection_stale_for_backlog
+        ),
+        source_self_inspection_refresh_commands=(
+            source_self_inspection_refresh_commands
+        ),
+    )
+    if source_context_lines:
+        lines.extend(["", "## Source Self-Inspection", "", *source_context_lines])
     lines.extend(
         [
             "",
@@ -121,6 +139,39 @@ def render_loop_plan(
         ]
     )
     return "\n".join(lines).strip() + "\n"
+
+
+def source_self_inspection_lines(
+    *,
+    source_self_inspection: str | None,
+    source_self_inspection_loop_id: str | None,
+    source_self_inspection_generated_at: str | None,
+    source_self_inspection_stale_for_backlog: bool,
+    source_self_inspection_refresh_commands: list[str] | None,
+) -> list[str]:
+    """Render source self-inspection provenance for loop plans."""
+    lines: list[str] = []
+    source_path = str(source_self_inspection or "").strip()
+    if source_path:
+        lines.append(f"- Source self-inspection: `{source_path}`")
+    source_loop = str(source_self_inspection_loop_id or "").strip()
+    source_generated_at = str(source_self_inspection_generated_at or "").strip()
+    if source_loop or source_generated_at:
+        if source_loop and source_generated_at:
+            lines.append(f"- Source loop: `{source_loop}` ({source_generated_at})")
+        else:
+            lines.append(f"- Source loop: `{source_loop or source_generated_at}`")
+    if source_self_inspection_stale_for_backlog:
+        lines.append("- Source self-inspection stale for backlog: true")
+        refresh_commands = [
+            str(command)
+            for command in source_self_inspection_refresh_commands or []
+            if str(command).strip()
+        ]
+        if refresh_commands:
+            lines.append("- Source self-inspection refresh commands:")
+            lines.extend(f"  - `{command}`" for command in refresh_commands)
+    return lines
 
 
 def selected_task_action_hint(item: dict[str, Any]) -> str:

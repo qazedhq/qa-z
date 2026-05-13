@@ -37,7 +37,13 @@ def handle_executor_result_ingest(args: argparse.Namespace) -> int:
     """Ingest an external executor result and optionally resume verification."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "executor-result ingest")
+    config = load_cli_config(
+        root,
+        args,
+        "executor-result ingest",
+        json_error_kind="qa_z.executor_result_error",
+        json_error_command="ingest",
+    )
     if config is None:
         return 2
 
@@ -64,14 +70,37 @@ def handle_executor_result_ingest(args: argparse.Namespace) -> int:
             print(render_executor_result_ingest_stdout(exc.outcome.summary))
         return exc.exit_code
     except ArtifactLoadError as exc:
-        print(f"qa-z executor-result ingest: artifact error: {exc}")
-        return 2
+        return _executor_result_error(
+            args,
+            command="ingest",
+            error="artifact_error",
+            message=f"qa-z executor-result ingest: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z executor-result ingest: source not found: {exc}")
-        return 4
+        return _executor_result_error(
+            args,
+            command="ingest",
+            error="source_not_found",
+            message=f"qa-z executor-result ingest: source not found: {exc}",
+            exit_code=4,
+        )
     except ValueError as exc:
-        print(f"qa-z executor-result ingest: configuration error: {exc}")
-        return 2
+        return _executor_result_error(
+            args,
+            command="ingest",
+            error="configuration_error",
+            message=f"qa-z executor-result ingest: configuration error: {exc}",
+            exit_code=2,
+        )
+    except OSError as exc:
+        return _executor_result_error(
+            args,
+            command="ingest",
+            error="artifact_write_error",
+            message=f"qa-z executor-result ingest: artifact write error: {exc}",
+            exit_code=2,
+        )
 
 
 def handle_executor_result_dry_run(args: argparse.Namespace) -> int:
@@ -86,14 +115,63 @@ def handle_executor_result_dry_run(args: argparse.Namespace) -> int:
             print(render_executor_result_dry_run_stdout(outcome.summary))
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z executor-result dry-run: artifact error: {exc}")
-        return 2
+        return _executor_result_error(
+            args,
+            command="dry-run",
+            error="artifact_error",
+            message=f"qa-z executor-result dry-run: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z executor-result dry-run: source not found: {exc}")
-        return 4
+        return _executor_result_error(
+            args,
+            command="dry-run",
+            error="source_not_found",
+            message=f"qa-z executor-result dry-run: source not found: {exc}",
+            exit_code=4,
+        )
     except ValueError as exc:
-        print(f"qa-z executor-result dry-run: configuration error: {exc}")
-        return 2
+        return _executor_result_error(
+            args,
+            command="dry-run",
+            error="configuration_error",
+            message=f"qa-z executor-result dry-run: configuration error: {exc}",
+            exit_code=2,
+        )
+    except OSError as exc:
+        return _executor_result_error(
+            args,
+            command="dry-run",
+            error="artifact_write_error",
+            message=f"qa-z executor-result dry-run: artifact write error: {exc}",
+            exit_code=2,
+        )
+
+
+def _executor_result_error(
+    args: argparse.Namespace,
+    *,
+    command: str,
+    error: str,
+    message: str,
+    exit_code: int,
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.executor_result_error",
+                    "command": command,
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_executor_result_command(

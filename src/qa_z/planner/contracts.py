@@ -350,7 +350,10 @@ def plan_contract(
     resolved_title = resolve_plan_title(title, issue_text, spec_text, change_set)
 
     contract_path = output_dir / f"{slug or slugify(resolved_title)}.md"
-    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        contract_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(f"could not write contract draft {contract_path}: {exc}") from exc
 
     if contract_path.exists() and not overwrite:
         return contract_path, False
@@ -373,7 +376,10 @@ def plan_contract(
         + "\n"
         + contract_markdown
     )
-    contract_path.write_text(content, encoding="utf-8")
+    try:
+        contract_path.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write contract draft {contract_path}: {exc}") from exc
     return contract_path, True
 
 

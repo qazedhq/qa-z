@@ -47,19 +47,40 @@ def write_verdict_artifacts(
     verdict: GuardVerdict, output_dir: Path
 ) -> tuple[Path, Path]:
     """Write JSON and Markdown verdict artifacts."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    json_path = output_dir / "verdict.json"
-    markdown_path = output_dir / "verdict.md"
-    json_path.write_text(
-        json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    markdown_path.write_text(render_verdict_markdown(verdict), encoding="utf-8")
-    return json_path, markdown_path
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        json_path = output_dir / "verdict.json"
+        markdown_path = output_dir / "verdict.md"
+        write_guard_verdict_artifact(
+            json_path,
+            json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
+            "json",
+        )
+        write_guard_verdict_artifact(
+            markdown_path,
+            render_verdict_markdown(verdict),
+            "markdown",
+        )
+        return json_path, markdown_path
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard verdict artifacts to {output_dir}: {exc}"
+        ) from exc
+
+
+def write_guard_verdict_artifact(path: Path, text: str, label: str) -> None:
+    """Write one guard verdict artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard verdict {label} artifact {path}: {exc}"
+        ) from exc
 
 
 def render_verdict_markdown(verdict: GuardVerdict) -> str:
     """Render a compact Markdown verdict."""
+    current_truth = verdict.extra.get("current_truth")
     lines = [
         "# QA-Z Guard Verdict",
         "",
@@ -67,9 +88,17 @@ def render_verdict_markdown(verdict: GuardVerdict) -> str:
         f"- Fast: `{verdict.fast.get('status')}`",
         f"- Deep: `{verdict.deep.get('status', 'not_run')}`",
         f"- Risk: {', '.join(verdict.risk.get('categories', [])) or 'none'}",
-        "",
-        "## Reasons",
-        "",
     ]
+    if isinstance(current_truth, dict) and current_truth.get("status"):
+        lines.append(f"- Current truth: `{current_truth['status']}`")
+        source = current_truth.get("source_self_inspection")
+        if source:
+            lines.append(f"- Current truth source: `{source}`")
+        refresh_commands = current_truth.get("source_self_inspection_refresh_commands")
+        if isinstance(refresh_commands, list):
+            for command in refresh_commands:
+                if isinstance(command, str) and command.strip():
+                    lines.append(f"- Current truth refresh: `{command.strip()}`")
+    lines.extend(["", "## Reasons", ""])
     lines.extend(f"- {reason}" for reason in verdict.reasons)
     return "\n".join(lines).rstrip() + "\n"

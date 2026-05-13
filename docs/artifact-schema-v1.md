@@ -474,6 +474,37 @@ TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeSc
 
 When the source run includes v2 selection metadata, `qa-z review --from-run` and `qa-z repair-prompt` carry that selection context forward so the next human or agent can see why each check was run, targeted, or skipped. Missing deep summaries are treated as fast-only runs; broken deep summaries are artifact errors.
 
+## Guard Verdict Artifacts
+
+`qa-z guard` writes:
+
+```text
+.qa-z/runs/<run-id>/guard/verdict.json
+.qa-z/runs/<run-id>/guard/verdict.md
+```
+
+`verdict.json` has:
+
+- `kind`: stable artifact kind, currently `qa_z.guard_verdict`
+- `schema_version`: integer schema marker, currently `1`
+- `status`: one of `merge_ok`, `do_not_merge`, `needs_review`, or `error`
+- `reasons`: ordered operator-facing reasons for the verdict
+- `fast`, `deep`, `risk`, `repair`, and `artifacts`: compact evidence blocks for
+  the guard run
+- `current_truth`: optional current-truth freshness block copied from the latest
+  self-inspection context when present
+
+When `current_truth.status` is `stale`, guard returns `needs_review` instead of
+`merge_ok` even if fast and deep checks pass. Stale current-truth means the
+latest `.qa-z/loops/latest/self_inspect.json` is missing, malformed, or older
+than the backlog `updated_at` timestamp, after parsing ISO-like timestamps as
+UTC instants. The stale block preserves `source_self_inspection`,
+`source_self_inspection_loop_id`, `source_self_inspection_generated_at`,
+`source_self_inspection_stale_for_backlog`, and
+`source_self_inspection_refresh_commands` when available. Stale guard verdicts
+do not imply QA-Z edited source or fixed target repositories; they tell the
+operator to refresh local current-truth evidence before trusting a green guard.
+
 ## Benchmark Summary
 
 `qa-z benchmark` runs seeded fixtures and writes:
@@ -642,7 +673,14 @@ The top-level gate JSON includes:
   optional `generated_artifact_dir_count`, optional
   `generated_local_only_count`, optional `generated_local_by_default_count`,
   `cross_cutting_count`, optional `cross_cutting_group_count`,
-  `unassigned_source_path_count`, `multi_batch_path_count`, and
+  `unassigned_source_path_count`, optional `product_decision_path_count`,
+  optional `product_decision_group_count`, optional
+  `release_scope_decision_path_count`, optional
+  `release_scope_decision_group_count`, optional
+  `approved_alpha_support_path_count`, optional
+  `approved_alpha_support_group_count`, optional
+  `deferred_alpha_scope_path_count`, optional
+  `deferred_alpha_scope_group_count`, `multi_batch_path_count`, and
   `next_action_count`: compact
   source/generated commit-split diagnostics from
   `scripts/worktree_commit_plan.py --include-ignored --json`
@@ -657,7 +695,8 @@ The top-level gate JSON includes:
 - optional `evidence.worktree_commit_plan.head`: copied worktree commit-plan
   repository head context, when the helper artifact recorded it
 - optional `evidence.worktree_commit_plan.attention_reasons`: machine-readable
-  strict worktree plan blockers such as `generated_artifacts_present`
+  strict worktree plan blockers such as `generated_artifacts_present` or
+  unresolved `product_decision_paths_present`
 - optional `evidence.worktree_commit_plan.attention_reason_count`: count of
   strict worktree plan blockers summarized from `attention_reasons`
 - optional `evidence.worktree_commit_plan.strict_mode`: copied strict audit
@@ -746,11 +785,17 @@ The JSON includes:
   require attention, such as `generated_artifacts_present`
 - `summary`: compact counts for batches, changed paths, generated artifacts,
   cross-cutting paths, `cross_cutting_group_count`, `report_path_count`,
-  multi-batch paths, and unassigned source paths, plus `batch_count`,
+  multi-batch paths, unassigned source paths, remaining unresolved
+  product-decision paths, release-scope decisions, approved alpha-support
+  paths, and deferred alpha-scope paths, plus `batch_count`,
   `changed_path_count`, `unchanged_batch_count`,
   `generated_artifact_file_count`, `generated_artifact_dir_count`,
   `generated_local_only_count`, `generated_local_by_default_count`,
-  `shared_patch_add_count`, and `attention_reason_count`
+  `shared_patch_add_count`, `product_decision_path_count`,
+  `product_decision_group_count`, `release_scope_decision_path_count`,
+  `release_scope_decision_group_count`, `approved_alpha_support_path_count`,
+  `approved_alpha_support_group_count`, `deferred_alpha_scope_path_count`,
+  `deferred_alpha_scope_group_count`, and `attention_reason_count`
 - `batches`: ordered commit-plan batches with `id`, `title`, commit `message`,
   `validation_commands`, `changed_count`, and `changed_paths`
 - `batches[].staging_plan`: machine-readable staging guidance with
@@ -774,6 +819,25 @@ The JSON includes:
   and current-truth tests that should be patch-added with the feature batch they
   describe
 - `report_paths`: local report files under `docs/reports/**`
+- `release_scope_decision_paths`: source-like paths that are intentionally
+  outside normal release batch rules but now have an explicit alpha-scope
+  decision, such as operating-model assets or credential-gated marketing/network
+  automation under `marketing/x/**`
+- `release_scope_decision_groups`: ownership-sized groups for those paths,
+  including each group's `id`, `title`, `ownership`, `release_scope`,
+  `path_count`, `paths`, and `next_action`; current release scopes are
+  `approved_alpha_support_scope`, `deferred_out_of_alpha_scope`, or
+  `unresolved_product_decision`
+- `approved_alpha_support_paths` and `approved_alpha_support_groups`: the
+  Codex-native operating model and operating-model validator approved as QA-Z
+  alpha support scope
+- `deferred_alpha_scope_paths` and `deferred_alpha_scope_groups`: the Claude
+  compatibility mirror plus Marketing/X surface and tests, deferred out of the
+  QA-Z alpha scope unless a separate product/network or compatibility release
+  decision approves them
+- `product_decision_paths` and `product_decision_groups`: remaining unresolved
+  product/release ownership items only; known approved/deferred groups do not
+  count as unresolved blockers
 - `shared_patch_add_paths`: ordered patch-add candidate list combining
   cross-cutting paths and report paths for selected-batch staging follow-through
 - `cross_cutting_groups`: operator-sized shared patch-add groups, currently
@@ -1019,8 +1083,10 @@ latest-loop context even though each individual command is deterministic.
 - `loop_id`: selected loop id
 - `generated_at`: UTC timestamp
 - `source_backlog`: backlog artifact path
-- `source_self_inspection`: latest self-inspection artifact path when it supplied live repository context
+- `source_self_inspection`: latest self-inspection artifact path when it supplied live repository context or provenance-only stale context
 - `source_self_inspection_loop_id` and `source_self_inspection_generated_at`: provenance copied from that self-inspection artifact when present
+- `source_self_inspection_stale_for_backlog`: optional boolean set when the latest self-inspection timestamp is older than the backlog `updated_at` timestamp
+- `source_self_inspection_refresh_commands`: optional copyable local commands shown when the source self-inspection is stale for the backlog; the current command is `python -m qa_z select-next --refresh --count 3 --json`
 - `live_repository`: compact live git/generated-artifact snapshot copied from the latest self-inspection pass when present
 - `selected_tasks`: the top 1 to 3 open backlog items sorted by selection priority score and stable tie-breakers
 - `state`: optional taskless selection state, currently `blocked_no_candidates` when no task is selected
@@ -1039,6 +1105,7 @@ Each selected task may include:
 The plain-text `qa-z select-next` output now mirrors compact selected-task details for operators:
 
 - live repository context when the latest self-inspection artifact supplied it
+- stale self-inspection provenance and a copyable refresh command when the latest self-inspection artifact is older than the backlog
 - taskless-loop diagnostics, including `selection_gap_reason` and open backlog count when no task is selected
 - selected task id plus title
 - `recommendation`
@@ -1059,7 +1126,8 @@ The plain-text `qa-z select-next` output now mirrors compact selected-task detai
 - `selected_categories`: selected backlog categories when they are known at selection time
 - `selected_fallback_families`: selected fallback families such as `cleanup`, `loop_health`, `workflow_remediation`, `docs_sync`, or `benchmark_expansion`
 - `evidence_used`: unique evidence paths for the selected tasks
-- `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, and `live_repository`: latest self-inspection path, provenance, and compact live repository snapshot when selection had that context
+- `source_self_inspection`, `source_self_inspection_loop_id`, `source_self_inspection_generated_at`, and `live_repository`: latest self-inspection path, provenance, and compact live repository snapshot when selection had fresh context
+- `source_self_inspection_stale_for_backlog` and `source_self_inspection_refresh_commands`: optional provenance and copyable local recovery command when selection saw a self-inspection artifact older than the backlog update; stale selection omits `live_repository` rather than copying old live context
 - optional `state`, currently `blocked_no_candidates` for taskless selection records
 - optional `selection_gap_reason` and `open_backlog_count` when no task survived selection
 - `resulting_session_id`: `null` until a later workflow creates and records a session

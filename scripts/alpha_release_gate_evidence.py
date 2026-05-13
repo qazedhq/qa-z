@@ -675,6 +675,14 @@ def release_evidence_for_command(
             "generated_local_only_count",
             "generated_local_by_default_count",
             "cross_cutting_group_count",
+            "product_decision_path_count",
+            "product_decision_group_count",
+            "release_scope_decision_path_count",
+            "release_scope_decision_group_count",
+            "approved_alpha_support_path_count",
+            "approved_alpha_support_group_count",
+            "deferred_alpha_scope_path_count",
+            "deferred_alpha_scope_group_count",
         ):
             optional_count = summary.get(optional_count_key)
             if isinstance(optional_count, int):
@@ -1307,6 +1315,60 @@ def render_release_evidence_lines(evidence: object) -> list[str]:
         )
         if unassigned_source_path_count is not None:
             worktree_parts.append(f"unassigned={unassigned_source_path_count}")
+        product_decision_path_count = worktree_evidence.get(
+            "product_decision_path_count"
+        )
+        if product_decision_path_count is not None:
+            worktree_parts.append(f"product_decision={product_decision_path_count}")
+        product_decision_group_count = worktree_evidence.get(
+            "product_decision_group_count"
+        )
+        if product_decision_group_count is not None:
+            worktree_parts.append(
+                f"product_decision_groups={product_decision_group_count}"
+            )
+        release_scope_decision_path_count = worktree_evidence.get(
+            "release_scope_decision_path_count"
+        )
+        if release_scope_decision_path_count is not None:
+            worktree_parts.append(
+                f"release_scope_decisions={release_scope_decision_path_count}"
+            )
+        release_scope_decision_group_count = worktree_evidence.get(
+            "release_scope_decision_group_count"
+        )
+        if release_scope_decision_group_count is not None:
+            worktree_parts.append(
+                f"release_scope_groups={release_scope_decision_group_count}"
+            )
+        approved_alpha_support_path_count = worktree_evidence.get(
+            "approved_alpha_support_path_count"
+        )
+        if approved_alpha_support_path_count is not None:
+            worktree_parts.append(
+                f"approved_alpha_support={approved_alpha_support_path_count}"
+            )
+        approved_alpha_support_group_count = worktree_evidence.get(
+            "approved_alpha_support_group_count"
+        )
+        if approved_alpha_support_group_count is not None:
+            worktree_parts.append(
+                f"approved_alpha_support_groups={approved_alpha_support_group_count}"
+            )
+        deferred_alpha_scope_path_count = worktree_evidence.get(
+            "deferred_alpha_scope_path_count"
+        )
+        if deferred_alpha_scope_path_count is not None:
+            worktree_parts.append(
+                f"deferred_alpha_scope={deferred_alpha_scope_path_count}"
+            )
+        deferred_alpha_scope_group_count = worktree_evidence.get(
+            "deferred_alpha_scope_group_count"
+        )
+        if deferred_alpha_scope_group_count is not None:
+            worktree_parts.append(
+                f"deferred_alpha_scope_groups={deferred_alpha_scope_group_count}"
+            )
         multi_batch_path_count = worktree_evidence.get("multi_batch_path_count")
         if multi_batch_path_count is not None:
             worktree_parts.append(f"multi_batch={multi_batch_path_count}")

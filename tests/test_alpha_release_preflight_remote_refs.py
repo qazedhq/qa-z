@@ -183,6 +183,49 @@ def test_preflight_allows_existing_refs_when_explicitly_requested(tmp_path):
     assert payload["next_commands"] == ["git push -u origin codex/qa-z-bootstrap"]
 
 
+def test_preflight_release_pr_guidance_uses_expected_branch(tmp_path):
+    module = load_preflight_module()
+    responses = base_responses()
+    responses[("git", "branch", "--show-current")] = (0, "release/v1\n", "")
+    responses[("git", "ls-remote", "--refs", "https://github.com/qazedhq/qa-z.git")] = (
+        0,
+        (
+            "1111111111111111111111111111111111111111\trefs/heads/main\n"
+            "2222222222222222222222222222222222222222\trefs/heads/release/v0.9.8-alpha\n"
+        ),
+        "",
+    )
+
+    result = module.run_preflight(
+        tmp_path,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_branch="release/v1",
+        allow_existing_refs=True,
+        runner=FakeRunner(responses),
+        github_metadata_fetcher=public_github_metadata,
+    )
+
+    assert result.exit_code == 0
+    payload = module.result_payload(
+        result,
+        repository_url="https://github.com/qazedhq/qa-z.git",
+        expected_branch="release/v1",
+        allow_existing_refs=True,
+    )
+
+    assert payload["next_actions"] == [
+        (
+            "Remote bootstrap refs are present and the release PR path is ready; "
+            "push release/v1, open the release PR, and wait for remote CI before "
+            "tagging."
+        )
+    ]
+    assert payload["publish_checklist"][0] == (
+        "Push the release branch with `git push -u origin release/v1`."
+    )
+    assert payload["next_commands"] == ["git push -u origin release/v1"]
+
+
 def test_preflight_fails_when_existing_refs_include_release_tag_even_if_allowed(
     tmp_path,
 ):
