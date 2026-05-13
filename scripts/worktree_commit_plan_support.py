@@ -442,7 +442,7 @@ BATCH_RULES = (
             "benchmarks/fixtures/**/external-result.json",
         ),
         validation_commands=(
-            "python -m pytest tests/test_executor_bridge.py tests/test_executor_result.py tests/test_executor_ingest_outcome.py -q",
+            "python -m pytest tests/test_executor_bridge.py tests/test_executor_result.py tests/test_executor_ingest_outcome.py tests/test_executor_result_dry_run.py -q",
             "python -m qa_z executor-result dry-run --session .qa-z/sessions/latest --json",
         ),
     ),
