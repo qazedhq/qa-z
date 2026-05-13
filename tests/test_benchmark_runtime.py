@@ -191,5 +191,61 @@ def test_benchmark_cli_json_reports_artifact_write_failure(
     }
     assert "qa-z benchmark: artifact error:" in output["message"]
     assert "could not write benchmark artifacts" in output["message"]
+    assert "could not write benchmark summary artifact" in output["message"]
+    assert str(results_dir / "summary.json") in output["message"]
+    assert "disk full" in output["message"]
+    assert not (results_dir / ".benchmark.lock").exists()
+
+
+def test_benchmark_cli_json_reports_report_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixtures_dir = tmp_path / "fixtures"
+    fixtures_dir.mkdir()
+    results_dir = tmp_path / "results"
+    original_write_text = Path.write_text
+
+    def fail_report_write(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == results_dir / "report.md":
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_report_write)
+
+    exit_code = main(
+        [
+            "benchmark",
+            "--path",
+            str(tmp_path),
+            "--fixtures-dir",
+            "fixtures",
+            "--results-dir",
+            "results",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.benchmark_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z benchmark: artifact error:" in output["message"]
+    assert "could not write benchmark artifacts" in output["message"]
+    assert "could not write benchmark report artifact" in output["message"]
+    assert str(results_dir / "report.md") in output["message"]
     assert "disk full" in output["message"]
     assert not (results_dir / ".benchmark.lock").exists()

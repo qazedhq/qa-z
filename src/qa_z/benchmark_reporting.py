@@ -43,14 +43,34 @@ def write_benchmark_artifacts(summary: dict[str, Any], results_dir: Path) -> Non
     """Write benchmark summary JSON and Markdown report artifacts."""
     try:
         results_dir.mkdir(parents=True, exist_ok=True)
-        (results_dir / "summary.json").write_text(
+        write_benchmark_summary(
+            results_dir / "summary.json",
             json.dumps(summary, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
         )
-        (results_dir / "report.md").write_text(
-            render_benchmark_report(summary), encoding="utf-8"
+        write_benchmark_report(
+            results_dir / "report.md", render_benchmark_report(summary)
         )
     except OSError as exc:
         raise OSError(
             f"could not write benchmark artifacts to {results_dir}: {exc}"
+        ) from exc
+
+
+def write_benchmark_summary(path: Path, text: str) -> None:
+    """Write the benchmark summary JSON with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write benchmark summary artifact {path}: {exc}"
+        ) from exc
+
+
+def write_benchmark_report(path: Path, text: str) -> None:
+    """Write the benchmark Markdown report with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write benchmark report artifact {path}: {exc}"
         ) from exc
