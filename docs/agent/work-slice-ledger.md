@@ -1001,3 +1001,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair the exact selected-task or self-inspection JSON path before autonomy consumes stale planning state.
 - Remaining blocker: self-improvement JSON artifacts remain local planning evidence and do not mutate target repositories.
 - Next safe slice: commit self-improvement JSON behavior, then run selection/backlog validation and mine history writer gaps.
+
+
+## 2026-05-13 Self-Improvement History Append Failure Contract
+- Repo: JustTyping
+- Lane: self-improvement selection -> loop history JSONL persistence
+- User-facing flow: `qa-z select-next --json`
+- Slice type: Contract / Evidence
+- Before: a failed `.qa-z/loops/history.jsonl` append could surface as a raw `OSError` without the select-next history path.
+- Root cause: `append_history()` created the parent directory and opened the JSONL history file inline with no path-aware persistence boundary.
+- Change made: wrapped the history parent creation and append in `could not append self-improvement history ...` and added a focused regression for append-mode write failure.
+- Validation run: `python -m pytest tests\test_self_improvement_selection.py tests\test_self_improvement_selection_history.py tests\test_self_improvement.py -q`; `python -m ruff check src\qa_z\improvement_state.py tests\test_self_improvement_selection.py`; `python -m ruff format --check src\qa_z\improvement_state.py tests\test_self_improvement_selection.py`.
+- Evidence: selection/history/self-inspection pack passed `34` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: select-next now distinguishes selected-task JSON, loop-plan markdown, and loop-history append persistence failures before autonomy or current-truth checks consume incomplete selection state.
+- User impact: operators can identify whether the selected task, loop plan, or loop history file failed instead of treating the selection as stale or taskless.
+- Remaining blocker: loop history remains local planning evidence and does not prove remote release or production readiness.
+- Next safe slice: commit history append behavior, then mine executor-history and verification publication writers for the next path-aware contract gap.
