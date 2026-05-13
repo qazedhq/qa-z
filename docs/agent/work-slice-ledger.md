@@ -1129,3 +1129,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish a manifest/template persistence failure from source-copy, guide, or missing-session failures before handing work to an external executor.
 - Remaining blocker: executor bridge remains a local package for external handoff and does not execute repairs or remote release actions.
 - Next safe slice: commit bridge JSON path context, then inspect remaining Markdown writer paths.
+
+
+## 2026-05-13 Executor Bridge Markdown Artifact Path Contract
+- Repo: JustTyping
+- Lane: repair-session -> external executor handoff package
+- User-facing flow: `qa-z executor-bridge --json`
+- Slice type: Contract / Evidence
+- Before: executor-bridge package write failures named the bridge directory but not the exact Markdown handoff guide when `executor_guide.md`, `codex.md`, or `claude.md` failed.
+- Root cause: `create_executor_bridge()` wrote Markdown guides inline after the JSON artifacts, leaving the outer package wrapper as the only error context.
+- Change made: added a path-aware executor-bridge Markdown writer and a JSON-mode regression that fails `codex.md` persistence.
+- Validation run: `python -m pytest tests\test_executor_bridge.py::test_executor_bridge_cli_json_reports_markdown_artifact_write_failure tests\test_executor_bridge.py::test_executor_bridge_cli_json_reports_artifact_write_failure tests\test_executor_bridge.py::test_executor_bridge_from_loop_packages_manifest_guides_and_inputs -q`; `python -m pytest tests\test_executor_bridge.py -q`; `python -m ruff check src\qa_z\executor_bridge_package.py tests\test_executor_bridge.py`; `python -m ruff format --check src\qa_z\executor_bridge_package.py tests\test_executor_bridge.py`.
+- Evidence: focused bridge Markdown/JSON/package pack passed `3` tests; full executor-bridge pack passed `17` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor bridge package failures now preserve both cleanup-safe package context and the exact failed Markdown guide path.
+- User impact: operators can distinguish JSON manifest/template failures from guide-generation persistence failures before giving a bridge package to Codex, Claude, or another external executor.
+- Remaining blocker: executor bridge remains a local package for external handoff and does not execute repairs or remote release actions.
+- Next safe slice: commit bridge Markdown path context, then continue mining executor-result ingest and dry-run report writer paths.
