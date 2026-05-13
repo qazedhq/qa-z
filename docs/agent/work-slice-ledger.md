@@ -809,3 +809,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers setting up Codex/Claude/Cursor/Copilot instruction files can distinguish an overwrite refusal from a local artifact write failure.
 - Remaining blocker: skill install remains a local instruction writer and does not approve or mutate release execution.
 - Next safe slice: commit skill install behavior, then run the guard/skill/demo validation pack before mining the next safe local CLI contract.
+
+
+## 2026-05-13 Demo Auth-Bug Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: demo auth-bug -> local demo artifact preparation
+- User-facing flow: `qa-z demo auth-bug`
+- Slice type: Flow / Contract
+- Before: a failed demo copy or runtime config write could escape as raw `OSError`.
+- Root cause: `handle_demo_auth_bug()` prepared the isolated demo directory and config before any command-owned filesystem error boundary.
+- Change made: wrapped demo artifact preparation in a deterministic `qa-z demo auth-bug: artifact write error` path with exit code `2`.
+- Validation run: `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure tests\test_demo_guard_action_package.py::test_demo_auth_bug_command_writes_repair_and_guard_artifacts -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the focused failure contract and the existing end-to-end auth-bug demo artifact test passed.
+- Gate delta: the public demo smoke path now separates local filesystem setup failure from guard/plan failure.
+- User impact: prospective operators running the built-in demo get a clear local artifact failure instead of a traceback before trusting the demo result.
+- Remaining blocker: demo remains local-only proof and does not add remote, publish, or production readiness.
+- Next safe slice: commit demo behavior, then run the demo/artifact-smoke validation pack before mining another command-contract gap.
