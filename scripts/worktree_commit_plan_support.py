@@ -424,7 +424,7 @@ BATCH_RULES = (
             "tests/github_summary*_support.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_verification.py tests/test_repair_prompt.py tests/test_review_commands.py tests/test_repair_session.py tests/test_github_summary_render.py tests/test_github_summary_session.py -q",
+            "python -m pytest tests/test_verification.py tests/test_repair_prompt.py tests/test_repair_prompt_error_contracts.py tests/test_review_commands.py tests/test_repair_session.py tests/test_github_summary_render.py tests/test_github_summary_session.py -q",
             "python -m qa_z verify --help",
         ),
     ),

@@ -43,6 +43,10 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
         in batches["repair_session_publish"]["validation_commands"][0]
     )
     assert (
+        "tests/test_repair_prompt_error_contracts.py"
+        in batches["repair_session_publish"]["validation_commands"][0]
+    )
+    assert (
         "tests/test_self_improvement_selection_output.py"
         in batches["self_inspection_backlog"]["validation_commands"][0]
     )
