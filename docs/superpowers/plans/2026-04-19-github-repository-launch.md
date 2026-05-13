@@ -309,7 +309,8 @@ The first remote validation path is explicit before any push.
 Run:
 
 ```powershell
-git push -u origin HEAD:<repository_default_branch>
+test "$(git rev-parse HEAD)" = "<approved-sha>"
+git push origin <approved-sha>:<repository_default_branch>
 ```
 
 Expected:
@@ -540,4 +541,3 @@ Decision:
 ```text
 QA-Z is locally release-ready for a public v0.9.8-alpha repository launch after the GitHub repository target is configured and remote CI passes.
 ```
-

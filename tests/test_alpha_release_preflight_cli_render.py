@@ -510,7 +510,11 @@ def test_render_preflight_human_prints_publish_checklist() -> None:
             "remote_path": "direct_publish",
             "publish_strategy": "push_default_branch",
             "publish_checklist": [
-                "Push the validated release baseline to main with `git push -u origin HEAD:main`.",
+                (
+                    'Verify the approved release SHA with `test "$(git rev-parse HEAD)" = '
+                    '"<approved-sha>"`, then push the validated release baseline '
+                    "to main with `git push origin <approved-sha>:main`."
+                ),
                 "Wait for remote CI before tagging.",
             ],
             "checks": [],
@@ -523,8 +527,9 @@ def test_render_preflight_human_prints_publish_checklist() -> None:
     )
     assert "Publish checklist:" in output
     assert (
-        "- Push the validated release baseline to main with "
-        "`git push -u origin HEAD:main`."
+        '- Verify the approved release SHA with `test "$(git rev-parse HEAD)" = '
+        '"<approved-sha>"`, then push the validated release baseline to main '
+        "with `git push origin <approved-sha>:main`."
     ) in output
 
 

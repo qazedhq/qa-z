@@ -127,7 +127,11 @@ def test_alpha_publish_handoff_pins_remote_blocker_and_next_commands() -> None:
         "If `origin` is absent in a fresh clone, add it only after this command succeeds"
         in release_handoff
     )
-    assert "git push -u origin HEAD:<repository_default_branch>" in release_handoff
+    assert 'test "$(git rev-parse HEAD)" = "<approved-sha>"' in release_handoff
+    assert "git push origin <approved-sha>:<repository_default_branch>" in (
+        release_handoff
+    )
+    assert "git push -u origin HEAD:<repository_default_branch>" not in release_handoff
     assert "git push -u origin codex/qa-z-bootstrap" in release_handoff
     assert "Release QA-Z v0.9.8-alpha" in release_handoff
     assert "docs/releases/v0.9.8-alpha-pr.md" in release_handoff

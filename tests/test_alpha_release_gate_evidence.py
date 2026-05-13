@@ -583,7 +583,11 @@ def test_alpha_release_gate_preserves_publish_checklist_count_in_evidence():
                 "release_path_state": "remote_direct_publish",
                 "publish_strategy": "push_default_branch",
                 "publish_checklist": [
-                    "Push the validated release baseline to main with `git push -u origin HEAD:main`.",
+                    (
+                        'Verify the approved release SHA with `test "$(git rev-parse HEAD)" = '
+                        '"<approved-sha>"`, then push the validated release baseline '
+                        "to main with `git push origin <approved-sha>:main`."
+                    ),
                     "Wait for remote CI before tagging.",
                     "Tag the validated default branch.",
                 ],
@@ -1204,7 +1208,10 @@ def test_alpha_release_gate_promotes_direct_publish_guidance_on_success(tmp_path
                 "validated default branch is green."
             )
         ],
-        "next_commands": ["git push -u origin HEAD:main"],
+        "next_commands": [
+            'test "$(git rev-parse HEAD)" = "<approved-sha>"',
+            "git push origin <approved-sha>:main",
+        ],
     }
     runner = RecordingRunner(
         {tuple(preflight_command): (0, json.dumps(preflight_payload), "")}

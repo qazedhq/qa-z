@@ -201,3 +201,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external repair executors now see the selection risk reason and changed file directly in the prompt, not only in machine JSON.
 - Remaining blocker: this does not run or approve any external repair executor; QA-Z remains a local deterministic handoff generator.
 - Next safe slice: run the second backlog expansion and choose a release command or benchmark fixture negative test that is safe to land locally.
+
+
+## 2026-05-13 Direct Publish Approved-SHA Contract
+- Repo: JustTyping
+- Lane: alpha release preflight -> release command contracts -> current-truth handoff
+- User-facing flow: `scripts/alpha_release_preflight.py --json`, alpha gate preflight promotion, and `docs/releases/v0.9.8-alpha-publish-handoff.md`
+- Slice type: Contract / Evidence
+- Before: the direct-publish path for an empty remote emitted `git push -u origin HEAD:<branch>`, while the release truth packet required approved-SHA refspecs and explicitly rejected moving `HEAD:main` pushes.
+- Root cause: preflight direct-publish guidance predated the approved-SHA proof branch contract and still treated the local working `HEAD` as the push source.
+- Change made: direct-publish checklists now require `test "$(git rev-parse HEAD)" = "<approved-sha>"` and `git push origin <approved-sha>:<repository_default_branch>`; preflight `next_commands` emit the same approved-SHA contract, and current-truth release handoff docs were updated to match.
+- Validation run: `python -m pytest tests\test_alpha_release_preflight_remote.py::test_preflight_passes_when_local_clean_and_empty_remote_reachable tests\test_alpha_release_preflight_remote.py::test_preflight_direct_publish_guidance_uses_repository_default_branch tests\test_alpha_release_preflight_cli_render.py::test_render_preflight_human_prints_publish_checklist tests\test_alpha_release_gate_evidence.py::test_alpha_release_gate_promotes_direct_publish_guidance_on_success tests\test_current_truth_release_handoff.py::test_alpha_publish_handoff_pins_remote_blocker_and_next_commands -q`; `python -m pytest tests\test_alpha_release_preflight_remote.py tests\test_alpha_release_preflight_cli_render.py tests\test_alpha_release_gate_evidence.py tests\test_current_truth_release_handoff.py -q`; `python -m ruff check scripts\alpha_release_preflight_evidence.py tests\test_alpha_release_preflight_remote.py tests\test_alpha_release_preflight_cli_render.py tests\test_alpha_release_gate_evidence.py tests\test_current_truth_release_handoff.py`; `python -m ruff format --check scripts\alpha_release_preflight_evidence.py tests\test_alpha_release_preflight_remote.py tests\test_alpha_release_preflight_cli_render.py tests\test_alpha_release_gate_evidence.py tests\test_current_truth_release_handoff.py`; `python scripts\check_text_file_hygiene.py --source working-tree`.
+- Evidence: the focused RED run failed while preflight still emitted `git push -u origin HEAD:main`; after implementation the focused pack passed `5` tests, the broader affected pack passed `73` tests, Ruff check/format passed, text hygiene passed, and a targeted search found no remaining positive direct-publish `HEAD:<branch>` guidance under `docs`, `scripts`, or `tests`.
+- Gate delta: direct-publish release commands now align with proof-head safety and avoid moving-HEAD refspecs; no push, tag, release, package publish, deploy, credential, queue, or API mutation was performed.
+- User impact: maintainers get a machine-checkable, immutable-SHA publish command instead of a moving local ref when a new empty repository is approved for direct publish.
+- Remaining blocker: actual push/tag/GitHub release/package/deploy execution still requires explicit human approval and fresh remote proof.
+- Next safe slice: mine preflight/worktree/alpha-gate consistency gaps for another local-only negative test that prevents release-readiness overclaims.
