@@ -921,3 +921,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: long-running operators can distinguish history persistence failure from no-op, blocked, or completed autonomy loop outcomes.
 - Remaining blocker: autonomy remains local planning/handoff only and does not mutate target repositories or dispatch live executors.
 - Next safe slice: commit autonomy history behavior, then run the autonomy/executor-result validation pack and mine the next runtime artifact writer.
+
+
+## 2026-05-13 Autonomy Outcome JSON Write Failure Contract
+- Repo: JustTyping
+- Lane: autonomy loop -> per-loop and latest outcome artifact persistence
+- User-facing flow: `qa-z autonomy --json`
+- Slice type: Contract / Evidence
+- Before: a failed autonomy `outcome.json` rewrite raised raw `OSError` without naming the outcome artifact path.
+- Root cause: the shared autonomy `write_json()` helper created parent directories and wrote JSON artifacts without a filesystem boundary.
+- Change made: wrapped autonomy JSON artifact writes with `could not write autonomy JSON artifact ...` and added a focused regression for failed per-loop outcome persistence.
+- Validation run: `python -m pytest tests\test_autonomy.py::test_write_outcome_artifact_wraps_json_write_failure tests\test_autonomy.py::test_record_executor_result_wraps_history_write_failure tests\test_autonomy.py::test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the failure includes the exact outcome path, and the one-loop latest outcome/history regression still passes.
+- Gate delta: autonomy outcome persistence failures now remain distinct from history updates, planner selection, and executor-result ingestion failures.
+- User impact: long-running operators can identify exactly which loop outcome artifact failed before relying on latest-loop status.
+- Remaining blocker: autonomy outcome artifacts remain local deterministic evidence and do not execute repairs or release actions.
+- Next safe slice: commit autonomy outcome behavior, then run the autonomy validation pack and mine copy/summary writer gaps.
