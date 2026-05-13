@@ -873,3 +873,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers using guard in CI can identify the exact failing summary path before trusting or rerunning the guard result.
 - Remaining blocker: GitHub summary rendering remains local artifact generation only; no GitHub comment, release, push, or deployment behavior was added.
 - Next safe slice: commit guard summary behavior, then run the guard/GitHub-summary validation pack before mining another writer gap.
+
+
+## 2026-05-13 Guard Repair Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: guard -> blocking verdict repair handoff persistence
+- User-facing flow: `qa-z guard --json` when fast/deep checks block merge
+- Slice type: Flow / Contract
+- Before: a failed guard repair companion write, such as `repair/codex.md`, returned `qa-z guard: artifact error: disk full` without naming the failed repair artifact path.
+- Root cause: `write_guard_repair()` wrote `repair.json`, `codex.md`, and `claude.md` inline after the shared repair packet/handoff writers succeeded.
+- Change made: added a path-aware guard repair text artifact writer and a focused JSON regression for failed `repair/codex.md` persistence.
+- Validation run: `python -m pytest tests\test_guard_cli.py::test_guard_repair_json_reports_adapter_write_failure tests\test_guard_cli.py::test_guard_failed_fast_check_returns_do_not_merge tests\test_guard_cli.py::test_guard_github_summary_json_reports_artifact_write_failure -q`.
+- Evidence: the focused RED produced only `qa-z guard: artifact error: disk full`; after implementation the failure payload includes `could not write guard repair codex artifact to ...`, and existing blocking-verdict repair generation still passes.
+- Gate delta: guard can now separate repair companion persistence failure from verdict, GitHub summary, repair packet, and handoff write failures.
+- User impact: operators see exactly which local repair artifact failed before handing work to an external executor.
+- Remaining blocker: repair artifacts remain local handoff instructions; QA-Z still does not fix target repositories or dispatch live executors.
+- Next safe slice: commit guard repair behavior, then run the guard/repair validation pack and select the next current-truth or artifact writer gap.
