@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from tests.ast_test_support import module_body
 
+import pytest
+
 import qa_z.self_improvement as self_improvement_module
 import qa_z.self_improvement_selection as self_improvement_selection_module
 from qa_z.selection_context import latest_self_inspection_selection_context
@@ -162,6 +164,43 @@ def test_select_next_records_reason_when_no_backlog_tasks_are_open(
     assert history["state"] == "blocked_no_candidates"
     assert history["selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert history["open_backlog_count"] == 0
+
+
+def test_select_next_wraps_history_append_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-04-22T00:00:00Z",
+            "items": [],
+        },
+    )
+    history_path = tmp_path / ".qa-z" / "loops" / "history.jsonl"
+    original_open = Path.open
+
+    def fail_history(path: Path, *args, **kwargs):
+        mode = str(args[0] if args else kwargs.get("mode", "r"))
+        if path == history_path and "a" in mode:
+            raise OSError("disk full")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", fail_history)
+
+    with pytest.raises(OSError) as excinfo:
+        self_improvement_selection_module.select_next_tasks(
+            root=tmp_path,
+            count=1,
+            now="2026-04-22T03:04:05Z",
+            loop_id="loop-history-fail",
+        )
+
+    message = str(excinfo.value)
+    assert "could not append self-improvement history" in message
+    assert str(history_path) in message
+    assert "disk full" in message
 
 
 def test_select_next_marks_stale_self_inspection_context_after_backlog_update(

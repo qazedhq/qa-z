@@ -51,7 +51,6 @@ def append_history(
     open_backlog_count: int | None = None,
 ) -> None:
     """Append one JSONL loop-memory record."""
-    history_path.parent.mkdir(parents=True, exist_ok=True)
     selected_ids = [str(item.get("id")) for item in selected_items]
     selected_id_set = set(selected_ids)
     entry = {
@@ -118,8 +117,14 @@ def append_history(
             ]
             if refresh_commands:
                 entry["source_self_inspection_refresh_commands"] = refresh_commands
-    with history_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    try:
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+        with history_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, sort_keys=True) + "\n")
+    except OSError as exc:
+        raise OSError(
+            f"could not append self-improvement history {history_path}: {exc}"
+        ) from exc
 
 
 def load_history_entries(path: Path) -> list[dict[str, Any]]:
