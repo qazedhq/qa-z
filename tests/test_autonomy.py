@@ -378,6 +378,32 @@ def test_update_history_entry_wraps_history_write_failure(
     assert "disk full" in message
 
 
+def test_write_outcome_artifact_wraps_json_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outcome_path = tmp_path / ".qa-z" / "loops" / "loop-target" / "outcome.json"
+    outcome = {
+        "artifacts": {"outcome": ".qa-z/loops/loop-target/outcome.json"},
+        "state": "session_prepared",
+    }
+    original_write_text = Path.write_text
+
+    def fail_outcome(path: Path, *args, **kwargs) -> int:
+        if path == outcome_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_outcome)
+
+    with pytest.raises(OSError) as excinfo:
+        autonomy_records_module.write_outcome_artifact(tmp_path, outcome)
+
+    message = str(excinfo.value)
+    assert "could not write autonomy JSON artifact" in message
+    assert str(outcome_path) in message
+    assert "disk full" in message
+
+
 def test_run_autonomy_accepts_dependency_bundle(tmp_path: Path) -> None:
     live_repository = {
         "modified_count": 0,
