@@ -1553,6 +1553,86 @@ def test_fast_returns_config_error_for_broken_yaml(
     assert "qa-z fast: configuration error:" in output
 
 
+def test_fast_cli_json_reports_config_error_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(
+        tmp_path,
+        [{"id": "py_test", "kind": "test", "run": python_command("")}],
+    )
+
+    exit_code = main(["fast", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.fast_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z fast: configuration error:" in output["message"]
+
+
+def test_deep_cli_json_reports_argument_error_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/baseline",
+            "--output-dir",
+            str(tmp_path / "runs"),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z deep: argument error:" in output["message"]
+
+
+def test_deep_cli_json_reports_source_not_found_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_fast_config(tmp_path, [])
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            ".qa-z/runs/missing",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z deep: source not found:" in output["message"]
+
+
 def test_verify_cli_compares_existing_runs_and_writes_artifacts(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
