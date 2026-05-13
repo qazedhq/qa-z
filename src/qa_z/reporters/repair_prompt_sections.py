@@ -120,6 +120,21 @@ def format_list(value: object) -> str:
     return ", ".join(str(item) for item in value)
 
 
+def format_changed_files(value: object) -> str:
+    """Render changed-file selection entries as inline-code paths."""
+    if not isinstance(value, list) or not value:
+        return "none"
+    paths: list[str] = []
+    for item in value:
+        if isinstance(item, dict):
+            path = str(item.get("path") or "").strip()
+        else:
+            path = str(item).strip()
+        if path:
+            paths.append(path)
+    return format_inline_code_list(paths)
+
+
 def format_inline_code_list(value: object) -> str:
     """Render a list of strings as inline-code Markdown."""
     if not isinstance(value, list) or not value:

@@ -202,8 +202,14 @@ def test_repair_prompt_json_includes_selection_context(
         selection={
             "mode": "smart",
             "input_source": "contract",
-            "changed_files": [],
-            "high_risk_reasons": ["no change information available"],
+            "changed_files": [
+                {
+                    "path": "src/qa_z/guard/runtime.py",
+                    "status": "modified",
+                    "kind": "source",
+                }
+            ],
+            "high_risk_reasons": ["guard behavior changed"],
             "selected_checks": [],
             "full_checks": [],
             "targeted_checks": [],
@@ -216,10 +222,9 @@ def test_repair_prompt_json_includes_selection_context(
 
     assert exit_code == 0
     assert packet["run"]["selection"]["mode"] == "smart"
-    assert (
-        "no change information available"
-        in packet["run"]["selection"]["high_risk_reasons"]
-    )
+    assert "guard behavior changed" in packet["run"]["selection"]["high_risk_reasons"]
+    assert "- High-risk reasons: guard behavior changed" in packet["agent_prompt"]
+    assert "- Changed files: `src/qa_z/guard/runtime.py`" in packet["agent_prompt"]
 
 
 def test_repair_prompt_includes_deep_findings(

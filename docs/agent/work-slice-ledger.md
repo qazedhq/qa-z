@@ -185,3 +185,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get an explicit failure if two current alpha decision packets coexist in the report instead of trusting whichever section happens to appear first.
 - Remaining blocker: push, tag, GitHub release, package publish, deploy, current-HEAD remote proof, Marketing/X promotion, and Claude mirror promotion all still require explicit human approval and post-action evidence.
 - Next safe slice: mine release command-contract tests for another safe negative case that improves approval-gated packet validation without touching deferred Marketing/X or `.claude/**`.
+
+
+## 2026-05-13 Repair Prompt Selection Context Visibility
+- Repo: JustTyping
+- Lane: repair prompt -> external executor handoff quality
+- User-facing flow: `qa-z repair-prompt --from-run ... --json`
+- Slice type: Flow / Evidence
+- Before: repair-prompt JSON preserved selection context, but the Markdown `agent_prompt` omitted changed files and high-risk reasons, making executor-facing repair instructions less self-contained.
+- Root cause: the renderer only printed selection mode, input source, and check buckets.
+- Change made: rendered selected changed files and high-risk reasons in the repair prompt's check-selection section, with a helper that converts structured changed-file entries into inline-code paths.
+- Validation run: `python -m pytest tests\test_repair_prompt.py::test_repair_prompt_json_includes_selection_context -q`; `python -m pytest tests\test_repair_prompt.py tests\test_repair_handoff.py -q`; `python -m ruff check src\qa_z\reporters\repair_prompt.py src\qa_z\reporters\repair_prompt_sections.py tests\test_repair_prompt.py tests\test_repair_handoff.py`; `python -m ruff format --check src\qa_z\reporters\repair_prompt.py src\qa_z\reporters\repair_prompt_sections.py tests\test_repair_prompt.py tests\test_repair_handoff.py`.
+- Evidence: the focused test failed before implementation because `agent_prompt` omitted the high-risk line; after the fix the focused test passed, the repair prompt/handoff pack passed `16` tests, Ruff check exited `0` with a cache-write warning, and Ruff format reported `4` files already formatted.
+- Gate delta: core handoff guidance is more actionable without adding live executor, queue, branch, commit, push, or API behavior.
+- User impact: external repair executors now see the selection risk reason and changed file directly in the prompt, not only in machine JSON.
+- Remaining blocker: this does not run or approve any external repair executor; QA-Z remains a local deterministic handoff generator.
+- Next safe slice: run the second backlog expansion and choose a release command or benchmark fixture negative test that is safe to land locally.
