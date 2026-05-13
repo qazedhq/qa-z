@@ -448,7 +448,12 @@ def test_collected_facts_count_ahead_from_packet_proof_head(
             return "main"
         if args == ("rev-parse", "origin/main"):
             return ORIGIN_MAIN
-        if args == ("rev-list", "--left-right", "--count", f"origin/main...{PROOF_HEAD}"):
+        if args == (
+            "rev-list",
+            "--left-right",
+            "--count",
+            f"origin/main...{PROOF_HEAD}",
+        ):
             return "0 17"
         raise AssertionError(f"unexpected git command: {args}")
 

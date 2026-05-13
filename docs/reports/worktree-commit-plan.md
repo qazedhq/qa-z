@@ -240,7 +240,7 @@ Current local evidence:
   `release_path_state=local_only_remote_preflight`. Skip-remote local preflight remains separate from read-only remote proof, and its remote checks stayed skipped by design.
 - Full local proof refresh:
   `python scripts\alpha_release_gate.py --quick --allow-dirty --json` carried
-  the local proof bundle through `pytest` (`1621 passed`), Ruff check, Ruff
+  the local proof bundle through `pytest` (`1622 passed`), Ruff check, Ruff
   format check, mypy (`534` source files), CLI help smoke, text hygiene, and
   worktree-plan evidence.
 

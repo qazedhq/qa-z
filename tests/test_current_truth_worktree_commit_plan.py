@@ -167,7 +167,7 @@ def test_alpha_rc_packet_pins_remote_proof_freshness_without_prod_claims() -> No
         in (commit_plan)
     )
     assert "not a product regression" in commit_plan
-    assert "`1621 passed`" in commit_plan
+    assert "`1622 passed`" in commit_plan
     assert "Read-only remote proof:" in commit_plan
     assert "`repository_http_status=200`" in commit_plan
     assert "`repository_visibility=public`" in commit_plan

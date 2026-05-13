@@ -100,7 +100,11 @@ def collect_release_truth_facts(
     if ahead_count is None:
         ahead_ref = resolved_head if proof_head or head else "HEAD"
         counts = run_git(
-            repo_root, "rev-list", "--left-right", "--count", f"origin/main...{ahead_ref}"
+            repo_root,
+            "rev-list",
+            "--left-right",
+            "--count",
+            f"origin/main...{ahead_ref}",
         )
         parts = counts.split()
         if len(parts) != 2:
