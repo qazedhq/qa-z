@@ -1369,3 +1369,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can fix demo setup failures without confusing runtime config persistence with packaged resource copy, guard output, or repair artifacts.
 - Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
 - Next safe slice: commit demo path context, then run final latest-HEAD release validation and wall-clock compliance checks.
+
+
+## 2026-05-13 Demo Resource Copy Artifact Path Contract
+- Repo: JustTyping
+- Lane: init/doctor -> demo -> guard/repair proof
+- User-facing flow: `qa-z demo auth-bug`
+- Slice type: Contract / Evidence
+- Before: packaged demo resource copy failures surfaced only the broad demo artifact boundary and raw filesystem error.
+- Root cause: `copy_resource_tree()` wrote copied files directly with `Path.write_bytes()` and relied on the outer demo handler for error context.
+- Change made: added a path-aware demo resource writer and a regression requiring the copied `README.md` target path on write failure.
+- Validation run: `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_copied_resource_write_failure -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_command_writes_repair_and_guard_artifacts tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_copied_resource_write_failure tests\test_demo_guard_action_package.py::test_packaged_auth_bug_demo_matches_public_source_demo -q`; `python -m ruff check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff format --check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`.
+- Evidence: regression failed first because output only contained `disk full`, then passed with the copied resource path; focused demo pack passed `4` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: demo bootstrap failures now distinguish packaged resource copy failures from runtime config persistence and downstream guard/repair artifacts.
+- User impact: operators can repair blocked demo file copies without treating the whole deterministic demo as unreliable.
+- Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
+- Next safe slice: commit demo resource path context, then run final latest-HEAD release validation and wall-clock compliance checks.
