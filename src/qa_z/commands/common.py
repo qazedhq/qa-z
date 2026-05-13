@@ -14,8 +14,11 @@ def write_text_if_missing(path: Path, content: str) -> bool:
     """Create a text file only when it does not exist yet."""
     if path.exists():
         return False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write {path}: {exc}") from exc
     return True
 
 

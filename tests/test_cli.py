@@ -773,6 +773,7 @@ def test_init_reports_artifact_write_failure(
     assert exit_code == 2
     assert "qa-z init: artifact write error:" in output
     assert "could not write bootstrap files" in output
+    assert str(config_path) in output
     assert "disk full" in output
 
 
