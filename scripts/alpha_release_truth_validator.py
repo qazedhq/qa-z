@@ -186,6 +186,7 @@ def validate_release_truth_texts(
 ) -> dict[str, object]:
     packet = section_from_header(texts.worktree_packet, RELEASE_PACKET_HEADER)
     packet_header_present = packet is not None
+    packet_header_count = texts.worktree_packet.count(RELEASE_PACKET_HEADER)
     if packet is None:
         packet = ""
     package_plan = texts.package_plan
@@ -203,6 +204,11 @@ def validate_release_truth_texts(
             "release_packet_header_present",
             packet_header_present,
             "release packet must contain the current alpha decision packet header",
+        ),
+        check(
+            "release_packet_header_unique",
+            packet_header_count == 1,
+            f"release packet must contain exactly one current alpha decision packet header; found {packet_header_count}",
         ),
         check(
             "current_head_pinned",

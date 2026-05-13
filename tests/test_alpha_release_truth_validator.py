@@ -198,6 +198,35 @@ Remote and publishing proof packet:
     assert "release_packet_header_present" in payload["failed_checks"]
 
 
+def test_validator_rejects_duplicate_release_decision_packet_sections() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+    texts = valid_release_truth_texts(module)
+    duplicated = module.ReleaseTruthTexts(
+        worktree_packet=(
+            texts.worktree_packet
+            + """
+## Alpha Release-Candidate Decision Packet - 2026-05-12
+- Source HEAD at proof time: `a3e5303933fe9b1bef03e2e915ce224e0cc4e1c1`.
+- Local proof HEAD is 15 commits ahead of remote `main`.
+"""
+        ),
+        package_plan=texts.package_plan,
+        release_handoff=texts.release_handoff,
+    )
+
+    payload = module.validate_release_truth_texts(facts, duplicated)
+
+    assert payload["status"] == "failed"
+    assert "release_packet_header_unique" in payload["failed_checks"]
+
+
 def test_validator_accepts_current_release_execution_packet_contract() -> None:
     module = load_truth_validator_module()
     facts = module.ReleaseTruthFacts(

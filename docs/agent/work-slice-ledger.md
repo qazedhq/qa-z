@@ -169,3 +169,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can validate a committed proof packet without fabricating current-HEAD remote proof, can avoid moving-HEAD proof branch mistakes, can rely on guard output to ask for review when current-truth inputs are missing or stale, and can distinguish release-check failure from evidence-file write failure.
 - Remaining blocker: push, tag, GitHub release, package publish, deploy, current-HEAD remote proof, Marketing/X promotion, and Claude mirror promotion all still require explicit human approval and post-action evidence.
 - Next safe slice: produce a proof-branch approval packet that uses the explicit approved-SHA refspec and lists the exact post-push CI/public-raw evidence commands, then wait for human approval before any remote mutation.
+
+
+## 2026-05-13 Release Packet Duplicate-Section Guard
+- Repo: JustTyping
+- Lane: release truth validator -> release packet parser safety
+- User-facing flow: alpha release packet validation and proof-head lifecycle
+- Slice type: Contract / Evidence
+- Before: the release truth validator selected the first matching alpha decision packet section, so a duplicate section later in the same report could hide stale source-head or ahead-count text behind an otherwise valid first packet.
+- Root cause: the validator checked that the current decision packet header existed but did not require it to be unique.
+- Change made: added the `release_packet_header_unique` validator check and a regression test that appends a stale duplicate packet section after a valid packet.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py::test_validator_rejects_duplicate_release_decision_packet_sections -q`; `python -m pytest tests\test_alpha_release_truth_validator.py -q`; `python -m ruff check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`.
+- Evidence: the new test failed before the implementation because duplicate sections still produced `passed`; after the fix the focused test passed, the full truth-validator file passed `14` tests, Ruff passed, and proof-head mode returned `19/19` checks with `proof_head_mode=packet`.
+- Gate delta: release packet validation is stricter against stale shadow sections while preserving committed proof-head packet validation.
+- User impact: maintainers get an explicit failure if two current alpha decision packets coexist in the report instead of trusting whichever section happens to appear first.
+- Remaining blocker: push, tag, GitHub release, package publish, deploy, current-HEAD remote proof, Marketing/X promotion, and Claude mirror promotion all still require explicit human approval and post-action evidence.
+- Next safe slice: mine release command-contract tests for another safe negative case that improves approval-gated packet validation without touching deferred Marketing/X or `.claude/**`.
