@@ -713,3 +713,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish unsafe executor history from a failed dry-run evidence write.
 - Remaining blocker: dry-run remains live-free and cannot prove actual target-repo repair quality without subsequent verification.
 - Next safe slice: commit dry-run behavior and validation routing, then mine autonomy/self-inspection artifact persistence or run another release-quality validation wave.
+
+
+## 2026-05-13 Autonomy Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: autonomy loop -> runtime summary artifact persistence
+- User-facing flow: `qa-z autonomy --json`
+- Slice type: Flow / Contract
+- Before: a failed autonomy runtime artifact write could escape as raw `OSError` during a local autonomy loop, even in JSON mode.
+- Root cause: `handle_autonomy()` loaded config through a normalized JSON error path but called `run_autonomy()` outside a command-owned OSError boundary.
+- Change made: mapped autonomy runtime persistence failures to `qa_z.autonomy_error` with `artifact_write_error`, preserved the existing configuration JSON contract, and added a focused regression that fails the latest autonomy summary write.
+- Validation run: `python -m pytest tests\test_autonomy.py::test_autonomy_cli_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_autonomy.py::test_autonomy_cli_json_reports_artifact_write_failure tests\test_autonomy.py::test_autonomy_cli_run_and_status -q`; `python -m pytest tests\test_cli_config_error_contracts.py::test_autonomy_json_reports_broken_config_as_machine_payload -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the new artifact write regression and the existing runtime/status and broken-config contracts passed.
+- Gate delta: autonomy JSON mode now distinguishes local artifact persistence failure from runtime budget or task selection results.
+- User impact: long-running local autonomy operators get a machine-readable failure reason instead of a traceback if the artifact store fails.
+- Remaining blocker: release execution remains approval-blocked and autonomy still prepares local planning/handoff artifacts only; it does not mutate target repositories.
+- Next safe slice: commit autonomy behavior, then mine self-inspection/select-next artifact persistence or run another release-quality validation wave.
