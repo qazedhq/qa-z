@@ -1625,3 +1625,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: GitHub visitors have the same low-friction first trial from the docs index as they do from the README.
 - Remaining blocker: PyPI/TestPyPI publishing remains unapproved; Git tag install is still the public alpha install path.
 - Next safe slice: run a wider public launch regression pack after the latest README/quickstart/scorecard/social-preview changes.
+
+
+## 2026-05-13 Demo JSON Failure Contract
+- Repo: JustTyping
+- Lane: demo / CLI UX / automation evidence
+- User-facing flow: `qa-z demo auth-bug --json` -> automation reads one stable payload -> operator sees deterministic recovery state.
+- Slice type: Evidence / Contract
+- Before: JSON success and runtime-config write failures were covered, but copied-resource failures, resource-directory creation failures, and nested demo command failures did not have dedicated JSON-mode regressions.
+- Root cause: the demo command had grown into the public first-run path before its setup-failure contract was split into a focused test file.
+- Change made: added `tests/test_demo_json_failure_contracts.py` with regressions for copied resource write failure, resource directory creation failure, and nested guard failure JSON payloads.
+- Validation run: `python -m pytest tests\test_demo_json_failure_contracts.py tests\test_demo_guard_action_package.py -q`; `python -m ruff check tests\test_demo_json_failure_contracts.py`; `python -m ruff format --check tests\test_demo_json_failure_contracts.py`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: focused demo tests passed `16`; Ruff check and format passed; after commit `340e3380c8e5`, both release truth validator modes passed `20/20`, and strict worktree plan remained `ready`.
+- Gate delta: the first-run demo JSON contract now covers setup and nested-command failures without relying on human stdout parsing.
+- User impact: GitHub visitors and CI scripts can automate the packaged demo more confidently because failures stay machine-readable and deterministic.
+- Remaining blocker: current HEAD remains local-only until push approval; release packet stays proof-only and mutation-gated.
+- Next safe slice: continue a product-code slice from stale-current-truth, repair prompt handoff, or benchmark lock coverage, then rerun the relevant focused validator.
