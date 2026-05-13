@@ -457,3 +457,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: unattended wrappers can distinguish local configuration failure from artifact/source failure across more of the core QA-Z loop.
 - Remaining blocker: commands without JSON output remain human-output-only, and remote release execution is still approval-blocked.
 - Next safe slice: mine non-config JSON/stderr gaps or release-preflight truth gaps.
+
+
+## 2026-05-13 Release Truth Validator Output Contract
+- Repo: JustTyping
+- Lane: alpha release truth validator -> machine evidence persistence
+- User-facing flow: `python scripts\alpha_release_truth_validator.py --json --output <path>`
+- Slice type: Contract / Evidence
+- Before: the truth validator could emit JSON to stdout, but unlike the release gate and preflight scripts it had no `--output` evidence file path and no deterministic write-failure exit contract.
+- Root cause: `alpha_release_truth_validator.py` had not adopted the common release-script output writer pattern.
+- Change made: added `--output` support, newline-terminated JSON file writing, parent directory creation, and a deterministic stderr message plus exit code `2` when evidence writing fails.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py -q -k "truth_validator_cli"`; `python -m pytest tests\test_alpha_release_truth_validator.py -q`; `python -m ruff check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`.
+- Evidence: the focused RED failed because `--output` was an unrecognized argument; after implementation the focused CLI tests passed, the full truth-validator pack passed `17` tests, and Ruff check/format passed.
+- Gate delta: release-truth evidence can now be saved as a first-class JSON artifact without depending on terminal capture.
+- User impact: alpha release rehearsals and automation wrappers can archive truth-validator payloads beside gate/preflight evidence and detect output-write failures consistently.
+- Remaining blocker: default validator output still correctly fails when the release packet proof head is stale against the current local HEAD; release execution remains approval-blocked.
+- Next safe slice: validate strict plan and continue backlog mining for another release/preflight or core CLI contract gap.
