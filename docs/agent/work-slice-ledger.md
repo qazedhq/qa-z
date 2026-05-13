@@ -649,3 +649,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: automation can tell runner/check failures from disk or output-path failures without scraping tracebacks.
 - Remaining blocker: release execution remains approval-blocked and current local HEAD is still not remote-proven.
 - Next safe slice: commit run-summary behavior and validation routing, then mine repair-session or executor-ingest persistence surfaces.
+
+
+## 2026-05-13 Executor Result Ingest Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: executor result -> ingest summary/report persistence
+- User-facing flow: `qa-z executor-result ingest --json`
+- Slice type: Flow / Contract
+- Before: a failed `ingest.json` or `ingest_report.md` write could escape as raw `OSError` from the executor-result ingest path.
+- Root cause: `finalized_ingest_outcome()` wrote ingest artifacts without path-aware context, and `handle_executor_result_ingest()` normalized source/config/artifact-load errors but not local persistence failures.
+- Change made: added executor-result ingest artifact write context, mapped ingest persistence failures to `qa_z.executor_result_error` with `artifact_write_error`, and updated executor-return commit-plan validation to include the ingest outcome test file.
+- Validation run: `python -m pytest tests\test_executor_ingest_outcome.py::test_finalized_ingest_outcome_reports_artifact_write_failure -q`; `python -m pytest tests\test_executor_result.py::test_executor_result_ingest_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_executor_result.py tests\test_executor_ingest_outcome.py tests\test_executor_result_dry_run.py -q`; `python -m pytest tests\test_benchmark_executor_runtime.py -q`; `python -m pytest tests\test_worktree_commit_plan_validation_commands.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python -m ruff check src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_ingest_outcome.py tests\test_executor_ingest_outcome.py tests\test_executor_result.py`; `python -m ruff format --check src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_ingest_outcome.py tests\test_executor_ingest_outcome.py tests\test_executor_result.py`; `python -m mypy src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_ingest_outcome.py tests\test_executor_ingest_outcome.py tests\test_executor_result.py`.
+- Evidence: the focused RED showed the writer preserving only `disk full` and the CLI leaking raw `OSError`; after implementation both focused tests passed, the executor-result/ingest/dry-run pack passed `35` tests, the benchmark executor runtime pack passed `5` tests, the commit-plan validation canary passed, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: executor-result ingest now fails closed with machine-readable local persistence failures while preserving existing source/config rejection behavior.
+- User impact: maintainers can distinguish a bad external result from a local artifact persistence failure before trusting ingest/verify state.
+- Remaining blocker: executor-result ingest still consumes local handoff artifacts only; no external executor or target repository mutation was added.
+- Next safe slice: commit executor-result ingest behavior and validation routing, then mine repair-session lifecycle artifact persistence or run a release-quality validation wave.
