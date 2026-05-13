@@ -147,4 +147,6 @@ def test_finalized_ingest_outcome_reports_artifact_write_failure(
         )
 
     assert "could not write executor result ingest artifacts" in str(excinfo.value)
+    assert "could not write executor result ingest report" in str(excinfo.value)
+    assert str(ingest_dir / "ingest_report.md") in str(excinfo.value)
     assert "disk full" in str(excinfo.value)
