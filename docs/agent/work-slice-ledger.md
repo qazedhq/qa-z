@@ -793,3 +793,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can rerun or repair the local artifact store instead of acting on a misleading backlog state when refresh writes fail.
 - Remaining blocker: backlog refresh remains a local evidence refresh and does not prove remote release execution readiness.
 - Next safe slice: commit backlog behavior, then run the self-improvement/backlog validation pack before mining another CLI contract gap.
+
+
+## 2026-05-13 Skill Install Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: skill install -> local agent instruction persistence
+- User-facing flow: `qa-z skill install codex`
+- Slice type: Flow / Contract
+- Before: a failed instruction file write could escape as raw `OSError` from `qa-z skill install`.
+- Root cause: `handle_skill_install()` iterated install targets without a command-owned filesystem error boundary.
+- Change made: mapped install-time persistence failures to a deterministic `qa-z skill install: artifact write error` message with exit code `2`.
+- Validation run: `python -m pytest tests\test_skill_install_cli.py::test_skill_install_reports_artifact_write_failure -q`; `python -m pytest tests\test_skill_install_cli.py::test_skill_install_reports_artifact_write_failure tests\test_skill_install_cli.py::test_skill_install_codex_writes_agents_file tests\test_skill_install_cli.py::test_skill_install_all_targets_create_expected_files -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_agent_skill_pack_and_templates_exist tests\test_demo_guard_action_package.py::test_packaged_skill_pack_matches_public_source_pack -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the focused failure contract, codex/all-target install paths, and packaged skill/template parity checks passed.
+- Gate delta: local agent-instruction setup now fails with deterministic operator output when the filesystem rejects writes.
+- User impact: maintainers setting up Codex/Claude/Cursor/Copilot instruction files can distinguish an overwrite refusal from a local artifact write failure.
+- Remaining blocker: skill install remains a local instruction writer and does not approve or mutate release execution.
+- Next safe slice: commit skill install behavior, then run the guard/skill/demo validation pack before mining the next safe local CLI contract.
