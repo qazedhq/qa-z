@@ -1273,3 +1273,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can repair the exact failed safety artifact before giving work to an external executor.
 - Remaining blocker: executor safety artifacts remain local pre-live policy and do not authorize live executor calls, remote mutation, or production release.
 - Next safe slice: commit executor safety path context, then run a status/strict-plan check before selecting another safe surface.
+
+
+## 2026-05-13 Repair Session Lifecycle Artifact Path Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff -> verify
+- User-facing flow: `qa-z repair-session start --json` and `qa-z repair-session verify --json`
+- Slice type: Contract / Evidence
+- Before: repair-session start and verification failures named the session directory but not the exact handoff, summary, or outcome file that failed.
+- Root cause: lifecycle helpers wrote Codex/Claude handoffs plus verification summary/outcome files inline inside broad start/verify artifact boundaries.
+- Change made: added a path-aware repair-session lifecycle artifact writer and regressions for Codex handoff, Claude handoff, verification summary, and verification outcome write failures.
+- Validation run: `python -m pytest tests\test_repair_session.py::test_repair_session_start_json_reports_artifact_write_failure tests\test_repair_session.py::test_repair_session_start_json_reports_claude_handoff_write_failure tests\test_repair_session.py::test_repair_session_verify_json_reports_artifact_write_failure tests\test_repair_session.py::test_repair_session_verify_json_reports_outcome_write_failure tests\test_repair_session.py::test_repair_session_verify_existing_candidate_writes_outcome -q`; `python -m pytest tests\test_repair_session.py tests\test_repair_session_architecture.py -q`; `python -m ruff check src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`.
+- Evidence: focused lifecycle write/outcome pack passed `5` tests; full repair-session and architecture pack passed `26` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: repair-session lifecycle failures now distinguish handoff, summary, and outcome persistence before external handoff or verification evidence is trusted.
+- User impact: operators can identify the exact failed session artifact during start or verify instead of treating the whole session directory as corrupt.
+- Remaining blocker: repair-session remains local handoff and verification orchestration; it does not execute repairs, mutate target repositories, or prove remote release readiness.
+- Next safe slice: commit repair-session lifecycle path context, then run a mid-stack validation wave.
