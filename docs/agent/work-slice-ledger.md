@@ -1193,3 +1193,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can repair the exact failed benchmark artifact instead of treating all benchmark output failures as a locked or corrupt results directory.
 - Remaining blocker: benchmark output remains local deterministic evidence and does not prove remote release or production readiness.
 - Next safe slice: commit benchmark path context, then run a validation wave before mining the next writer surface.
+
+
+## 2026-05-13 Artifact Writer Seam Budget Repair
+- Repo: JustTyping
+- Lane: benchmark/doctor reliability and executor-result dry-run safety
+- User-facing flow: `qa-z benchmark --json` and `qa-z executor-result dry-run --json`
+- Slice type: Cleanup / Evidence
+- Before: alpha gate failed because the new path-aware writer helpers pushed `benchmark_reporting.py` and `executor_dry_run.py` over their architecture line-count budgets.
+- Root cause: low-level artifact write helpers were added inside orchestration modules that have explicit small-seam layout guards.
+- Change made: moved benchmark and dry-run writer helpers into dedicated artifact-writing modules while preserving the exact-path failure behavior.
+- Validation run: `python -m pytest tests\test_benchmark_reporting_architecture.py tests\test_executor_history_dry_run_layout_architecture.py tests\test_benchmark_runtime.py tests\test_executor_result_dry_run.py -q`; `python -m ruff check src\qa_z\benchmark_reporting.py src\qa_z\benchmark_artifact_writing.py src\qa_z\executor_dry_run.py src\qa_z\executor_dry_run_artifacts.py tests\test_benchmark_runtime.py tests\test_executor_result_dry_run.py`; `python -m ruff format --check src\qa_z\benchmark_reporting.py src\qa_z\benchmark_artifact_writing.py src\qa_z\executor_dry_run.py src\qa_z\executor_dry_run_artifacts.py tests\test_benchmark_runtime.py tests\test_executor_result_dry_run.py`.
+- Evidence: alpha gate exposed `benchmark_reporting.py exceeded budget: 76` and `executor_dry_run.py exceeded budget: 90>80`; after the seam refactor, focused architecture/behavior pack passed `20` tests, Ruff check passed, Ruff format reported `6 files already formatted`, and line counts returned to `60` and `80`.
+- Gate delta: path-aware artifact errors now stay compatible with the small-module architecture budget enforced by the alpha gate.
+- User impact: maintainers keep sharper write-failure diagnostics without allowing benchmark or dry-run orchestration files to grow past their intended review size.
+- Remaining blocker: this repairs local gate integrity only; remote proof, push, package publish, deployment, and production readiness remain approval-blocked.
+- Next safe slice: commit the seam-budget repair, rerun the alpha gate quick, then continue only if the gate is green or a new product failure appears.
