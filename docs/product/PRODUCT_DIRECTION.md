@@ -483,7 +483,10 @@ The production goal is to deliver a reliable local QA control plane for develope
 - `README.md`: public product narrative, command workflow, current status, non-goals, docs index.
 - `docs/architecture.md`: current architecture layers and model-agnostic boundary.
 - `docs/mvp-issues.md`: historical MVP and alpha milestone scopes.
-- `docs/releases/v0.9.8-alpha.md`: current alpha capabilities, validation evidence, and known non-goals.
+- `docs/releases/v0.9.9-alpha.md`: latest public alpha release notes and
+  current public alpha entry point.
+- `docs/releases/v0.9.8-alpha.md`: historical first public alpha capabilities,
+  validation evidence, and known non-goals.
 - `docs/releases/v0.9.8-alpha-publish-handoff.md`: release gate, validation, generated-artifact, and publish safety evidence.
 - `docs/artifact-schema-v1.md`: artifact schema and repair/verification contracts.
 - `docs/repair-sessions.md`: repair session, executor bridge, executor-result, and autonomy boundaries.

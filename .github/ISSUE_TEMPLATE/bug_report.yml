@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve QA-Z. Please include command output or artifact paths so the issue is reproducible.
+        Thanks for helping improve QA-Z. Please include command output or artifact paths so the issue is reproducible. For usage questions, start with SUPPORT.md. For vulnerabilities or secrets, use a private GitHub Security Advisory instead of a public bug report.
   - type: textarea
     id: observed
     attributes:

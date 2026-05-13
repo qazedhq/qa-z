@@ -28,6 +28,11 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     assert json.loads(verdict_path.read_text(encoding="utf-8"))["status"] == (
         "do_not_merge"
     )
+    assert "Next:" in output
+    assert "cd" in output
+    assert str(demo) in output
+    assert "qa-z guard --from-run latest --adapter codex" in output
+    assert "qa-z repair-prompt --from-run latest --adapter codex" in output
     failed_checks = {
         check["id"]: check
         for check in json.loads(summary_path.read_text(encoding="utf-8"))["checks"]
@@ -40,6 +45,78 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     )
     assert "can_view_invoice" in failure_output
     assert (demo / ".qa-z" / "runs" / "latest" / "repair" / "codex.md").exists()
+
+
+def test_demo_auth_bug_readme_followup_commands_run_from_demo_root(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exit_code = main(["demo", "auth-bug", "--path", str(tmp_path)])
+    capsys.readouterr()
+    demo = tmp_path / ".qa-z" / "demo" / "auth-bug"
+
+    monkeypatch.chdir(demo)
+    guard_exit = main(["guard", "--from-run", "latest", "--adapter", "codex"])
+    guard_output = capsys.readouterr().out
+    repair_exit = main(
+        [
+            "repair-prompt",
+            "--from-run",
+            "latest",
+            "--adapter",
+            "codex",
+            "--json",
+        ]
+    )
+    repair_packet = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert guard_exit == 0
+    assert "DO NOT MERGE YET" in guard_output
+    assert repair_exit == 0
+    assert repair_packet["repair_needed"] is True
+    assert repair_packet["suggested_fix_order"] == ["auth_policy"]
+
+
+def test_demo_auth_bug_parent_directory_followup_reports_demo_root_hint(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["demo", "auth-bug", "--path", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    guard_exit = main(
+        [
+            "guard",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            "latest",
+            "--adapter",
+            "codex",
+        ]
+    )
+    guard_output = capsys.readouterr().out
+    repair_exit = main(
+        [
+            "repair-prompt",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            "latest",
+            "--adapter",
+            "codex",
+        ]
+    )
+    repair_output = capsys.readouterr().out
+
+    assert guard_exit == 2
+    assert repair_exit == 4
+    for output in (guard_output, repair_output):
+        assert "cd .qa-z/demo/auth-bug" in output
+        assert "qa-z guard --from-run latest --adapter codex" in output
+        assert "qa-z repair-prompt --from-run latest --adapter codex" in output
 
 
 def test_demo_auth_bug_reports_runtime_config_write_failure(

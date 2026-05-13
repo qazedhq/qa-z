@@ -4,6 +4,10 @@ title: "[Feature]: "
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Propose deterministic QA-Z improvements here. Usage questions belong in SUPPORT.md. Release, package, tag, or deploy approvals require the approval-gated release handoff and are not inferred from feature requests.
   - type: textarea
     id: goal
     attributes:

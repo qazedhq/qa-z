@@ -1417,3 +1417,211 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can fix the exact adapter handoff artifact before handing work to a specific external executor.
 - Remaining blocker: adapter handoffs remain local deterministic prompts and do not execute repairs, mutate target repositories, or prove remote release readiness.
 - Next safe slice: run final latest-HEAD release validation and wall-clock compliance checks.
+
+
+## 2026-05-13 Current-HEAD Release Proof Alignment
+- Repo: JustTyping
+- Lane: release truth / proof evidence
+- User-facing flow: alpha release packet -> truth validator -> proof branch handoff -> rollback plan
+- Slice type: Contract / Evidence
+- Before: the alpha release decision packet was pinned to an older proof HEAD, so default `alpha_release_truth_validator.py --json` failed against current local HEAD `2644e81afedcfbd28cf06b55df17059381ea1d02`.
+- Root cause: the durable release packet, proof-branch command packet, rollback packet, and package handoff were not regenerated after the latest local hardening commits.
+- Change made: refreshed the release decision packet for current HEAD, made the truth validator require a unique source proof head plus exact proof-branch/rollback/package current-head commands, exposed the exact proof branch and local-only remote-proof state in validator JSON facts, and kept proof-head-from-packet mode meaningful for commit-safe validation.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_current_truth_worktree_commit_plan.py tests\test_worktree_commit_plan_validation_commands.py -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python scripts\alpha_release_gate.py --quick --allow-dirty --json`.
+- Evidence: focused release-alignment packs passed `22`, `52`, and `29` tests; strict worktree plan returned `status=ready`; both truth validator modes passed `20/20` with `proof_branch=codex/alpha-rc-2644e81afedc-20260513` and `current_head_remote_proof=local_only_not_remote_visible`; alpha release gate passed `28/28`; full pytest inside the gate reported `1710 passed`.
+- Gate delta: default release truth now proves the current local HEAD packet, while proof-head-from-packet mode still proves the packet-internal head and stale-packet negative tests keep mismatched heads failing.
+- User impact: maintainers can request a proof-branch push using exact current-head commands without confusing local RC readiness with remote alpha, package publish, or production readiness.
+- Remaining blocker: current HEAD remains local-only until an explicitly approved proof-branch push creates remote CI and public raw evidence; tag, GitHub release, package publish, deploy, Marketing/X, and Claude mirror promotion remain blocked.
+- Next safe slice: approve and execute the proof-branch push for `2644e81afedcfbd28cf06b55df17059381ea1d02`, then capture remote CI and public raw evidence before any tag or publish decision.
+
+
+## 2026-05-13 Remote-Visible Release Truth And Support Routing
+- Repo: JustTyping
+- Lane: release truth / GitHub public launch surface
+- User-facing flow: GitHub discovery -> support routing -> release packet -> truth validator -> public raw proof
+- Slice type: Contract / Evidence
+- Before: the release truth packet still described an older proof-head shape where current HEAD was not remote-visible, and public support routing was split between CONTRIBUTING and SECURITY without a dedicated support file.
+- Root cause: remote `main` advanced to `b9a2504ad07d15776eb900f07d6ee83f22ef9076` after the previous proof packet, but the validator and docs only accepted the older exact-commit raw `404` wording.
+- Change made: taught `alpha_release_truth_validator.py` to classify both local-only and `remote_visible` current-head proof, refreshed release packet/package/security/roadmap/product docs to current `v0.9.9-alpha` and `b9a2504` reality, added `SUPPORT.md`, and pinned the support/release-truth surfaces with current-truth tests.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py tests\test_current_truth_worktree_commit_plan.py -q`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m pytest tests\test_public_docs_current_truth.py tests\test_text_file_hygiene.py tests\test_public_raw_urls.py tests\test_github_workflow.py tests\test_launch_growth_package.py -q`; `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit b9a2504ad07d15776eb900f07d6ee83f22ef9076`; `python -m qa_z doctor --json`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: focused release/current-truth pack passed `30` tests; both release truth validator modes passed `20/20` with `current_head_remote_proof=remote_visible`; public hygiene passed; public docs/workflow/star-ready pack passed `68` tests; public raw URL hygiene passed for branch and exact current SHA; doctor returned `status=passed`; strict worktree plan returned `status=ready` with `cross_cutting_count=0`.
+- Gate delta: release truth now distinguishes remote-visible current HEAD proof from local-only proof without weakening approval-gated tag, release, package, deploy, Marketing/X, or Claude mirror boundaries.
+- User impact: a GitHub visitor now has clearer support routing, and maintainers have a validator-backed packet that matches the public `main` SHA instead of stale local-only release evidence.
+- Remaining blocker: no tag, GitHub release, package publish, deploy, Marketing/X promotion, or Claude mirror promotion was approved or executed in this slice.
+- Next safe slice: run a full final quality wave and prepare exact commit-ready packets for the release-truth, support/community, and commit-plan-support batches.
+
+
+## 2026-05-13 Public Support Docs Commit-Plan Ownership
+- Repo: JustTyping
+- Lane: current truth / release staging safety
+- User-facing flow: public GitHub support docs -> current-truth tests -> worktree commit plan -> release packet staging
+- Slice type: Contract / Evidence
+- Before: `SUPPORT.md`, `SECURITY.md`, `docs/product/PRODUCT_DIRECTION.md`, and `docs/roadmap.md` were covered by public/current-truth tests but did not appear in a changed commit-plan batch.
+- Root cause: the `current_truth_release_surface` batch owned launch docs and tests, but not root support/security docs or product/roadmap truth docs.
+- Change made: routed support/security/product/roadmap truth docs into `current_truth_release_surface` and added a regression requiring those paths to stay in that batch with no cross-cutting or unassigned-source attention.
+- Validation run: `python -m pytest tests\test_worktree_commit_plan.py::test_commit_plan_routes_public_support_docs_to_current_truth_batch -q`; `python -m pytest tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_current_truth_worktree_commit_plan.py tests\test_public_docs_current_truth.py tests\test_launch_growth_package.py -q`; `python -m ruff check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: the new regression failed first because only `tests/test_public_docs_current_truth.py` was assigned; after the fix it passed, the focused pack passed `77` tests, Ruff check passed, Ruff format reported `2 files already formatted`, and strict worktree plan returned `status=ready` with `current_truth_release_surface` including `SECURITY.md`, `SUPPORT.md`, `docs/product/PRODUCT_DIRECTION.md`, and `docs/roadmap.md`.
+- Gate delta: public support and direction docs now have explicit staging ownership instead of relying on tests alone.
+- User impact: maintainers can prepare a GitHub launch/support-doc commit packet without silently omitting root support/security or product direction truth.
+- Remaining blocker: deferred `.claude/**`, `marketing/x/**`, and `tests/test_x_automation.py` paths still require separate approval and remain out of QA-Z alpha staging.
+- Next safe slice: tighten GitHub issue-template/community-profile evidence so repository health proof and local validators agree on the public support route.
+
+
+## 2026-05-13 Public Text Mojibake Hygiene Guard
+- Repo: JustTyping
+- Lane: GitHub first impression / public text hygiene
+- User-facing flow: public README/docs -> text hygiene gate -> GitHub launch confidence
+- Slice type: Contract / Evidence
+- Before: console inspection could show a mojibake-looking README heading, but the public text hygiene gate only covered line endings and collapsed text.
+- Root cause: `check_text_file_hygiene.py` had no explicit marker check for known public text encoding damage.
+- Change made: added a likely-mojibake marker check for public text blobs and a regression that creates a damaged README fixture without embedding the damaged marker directly in tracked source.
+- Validation run: `python -m pytest tests\test_text_file_hygiene.py::test_likely_mojibake_in_public_text_fails -q`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m pytest tests\test_text_file_hygiene.py tests\test_public_docs_current_truth.py tests\test_launch_growth_package.py -q`; `python -m ruff check scripts\check_text_file_hygiene.py tests\test_text_file_hygiene.py`; `python -m ruff format --check scripts\check_text_file_hygiene.py tests\test_text_file_hygiene.py`.
+- Evidence: the new regression passed, working-tree public hygiene passed, the public docs/text hygiene pack passed `39` tests, Ruff check passed, and Ruff format reported `2 files already formatted`.
+- Gate delta: a known mojibake marker in public text now fails the same hygiene script used by release/public-readiness validation.
+- User impact: GitHub first-impression files are less likely to ship with visibly broken encoding damage.
+- Remaining blocker: this does not prove remote raw hygiene for unpushed local changes; public raw proof still depends on a pushed commit or current remote ref.
+- Next safe slice: tighten GitHub issue-template/community-profile evidence so bug, feature, support, and security routes are locally validated.
+
+
+## 2026-05-13 GitHub Issue Template Support Routing
+- Repo: JustTyping
+- Lane: GitHub community health / contributor onboarding
+- User-facing flow: GitHub visitor -> issue chooser -> support/security/release route -> deterministic evidence issue
+- Slice type: Contract / Evidence
+- Before: bug and feature issue forms existed, but blank issues were not explicitly disabled and issue chooser contact links did not point users to support, private security reporting, or release/package approval handoffs.
+- Root cause: `.github/ISSUE_TEMPLATE/config.yml` was missing, and the commit plan did not assign `.github/ISSUE_TEMPLATE/**` or PR template changes to the current-truth release surface.
+- Change made: added GitHub issue-template config with support, private security advisory, and release/package approval contact links; updated bug and feature form intro text; routed GitHub community templates into `current_truth_release_surface`; and added regressions for both route content and commit-plan ownership.
+- Validation run: `python -m pytest tests\test_launch_growth_package.py::test_github_issue_templates_route_support_security_and_release_contacts -q`; `python -m pytest tests\test_worktree_commit_plan.py::test_commit_plan_routes_github_community_templates_to_current_truth_batch tests\test_worktree_commit_plan.py::test_commit_plan_routes_public_support_docs_to_current_truth_batch -q`; `python -m pytest tests\test_launch_growth_package.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_public_docs_current_truth.py tests\test_text_file_hygiene.py -q`; `python -m ruff check scripts\worktree_commit_plan_support.py scripts\check_text_file_hygiene.py tests\test_worktree_commit_plan.py tests\test_launch_growth_package.py tests\test_text_file_hygiene.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py scripts\check_text_file_hygiene.py tests\test_worktree_commit_plan.py tests\test_launch_growth_package.py tests\test_text_file_hygiene.py`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: the new route test failed first on missing `config.yml`, then passed; commit-plan ownership failed first with only the test assigned, then passed; the public/community/commit-plan pack passed `86` tests; Ruff check and format passed; public text hygiene passed; strict worktree plan returned `status=ready` with `.github/ISSUE_TEMPLATE/**` assigned to `current_truth_release_surface`.
+- Gate delta: GitHub community profile routes now have local file evidence, test coverage, and staging ownership.
+- User impact: new contributors get directed away from unsafe public security reports and unapproved release requests, while real deterministic bug/feature issues stay structured.
+- Remaining blocker: applying repository settings, branch protection, releases, package publish, deployment, Marketing/X promotion, and Claude mirror promotion still require separate approval.
+- Next safe slice: inspect quickstart/demo command snippets against current CLI output and add a narrow docs-command validator where the public first-run flow is weakest.
+
+
+## 2026-05-13 README Demo Follow-Up Command Contract
+- Repo: JustTyping
+- Lane: 60-second demo / first-run UX
+- User-facing flow: README quick demo -> `qa-z demo auth-bug` -> guard -> repair-prompt
+- Slice type: Flow / Contract / Evidence
+- Before: running the README demo commands literally from the starting directory made `qa-z demo auth-bug` succeed, then made `qa-z guard --from-run latest` and `qa-z repair-prompt --from-run latest` fail because the latest run lived under `.qa-z/demo/auth-bug`.
+- Root cause: the README and terminal proof omitted the required move into the isolated demo root, and the demo command output named the demo root without showing the next commands.
+- Change made: added explicit `Next:` commands to `qa-z demo auth-bug`, inserted `cd .qa-z/demo/auth-bug` into the README and checked-in terminal proof, and added a regression that executes the follow-up guard and repair-prompt commands from the demo root.
+- Validation run: manual literal README flow before the fix showed `DEMO_EXIT=0`, `GUARD_EXIT=2`, and `REPAIR_EXIT=4`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_command_writes_repair_and_guard_artifacts -q`; `python -m pytest tests\test_launch_growth_package.py::test_readme_demo_visual_is_checked_in_and_public_safe -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_readme_followup_commands_run_from_demo_root -q`; `python -m pytest tests\test_demo_guard_action_package.py tests\test_launch_growth_package.py tests\test_examples.py -q`; `python -m ruff check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py tests\test_launch_growth_package.py tests\test_examples.py`; `python -m ruff format --check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py tests\test_launch_growth_package.py tests\test_examples.py`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the two public-flow regressions failed first, then passed; the new runtime follow-up test passed; the demo/launch/examples pack passed `30` tests; Ruff check and format passed; public text hygiene passed; `git diff --check` passed.
+- Gate delta: the first-run demo contract now proves that the commands after `qa-z demo auth-bug` run against the generated demo run instead of a missing root `.qa-z/runs` directory.
+- User impact: a GitHub visitor can copy the README demo sequence and continue to guard and repair evidence without needing to infer the demo working directory.
+- Remaining blocker: strict worktree plan currently reports `README.md` as a cross-cutting patch-add path until the README hunk is isolated in a commit-ready packet.
+- Next safe slice: prepare commit-ready staging packets or run the next product-code slice while preserving the README patch-add boundary.
+
+
+## 2026-05-13 Demo Parent Directory Follow-Up Hint
+- Repo: JustTyping
+- Lane: 60-second demo / CLI error UX
+- User-facing flow: `qa-z demo auth-bug` -> accidental parent-directory guard/repair-prompt retry
+- Slice type: Flow / Contract / Evidence
+- Before: after `qa-z demo auth-bug`, running `qa-z guard --from-run latest` or `qa-z repair-prompt --from-run latest` from the parent directory failed with only `No run directory found at ...\.qa-z\runs`.
+- Root cause: the shared latest-run resolver did not detect that the auth-bug demo had already produced valid run evidence under `.qa-z/demo/auth-bug`.
+- Change made: added a targeted auth-bug demo follow-up hint to the shared artifact resolver when `latest` cannot be resolved from the current root but demo evidence exists, and added a regression covering both guard and repair-prompt parent-directory mistakes.
+- Validation run: `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_parent_directory_followup_reports_demo_root_hint -q`; `python -m pytest tests\test_demo_guard_action_package.py tests\test_guard_cli.py tests\test_repair_prompt.py tests\test_review_packet_runtime.py tests\test_deep_run_resolution.py -q`; `python -m ruff check src\qa_z\artifacts.py src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff format --check src\qa_z\artifacts.py src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `git diff --check`; `python scripts\worktree_commit_plan.py --summary-only --json`.
+- Evidence: the new parent-directory regression failed first on missing `cd .qa-z/demo/auth-bug`, then passed; the run-source/guard/repair/review/deep pack passed `51` tests; Ruff check and format passed; `git diff --check` passed; non-strict worktree plan returned `status=ready` with only `README.md` listed as a patch-add cross-cutting path.
+- Gate delta: accidental parent-directory follow-up now points directly to the demo root and the two expected next commands instead of leaving users to infer where `latest` lives.
+- User impact: the README/demo experience is more forgiving while preserving the isolated demo directory model.
+- Remaining blocker: strict worktree plan still requires patch-add or commit handling for the README hunk.
+- Next safe slice: update or validate public quickstart command snippets that still mention optional deep checks without clear Semgrep gating.
+
+
+## 2026-05-13 README Quickstart Demo-First Flow
+- Repo: JustTyping
+- Lane: first-run quickstart / GitHub first impression
+- User-facing flow: README Quickstart -> deterministic demo -> own-repository setup
+- Slice type: Flow / Contract / Evidence
+- Before: the short README Quickstart told users to run `qa-z init`, then `qa-z guard`, then `qa-z repair-prompt`; a literal empty-directory trial produced a guard error from missing default tools and paths before reaching a clean demo story.
+- Root cause: the public Quickstart mixed an own-repository setup flow with a zero-context first-run demo flow.
+- Change made: made the short Quickstart demo-first, moved own-repository setup into a separate block with `qa-z init --profile python --with-agent-templates` and `qa-z doctor`, and added a regression pinning that the short Quickstart includes the runnable demo sequence.
+- Validation run: manual literal old Quickstart trial returned `INIT=0`, `GUARD=1`, `REPAIR=0` with missing tool/path repair evidence; `python -m pytest tests\test_launch_growth_package.py::test_readme_short_quickstart_uses_runnable_demo_flow -q`; `python -m pytest tests\test_launch_growth_package.py tests\test_demo_guard_action_package.py tests\test_public_docs_current_truth.py tests\test_text_file_hygiene.py -q`; `python -m ruff check src\qa_z\artifacts.py src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py tests\test_launch_growth_package.py tests\test_public_docs_current_truth.py tests\test_text_file_hygiene.py`; `python -m ruff format --check src\qa_z\artifacts.py src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py tests\test_launch_growth_package.py tests\test_public_docs_current_truth.py tests\test_text_file_hygiene.py`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`.
+- Evidence: the new README Quickstart regression failed first on the old `qa-z init` -> `qa-z guard` block, then passed; the public/demo/current-truth/text pack passed `52` tests; Ruff check and format passed; public text hygiene passed.
+- Gate delta: the first public Quickstart no longer sends a blank local directory through project-specific checks before showing QA-Z's deterministic value.
+- User impact: GitHub visitors get a copy-paste demo before they have to adapt QA-Z to their own repository.
+- Remaining blocker: strict worktree plan still treats README as cross-cutting and needs patch-add/commit handling.
+- Next safe slice: refresh commit-ready packet evidence or continue into another narrow CLI/docs truth check without touching deferred Marketing/X or Claude mirror paths.
+
+
+## 2026-05-13 Community Health Link Surface
+- Repo: JustTyping
+- Lane: contributor onboarding / community health
+- User-facing flow: README -> CONTRIBUTING/SUPPORT/SECURITY/CODE_OF_CONDUCT -> issue or PR
+- Slice type: Contract / Evidence
+- Before: the README Contributing section showed setup commands but did not link the repository community-health files, and CONTRIBUTING did not point contributors to support or private security disclosure routes.
+- Root cause: support/security routing had been added as standalone docs without a README/CONTRIBUTING current-truth assertion or commit-plan ownership for `CONTRIBUTING.md`.
+- Change made: linked `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md` from README, linked support/security routes from CONTRIBUTING, and routed `CONTRIBUTING.md` plus `CODE_OF_CONDUCT.md` into the current-truth release surface batch.
+- Validation run: `python -m pytest tests\test_public_docs_current_truth.py::test_readme_contributing_section_links_community_health_files -q`; `python -m pytest tests\test_worktree_commit_plan.py::test_commit_plan_routes_public_support_docs_to_current_truth_batch -q`; `python -m pytest tests\test_public_docs_current_truth.py tests\test_launch_growth_package.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_text_file_hygiene.py -q`; `python -m ruff check scripts\worktree_commit_plan_support.py scripts\check_text_file_hygiene.py tests\test_public_docs_current_truth.py tests\test_launch_growth_package.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_text_file_hygiene.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py scripts\check_text_file_hygiene.py tests\test_public_docs_current_truth.py tests\test_launch_growth_package.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_cli.py tests\test_text_file_hygiene.py`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`.
+- Evidence: the new community-health link assertion failed first, then passed; the support-doc commit-plan assertion failed first for `CONTRIBUTING.md`/`CODE_OF_CONDUCT.md`, then passed; the public docs/launch/commit-plan/text pack passed `88` tests; Ruff check and format passed; public text hygiene passed.
+- Gate delta: root community-health docs now have README discoverability, CONTRIBUTING routing, current-truth tests, and commit-plan staging ownership.
+- User impact: contributors and security reporters can find the right route without guessing from issue templates alone.
+- Remaining blocker: branch protection, release execution, package publish, deployment, Marketing/X, and Claude mirror promotion still require separate approval.
+- Next safe slice: run a wider validation wave or convert the accumulated public/demo/community changes into explicit commit-ready packets.
+
+
+## 2026-05-13 Public Surface Gate Recovery Wave
+- Repo: JustTyping
+- Lane: validation / gate integrity
+- User-facing flow: public README/community/demo changes -> full quick alpha gate
+- Slice type: Evidence / Cleanup
+- Before: `python scripts\alpha_release_gate.py --quick --allow-dirty --json` failed because README exceeded the public landing-page line budget and `tests/test_worktree_commit_plan.py` exceeded its split budget.
+- Root cause: the public quickstart/community additions were correct behaviorally but added too many README lines, and new commit-plan public docs tests belonged in a focused split file.
+- Change made: compressed README advanced-command and non-goal wording while preserving current-truth anchors, split public docs commit-plan tests into `tests/test_worktree_commit_plan_public_docs.py`, and updated the commit-plan validation command to include the new file.
+- Validation run: `python -m pytest tests\test_current_truth.py::test_readme_is_public_landing_page_linking_to_internal_anchors tests\test_worktree_commit_plan_architecture.py::test_worktree_commit_plan_main_test_file_stays_under_split_budget tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_public_docs.py tests\test_worktree_commit_plan_validation_commands.py -q`; `python -m ruff check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_public_docs.py tests\test_worktree_commit_plan_validation_commands.py tests\test_current_truth.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_public_docs.py tests\test_worktree_commit_plan_validation_commands.py tests\test_current_truth.py`; `git diff --check`; `python scripts\alpha_release_gate.py --quick --allow-dirty --json`.
+- Evidence: README is now `227` lines, `tests/test_worktree_commit_plan.py` is now `719` lines, focused gate-recovery tests passed `34`, Ruff check and format passed, `git diff --check` passed, and alpha release gate quick passed `28/28` with full pytest `1719 passed`.
+- Gate delta: the accumulated public/demo/community work now clears the quick alpha quality gate again.
+- User impact: public onboarding improvements did not come at the cost of repository maintainability limits or release-gate confidence.
+- Remaining blocker: strict worktree plan still requires patch-add/commit handling for README, and remote mutation remains unapproved.
+- Next safe slice: continue improving star-ready surfaces or prepare exact staged commit packets without touching deferred out-of-alpha paths.
+
+
+## 2026-05-13 Social Preview Copy Console-Safe Contract
+- Repo: JustTyping
+- Lane: GitHub discoverability / social preview
+- User-facing flow: GitHub repository share card -> launch package -> social preview setup
+- Slice type: Contract / Evidence
+- Before: `docs/launch/social-preview.md` used an emoji-only brand line that rendered as mojibake-looking text in the Windows console, and `docs/launch-package.md` described a different social preview tagline than the checked-in SVG asset.
+- Root cause: the social preview setup doc, launch package copy block, and SVG asset copy were not pinned by one shared public-surface regression.
+- Change made: made the social preview copy ASCII-safe, aligned the launch package text with the checked-in SVG tagline, and added a regression that checks the social preview docs, launch package, and SVG copy together.
+- Validation run: `python -m pytest tests\test_launch_growth_package.py::test_social_preview_copy_matches_asset_and_stays_ascii_safe tests\test_launch_growth_package.py::test_launch_asset_docs_avoid_fabricated_public_claims tests\test_public_docs_current_truth.py::test_public_docs_point_to_latest_github_prerelease_without_package_publish -q`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check docs tests\test_launch_growth_package.py`; `python -m ruff format --check tests\test_launch_growth_package.py`.
+- Evidence: focused social-preview/public-release docs tests passed `3`; public text hygiene passed; Ruff check and format passed.
+- Gate delta: social preview copy is now tied to asset truth and avoids console-hostile characters in the public setup doc.
+- User impact: maintainers applying the GitHub social preview see the same tagline that appears in the generated preview asset, without broken-looking terminal output.
+- Remaining blocker: the GitHub UI social preview upload still requires repository settings mutation and remains approval-gated.
+- Next safe slice: review OpenSSF Scorecard and GitHub launch trust docs for opt-in permissions, local validation limits, and current remote-proof wording.
+
+
+## 2026-05-13 OpenSSF Scorecard Trust Boundary
+- Repo: JustTyping
+- Lane: GitHub trust evidence / scorecard
+- User-facing flow: GitHub visitor -> trust evidence -> Scorecard workflow and code-scanning result
+- Slice type: Contract / Evidence
+- Before: `docs/scorecard.md` named the Scorecard workflow but did not describe its exact triggers, permissions, publish boundary, or local-validation limitation.
+- Root cause: the Scorecard workflow was covered by workflow structure tests, but the public-facing trust doc was not tied to the concrete YAML contract.
+- Change made: documented the weekly/manual/branch-protection triggers, `contents: read`, `security-events: write`, `publish_results: false`, SARIF upload path, non-mutation boundary, and local validation limits; added a regression that reads the workflow YAML and asserts the docs describe the same trust boundary.
+- Validation run: `python -m pytest tests\test_launch_growth_package.py::test_scorecard_docs_describe_permissions_triggers_and_local_limits tests\test_launch_growth_package.py::test_optional_pr_comment_and_scorecard_surfaces_are_opt_in -q`; `python -m pytest tests\test_github_workflow.py -q`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests\test_launch_growth_package.py`; `python -m ruff format --check tests\test_launch_growth_package.py`.
+- Evidence: targeted Scorecard docs tests passed `2`; GitHub workflow suite passed `23`; public text hygiene passed; Ruff check and format passed.
+- Gate delta: Scorecard is now presented as reproducible trust evidence without implying local validation can fabricate a current OpenSSF score.
+- User impact: a skeptical GitHub visitor can see what the repository-owned Scorecard workflow does, what it cannot do, and why the result belongs in GitHub code scanning.
+- Remaining blocker: current live Scorecard result still depends on a GitHub Actions run; local validation only proves workflow and docs shape.
+- Next safe slice: inspect package publish and install docs for any stale v0.9.8/v0.9.9 or package-registry wording drift after public launch updates.
+
+
+## 2026-05-13 Detailed Quickstart Packaged Demo Lead-In
+- Repo: JustTyping
+- Lane: quickstart / install trial
+- User-facing flow: docs quickstart -> install -> 60-second packaged demo -> deeper example repository demo
+- Slice type: Flow / Contract / Evidence
+- Before: the root README offered the `qa-z demo auth-bug` first-run path, but `docs/quickstart.md` still led with the older `examples/agent-auth-bug` source-checkout flow.
+- Root cause: the detailed quickstart had not been realigned after the installed packaged demo became the best first trial path.
+- Change made: added a `Run The 60-Second Packaged Demo` section with `qa-z demo auth-bug`, `cd .qa-z/demo/auth-bug`, `qa-z guard`, and `qa-z repair-prompt` before the deeper example-repository flow; added a regression proving the packaged demo appears before `cd examples/agent-auth-bug`.
+- Validation run: `python -m pytest tests\test_launch_growth_package.py::test_docs_quickstart_leads_with_packaged_demo_before_example_repo_flow tests\test_launch_growth_package.py::test_readme_short_quickstart_uses_runnable_demo_flow tests\test_public_docs_current_truth.py::test_quickstart_states_repair_verification_success_signal -q`; `python -m ruff format tests\test_launch_growth_package.py`; `python -m ruff check tests\test_launch_growth_package.py`; `python -m ruff format --check tests\test_launch_growth_package.py`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`.
+- Evidence: quickstart-focused tests passed `3`; Ruff reformatted the new test once, then check and format passed; public text hygiene passed.
+- Gate delta: both README and detailed quickstart now lead with a copy-paste packaged demo before asking users to adapt QA-Z to a source checkout.
+- User impact: GitHub visitors have the same low-friction first trial from the docs index as they do from the README.
+- Remaining blocker: PyPI/TestPyPI publishing remains unapproved; Git tag install is still the public alpha install path.
+- Next safe slice: run a wider public launch regression pack after the latest README/quickstart/scorecard/social-preview changes.

@@ -58,7 +58,7 @@ Text:
 
 ```text
 QA-Z
-The safety belt for AI-generated code.
+Make AI coding safe to merge.
 Contracts. Checks. Repair prompts. Verification.
 github.com/qazedhq/qa-z
 ```

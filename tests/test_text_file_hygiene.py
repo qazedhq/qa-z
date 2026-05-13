@@ -88,6 +88,23 @@ def test_suspiciously_collapsed_readme_fails(tmp_path: Path) -> None:
     assert "suspiciously collapsed" in issues[0].reason
 
 
+def test_likely_mojibake_in_public_text_fails(tmp_path: Path) -> None:
+    module = load_hygiene_module()
+    readme = tmp_path / "README.md"
+    marker = "?" + "\uc373"
+    readme.write_text(
+        f"# QA-Z {marker}\u622a?\n\nMake AI coding safe to merge.\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    issues = module.check_paths(tmp_path, [readme])
+
+    assert [(issue.path, issue.reason) for issue in issues] == [
+        ("README.md", f"contains likely mojibake marker {marker!r}")
+    ]
+
+
 def test_suspiciously_collapsed_yaml_fails(tmp_path: Path) -> None:
     module = load_hygiene_module()
     workflow = tmp_path / ".github" / "workflows" / "ci.yml"

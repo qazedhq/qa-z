@@ -373,7 +373,7 @@ def test_commit_plan_can_fail_when_report_paths_need_patch_add() -> None:
 
     result = module.analyze_status_lines(
         [
-            " M docs/reports/worktree-commit-plan.md",
+            " M docs/reports/current-state-analysis.md",
             " M src/qa_z/benchmark.py",
         ],
         fail_on_cross_cutting=True,
@@ -385,7 +385,7 @@ def test_commit_plan_can_fail_when_report_paths_need_patch_add() -> None:
         "fail_on_cross_cutting": True,
     }
     assert result["summary"]["attention_reason_count"] == 1
-    assert result["report_paths"] == ["docs/reports/worktree-commit-plan.md"]
+    assert result["report_paths"] == ["docs/reports/current-state-analysis.md"]
     assert result["cross_cutting_paths"] == []
     assert result["cross_cutting_groups"][0]["id"] == "status_reports"
     assert "cross_cutting_paths_present" in result["attention_reasons"]

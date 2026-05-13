@@ -102,6 +102,10 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     print("Demo config: qa-z.demo.yaml")
     print("Guard verdict: .qa-z/runs/latest/guard/verdict.json")
     print("Repair prompt: .qa-z/runs/latest/repair/codex.md")
+    print("Next:")
+    print(f"  cd {demo_root}")
+    print("  qa-z guard --from-run latest --adapter codex")
+    print("  qa-z repair-prompt --from-run latest --adapter codex")
     return 0
 
 

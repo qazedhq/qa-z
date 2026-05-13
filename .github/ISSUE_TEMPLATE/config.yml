@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support questions
+    url: https://github.com/qazedhq/qa-z/blob/main/SUPPORT.md
+    about: Ask usage questions with deterministic command evidence and no secrets.
+  - name: Private security reports
+    url: https://github.com/qazedhq/qa-z/security/advisories/new
+    about: Report vulnerabilities privately before opening any public issue.
+  - name: Release, package, tag, or deploy approvals
+    url: https://github.com/qazedhq/qa-z/blob/main/docs/package-publish-plan.md
+    about: Use the approval-gated release and package handoff instead of an issue.

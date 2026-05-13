@@ -79,6 +79,8 @@ COMPOUND_TEXT_SUFFIXES = (
     ".yml.example",
 )
 
+MOJIBAKE_MARKERS = ("?" + "\uc373",)
+
 
 @dataclass(frozen=True)
 class HygieneIssue:
@@ -313,6 +315,9 @@ def check_blob(relative: str, data: bytes) -> list[HygieneIssue]:
         return [HygieneIssue(relative, "contains CRLF line endings")]
     if b"\r" in data:
         return [HygieneIssue(relative, "contains CR-only line endings")]
+    mojibake_reason = likely_mojibake_reason(relative, data)
+    if mojibake_reason:
+        return [HygieneIssue(relative, mojibake_reason)]
     collapsed_reason = collapsed_public_file_reason(relative, data)
     if collapsed_reason:
         return [HygieneIssue(relative, collapsed_reason)]
@@ -355,6 +360,17 @@ def is_text_path(path: str | Path) -> bool:
     if normalized.endswith(COMPOUND_TEXT_SUFFIXES):
         return True
     return pure_path.suffix.lower() in TEXT_SUFFIXES
+
+
+def likely_mojibake_reason(relative: str, data: bytes) -> str | None:
+    """Return a reason when public text contains known encoding damage markers."""
+    if not is_text_path(relative):
+        return None
+    text = data.decode("utf-8", errors="replace")
+    for marker in MOJIBAKE_MARKERS:
+        if marker in text:
+            return f"contains likely mojibake marker {marker!r}"
+    return None
 
 
 def collapsed_public_file_reason(relative: str, data: bytes) -> str | None:
