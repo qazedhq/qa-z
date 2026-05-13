@@ -171,10 +171,19 @@ def handle_deep(args: argparse.Namespace) -> int:
             exit_code=2,
         )
 
-    summary_path = write_run_summary_artifacts(run.summary, run.resolution.deep_dir)
-    write_sarif_artifact(run.summary, run.resolution.deep_dir / "results.sarif")
-    if args.sarif_output:
-        write_sarif_artifact(run.summary, resolve_cli_path(root, args.sarif_output))
+    try:
+        summary_path = write_run_summary_artifacts(run.summary, run.resolution.deep_dir)
+        write_sarif_artifact(run.summary, run.resolution.deep_dir / "results.sarif")
+        if args.sarif_output:
+            write_sarif_artifact(run.summary, resolve_cli_path(root, args.sarif_output))
+    except OSError as exc:
+        return _execution_error(
+            args,
+            command="deep",
+            error="artifact_write_error",
+            message=f"qa-z deep: artifact write error: {exc}",
+            exit_code=2,
+        )
 
     if args.json:
         print(summary_json(run.summary), end="")

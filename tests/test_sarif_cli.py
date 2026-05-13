@@ -93,6 +93,52 @@ def test_deep_writes_sarif_artifact_and_optional_copy(
     }
 
 
+def test_deep_json_reports_sarif_output_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_deep_config(tmp_path)
+    original_write_text = Path.write_text
+    sarif_copy = tmp_path / "qa-z.sarif"
+
+    def fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout=json.dumps({"results": []}),
+            stderr="",
+        )
+
+    def fail_sarif_copy(path, *args, **kwargs):
+        if path == sarif_copy:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr("qa_z.runners.subprocess.subprocess.run", fake_run)
+    monkeypatch.setattr(Path, "write_text", fail_sarif_copy)
+
+    exit_code = main(
+        [
+            "deep",
+            "--path",
+            str(tmp_path),
+            "--output-dir",
+            str(tmp_path / ".qa-z" / "runs" / "local"),
+            "--sarif-output",
+            str(sarif_copy),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.deep_error"
+    assert output["error"] == "artifact_write_error"
+    assert "qa-z deep: artifact write error:" in output["message"]
+    assert "qa-z.sarif" in output["message"]
+
+
 def test_deep_writes_empty_sarif_when_no_deep_checks_are_configured(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
