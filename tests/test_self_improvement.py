@@ -715,6 +715,8 @@ def test_select_next_json_reports_artifact_write_failure(
     }
     assert "qa-z select-next: artifact write error:" in output["message"]
     assert "could not write selection artifacts" in output["message"]
+    assert "could not write self-improvement JSON artifact" in output["message"]
+    assert str(selected_path) in output["message"]
     assert "disk full" in output["message"]
 
 

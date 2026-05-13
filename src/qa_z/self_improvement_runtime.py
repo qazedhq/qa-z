@@ -30,10 +30,15 @@ def resolve_optional_artifact_path(root: Path, value: str) -> Path | None:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     """Write a deterministic JSON object artifact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        raise OSError(
+            f"could not write self-improvement JSON artifact {path}: {exc}"
+        ) from exc
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
