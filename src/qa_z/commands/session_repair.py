@@ -62,6 +62,14 @@ def handle_repair_session_start(args: argparse.Namespace) -> int:
             message=f"qa-z repair-session start: configuration error: {exc}",
             exit_code=2,
         )
+    except OSError as exc:
+        return _repair_session_error(
+            args,
+            command="start",
+            error="artifact_write_error",
+            message=f"qa-z repair-session start: artifact write error: {exc}",
+            exit_code=2,
+        )
 
 
 def handle_repair_session_status(args: argparse.Namespace) -> int:
@@ -174,6 +182,14 @@ def handle_repair_session_verify(args: argparse.Namespace) -> int:
             command="verify",
             error="configuration_error",
             message=f"qa-z repair-session verify: configuration error: {exc}",
+            exit_code=2,
+        )
+    except OSError as exc:
+        return _repair_session_error(
+            args,
+            command="verify",
+            error="artifact_write_error",
+            message=f"qa-z repair-session verify: artifact write error: {exc}",
             exit_code=2,
         )
 

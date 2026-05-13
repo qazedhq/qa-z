@@ -145,13 +145,19 @@ def complete_session_verification(
     )
     dry_run_summary = load_session_dry_run_summary(updated, root)
     summary = session_summary_dict(updated, comparison, dry_run_summary=dry_run_summary)
-    summary_path.write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    outcome_path.write_text(
-        render_outcome_markdown(updated, comparison, summary), encoding="utf-8"
-    )
-    write_session_manifest(updated, root)
+    try:
+        summary_path.write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        outcome_path.write_text(
+            render_outcome_markdown(updated, comparison, summary), encoding="utf-8"
+        )
+        write_session_manifest(updated, root)
+    except OSError as exc:
+        raise OSError(
+            f"could not write repair-session verification artifacts to {session_dir}: "
+            f"{exc}"
+        ) from exc
     return updated, summary
 
 
