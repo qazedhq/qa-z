@@ -650,6 +650,32 @@ def test_executor_bridge_cli_from_loop_and_missing_session(
     assert "qa-z executor-bridge: source not found:" in missing_output
 
 
+def test_executor_bridge_cli_json_missing_session_reports_machine_payload(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(
+        [
+            "executor-bridge",
+            "--path",
+            str(tmp_path),
+            "--from-session",
+            ".qa-z/sessions/missing",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 4
+    assert output == {
+        "kind": "qa_z.executor_bridge_error",
+        "error": "source_not_found",
+        "exit_code": 4,
+        "message": output["message"],
+    }
+    assert "qa-z executor-bridge: source not found:" in output["message"]
+
+
 def test_executor_bridge_cli_stdout_points_to_return_and_safety_entrypoints(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

@@ -265,3 +265,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: automation can treat repair-prompt missing-run and broken-artifact failures as structured error payloads instead of scraping text.
 - Remaining blocker: this still only generates local deterministic repair guidance; it does not execute or approve external repairs.
 - Next safe slice: run a validation wave across the changed release and core CLI packs before selecting another workstream.
+
+
+## 2026-05-13 Executor Bridge JSON Failure Contract
+- Repo: JustTyping
+- Lane: external executor bridge -> deterministic CLI output
+- User-facing flow: `qa-z executor-bridge --json`
+- Slice type: Flow / Contract
+- Before: successful executor-bridge JSON emitted a structured manifest, but missing-session and configuration failures still printed plain text even with `--json`.
+- Root cause: `handle_executor_bridge` rendered exception paths directly instead of sharing JSON-mode error handling.
+- Change made: added a `qa_z.executor_bridge_error` JSON payload for `--json` failure paths while preserving existing text output for non-JSON mode.
+- Validation run: `python -m pytest tests\test_executor_bridge.py::test_executor_bridge_cli_json_missing_session_reports_machine_payload tests\test_executor_bridge.py::test_executor_bridge_cli_from_loop_and_missing_session -q`; `python -m pytest tests\test_executor_bridge.py tests\test_executor_bridge_helper_architecture.py -q`; `python -m ruff check src\qa_z\commands\runtime_bridge.py tests\test_executor_bridge.py`; `python -m ruff format --check src\qa_z\commands\runtime_bridge.py tests\test_executor_bridge.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` because output started with `qa-z executor-bridge: source not found`; after the fix the focused pair passed, the executor bridge pack passed `19` tests, and Ruff check/format passed.
+- Gate delta: executor-bridge failures are now parseable in JSON mode without changing manifest success behavior or invoking a live executor.
+- User impact: external executor orchestration wrappers can distinguish `source_not_found`, `artifact_error`, and `configuration_error` without brittle stdout parsing.
+- Remaining blocker: executor bridge still only packages local handoff material; it does not run external agents or mutate target repositories.
+- Next safe slice: broaden final validation across all changed CLI failure-contract packs, then pick a non-CLI release gate or benchmark fixture if continuing.
