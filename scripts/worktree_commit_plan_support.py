@@ -281,7 +281,7 @@ BATCH_RULES = (
         ),
         validation_commands=(
             "python -m pytest tests/test_coverage_gap_discovery.py tests/test_execution_discovery_architecture.py tests/test_execution_executor_candidates_architecture.py tests/test_execution_followup_candidates_architecture.py tests/test_fast_gate_environment.py tests/test_git_runtime_signal_inputs.py tests/test_live_repository_architecture.py tests/test_loop_health_architecture.py tests/test_loop_health_signal_inputs.py tests/test_report_freshness.py tests/test_report_freshness_architecture.py tests/test_report_signal_architecture.py tests/test_report_signal_inputs.py tests/test_selection_context_architecture.py tests/test_surface_discovery_architecture.py tests/test_task_selection_architecture.py tests/test_task_selection_evidence_architecture.py -q",
-            "python -m pytest tests/test_operator_commands.py -q",
+            "python -m pytest tests/test_guard_cli.py tests/test_operator_commands.py -q",
             "python -m qa_z self-inspect --json",
         ),
     ),

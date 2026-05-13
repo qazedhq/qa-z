@@ -14,6 +14,7 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
             "?? scripts/worktree_commit_plan.py",
             " M src/qa_z/benchmark.py",
             " M src/qa_z/autonomy_actions.py",
+            " M src/qa_z/guard/verdict.py",
             " M src/qa_z/task_selection_render.py",
         ]
     )
@@ -53,6 +54,10 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
     assert (
         "tests/test_self_improvement_selection_output.py"
         in batches["self_inspection_backlog"]["validation_commands"][0]
+    )
+    assert (
+        "tests/test_guard_cli.py"
+        in batches["planning_runtime_foundation"]["validation_commands"][1]
     )
     assert batches["benchmark_coverage"]["staging_plan"] == {
         "include_paths": ["src/qa_z/benchmark.py"],
