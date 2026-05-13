@@ -1257,3 +1257,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair the exact failed run evidence artifact instead of rerunning blindly after a broad summary-write error.
 - Remaining blocker: run summaries remain local evidence and do not prove remote release, package publish, deployment, or production readiness.
 - Next safe slice: commit run-summary path context, then run another narrow validation wave before selecting the next output surface.
+
+
+## 2026-05-13 Executor Safety Artifact Path Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff -> safety package
+- User-facing flow: `qa-z repair-session start` and `qa-z executor-bridge`
+- Slice type: Contract / Evidence
+- Before: executor safety package write failures named the safety output directory but not whether `executor_safety.json` or `executor_safety.md` failed.
+- Root cause: `write_executor_safety_artifacts()` wrote JSON and Markdown safety files inline inside one broad output-directory boundary.
+- Change made: added a path-aware executor safety artifact writer and regressions for both JSON and Markdown write failures.
+- Validation run: `python -m pytest tests\test_artifact_schema.py::test_executor_safety_package_schema_v1_required_fields_are_stable tests\test_artifact_schema.py::test_write_executor_safety_artifacts_wraps_write_failures tests\test_artifact_schema.py::test_write_executor_safety_artifacts_wraps_markdown_write_failures tests\test_repair_session.py::test_repair_session_start_creates_manifest_handoff_and_executor_guide tests\test_executor_bridge.py::test_executor_bridge_from_loop_packages_manifest_guides_and_inputs -q`; `python -m pytest tests\test_artifact_schema.py -q`; `python -m ruff check src\qa_z\executor_safety.py tests\test_artifact_schema.py`; `python -m ruff format --check src\qa_z\executor_safety.py tests\test_artifact_schema.py`.
+- Evidence: focused safety/repair/bridge pack passed `5` tests; full artifact schema module passed `21` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor safety failures now distinguish machine policy persistence from Markdown policy persistence before bridge or repair-session handoff packages trust the safety rail.
+- User impact: maintainers can repair the exact failed safety artifact before giving work to an external executor.
+- Remaining blocker: executor safety artifacts remain local pre-live policy and do not authorize live executor calls, remote mutation, or production release.
+- Next safe slice: commit executor safety path context, then run a status/strict-plan check before selecting another safe surface.
