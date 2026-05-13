@@ -843,6 +843,42 @@ def test_plan_creates_a_contract_draft_from_sources(
     )
 
 
+def test_plan_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text(
+        dedent(
+            """
+            project:
+              name: qa-z
+            contracts:
+              output_dir: qa/contracts
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    contract_path = tmp_path / "qa" / "contracts" / "protect-billing.md"
+    original_write_text = Path.write_text
+
+    def fail_contract_write(path: Path, *args, **kwargs) -> int:
+        if path == contract_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_contract_write)
+
+    exit_code = main(["plan", "--path", str(tmp_path), "--title", "Protect billing"])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z plan: artifact write error:" in output
+    assert "could not write contract draft" in output
+    assert "disk full" in output
+
+
 def test_plan_uses_custom_contract_output_directory(
     tmp_path,
     capsys: pytest.CaptureFixture[str],

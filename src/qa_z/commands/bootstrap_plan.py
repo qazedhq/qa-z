@@ -17,16 +17,20 @@ def handle_plan(args: argparse.Namespace) -> int:
     if config is None:
         return 2
 
-    contract_path, created = plan_contract(
-        root=root,
-        config=config,
-        title=args.title,
-        slug=args.slug,
-        issue_path=resolve_cli_path(root, args.issue) if args.issue else None,
-        spec_path=resolve_cli_path(root, args.spec) if args.spec else None,
-        diff_path=resolve_cli_path(root, args.diff) if args.diff else None,
-        overwrite=args.overwrite,
-    )
+    try:
+        contract_path, created = plan_contract(
+            root=root,
+            config=config,
+            title=args.title,
+            slug=args.slug,
+            issue_path=resolve_cli_path(root, args.issue) if args.issue else None,
+            spec_path=resolve_cli_path(root, args.spec) if args.spec else None,
+            diff_path=resolve_cli_path(root, args.diff) if args.diff else None,
+            overwrite=args.overwrite,
+        )
+    except OSError as exc:
+        print(f"qa-z plan: artifact write error: could not write contract draft: {exc}")
+        return 2
 
     relative_contract_path = format_relative_path(contract_path, root)
     status = "created contract" if created else "kept existing contract"
