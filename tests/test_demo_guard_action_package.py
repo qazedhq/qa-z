@@ -92,6 +92,31 @@ def test_demo_auth_bug_reports_copied_resource_write_failure(
     assert "disk full" in output
 
 
+def test_demo_auth_bug_reports_resource_directory_create_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    demo_root = tmp_path / ".qa-z" / "demo" / "auth-bug"
+    original_mkdir = Path.mkdir
+
+    def fail_demo_dir(path: Path, *args, **kwargs) -> None:
+        if path == demo_root:
+            raise OSError("disk full")
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_demo_dir)
+
+    exit_code = main(["demo", "auth-bug", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z demo auth-bug: artifact write error:" in output
+    assert "could not prepare demo artifacts" in output
+    assert str(demo_root) in output
+    assert "disk full" in output
+
+
 def test_agent_skill_pack_and_templates_exist() -> None:
     required_paths = [
         "skills/qa-z-merge-safety/SKILL.md",

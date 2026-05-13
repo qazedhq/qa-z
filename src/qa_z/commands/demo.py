@@ -114,7 +114,12 @@ def copy_resource_tree(source: Traversable, destination: Path) -> None:
     """Copy a packaged resource directory to the filesystem."""
     if not source.is_dir():
         raise FileNotFoundError(f"missing packaged demo resource: {source}")
-    destination.mkdir(parents=True, exist_ok=True)
+    try:
+        destination.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise OSError(
+            f"could not create demo resource directory {destination}: {exc}"
+        ) from exc
     for child in source.iterdir():
         if child.name in IGNORED_DEMO_NAMES:
             continue
