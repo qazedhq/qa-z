@@ -521,3 +521,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: future worktree plan behavior tests have room to grow in focused files instead of bloating the main regression pack.
 - Remaining blocker: alpha gate must be rerun after this split before claiming the release-quality wave is green again.
 - Next safe slice: rerun alpha gate, then continue backlog mining.
+
+
+## 2026-05-13 Deep SARIF Output Failure Contract
+- Repo: JustTyping
+- Lane: deep analysis -> SARIF artifact writing
+- User-facing flow: `qa-z deep --sarif-output <path> --json`
+- Slice type: Flow / Contract
+- Before: a SARIF copy write failure could escape as raw `OSError` after the deep run completed, even in JSON mode.
+- Root cause: `handle_deep()` wrote SARIF artifacts outside its normalized command-error boundary, and `write_sarif_artifact()` did not attach the target path to OSError details.
+- Change made: wrapped deep summary/SARIF artifact writes in the existing `qa_z.deep_error` path with `artifact_write_error`, made SARIF writer errors include the output path, and routed SARIF output-contract changes to the deep runner commit-plan batch.
+- Validation run: `python -m pytest tests\test_sarif_cli.py::test_deep_json_reports_sarif_output_write_failure -q`; `python -m pytest tests\test_sarif_cli.py tests\test_deep_run_resolution.py tests\test_cli.py -q -k "sarif or deep"`; `python -m pytest tests\test_worktree_commit_plan.py::test_commit_plan_routes_sarif_output_contract_to_deep_batch tests\test_sarif_cli.py tests\test_deep_run_resolution.py -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m ruff check src\qa_z\commands\execution_runs.py src\qa_z\reporters\sarif.py scripts\worktree_commit_plan_support.py tests\test_sarif_cli.py tests\test_worktree_commit_plan.py`; `python -m ruff format --check src\qa_z\commands\execution_runs.py src\qa_z\reporters\sarif.py scripts\worktree_commit_plan_support.py tests\test_sarif_cli.py tests\test_worktree_commit_plan.py`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused SARIF error test passed, the SARIF/deep filtered pack passed `13` tests, the routing/SARIF/deep pack passed `11` tests, strict worktree plan stayed `ready`, and Ruff check/format passed.
+- Gate delta: deep JSON mode now remains machine-parseable when SARIF evidence cannot be written.
+- User impact: CI wrappers and local operators can distinguish deep analysis results from artifact persistence failures without raw tracebacks.
+- Remaining blocker: release execution remains approval-blocked; a full alpha gate rerun is still needed after this slice before claiming the wave remains green.
+- Next safe slice: commit SARIF/deep changes, rerun alpha gate or a focused deep validation wave, then continue mining.
