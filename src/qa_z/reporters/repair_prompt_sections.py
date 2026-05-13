@@ -9,7 +9,7 @@ from qa_z.reporters.deep_context import DeepContext, format_finding_location
 from qa_z.reporters.deep_context import format_severity_summary as format_deep_severity
 
 if TYPE_CHECKING:
-    from qa_z.reporters.repair_prompt import FailureContext
+    from qa_z.reporters.repair_prompt import FailureContext, RepairPacket
 
 
 def render_optional_list(
@@ -96,6 +96,74 @@ def render_security_findings(deep: dict[str, Any] | None) -> list[str]:
         ]
     )
     return lines
+
+
+def repair_prompt_affected_files(packet: "RepairPacket") -> list[str]:
+    """Return executor-relevant files from failed checks and blocking deep findings."""
+    paths = [path for failure in packet.failures for path in failure.candidate_files]
+    paths.extend(blocking_deep_finding_paths(packet.deep))
+    return unique_preserve_order(paths)
+
+
+def blocking_deep_finding_paths(deep: dict[str, Any] | None) -> list[str]:
+    """Return paths for blocking deep findings only."""
+    if not isinstance(deep, dict):
+        return []
+
+    grouped = blocking_grouped_findings(deep)
+    if grouped:
+        return [
+            path
+            for finding in grouped
+            if (path := str(finding.get("path") or "").strip())
+        ]
+
+    findings = deep.get("top_findings")
+    if not isinstance(findings, list):
+        return []
+    blocking = blocking_severities(deep)
+    paths = [
+        path
+        for finding in findings
+        if isinstance(finding, dict)
+        and str(finding.get("severity", "")).upper() in blocking
+        if (path := str(finding.get("path") or "").strip())
+    ]
+    if paths:
+        return paths
+
+    if int(deep.get("blocking_findings_count") or 0) <= 0:
+        return []
+    return [
+        path
+        for finding in findings
+        if isinstance(finding, dict)
+        if (path := str(finding.get("path") or "").strip())
+    ]
+
+
+def repair_prompt_validation_commands(packet: "RepairPacket") -> list[str]:
+    """Return exact validation commands for a completed repair."""
+    commands = [
+        format_command(failure.command)
+        for failure in packet.failures
+        if failure.command
+    ]
+    commands.append("python -m qa_z fast")
+    if repair_prompt_requires_deep_validation(packet.deep):
+        commands.append("python -m qa_z deep --from-run latest")
+    return unique_preserve_order(commands)
+
+
+def repair_prompt_requires_deep_validation(deep: dict[str, Any] | None) -> bool:
+    """Return whether this prompt needs a deep validation command."""
+    return bool(
+        isinstance(deep, dict)
+        and (
+            int(deep.get("blocking_findings_count") or 0) > 0
+            or bool(blocking_grouped_findings(deep))
+        )
+    )
 
 
 def evidence_tail(failure: "FailureContext") -> str:
