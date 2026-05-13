@@ -124,6 +124,53 @@ def test_self_inspection_skips_stale_dated_integration_report(
     assert "integration_gap" not in categories
 
 
+def test_self_inspection_skips_stale_dated_docs_drift_report(
+    tmp_path: Path,
+) -> None:
+    write_report(
+        tmp_path,
+        "next-improvement-roadmap.md",
+        """
+        # QA-Z Next Improvement Roadmap
+
+        Date: 2026-04-10
+
+        Run one explicit current-truth sync audit across README, schema docs,
+        config example, and CLI behavior.
+        """,
+    )
+
+    paths = run_self_inspection(root=tmp_path, now=NOW, loop_id="stale-docs-drift")
+    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
+    categories = {item["category"] for item in report["candidates"]}
+
+    assert "docs_drift" not in categories
+
+
+def test_self_inspection_skips_stale_dated_coverage_gap_report(
+    tmp_path: Path,
+) -> None:
+    write_report(
+        tmp_path,
+        "next-improvement-roadmap.md",
+        """
+        # QA-Z Next Improvement Roadmap
+
+        Date: 2026-04-10
+
+        Mixed-surface executed benchmark expansion is still needed because
+        mixed-language verification coverage exists, but executed mixed-surface
+        behavior across fast, deep, and repair handoff is still thin.
+        """,
+    )
+
+    paths = run_self_inspection(root=tmp_path, now=NOW, loop_id="stale-coverage-gap")
+    report = json.loads(paths.self_inspection_path.read_text(encoding="utf-8"))
+    categories = {item["category"] for item in report["candidates"]}
+
+    assert "coverage_gap" not in categories
+
+
 def test_self_inspection_skips_branch_mismatched_integration_report(
     tmp_path: Path, monkeypatch
 ) -> None:

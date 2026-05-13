@@ -18,9 +18,20 @@ __all__ = [
 ]
 
 
-def discover_coverage_gap_candidates(root: Path) -> list[Any]:
+def discover_coverage_gap_candidates(
+    root: Path,
+    *,
+    generated_at: str | None = None,
+    current_branch: str | None = None,
+    current_head: str | None = None,
+) -> list[Any]:
     """Create candidates from benchmark realism and coverage gaps."""
-    evidence = mixed_surface_coverage_evidence(root)
+    evidence = mixed_surface_coverage_evidence(
+        root,
+        generated_at=generated_at,
+        current_branch=current_branch,
+        current_head=current_head,
+    )
     if not evidence:
         return []
     return [
@@ -43,7 +54,13 @@ def discover_coverage_gap_candidates(root: Path) -> list[Any]:
     ]
 
 
-def mixed_surface_coverage_evidence(root: Path) -> list[dict[str, Any]]:
+def mixed_surface_coverage_evidence(
+    root: Path,
+    *,
+    generated_at: str | None = None,
+    current_branch: str | None = None,
+    current_head: str | None = None,
+) -> list[dict[str, Any]]:
     """Collect evidence that mixed-surface executed benchmark coverage is thin."""
     fixtures_root = root / "benchmarks" / "fixtures"
     evidence: list[dict[str, Any]] = []
@@ -95,6 +112,9 @@ def mixed_surface_coverage_evidence(root: Path) -> list[dict[str, Any]]:
                     "current mixed coverage leans on seeded verification artifacts",
                 ),
                 summary="report calls out remaining executed mixed-surface benchmark realism work",
+                generated_at=generated_at,
+                current_branch=current_branch,
+                current_head=current_head,
             ),
         )
     )
