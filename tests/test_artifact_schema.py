@@ -637,7 +637,32 @@ def test_write_executor_safety_artifacts_wraps_write_failures(
 
     message = str(excinfo.value)
     assert "could not write executor safety artifacts" in message
+    assert "could not write executor safety json artifact" in message
+    assert str(output_dir / "executor_safety.json") in message
     assert str(output_dir) in message
+    assert "disk full" in message
+
+
+def test_write_executor_safety_artifacts_wraps_markdown_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    original_write_text = Path.write_text
+
+    def fail_safety_markdown(path: Path, *args: Any, **kwargs: Any) -> int:
+        if path == output_dir / "executor_safety.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_safety_markdown)
+
+    with pytest.raises(OSError) as excinfo:
+        write_executor_safety_artifacts(root=tmp_path, output_dir=output_dir)
+
+    message = str(excinfo.value)
+    assert "could not write executor safety artifacts" in message
+    assert "could not write executor safety markdown artifact" in message
+    assert str(output_dir / "executor_safety.md") in message
     assert "disk full" in message
 
 

@@ -165,11 +165,15 @@ def write_executor_safety_artifacts(*, root: Path, output_dir: Path) -> dict[str
     markdown_path = output_dir / "executor_safety.md"
     try:
         json_path.parent.mkdir(parents=True, exist_ok=True)
-        json_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        write_executor_safety_artifact(
+            json_path,
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            "json",
         )
-        markdown_path.write_text(
-            render_executor_safety_markdown(payload), encoding="utf-8"
+        write_executor_safety_artifact(
+            markdown_path,
+            render_executor_safety_markdown(payload),
+            "markdown",
         )
     except OSError as exc:
         raise OSError(
@@ -179,3 +183,13 @@ def write_executor_safety_artifacts(*, root: Path, output_dir: Path) -> dict[str
         "policy_json": format_path(json_path, root),
         "policy_markdown": format_path(markdown_path, root),
     }
+
+
+def write_executor_safety_artifact(path: Path, text: str, label: str) -> None:
+    """Write one executor safety artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor safety {label} artifact {path}: {exc}"
+        ) from exc
