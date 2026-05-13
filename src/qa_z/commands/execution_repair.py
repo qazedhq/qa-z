@@ -30,6 +30,13 @@ from qa_z.repair_handoff import (
 )
 
 
+def write_handoff_markdown(path: Path, text: str) -> None:
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write {path}: {exc}") from exc
+
+
 def handle_repair_prompt(args: argparse.Namespace) -> int:
     """Render deterministic repair artifacts from a failed run."""
     root = Path(args.path).expanduser().resolve()
@@ -75,8 +82,8 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
         )
         write_repair_artifacts(packet, output_dir)
         write_repair_handoff_artifact(handoff, output_dir)
-        (output_dir / "codex.md").write_text(codex_markdown, encoding="utf-8")
-        (output_dir / "claude.md").write_text(claude_markdown, encoding="utf-8")
+        write_handoff_markdown(output_dir / "codex.md", codex_markdown)
+        write_handoff_markdown(output_dir / "claude.md", claude_markdown)
         if args.handoff_json:
             print(repair_handoff_json(handoff), end="")
             return 0
@@ -102,6 +109,13 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
             error="source_not_found",
             message=f"qa-z repair-prompt: source not found: {exc}",
             exit_code=4,
+        )
+    except OSError as exc:
+        return _repair_prompt_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z repair-prompt: artifact write error: {exc}",
+            exit_code=2,
         )
 
 
