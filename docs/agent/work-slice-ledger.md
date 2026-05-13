@@ -1145,3 +1145,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish JSON manifest/template failures from guide-generation persistence failures before giving a bridge package to Codex, Claude, or another external executor.
 - Remaining blocker: executor bridge remains a local package for external handoff and does not execute repairs or remote release actions.
 - Next safe slice: commit bridge Markdown path context, then continue mining executor-result ingest and dry-run report writer paths.
+
+
+## 2026-05-13 Executor Result Dry-Run Report Path Contract
+- Repo: JustTyping
+- Lane: external executor handoff -> executor-result dry-run safety check
+- User-facing flow: `qa-z executor-result dry-run --json`
+- Slice type: Contract / Evidence
+- Before: failed dry-run Markdown report writes named the executor-results directory but not the exact `dry_run_report.md` path.
+- Root cause: `run_executor_result_dry_run()` wrote the Markdown report inline inside the same broad artifact boundary as the JSON summary.
+- Change made: added a path-aware dry-run report writer and a JSON-mode regression that fails `dry_run_report.md` persistence.
+- Validation run: `python -m pytest tests\test_executor_result_dry_run.py::test_executor_result_dry_run_json_reports_report_write_failure tests\test_executor_result_dry_run.py::test_executor_result_dry_run_json_reports_artifact_write_failure tests\test_executor_result_dry_run.py::test_executor_result_dry_run_reports_clear_for_verified_completed_history -q`; `python -m pytest tests\test_executor_result_dry_run.py -q`; `python -m ruff check src\qa_z\executor_dry_run.py tests\test_executor_result_dry_run.py`; `python -m ruff format --check src\qa_z\executor_dry_run.py tests\test_executor_result_dry_run.py`.
+- Evidence: focused dry-run write/clear pack passed `3` tests; full dry-run module passed `7` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor-result dry-run failures now distinguish JSON summary persistence from Markdown report persistence before an operator trusts safety rehearsal output.
+- User impact: maintainers get the exact failed dry-run report path when local executor safety rehearsal cannot persist its operator-facing evidence.
+- Remaining blocker: executor-result dry-run remains local pre-live evidence and does not authorize remote release, package publishing, deployment, or executor mutation.
+- Next safe slice: commit dry-run report path context, then inspect executor-result ingest report writer path clarity.
