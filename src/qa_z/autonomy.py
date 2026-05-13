@@ -319,8 +319,8 @@ def run_autonomy_loop(
         loop_health=loop_health,
         live_repository=selection_context.get("live_repository"),
     )
-    (loop_dir / "loop_plan.md").write_text(plan_text, encoding="utf-8")
-    (latest_dir / "loop_plan.md").write_text(plan_text, encoding="utf-8")
+    write_loop_plan_artifact(loop_dir / "loop_plan.md", plan_text)
+    write_loop_plan_artifact(latest_dir / "loop_plan.md", plan_text)
     outcome = {
         "kind": AUTONOMY_OUTCOME_KIND,
         "schema_version": SELF_IMPROVEMENT_SCHEMA_VERSION,
@@ -359,3 +359,13 @@ def run_autonomy_loop(
     copy_artifact(loop_dir / "outcome.json", latest_dir / "outcome.json")
     update_history_entry(selection_paths.history_path, loop_id=loop_id, outcome=outcome)
     return outcome
+
+
+def write_loop_plan_artifact(path: Path, text: str) -> None:
+    """Write an autonomy loop plan with path-aware errors."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write autonomy loop plan artifact {path}: {exc}"
+        ) from exc

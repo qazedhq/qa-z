@@ -852,6 +852,44 @@ def test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history(
     assert history["outcome_path"] == f".qa-z/loops/{loop_id}/outcome.json"
 
 
+def test_run_autonomy_wraps_loop_plan_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stub_live_repository_signals(
+        monkeypatch,
+        current_branch="codex/qa-z-bootstrap",
+        current_head="1234567890abcdef1234567890abcdef12345678",
+        modified_count=1,
+        untracked_count=0,
+        staged_count=0,
+        modified_paths=["src/qa_z/autonomy.py"],
+        untracked_paths=[],
+        runtime_artifact_paths=[],
+        benchmark_result_paths=["benchmarks/results/summary.json"],
+        generated_artifact_policy_explicit=True,
+    )
+    write_benchmark_summary(tmp_path)
+    loop_plan_path = (
+        tmp_path / ".qa-z" / "loops" / "loop-20260415-000000-01" / "loop_plan.md"
+    )
+    original_write_text = Path.write_text
+
+    def fail_loop_plan(path: Path, *args, **kwargs) -> int:
+        if path == loop_plan_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_loop_plan)
+
+    with pytest.raises(OSError) as excinfo:
+        run_autonomy(root=tmp_path, loops=1, count=2, now=NOW)
+
+    message = str(excinfo.value)
+    assert "could not write autonomy loop plan artifact" in message
+    assert str(loop_plan_path) in message
+    assert "disk full" in message
+
+
 def test_autonomy_multiple_loops_appends_history_and_keeps_distinct_directories(
     tmp_path: Path,
 ) -> None:
