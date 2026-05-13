@@ -1097,3 +1097,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get regression coverage for the precise failed verification file in CLI JSON mode.
 - Remaining blocker: this only repairs local test-contract drift; remote proof and release execution remain approval-blocked.
 - Next safe slice: commit the verify CLI contract sync, then rerun the alpha gate quick.
+
+
+## 2026-05-13 Skill Install Path-Aware Write Failure Contract
+- Repo: JustTyping
+- Lane: local operating-model setup -> agent instruction install
+- User-facing flow: `qa-z skill install codex`
+- Slice type: Contract / Evidence
+- Before: skill-install write failures named the instruction target but not the exact output file.
+- Root cause: `install_target()` wrote or appended instruction files inline, and the command wrapper only added target-level context.
+- Change made: added path-aware directory, read, and write boundaries for skill-install artifacts and tightened the existing write-failure regression to require the output path.
+- Validation run: `python -m pytest tests\test_skill_install_cli.py -q`; `python -m ruff check src\qa_z\commands\skill_install.py tests\test_skill_install_cli.py`; `python -m ruff format --check src\qa_z\commands\skill_install.py tests\test_skill_install_cli.py`.
+- Evidence: skill-install CLI pack passed `8` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: operating-model instruction install failures now identify the exact file before maintainers retry with `--append`, `--force`, or `--output`.
+- User impact: maintainers can distinguish a target refusal from a filesystem failure on `AGENTS.md`, `CLAUDE.md`, Cursor rules, or Copilot instructions.
+- Remaining blocker: skill install only writes local instruction files and does not prove release readiness or remote publication.
+- Next safe slice: commit skill-install path context, then continue mining CLI output/error surfaces.
