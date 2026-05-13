@@ -633,3 +633,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: merge-guard automation can distinguish local persistence failure from merge risk, stale current-truth, or bad config.
 - Remaining blocker: this does not prove remote release readiness; push/tag/release/package/deploy remain approval-blocked.
 - Next safe slice: commit guard behavior and validation routing, then mine the remaining guard repair or run-summary persistence surfaces.
+
+
+## 2026-05-13 Run Summary Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: fast/deep execution -> run summary artifact writing
+- User-facing flow: `qa-z fast --json` and `qa-z deep --json`
+- Slice type: Flow / Contract
+- Before: a failed `summary.json`, `summary.md`, or per-check JSON write from the shared run-summary reporter could escape as raw `OSError` on `qa-z fast`, while `qa-z deep` kept JSON mode but lost the artifact path context.
+- Root cause: `write_run_summary_artifacts()` did not attach run-summary-specific context to filesystem failures, and `handle_fast()` wrote summary/latest-run artifacts outside a command-owned OSError boundary.
+- Change made: made the shared run-summary artifact writer path-aware, mapped fast persistence failures to `qa_z.fast_error` with `artifact_write_error`, and updated planning/runtime commit-plan validation to include direct fast/deep error-contract tests.
+- Validation run: `python -m pytest tests\test_execution_runs_error_contracts.py -q`; `python -m pytest tests\test_execution_runs_error_contracts.py tests\test_sarif_cli.py tests\test_deep_run_resolution.py -q`; `python -m pytest tests\test_cli.py -q -k "fast or deep"`; `python -m pytest tests\test_worktree_commit_plan_validation_commands.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python -m ruff check src\qa_z\commands\execution_runs.py src\qa_z\reporters\run_summary.py tests\test_execution_runs_error_contracts.py scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check src\qa_z\commands\execution_runs.py src\qa_z\reporters\run_summary.py tests\test_execution_runs_error_contracts.py scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan_validation_commands.py`; `python -m mypy src\qa_z\commands\execution_runs.py src\qa_z\reporters\run_summary.py tests\test_execution_runs_error_contracts.py`.
+- Evidence: the focused RED failed with raw `OSError` for fast and missing path context for deep; after implementation the focused error-contract file passed, the SARIF/deep run-resolution pack passed `12` tests, the fast/deep CLI filter passed `16` tests, the commit-plan validation canary passed, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: fast/deep execution JSON mode now keeps local artifact persistence failures machine-readable and path-aware.
+- User impact: automation can tell runner/check failures from disk or output-path failures without scraping tracebacks.
+- Remaining blocker: release execution remains approval-blocked and current local HEAD is still not remote-proven.
+- Next safe slice: commit run-summary behavior and validation routing, then mine repair-session or executor-ingest persistence surfaces.
