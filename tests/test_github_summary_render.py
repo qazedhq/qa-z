@@ -118,6 +118,43 @@ def test_github_summary_cli_writes_output_file(
     assert "Repair Session Outcome" not in stdout
 
 
+def test_github_summary_cli_reports_output_write_failure(
+    monkeypatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_summary(tmp_path, "2026-04-11T17-38-52Z")
+    output_path = tmp_path / ".qa-z" / "runs" / "ci" / "github-summary.md"
+    original_write_text = Path.write_text
+
+    def fail_output_write(path, *args, **kwargs):
+        if path == output_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_output_write)
+
+    exit_code = main(
+        [
+            "github-summary",
+            "--path",
+            str(tmp_path),
+            "--from-run",
+            "latest",
+            "--output",
+            str(output_path),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "# QA-Z Summary" in captured.out
+    assert (
+        f"qa-z github-summary: could not write --output {output_path}: disk full"
+        in captured.err
+    )
+
+
 def test_github_summary_cli_reports_missing_run(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

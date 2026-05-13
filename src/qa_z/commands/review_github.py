@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from qa_z.artifacts import (
@@ -12,6 +13,15 @@ from qa_z.artifacts import (
 from qa_z.commands.common import load_cli_config, resolve_cli_path
 from qa_z.commands.review_github_context import load_github_summary_context
 from qa_z.reporters.github_summary import render_github_summary
+
+
+def write_github_summary_output(output_path: Path, markdown: str) -> str | None:
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(markdown, encoding="utf-8")
+    except OSError as exc:
+        return f"qa-z github-summary: could not write --output {output_path}: {exc}"
+    return None
 
 
 def handle_github_summary(args: argparse.Namespace) -> int:
@@ -38,8 +48,11 @@ def handle_github_summary(args: argparse.Namespace) -> int:
         )
         if args.output:
             output_path = resolve_cli_path(root, args.output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(markdown, encoding="utf-8")
+            output_error = write_github_summary_output(output_path, markdown)
+            if output_error is not None:
+                print(markdown, end="")
+                print(output_error, file=sys.stderr)
+                return 2
         print(markdown, end="")
         return 0
     except ArtifactLoadError as exc:
