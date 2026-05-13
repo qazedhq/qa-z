@@ -601,3 +601,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external handoff automation receives machine-readable failure context and does not leave partial bridge packages behind.
 - Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after committing this slice.
 - Next safe slice: commit executor bridge changes, then mine benchmark/report artifact write failures or guard workflow persistence failures.
+
+
+## 2026-05-13 Benchmark Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: benchmark runtime -> benchmark summary/report artifacts
+- User-facing flow: `qa-z benchmark --json`
+- Slice type: Evidence / Contract
+- Before: a failed `benchmarks/results/summary.json` or `report.md` write could escape as raw `OSError` after benchmark fixtures finished.
+- Root cause: benchmark artifact writing had no path-aware OSError boundary, and the CLI only normalized `BenchmarkError` fixture/lock failures.
+- Change made: added path-aware benchmark artifact write failures and mapped true persistence errors to `qa_z.benchmark_error` with `artifact_write_error`, while keeping fixture and lock failures as `benchmark_error`.
+- Validation run: `python -m pytest tests\test_benchmark_runtime.py::test_benchmark_cli_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_benchmark_runtime.py tests\test_benchmark_reporting.py tests\test_benchmark_architecture.py tests\test_worktree_commit_plan_validation_commands.py -q`; `python -m pytest tests\test_benchmark.py -q`; `python -m mypy src tests`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\check_text_file_hygiene.py --source working-tree`; `python -m ruff check src\qa_z\commands\runtime_benchmark.py src\qa_z\benchmark_reporting.py tests\test_benchmark_runtime.py`; `python -m ruff format --check src\qa_z\commands\runtime_benchmark.py src\qa_z\benchmark_reporting.py tests\test_benchmark_runtime.py`; `git diff --check`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused test passed, the benchmark runtime/reporting/architecture pack passed `20` tests, `tests\test_benchmark.py` passed `15` tests, mypy reported no issues, strict worktree plan stayed `ready`, and hygiene/Ruff/diff checks passed.
+- Gate delta: benchmark JSON mode now fails closed when result artifacts cannot be persisted and does not conflate write failure with fixture expectation failure.
+- User impact: maintainers can distinguish benchmark corpus failures from local disk/output-path failures in automation.
+- Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after committing this slice.
+- Next safe slice: commit benchmark write failure handling, then mine guard workflow or run-summary artifact write failures.
