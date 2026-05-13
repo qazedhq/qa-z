@@ -107,6 +107,7 @@ def utc_timestamp() -> str:
 def cli_help_commands() -> list[GateCommand]:
     help_surfaces = [
         (),
+        ("doctor",),
         ("init",),
         ("plan",),
         ("fast",),
@@ -833,6 +834,15 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def write_output_payload(output_path: Path, payload_json: str) -> str | None:
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(f"{payload_json}\n", encoding="utf-8")
+    except OSError as exc:
+        return f"alpha release gate: could not write --output {output_path}: {exc}"
+    return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     preflight_output = args.preflight_output
@@ -859,15 +869,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     payload_json = json.dumps(result.payload, indent=2)
 
+    output_error = None
     if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(f"{payload_json}\n", encoding="utf-8")
+        output_error = write_output_payload(args.output, payload_json)
+        if output_error is not None:
+            print(output_error, file=sys.stderr)
 
     if args.json:
         print(payload_json)
     else:
         print(render_alpha_release_gate_human(result.payload), end="")
 
+    if output_error is not None:
+        return 2
     return result.exit_code
 
 

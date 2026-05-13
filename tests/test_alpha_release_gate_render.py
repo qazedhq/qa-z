@@ -267,7 +267,7 @@ def test_alpha_release_gate_summarizes_release_evidence(tmp_path):
             "artifacts": ["qa_z-0.9.8a0.tar.gz", "qa_z-0.9.8a0-py3-none-any.whl"],
             "summary": "Successfully built qa_z-0.9.8a0.tar.gz and qa_z-0.9.8a0-py3-none-any.whl",
         },
-        "cli_help": {"check_count": 20, "failed_count": 0},
+        "cli_help": {"check_count": 21, "failed_count": 0},
         "deep": {
             "scan_quality_check_ids": ["sg_scan"],
             "scan_quality_status": "warning",
