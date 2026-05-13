@@ -13,6 +13,9 @@ TEST_PATH = ROOT / "tests" / "test_worktree_commit_plan.py"
 OUTPUT_TEST_PATH = ROOT / "tests" / "test_worktree_commit_plan_output.py"
 FILTER_TEST_PATH = ROOT / "tests" / "test_worktree_commit_plan_filtering.py"
 CLI_TEST_PATH = ROOT / "tests" / "test_worktree_commit_plan_cli.py"
+VALIDATION_COMMANDS_TEST_PATH = (
+    ROOT / "tests" / "test_worktree_commit_plan_validation_commands.py"
+)
 
 
 def _function_names(path: Path) -> set[str]:
@@ -68,6 +71,10 @@ def test_worktree_commit_plan_tests_share_support_module() -> None:
     assert (
         "from tests.worktree_commit_plan_test_support import"
         in CLI_TEST_PATH.read_text(encoding="utf-8")
+    )
+    assert (
+        "from tests.worktree_commit_plan_test_support import"
+        in VALIDATION_COMMANDS_TEST_PATH.read_text(encoding="utf-8")
     )
 
 

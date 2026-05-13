@@ -218,7 +218,7 @@ BATCH_RULES = (
             "tests/worktree_commit_plan*_support.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_worktree_commit_plan.py tests/test_current_truth.py -q",
+            "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
             "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
             "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
         ),
