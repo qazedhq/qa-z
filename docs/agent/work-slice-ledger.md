@@ -841,3 +841,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish a failed local safety package write from a repair handoff, bridge manifest, or executor-result failure.
 - Remaining blocker: the safety package remains pre-live/local-only and does not authorize external executor dispatch or remote release execution.
 - Next safe slice: commit executor safety behavior, then mine the repair handoff writer or run a broader repair/executor validation wave.
+
+
+## 2026-05-13 Repair Handoff Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> normalized external handoff persistence
+- User-facing flow: `qa-z repair-prompt --json` and guard/benchmark handoff generation
+- Slice type: Flow / Contract
+- Before: the shared normalized repair handoff writer could raise a raw `OSError` without naming the handoff artifact directory when `handoff.json` failed to persist.
+- Root cause: `write_repair_handoff_artifact()` created the output directory and wrote `handoff.json` without a path-aware filesystem boundary, leaving each caller to add broader context after the original path was lost.
+- Change made: wrapped the shared handoff writer with a deterministic `could not write repair handoff artifact to ...` message and added a focused regression for a failed `handoff.json` write.
+- Validation run: `python -m pytest tests\test_repair_handoff.py::test_write_repair_handoff_artifact_wraps_write_failures tests\test_repair_handoff.py::test_repair_prompt_cli_writes_handoff_and_adapter_artifacts tests\test_repair_prompt_error_contracts.py::test_repair_prompt_json_reports_artifact_write_failure -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the new writer regression, repair-prompt handoff write path, and JSON artifact failure contract passed.
+- Gate delta: repair prompt, guard workflow, benchmark handoff generation, and repair-session start now share a path-aware handoff persistence boundary.
+- User impact: operators can tell a handoff JSON persistence failure apart from adapter markdown rendering, repair packet generation, or artifact source loading.
+- Remaining blocker: repair handoff remains an external-executor instruction artifact; QA-Z still does not directly edit target repositories.
+- Next safe slice: commit repair handoff behavior, then run a broader repair/guard/benchmark validation wave before mining the next writer gap.
