@@ -132,9 +132,12 @@ def test_benchmark_cli_reports_locked_results_dir(
             "--json",
         ]
     )
-    output = capsys.readouterr().out
+    output = json.loads(capsys.readouterr().out)
 
     assert exit_code == 2
-    assert "qa-z benchmark: benchmark error:" in output
-    assert "results directory is already in use" in output
-    assert "use a different --results-dir" in output
+    assert output["kind"] == "qa_z.benchmark_error"
+    assert output["error"] == "benchmark_error"
+    assert output["exit_code"] == 2
+    assert "qa-z benchmark: benchmark error:" in output["message"]
+    assert "results directory is already in use" in output["message"]
+    assert "use a different --results-dir" in output["message"]

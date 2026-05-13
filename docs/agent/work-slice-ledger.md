@@ -313,3 +313,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: automation can branch on `kind=qa_z.guard_error` and `error=configuration_error` instead of scraping human text when guard cannot load config.
 - Remaining blocker: this does not prove a target repository is merge-safe; callers still need fresh guard verdict artifacts from valid config and current input evidence.
 - Next safe slice: extend the same JSON failure contract to benchmark runtime failures, then run a broader validation wave.
+
+
+## 2026-05-13 Benchmark JSON Failure Contract
+- Repo: JustTyping
+- Lane: benchmark CLI -> deterministic operator output
+- User-facing flow: `qa-z benchmark --json`
+- Slice type: Flow / Contract
+- Before: successful benchmark JSON emitted a structured summary, but locked-results and other benchmark runtime errors printed plain text even in JSON mode.
+- Root cause: `handle_benchmark` handled `BenchmarkError` with a direct text `print` regardless of `--json`.
+- Change made: added a `qa_z.benchmark_error` JSON payload for benchmark failures in JSON mode while preserving existing text output otherwise.
+- Validation run: `python -m pytest tests\test_benchmark_runtime.py::test_benchmark_cli_reports_locked_results_dir tests\test_benchmark_runtime.py::test_run_benchmark_rejects_locked_results_dir -q`; `python -m pytest tests\test_benchmark_runtime.py -q`; `python -m ruff check src\qa_z\commands\runtime_benchmark.py tests\test_benchmark_runtime.py`; `python -m ruff format --check src\qa_z\commands\runtime_benchmark.py tests\test_benchmark_runtime.py`.
+- Evidence: the focused RED run failed with `JSONDecodeError` because locked-results output started with `qa-z benchmark: benchmark error`; after the fix the focused pair passed, the benchmark runtime pack passed, and Ruff check/format passed.
+- Gate delta: benchmark runtime failures are now parseable in JSON mode without weakening lock handling or deleting generated results.
+- User impact: operators and automation can distinguish benchmark infrastructure failure from fixture failure using stable JSON fields.
+- Remaining blocker: this does not make benchmark results release proof by itself; operators still need a fresh successful benchmark run and committed/frozen evidence only when intentionally promoted.
+- Next safe slice: run final validation across core CLI failure contracts, benchmark runtime, worktree plan, alpha gate, and truth-validator proof-head mode.
