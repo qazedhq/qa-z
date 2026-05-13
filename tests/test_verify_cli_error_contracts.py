@@ -77,5 +77,6 @@ def test_verify_json_reports_artifact_write_failure(
         "message": output["message"],
     }
     assert "qa-z verify: artifact error:" in output["message"]
-    assert "could not write verification artifacts" in output["message"]
+    assert "could not write verification artifact" in output["message"]
+    assert str(output_dir / "summary.json") in output["message"]
     assert "disk full" in output["message"]
