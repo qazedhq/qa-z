@@ -360,6 +360,56 @@ def test_repair_session_start_json_reports_artifact_write_failure(
     }
     assert "qa-z repair-session start: artifact write error:" in output["message"]
     assert "could not write repair-session start artifacts" in output["message"]
+    assert "could not write repair-session codex handoff" in output["message"]
+    assert str(session_dir / "handoff" / "codex.md") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_repair_session_start_json_reports_claude_handoff_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    original_write_text = Path.write_text
+
+    def fail_claude_handoff(path: Path, *args, **kwargs) -> int:
+        if path == session_dir / "handoff" / "claude.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_claude_handoff)
+
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.repair_session_error",
+        "command": "start",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z repair-session start: artifact write error:" in output["message"]
+    assert "could not write repair-session start artifacts" in output["message"]
+    assert "could not write repair-session claude handoff" in output["message"]
+    assert str(session_dir / "handoff" / "claude.md") in output["message"]
     assert "disk full" in output["message"]
 
 
@@ -1168,6 +1218,70 @@ def test_repair_session_verify_json_reports_artifact_write_failure(
     }
     assert "qa-z repair-session verify: artifact write error:" in output["message"]
     assert "could not write repair-session verification artifacts" in output["message"]
+    assert "could not write repair-session verification summary" in output["message"]
+    assert str(session_dir / "summary.json") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_repair_session_verify_json_reports_outcome_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    write_fast_summary(tmp_path, "candidate", status="passed", exit_code=0)
+    main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+        ]
+    )
+    capsys.readouterr()
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    original_write_text = Path.write_text
+
+    def fail_session_outcome(path: Path, *args, **kwargs) -> int:
+        if path == session_dir / "outcome.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_session_outcome)
+
+    exit_code = main(
+        [
+            "repair-session",
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--session",
+            ".qa-z/sessions/session-one",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.repair_session_error",
+        "command": "verify",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z repair-session verify: artifact write error:" in output["message"]
+    assert "could not write repair-session verification artifacts" in output["message"]
+    assert "could not write repair-session verification outcome" in output["message"]
+    assert str(session_dir / "outcome.md") in output["message"]
     assert "disk full" in output["message"]
 
 

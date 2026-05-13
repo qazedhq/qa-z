@@ -77,11 +77,15 @@ def create_repair_session(
         handoff_dir = session_dir / "handoff"
         write_repair_artifacts(repair_packet, handoff_dir)
         write_repair_handoff_artifact(handoff, handoff_dir)
-        (handoff_dir / "codex.md").write_text(
-            render_codex_handoff(handoff), encoding="utf-8"
+        write_repair_session_artifact(
+            handoff_dir / "codex.md",
+            render_codex_handoff(handoff),
+            "codex handoff",
         )
-        (handoff_dir / "claude.md").write_text(
-            render_claude_handoff(handoff), encoding="utf-8"
+        write_repair_session_artifact(
+            handoff_dir / "claude.md",
+            render_claude_handoff(handoff),
+            "claude handoff",
         )
         safety_artifacts = write_executor_safety_artifacts(
             root=root, output_dir=session_dir
@@ -151,11 +155,15 @@ def complete_session_verification(
     dry_run_summary = load_session_dry_run_summary(updated, root)
     summary = session_summary_dict(updated, comparison, dry_run_summary=dry_run_summary)
     try:
-        summary_path.write_text(
-            json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        write_repair_session_artifact(
+            summary_path,
+            json.dumps(summary, indent=2, sort_keys=True) + "\n",
+            "verification summary",
         )
-        outcome_path.write_text(
-            render_outcome_markdown(updated, comparison, summary), encoding="utf-8"
+        write_repair_session_artifact(
+            outcome_path,
+            render_outcome_markdown(updated, comparison, summary),
+            "verification outcome",
         )
         write_session_manifest(updated, root)
     except OSError as exc:
@@ -164,6 +172,14 @@ def complete_session_verification(
             f"{exc}"
         ) from exc
     return updated, summary
+
+
+def write_repair_session_artifact(path: Path, text: str, label: str) -> None:
+    """Write one repair-session artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write repair-session {label} {path}: {exc}") from exc
 
 
 def load_repair_session(root: Path, session: str):
