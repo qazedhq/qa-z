@@ -1209,3 +1209,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers keep sharper write-failure diagnostics without allowing benchmark or dry-run orchestration files to grow past their intended review size.
 - Remaining blocker: this repairs local gate integrity only; remote proof, push, package publish, deployment, and production readiness remain approval-blocked.
 - Next safe slice: commit the seam-budget repair, rerun the alpha gate quick, then continue only if the gate is green or a new product failure appears.
+
+
+## 2026-05-13 Guard Verdict Artifact Path Contract
+- Repo: JustTyping
+- Lane: guard/current-truth correctness -> guard verdict persistence
+- User-facing flow: `qa-z guard --json`
+- Slice type: Contract / Evidence
+- Before: guard verdict artifact write failures named the guard output directory but not whether `verdict.json` or `verdict.md` failed.
+- Root cause: `write_verdict_artifacts()` wrote both files inline inside one broad guard-verdict boundary.
+- Change made: added a path-aware guard verdict artifact writer and JSON-mode regressions for both verdict JSON and Markdown write failures.
+- Validation run: `python -m pytest tests\test_guard_cli.py::test_guard_json_reports_verdict_artifact_write_failure tests\test_guard_cli.py::test_guard_json_reports_verdict_markdown_artifact_write_failure tests\test_guard_cli.py::test_guard_happy_path_writes_merge_ok_verdict -q`; `python -m pytest tests\test_guard_cli.py -q`; `python -m ruff check src\qa_z\guard\verdict.py tests\test_guard_cli.py`; `python -m ruff format --check src\qa_z\guard\verdict.py tests\test_guard_cli.py`.
+- Evidence: focused guard verdict pack passed `3` tests; full guard CLI module passed `15` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: guard verdict failures now distinguish machine-verdict persistence from Markdown-verdict persistence before operators trust merge-safety output.
+- User impact: maintainers can identify the exact failed guard artifact while keeping current-truth, repair, and GitHub-summary guard paths separate.
+- Remaining blocker: guard verdicts remain local merge-safety evidence and do not prove remote release, package publish, deployment, or production readiness.
+- Next safe slice: commit guard verdict path context, then mine remaining guard workflow or review packet output surfaces.
