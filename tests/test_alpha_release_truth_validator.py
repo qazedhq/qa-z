@@ -434,3 +434,36 @@ def test_collected_facts_record_packet_proof_head_mode(tmp_path: Path) -> None:
     assert facts.head == PROOF_HEAD
     assert facts.current_head == POST_COMMIT_HEAD
     assert facts.proof_head_mode == "packet"
+
+
+def test_collected_facts_count_ahead_from_packet_proof_head(
+    monkeypatch, tmp_path: Path
+) -> None:
+    module = load_truth_validator_module()
+
+    def fake_run_git(_repo_root, *args):
+        if args == ("rev-parse", "HEAD"):
+            return POST_COMMIT_HEAD
+        if args == ("branch", "--show-current"):
+            return "main"
+        if args == ("rev-parse", "origin/main"):
+            return ORIGIN_MAIN
+        if args == ("rev-list", "--left-right", "--count", f"origin/main...{PROOF_HEAD}"):
+            return "0 17"
+        raise AssertionError(f"unexpected git command: {args}")
+
+    monkeypatch.setattr(module, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        module, "package_version_from_pyproject", lambda _repo_root: "0.9.8a0"
+    )
+
+    facts = module.collect_release_truth_facts(
+        tmp_path,
+        proof_head=PROOF_HEAD,
+        proof_head_mode="packet",
+    )
+
+    assert facts.head == PROOF_HEAD
+    assert facts.current_head == POST_COMMIT_HEAD
+    assert facts.ahead_count == 17
+    assert facts.proof_head_mode == "packet"
