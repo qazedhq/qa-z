@@ -496,6 +496,14 @@ def render_human(payload: dict[str, object]) -> str:
     if isinstance(failed_checks, list) and failed_checks:
         lines.append("failed checks:")
         lines.extend(f"- {name}" for name in failed_checks)
+    next_actions = payload.get("next_actions")
+    if isinstance(next_actions, list) and next_actions:
+        lines.append("next actions:")
+        lines.extend(f"- {action}" for action in next_actions)
+    next_commands = payload.get("next_commands")
+    if isinstance(next_commands, list) and next_commands:
+        lines.append("next commands:")
+        lines.extend(f"- {command}" for command in next_commands)
     return "\n".join(lines) + "\n"
 
 

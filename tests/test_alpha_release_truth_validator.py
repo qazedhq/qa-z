@@ -176,6 +176,39 @@ Remote and publishing proof packet:
     )
 
 
+def test_validator_human_output_renders_recovery_guidance() -> None:
+    module = load_truth_validator_module()
+    facts = module.ReleaseTruthFacts(
+        head=PROOF_HEAD,
+        branch="main",
+        origin_main=ORIGIN_MAIN,
+        ahead_count=17,
+        package_version="0.9.8a0",
+    )
+    texts = module.ReleaseTruthTexts(
+        worktree_packet=f"""
+## Alpha Release-Candidate Decision Packet - 2026-05-12
+- Source HEAD at proof time: `{POST_COMMIT_HEAD}`.
+- Branch at proof time: `main`.
+- Remote `main` at proof time:
+  `{ORIGIN_MAIN}`.
+- Local proof HEAD is 15 commits ahead of remote `main`.
+""",
+        package_plan="",
+        release_handoff="",
+    )
+
+    output = module.render_human(module.validate_release_truth_texts(facts, texts))
+
+    assert "next actions:" in output
+    assert "Regenerate the alpha release decision packet for the current HEAD" in output
+    assert "next commands:" in output
+    assert (
+        "python scripts\\alpha_release_truth_validator.py --proof-head-from-packet --json"
+        in output
+    )
+
+
 def test_validator_rejects_missing_release_decision_packet_header() -> None:
     module = load_truth_validator_module()
     facts = module.ReleaseTruthFacts(
