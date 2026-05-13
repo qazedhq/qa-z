@@ -1225,3 +1225,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can identify the exact failed guard artifact while keeping current-truth, repair, and GitHub-summary guard paths separate.
 - Remaining blocker: guard verdicts remain local merge-safety evidence and do not prove remote release, package publish, deployment, or production readiness.
 - Next safe slice: commit guard verdict path context, then mine remaining guard workflow or review packet output surfaces.
+
+
+## 2026-05-13 Review Packet Artifact Path Contract
+- Repo: JustTyping
+- Lane: diff/input -> fast/deep analysis -> review packet
+- User-facing flow: `qa-z review --json`
+- Slice type: Contract / Evidence
+- Before: review packet artifact failures named the output directory but not whether `review.md` or `review.json` failed.
+- Root cause: `_write_review_artifacts_impl()` wrote Markdown and optional JSON inline inside one broad review-artifact boundary.
+- Change made: added a path-aware review artifact writer and JSON-mode regressions for both Markdown and JSON write failures.
+- Validation run: `python -m pytest tests\test_review_packet_error_contracts.py tests\test_review_packet_runtime.py tests\test_review_packet_architecture.py -q`; `python -m ruff check src\qa_z\reporters\review_packet.py tests\test_review_packet_error_contracts.py`; `python -m ruff format --check src\qa_z\reporters\review_packet.py tests\test_review_packet_error_contracts.py`.
+- Evidence: review packet failure/runtime/architecture pack passed `20` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: review packet failures now distinguish Markdown persistence from JSON persistence before downstream GitHub summary or repair prompt flows consume review evidence.
+- User impact: operators get the exact failed review artifact path when a local review packet cannot be written.
+- Remaining blocker: review packets remain local deterministic evidence and do not publish GitHub comments, push code, or prove production readiness.
+- Next safe slice: commit review packet path context, then continue with SARIF or run-summary output surfaces.
