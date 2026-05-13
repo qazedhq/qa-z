@@ -681,3 +681,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external repair workflows do not mistake a disk/output failure for an actual verification result.
 - Remaining blocker: repair-session still waits for external human/agent repair work; QA-Z does not edit target repositories.
 - Next safe slice: commit repair-session verify behavior, then mine remaining start-session handoff or executor dry-run persistence paths.
+
+
+## 2026-05-13 Repair Session Start JSON and Artifact Write Contract
+- Repo: JustTyping
+- Lane: repair-session start -> external handoff package persistence
+- User-facing flow: `qa-z repair-session start --json`
+- Slice type: Flow / Contract
+- Before: repair-session start had only human stdout, and a failed handoff/session artifact write could lose path context or stay text-only.
+- Root cause: the start parser lacked `--json`, while `create_repair_session()` wrote packet, handoff, guide, safety, and manifest artifacts without a single start-owned OSError boundary.
+- Change made: added start JSON output for the session manifest, wrapped start artifact persistence with a path-aware error, and reused `qa_z.repair_session_error` with `artifact_write_error` for JSON-mode start failures.
+- Validation run: `python -m pytest tests\test_repair_session.py::test_repair_session_start_json_writes_session_payload tests\test_repair_session.py::test_repair_session_start_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_repair_session.py tests\test_session_commands.py -q`; `python -m ruff check src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`; `python -m mypy src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`.
+- Evidence: the focused RED failed because `--json` was unrecognized; after implementation both start JSON tests passed, the repair-session/session pack passed `23` tests, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: repair-session start can now be consumed by automation without scraping human stdout and fails closed on local persistence problems.
+- User impact: external repair handoff setup is easier to script while staying local-only and deterministic.
+- Remaining blocker: start only packages local handoff artifacts; it does not execute external repair work or mutate target repositories.
+- Next safe slice: commit repair-session start behavior, then mine executor dry-run/report or autonomy artifact persistence surfaces.
