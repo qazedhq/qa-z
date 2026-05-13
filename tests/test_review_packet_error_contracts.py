@@ -84,10 +84,18 @@ def test_review_json_reports_artifact_write_failure(
     output_dir = tmp_path / ".qa-z" / "review"
     original_write_text = Path.write_text
 
-    def fail_review_markdown(path: Path, *args: object, **kwargs: object) -> int:
+    def fail_review_markdown(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
         if path == output_dir / "review.md":
             raise OSError("disk full")
-        return original_write_text(path, *args, **kwargs)
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
 
     monkeypatch.setattr(Path, "write_text", fail_review_markdown)
 

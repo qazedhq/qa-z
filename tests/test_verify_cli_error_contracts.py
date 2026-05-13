@@ -40,10 +40,18 @@ def test_verify_json_reports_artifact_write_failure(
     output_dir = tmp_path / ".qa-z" / "runs" / "candidate" / "verify"
     original_write_text = Path.write_text
 
-    def fail_verify_summary(path: Path, *args: object, **kwargs: object) -> int:
+    def fail_verify_summary(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
         if path == output_dir / "summary.json":
             raise OSError("disk full")
-        return original_write_text(path, *args, **kwargs)
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
 
     monkeypatch.setattr(Path, "write_text", fail_verify_summary)
 
