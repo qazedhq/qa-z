@@ -1657,3 +1657,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: an operator can distinguish true safe exhaustion from "no backlog item selected yet" and immediately rerun backlog/strict worktree evidence or use `docs/agent/next-real-slices.md`.
 - Remaining blocker: this is local planning evidence only; it does not approve push, release, package publish, Marketing/X, or Claude mirror promotion.
 - Next safe slice: run another backlog expansion pass and choose a product-code or release-proof slice that does not require remote mutation.
+
+
+## 2026-05-13 GitHub Repository Settings Packet
+- Repo: JustTyping
+- Lane: GitHub discoverability / launch package
+- User-facing flow: launch maintainer -> repository settings -> description/topics/social preview.
+- Slice type: Contract / Evidence
+- Before: the launch package listed topics and social preview assets, but the GitHub repository description was not pinned by the same local regression, and topic format/count was not tested.
+- Root cause: discoverability settings were documented as narrative launch copy instead of a concrete settings packet with mutation boundaries.
+- Change made: added a `Repository Settings` section with the recommended GitHub description, explicit settings-mutation boundary, and a regression that validates the description plus 20 lower-case unique topic slugs.
+- Validation run: read-only `gh repo view qazedhq/qa-z --json name,owner,description,stargazerCount,forkCount,watchers,repositoryTopics,isPrivate,defaultBranchRef,licenseInfo`; `python -m pytest tests\test_launch_growth_package.py::test_launch_package_pins_github_description_and_topics tests\test_launch_growth_package.py::test_social_preview_copy_matches_asset_and_stays_ascii_safe tests\test_launch_growth_package.py::test_launch_asset_docs_avoid_fabricated_public_claims -q`; `python -m pytest tests\test_launch_growth_package.py -q`; `python scripts\check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests\test_launch_growth_package.py`; `python -m ruff format --check tests\test_launch_growth_package.py`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`.
+- Evidence: the new focused test first failed because `## Repository Settings` was absent, then passed; the launch growth package passed `17` tests; read-only GitHub metadata showed public repo `qazedhq/qa-z`, default branch `main`, Apache-2.0 license, and the current remote description; both truth validator modes and strict worktree plan passed after commit `d0d6f5b42a94`.
+- Gate delta: repository description/topics/social preview are now a tested launch packet rather than loose copy.
+- User impact: maintainers can apply GitHub discoverability settings from one tested doc without implying unapproved package publish, release, tag, or deployment.
+- Remaining blocker: applying repository description/topics/social preview still requires approved GitHub settings mutation.
+- Next safe slice: inspect release/package proof docs for stale publish wording or run a wider alpha gate validation wave.
