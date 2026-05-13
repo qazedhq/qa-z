@@ -329,3 +329,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators and automation can distinguish benchmark infrastructure failure from fixture failure using stable JSON fields.
 - Remaining blocker: this does not make benchmark results release proof by itself; operators still need a fresh successful benchmark run and committed/frozen evidence only when intentionally promoted.
 - Next safe slice: run final validation across core CLI failure contracts, benchmark runtime, worktree plan, alpha gate, and truth-validator proof-head mode.
+
+
+## 2026-05-13 Release Truth Validator Recovery Guidance
+- Repo: JustTyping
+- Lane: release truth validator -> proof-head lifecycle -> operator recovery guidance
+- User-facing flow: `python scripts\alpha_release_truth_validator.py --json`
+- Slice type: Contract / Evidence
+- Before: default current-HEAD validation correctly failed when the tracked release packet was pinned to an older proof head, but the JSON payload only listed failed checks and did not provide the safe historical-proof rerun command.
+- Root cause: release truth failure payloads had no deterministic next-action synthesis for stale packet/current-head mismatch checks.
+- Change made: failed truth-validator payloads now include additive `next_actions` and `next_commands`, including the commit-safe `--proof-head-from-packet` validator rerun when stale packet/current-head checks fail; passed proof-head mode emits empty guidance arrays.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py::test_validator_rejects_stale_local_head_in_release_packet -q`; `python -m pytest tests\test_alpha_release_truth_validator.py -q`; `python scripts\alpha_release_truth_validator.py --json`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`; `python -m ruff check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`.
+- Evidence: the focused RED failed with `KeyError: 'next_actions'`; after implementation the focused test passed, the truth-validator pack passed `14` tests, default validator still failed honestly on current-head packet staleness while showing recovery guidance, proof-head-from-packet mode passed `19/19`, and Ruff check/format passed.
+- Gate delta: release truth remains fail-closed for moved HEADs while machine callers now receive the safe packet-proof validation command instead of scraping human context.
+- User impact: operators can distinguish "regenerate for current HEAD" from "review historical proof packet" directly from JSON output.
+- Remaining blocker: current local HEAD is still not remote-proven, and unapproved push/tag/GitHub release/package/deploy actions remain blocked.
+- Next safe slice: run a broader validation wave across changed release truth and CLI failure-contract surfaces before choosing another release or core workflow hardening cycle.
