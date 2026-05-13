@@ -36,7 +36,10 @@ def handle_repair_session_start(args: argparse.Namespace) -> int:
             baseline_run=args.baseline_run,
             session_id=args.session_id,
         )
-        print(render_session_start_stdout(result.session))
+        if args.json:
+            print(json.dumps(result.session.to_dict(), indent=2, sort_keys=True))
+        else:
+            print(render_session_start_stdout(result.session))
         return 0
     except ArtifactLoadError as exc:
         return _repair_session_error(
@@ -251,6 +254,11 @@ def register_repair_session_command(subparsers: argparse._SubParsersAction) -> N
     repair_session_start_parser.add_argument(
         "--session-id",
         help="optional stable session id; defaults to a UTC timestamp plus suffix",
+    )
+    repair_session_start_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable repair-session manifest",
     )
     repair_session_start_parser.set_defaults(handler=handle_repair_session_start)
 

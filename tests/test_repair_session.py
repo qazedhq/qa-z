@@ -286,6 +286,81 @@ def test_repair_session_start_creates_manifest_handoff_and_executor_guide(
     assert "# QA-Z Pre-Live Executor Safety Package" in safety_markdown
 
 
+def test_repair_session_start_json_writes_session_payload(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-json",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["kind"] == "qa_z.repair_session"
+    assert output["session_id"] == "session-json"
+    assert output["state"] == "waiting_for_external_repair"
+    assert output["handoff_dir"] == ".qa-z/sessions/session-json/handoff"
+
+
+def test_repair_session_start_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    session_dir = tmp_path / ".qa-z" / "sessions" / "session-one"
+    original_write_text = Path.write_text
+
+    def fail_codex_handoff(path: Path, *args, **kwargs) -> int:
+        if path == session_dir / "handoff" / "codex.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_codex_handoff)
+
+    exit_code = main(
+        [
+            "repair-session",
+            "start",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--session-id",
+            "session-one",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.repair_session_error",
+        "command": "start",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z repair-session start: artifact write error:" in output["message"]
+    assert "could not write repair-session start artifacts" in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_repair_session_load_rejects_manifest_session_dir_mismatch(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

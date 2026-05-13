@@ -73,45 +73,50 @@ def create_repair_session(
             f"Repair session already exists: {format_path(session_dir, root)}"
         )
 
-    handoff_dir = session_dir / "handoff"
-    write_repair_artifacts(repair_packet, handoff_dir)
-    write_repair_handoff_artifact(handoff, handoff_dir)
-    (handoff_dir / "codex.md").write_text(
-        render_codex_handoff(handoff), encoding="utf-8"
-    )
-    (handoff_dir / "claude.md").write_text(
-        render_claude_handoff(handoff), encoding="utf-8"
-    )
-    safety_artifacts = write_executor_safety_artifacts(
-        root=root, output_dir=session_dir
-    )
+    try:
+        handoff_dir = session_dir / "handoff"
+        write_repair_artifacts(repair_packet, handoff_dir)
+        write_repair_handoff_artifact(handoff, handoff_dir)
+        (handoff_dir / "codex.md").write_text(
+            render_codex_handoff(handoff), encoding="utf-8"
+        )
+        (handoff_dir / "claude.md").write_text(
+            render_claude_handoff(handoff), encoding="utf-8"
+        )
+        safety_artifacts = write_executor_safety_artifacts(
+            root=root, output_dir=session_dir
+        )
 
-    now = utc_now()
-    session = RepairSession(
-        session_id=resolved_session_id,
-        session_dir=format_path(session_dir, root),
-        baseline_run_dir=format_path(baseline_source.run_dir, root),
-        baseline_fast_summary_path=format_path(baseline_source.summary_path, root),
-        baseline_deep_summary_path=(
-            format_path(baseline_source.run_dir / "deep" / "summary.json", root)
-            if deep_summary is not None
-            else None
-        ),
-        handoff_dir=format_path(handoff_dir, root),
-        handoff_artifacts=handoff_artifact_paths(handoff_dir, root),
-        executor_guide_path=format_path(session_dir / "executor_guide.md", root),
-        state="waiting_for_external_repair",
-        created_at=now,
-        updated_at=now,
-        provenance={
-            "baseline_status": summary.status,
-            "contract_path": summary.contract_path,
-            "repair_needed": repair_packet.repair_needed,
-        },
-        safety_artifacts=safety_artifacts,
-    )
-    write_executor_guide(session, handoff, root)
-    write_session_manifest(session, root)
+        now = utc_now()
+        session = RepairSession(
+            session_id=resolved_session_id,
+            session_dir=format_path(session_dir, root),
+            baseline_run_dir=format_path(baseline_source.run_dir, root),
+            baseline_fast_summary_path=format_path(baseline_source.summary_path, root),
+            baseline_deep_summary_path=(
+                format_path(baseline_source.run_dir / "deep" / "summary.json", root)
+                if deep_summary is not None
+                else None
+            ),
+            handoff_dir=format_path(handoff_dir, root),
+            handoff_artifacts=handoff_artifact_paths(handoff_dir, root),
+            executor_guide_path=format_path(session_dir / "executor_guide.md", root),
+            state="waiting_for_external_repair",
+            created_at=now,
+            updated_at=now,
+            provenance={
+                "baseline_status": summary.status,
+                "contract_path": summary.contract_path,
+                "repair_needed": repair_packet.repair_needed,
+            },
+            safety_artifacts=safety_artifacts,
+        )
+        write_executor_guide(session, handoff, root)
+        write_session_manifest(session, root)
+    except OSError as exc:
+        raise OSError(
+            f"could not write repair-session start artifacts to {session_dir}: {exc}"
+        ) from exc
     return RepairSessionStartResult(session=session, handoff=handoff)
 
 
