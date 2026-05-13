@@ -128,7 +128,12 @@ def copy_resource_tree(source: Traversable, destination: Path) -> None:
 def write_demo_runtime_config(demo_root: Path) -> Path:
     """Write a dependency-light config for the installed demo command."""
     config_path = demo_root / "qa-z.demo.yaml"
-    config_path.write_text(AUTH_BUG_DEMO_CONFIG, encoding="utf-8", newline="\n")
+    try:
+        config_path.write_text(AUTH_BUG_DEMO_CONFIG, encoding="utf-8", newline="\n")
+    except OSError as exc:
+        raise OSError(
+            f"could not write demo runtime config {config_path}: {exc}"
+        ) from exc
     return config_path
 
 

@@ -63,6 +63,7 @@ def test_demo_auth_bug_reports_runtime_config_write_failure(
     assert exit_code == 2
     assert "qa-z demo auth-bug: artifact write error:" in output
     assert "could not prepare demo artifacts" in output
+    assert str(config_path) in output
     assert "disk full" in output
 
 
