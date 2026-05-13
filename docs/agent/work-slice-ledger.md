@@ -697,3 +697,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external repair handoff setup is easier to script while staying local-only and deterministic.
 - Remaining blocker: start only packages local handoff artifacts; it does not execute external repair work or mutate target repositories.
 - Next safe slice: commit repair-session start behavior, then mine executor dry-run/report or autonomy artifact persistence surfaces.
+
+
+## 2026-05-13 Executor Result Dry-Run Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: executor result -> dry-run safety report persistence
+- User-facing flow: `qa-z executor-result dry-run --json`
+- Slice type: Evidence / Contract
+- Before: a failed `dry_run_summary.json` or `dry_run_report.md` write could escape as raw `OSError` from the executor-result dry-run command.
+- Root cause: `run_executor_result_dry_run()` wrote materialized dry-run artifacts without a path-aware boundary, and the dry-run CLI normalized load/source/config failures but not persistence failures.
+- Change made: added executor-result dry-run artifact write context, mapped dry-run persistence failures to `qa_z.executor_result_error` with `artifact_write_error`, and updated executor-return commit-plan validation to include the dry-run test file.
+- Validation run: `python -m pytest tests\test_executor_result_dry_run.py::test_executor_result_dry_run_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_executor_result_dry_run.py tests\test_executor_result.py tests\test_executor_ingest_outcome.py -q`; `python -m pytest tests\test_worktree_commit_plan_validation_commands.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python -m ruff check src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_dry_run.py tests\test_executor_result_dry_run.py`; `python -m ruff format --check src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_dry_run.py tests\test_executor_result_dry_run.py`; `python -m mypy src\qa_z\commands\runtime_executor_result.py src\qa_z\executor_dry_run.py tests\test_executor_result_dry_run.py`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the focused test passed, the executor-result dry-run/result/ingest pack passed `36` tests, the commit-plan validation canary passed, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: dry-run safety evidence now remains machine-parseable when the local artifact store fails.
+- User impact: maintainers can distinguish unsafe executor history from a failed dry-run evidence write.
+- Remaining blocker: dry-run remains live-free and cannot prove actual target-repo repair quality without subsequent verification.
+- Next safe slice: commit dry-run behavior and validation routing, then mine autonomy/self-inspection artifact persistence or run another release-quality validation wave.
