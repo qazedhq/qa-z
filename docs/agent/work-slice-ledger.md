@@ -1289,3 +1289,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can identify the exact failed session artifact during start or verify instead of treating the whole session directory as corrupt.
 - Remaining blocker: repair-session remains local handoff and verification orchestration; it does not execute repairs, mutate target repositories, or prove remote release readiness.
 - Next safe slice: commit repair-session lifecycle path context, then run a mid-stack validation wave.
+
+
+## 2026-05-13 Repair Session Manifest Artifact Path Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff -> verify
+- User-facing flow: `qa-z repair-session start`, session reload/backfill, and repair-session manifest persistence
+- Slice type: Contract / Evidence
+- Before: repair-session manifest write failures surfaced the raw filesystem error without naming `session.json`.
+- Root cause: `write_session_manifest()` wrote the manifest inline without a path-aware persistence boundary.
+- Change made: wrapped manifest persistence with an exact `session.json` failure message and added a regression for manifest write errors.
+- Validation run: `python -m pytest tests\test_repair_session_support.py::test_write_session_manifest_reports_manifest_path_on_write_failure -q`; `python -m pytest tests\test_repair_session_support.py tests\test_repair_session.py::test_repair_session_start_json_reports_artifact_write_failure tests\test_repair_session.py::test_repair_session_verify_json_reports_artifact_write_failure -q`; `python -m ruff check src\qa_z\repair_session_support.py tests\test_repair_session_support.py`; `python -m ruff format --check src\qa_z\repair_session_support.py tests\test_repair_session_support.py`.
+- Evidence: regression failed first with raw `disk full`, then passed; focused repair-session support/start/verify pack passed `4` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: session manifest failures now identify the exact failed manifest artifact before operators trust handoff, safety, or verification state.
+- User impact: maintainers can fix manifest persistence failures without confusing them with handoff, summary, safety, or outcome artifact failures.
+- Remaining blocker: repair-session manifests remain local evidence and do not execute repairs, mutate target repositories, or prove remote release readiness.
+- Next safe slice: commit manifest path context, then run latest-HEAD strict plan and alpha/truth validation.
