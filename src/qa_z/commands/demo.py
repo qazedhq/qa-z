@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stdout
+import io
+import json
 from importlib.abc import Traversable
 from importlib.resources import files
 from pathlib import Path
@@ -60,9 +63,7 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
             f"could not prepare demo artifacts: {exc}"
         )
         return 2
-    from qa_z.cli import main as qa_z_main
-
-    plan_exit = qa_z_main(
+    plan_exit = run_demo_subcommand(
         [
             "plan",
             "--path",
@@ -78,9 +79,10 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
             "--slug",
             "ai-auth-bug",
             "--overwrite",
-        ]
+        ],
+        suppress_stdout=args.json,
     )
-    guard_exit = qa_z_main(
+    guard_exit = run_demo_subcommand(
         [
             "guard",
             "--path",
@@ -93,10 +95,49 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
             "ai-auth-bug",
             "--deep",
             "never",
-        ]
+        ],
+        suppress_stdout=args.json,
     )
     if plan_exit != 0 or guard_exit != 0:
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "kind": "qa_z.demo.auth_bug_error",
+                        "error": "demo_run_error",
+                        "exit_code": 1,
+                        "message": (
+                            "qa-z demo auth-bug: failed to create demo evidence "
+                            f"(plan_exit={plan_exit}, guard_exit={guard_exit})"
+                        ),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
         return 1
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.demo.auth_bug",
+                    "demo": "auth-bug",
+                    "status": "created",
+                    "demo_root": str(demo_root),
+                    "config": "qa-z.demo.yaml",
+                    "guard_verdict": ".qa-z/runs/latest/guard/verdict.json",
+                    "repair_prompt": ".qa-z/runs/latest/repair/codex.md",
+                    "next_commands": [
+                        f"cd {demo_root}",
+                        "qa-z guard --from-run latest --adapter codex",
+                        "qa-z repair-prompt --from-run latest --adapter codex",
+                    ],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
     print("AI wrote a risky auth change. QA-Z caught it before merge.")
     print(f"Demo root: {demo_root}")
     print("Demo config: qa-z.demo.yaml")
@@ -107,6 +148,17 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     print("  qa-z guard --from-run latest --adapter codex")
     print("  qa-z repair-prompt --from-run latest --adapter codex")
     return 0
+
+
+def run_demo_subcommand(command: list[str], *, suppress_stdout: bool) -> int:
+    """Run a nested QA-Z demo command while optionally preserving JSON stdout."""
+    from qa_z.cli import main as qa_z_main
+
+    if not suppress_stdout:
+        return int(qa_z_main(command))
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        return int(qa_z_main(command))
 
 
 def demo_auth_bug_resource() -> Traversable:
@@ -177,6 +229,11 @@ def register_demo_command(subparsers: argparse._SubParsersAction) -> None:
         "--path",
         default=".",
         help="directory where the isolated demo copy should be created",
+    )
+    auth_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the machine-readable demo summary",
     )
     auth_parser.set_defaults(demo_handler=handle_demo_auth_bug)
     demo_parser.set_defaults(handler=handle_demo)

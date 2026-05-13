@@ -35,6 +35,9 @@ qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
 ```
 
+Automation can use `qa-z demo auth-bug --json` to capture the demo root,
+guard verdict path, repair prompt path, and copy-paste follow-up commands.
+
 For your own repository:
 
 ```bash

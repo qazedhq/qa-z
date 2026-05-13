@@ -140,6 +140,7 @@ def test_readme_short_quickstart_uses_runnable_demo_flow() -> None:
     assert "qa-z init\nqa-z guard" not in quickstart
     for command in (
         "qa-z demo auth-bug",
+        "qa-z demo auth-bug --json",
         "cd .qa-z/demo/auth-bug",
         "qa-z guard --from-run latest --adapter codex",
         "qa-z repair-prompt --from-run latest --adapter codex",
@@ -157,6 +158,7 @@ def test_docs_quickstart_leads_with_packaged_demo_before_example_repo_flow() -> 
 
     for command in (
         "qa-z demo auth-bug",
+        "qa-z demo auth-bug --json",
         "cd .qa-z/demo/auth-bug",
         "qa-z guard --from-run latest --adapter codex",
         "qa-z repair-prompt --from-run latest --adapter codex",

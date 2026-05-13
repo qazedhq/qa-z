@@ -47,6 +47,33 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     assert (demo / ".qa-z" / "runs" / "latest" / "repair" / "codex.md").exists()
 
 
+def test_demo_auth_bug_json_prints_single_machine_payload(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["demo", "auth-bug", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    demo = tmp_path / ".qa-z" / "demo" / "auth-bug"
+
+    assert exit_code == 0
+    assert payload == {
+        "kind": "qa_z.demo.auth_bug",
+        "demo": "auth-bug",
+        "status": "created",
+        "demo_root": str(demo),
+        "config": "qa-z.demo.yaml",
+        "guard_verdict": ".qa-z/runs/latest/guard/verdict.json",
+        "repair_prompt": ".qa-z/runs/latest/repair/codex.md",
+        "next_commands": [
+            f"cd {demo}",
+            "qa-z guard --from-run latest --adapter codex",
+            "qa-z repair-prompt --from-run latest --adapter codex",
+        ],
+    }
+    assert (demo / ".qa-z" / "runs" / "latest" / "guard" / "verdict.json").exists()
+    assert (demo / ".qa-z" / "runs" / "latest" / "repair" / "codex.md").exists()
+
+
 def test_demo_auth_bug_readme_followup_commands_run_from_demo_root(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
