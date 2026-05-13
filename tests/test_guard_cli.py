@@ -305,6 +305,21 @@ def test_guard_no_checks_configured_needs_review(tmp_path: Path, capsys) -> None
     assert "No supported fast checks" in output["reasons"][0]
 
 
+def test_guard_json_config_error_reports_machine_payload(
+    tmp_path: Path, capsys
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("project: [unterminated\n", encoding="utf-8")
+
+    exit_code = main(["guard", "--path", str(tmp_path), "--deep", "never", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.guard_error"
+    assert output["error"] == "configuration_error"
+    assert output["exit_code"] == 2
+    assert "qa-z guard: configuration error:" in output["message"]
+
+
 def test_guard_github_summary_option_writes_summary(tmp_path: Path, capsys) -> None:
     write_config(tmp_path)
     write_contract(tmp_path)

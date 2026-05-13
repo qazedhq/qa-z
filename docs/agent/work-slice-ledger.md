@@ -297,3 +297,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: callers can distinguish dry-run versus ingest failures and branch on stable error ids instead of scraping command-prefixed text.
 - Remaining blocker: executor-result artifacts still must come from an approved external process; QA-Z only ingests and evaluates the local evidence.
 - Next safe slice: run final validation across release command contracts plus core JSON failure contracts.
+
+
+## 2026-05-13 Guard JSON Failure Contract
+- Repo: JustTyping
+- Lane: guard CLI -> deterministic operator output
+- User-facing flow: `qa-z guard --json`
+- Slice type: Flow / Contract
+- Before: successful guard JSON emitted a structured verdict, but configuration and guard setup failures printed plain text even in JSON mode.
+- Root cause: `handle_guard` reused a text-only config loader and printed exception paths directly.
+- Change made: added a `qa_z.guard_error` payload for `--json` failure paths while preserving existing non-JSON text output and exit code `2`.
+- Validation run: `python -m pytest tests\test_guard_cli.py::test_guard_json_config_error_reports_machine_payload tests\test_guard_cli.py::test_guard_happy_path_writes_merge_ok_verdict -q`; `python -m pytest tests\test_guard_cli.py -q`; `python -m ruff check src\qa_z\commands\guard.py tests\test_guard_cli.py`; `python -m ruff format --check src\qa_z\commands\guard.py tests\test_guard_cli.py`.
+- Evidence: the focused RED run failed with `JSONDecodeError` because output started with `qa-z guard: configuration error`; after the fix the focused pair passed, the full guard CLI file passed `11` tests, and Ruff check/format passed.
+- Gate delta: guard failures are now parseable in JSON mode without changing merge verdict semantics or adding remote/model behavior.
+- User impact: automation can branch on `kind=qa_z.guard_error` and `error=configuration_error` instead of scraping human text when guard cannot load config.
+- Remaining blocker: this does not prove a target repository is merge-safe; callers still need fresh guard verdict artifacts from valid config and current input evidence.
+- Next safe slice: extend the same JSON failure contract to benchmark runtime failures, then run a broader validation wave.
