@@ -122,7 +122,15 @@ def copy_resource_tree(source: Traversable, destination: Path) -> None:
         if child.is_dir():
             copy_resource_tree(child, target)
         else:
-            target.write_bytes(child.read_bytes())
+            write_resource_file(target, child.read_bytes())
+
+
+def write_resource_file(path: Path, content: bytes) -> None:
+    """Write one packaged demo resource with path-aware errors."""
+    try:
+        path.write_bytes(content)
+    except OSError as exc:
+        raise OSError(f"could not write demo resource {path}: {exc}") from exc
 
 
 def write_demo_runtime_config(demo_root: Path) -> Path:
