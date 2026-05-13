@@ -53,14 +53,21 @@ def handle_skill_install(args: argparse.Namespace) -> int:
             if args.output
             else root / target.default_path
         )
-        action = install_target(
-            root=root,
-            target=target,
-            output_path=output_path,
-            append=args.append,
-            force=args.force,
-            dry_run=args.dry_run,
-        )
+        try:
+            action = install_target(
+                root=root,
+                target=target,
+                output_path=output_path,
+                append=args.append,
+                force=args.force,
+                dry_run=args.dry_run,
+            )
+        except OSError as exc:
+            print(
+                "qa-z skill install: artifact write error: "
+                f"could not write {target.name} instructions: {exc}"
+            )
+            return 2
         print(action)
         if action.startswith("refusing"):
             exit_code = 1

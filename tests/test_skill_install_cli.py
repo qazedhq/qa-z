@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from qa_z.cli import main
 
 
@@ -104,3 +106,27 @@ def test_skill_install_output_path_is_path_safe(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     assert output_path.exists()
     assert "QA-Z Merge Safety" in output_path.read_text(encoding="utf-8")
+
+
+def test_skill_install_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    agents_path = tmp_path / "AGENTS.md"
+    original_write_text = Path.write_text
+
+    def fail_agents_write(path: Path, *args, **kwargs) -> int:
+        if path == agents_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_agents_write)
+
+    exit_code = main(["skill", "install", "codex", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z skill install: artifact write error:" in output
+    assert "could not write codex instructions" in output
+    assert "disk full" in output
