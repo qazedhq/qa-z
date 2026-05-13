@@ -716,3 +716,34 @@ def test_select_next_json_reports_artifact_write_failure(
     assert "qa-z select-next: artifact write error:" in output["message"]
     assert "could not write selection artifacts" in output["message"]
     assert "disk full" in output["message"]
+
+
+def test_select_next_json_reports_loop_plan_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    loop_plan_path = tmp_path / ".qa-z" / "loops" / "latest" / "loop_plan.md"
+    original_write_text = Path.write_text
+
+    def fail_loop_plan(path: Path, *args, **kwargs) -> int:
+        if path == loop_plan_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_loop_plan)
+
+    exit_code = main(["select-next", "--path", str(tmp_path), "--count", "1", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.select_next_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z select-next: artifact write error:" in output["message"]
+    assert "could not write selection loop plan artifact" in output["message"]
+    assert str(loop_plan_path) in output["message"]
+    assert "disk full" in output["message"]
