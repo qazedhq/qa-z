@@ -68,27 +68,33 @@ def handle_init(args: argparse.Namespace) -> int:
     created: list[Path] = []
     skipped: list[Path] = []
 
-    for path, content in (
-        (config_path, profile_config(args.profile)),
-        (contracts_readme, CONTRACTS_README),
-    ):
-        if write_text_if_missing(path, content):
-            created.append(path)
-        else:
-            skipped.append(path)
-
-    if args.with_agent_templates:
-        for path, content in agent_templates:
+    try:
+        for path, content in (
+            (config_path, profile_config(args.profile)),
+            (contracts_readme, CONTRACTS_README),
+        ):
             if write_text_if_missing(path, content):
                 created.append(path)
             else:
                 skipped.append(path)
 
-    if args.with_github_workflow:
-        if write_text_if_missing(github_workflow, GITHUB_WORKFLOW):
-            created.append(github_workflow)
-        else:
-            skipped.append(github_workflow)
+        if args.with_agent_templates:
+            for path, content in agent_templates:
+                if write_text_if_missing(path, content):
+                    created.append(path)
+                else:
+                    skipped.append(path)
+
+        if args.with_github_workflow:
+            if write_text_if_missing(github_workflow, GITHUB_WORKFLOW):
+                created.append(github_workflow)
+            else:
+                skipped.append(github_workflow)
+    except OSError as exc:
+        print(
+            f"qa-z init: artifact write error: could not write bootstrap files: {exc}"
+        )
+        return 2
 
     print(f"Initialized QA-Z bootstrap in {root}")
     for path in created:

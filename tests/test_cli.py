@@ -752,6 +752,30 @@ def test_init_is_idempotent(tmp_path, capsys: pytest.CaptureFixture[str]) -> Non
     assert "Nothing new was written" in second_output
 
 
+def test_init_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "qa-z.yaml"
+    original_write_text = Path.write_text
+
+    def fail_config_write(path: Path, *args, **kwargs) -> int:
+        if path == config_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_config_write)
+
+    exit_code = main(["init", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z init: artifact write error:" in output
+    assert "could not write bootstrap files" in output
+    assert "disk full" in output
+
+
 def test_plan_creates_a_contract_draft_from_sources(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
