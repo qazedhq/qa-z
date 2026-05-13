@@ -243,16 +243,24 @@ def _write_review_artifacts_impl(
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
         markdown_path = output_dir / "review.md"
-        markdown_path.write_text(markdown, encoding="utf-8")
+        write_review_artifact(markdown_path, markdown, "markdown")
         json_path = None
         if json_text is not None:
             json_path = output_dir / "review.json"
-            json_path.write_text(json_text, encoding="utf-8")
+            write_review_artifact(json_path, json_text, "json")
     except OSError as exc:
         raise OSError(
             f"could not write review artifacts to {output_dir}: {exc}"
         ) from exc
     return markdown_path, json_path
+
+
+def write_review_artifact(path: Path, text: str, label: str) -> None:
+    """Write one review artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(f"could not write review {label} artifact {path}: {exc}") from exc
 
 
 def _load_contract_review_context_impl(

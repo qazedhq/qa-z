@@ -120,4 +120,57 @@ def test_review_json_reports_artifact_write_failure(
     }
     assert "qa-z review: artifact error:" in output["message"]
     assert "could not write review artifacts" in output["message"]
+    assert "could not write review markdown artifact" in output["message"]
+    assert str(output_dir / "review.md") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_review_json_reports_json_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "review"
+    original_write_text = Path.write_text
+
+    def fail_review_json(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == output_dir / "review.json":
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_review_json)
+
+    exit_code = main(
+        [
+            "review",
+            "--path",
+            str(tmp_path),
+            "--json",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.review_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z review: artifact error:" in output["message"]
+    assert "could not write review artifacts" in output["message"]
+    assert "could not write review json artifact" in output["message"]
+    assert str(output_dir / "review.json") in output["message"]
     assert "disk full" in output["message"]
