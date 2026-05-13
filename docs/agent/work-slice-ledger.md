@@ -1401,3 +1401,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair filesystem or permission problems in the demo target directory directly.
 - Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
 - Next safe slice: commit demo resource directory path context, then run final latest-HEAD release validation and wall-clock compliance checks.
+
+
+## 2026-05-13 Repair Prompt Adapter Handoff Path Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff
+- User-facing flow: `qa-z repair-prompt --json`
+- Slice type: Contract / Evidence
+- Before: Codex/Claude handoff Markdown write failures named the path but not which adapter handoff failed.
+- Root cause: `write_handoff_markdown()` wrapped both adapter outputs with a generic path-only message.
+- Change made: threaded the adapter label through handoff Markdown persistence and strengthened the Codex handoff write-failure regression.
+- Validation run: `python -m pytest tests\test_repair_prompt_error_contracts.py::test_repair_prompt_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_repair_prompt_error_contracts.py tests\test_repair_handoff.py::test_repair_prompt_cli_writes_handoff_and_adapter_artifacts tests\test_repair_handoff.py::test_repair_prompt_cli_can_print_handoff_json -q`; `python -m ruff check src\qa_z\commands\execution_repair.py tests\test_repair_prompt_error_contracts.py tests\test_repair_handoff.py`; `python -m ruff format --check src\qa_z\commands\execution_repair.py tests\test_repair_prompt_error_contracts.py tests\test_repair_handoff.py`.
+- Evidence: regression failed first because the message lacked `repair-prompt codex handoff`, then passed; focused repair-prompt/handoff pack passed `5` tests; Ruff check passed; Ruff format reported `3 files already formatted`.
+- Gate delta: repair-prompt adapter artifact failures now distinguish Codex handoff Markdown from Claude handoff Markdown and other repair artifacts.
+- User impact: operators can fix the exact adapter handoff artifact before handing work to a specific external executor.
+- Remaining blocker: adapter handoffs remain local deterministic prompts and do not execute repairs, mutate target repositories, or prove remote release readiness.
+- Next safe slice: run final latest-HEAD release validation and wall-clock compliance checks.
