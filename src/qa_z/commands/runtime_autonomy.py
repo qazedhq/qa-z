@@ -25,7 +25,14 @@ def handle_autonomy(args: argparse.Namespace) -> int:
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
     if args.autonomy_command == "status":
-        status = load_autonomy_status(root)
+        try:
+            status = load_autonomy_status(root)
+        except OSError as exc:
+            return _autonomy_error(
+                args,
+                error="artifact_error",
+                message=f"qa-z autonomy status: artifact error: {exc}",
+            )
         if args.json:
             print(json.dumps(status, indent=2, sort_keys=True), end="\n")
         else:
@@ -37,19 +44,49 @@ def handle_autonomy(args: argparse.Namespace) -> int:
     )
     if config is None:
         return 2
-    summary = run_autonomy(
-        root=root,
-        config=config,
-        loops=args.loops,
-        count=args.count,
-        min_runtime_seconds=args.min_runtime_hours * 3600,
-        min_loop_seconds=args.min_loop_seconds,
-    )
+    try:
+        summary = run_autonomy(
+            root=root,
+            config=config,
+            loops=args.loops,
+            count=args.count,
+            min_runtime_seconds=args.min_runtime_hours * 3600,
+            min_loop_seconds=args.min_loop_seconds,
+        )
+    except OSError as exc:
+        return _autonomy_error(
+            args,
+            error="artifact_write_error",
+            message=(
+                "qa-z autonomy: artifact write error: "
+                f"could not write autonomy artifacts: {exc}"
+            ),
+        )
     if args.json:
         print(json.dumps(summary, indent=2, sort_keys=True), end="\n")
     else:
         print(render_autonomy_summary(summary, root))
     return 0
+
+
+def _autonomy_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+) -> int:
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.autonomy_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_autonomy_command(subparsers: argparse._SubParsersAction) -> None:

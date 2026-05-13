@@ -1641,6 +1641,48 @@ def test_autonomy_cli_run_and_status(tmp_path: Path, capsys, monkeypatch) -> Non
     assert status["runtime_budget_met"] is True
 
 
+def test_autonomy_cli_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_benchmark_summary(tmp_path)
+    summary_path = tmp_path / ".qa-z" / "loops" / "latest" / "autonomy_summary.json"
+    original_write_text = Path.write_text
+
+    def fail_autonomy_summary(path: Path, *args, **kwargs) -> int:
+        if path == summary_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_autonomy_summary)
+
+    exit_code = main(
+        [
+            "autonomy",
+            "--path",
+            str(tmp_path),
+            "--loops",
+            "1",
+            "--count",
+            "1",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.autonomy_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z autonomy: artifact write error:" in output["message"]
+    assert "could not write autonomy artifacts" in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_load_autonomy_status_without_previous_loop(tmp_path: Path) -> None:
     status = load_autonomy_status(tmp_path)
 
