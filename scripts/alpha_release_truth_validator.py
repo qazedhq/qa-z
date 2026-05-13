@@ -522,7 +522,25 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--ahead-count", type=int, default=None)
     parser.add_argument("--package-version", default=None)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional path where the JSON validation payload should be written.",
+    )
     return parser.parse_args(argv)
+
+
+def write_output_payload(output_path: Path, payload_json: str) -> str | None:
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(f"{payload_json}\n", encoding="utf-8")
+    except OSError as exc:
+        return (
+            f"alpha release truth validator: could not write --output "
+            f"{output_path}: {exc}"
+        )
+    return None
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -559,10 +577,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         package_version=args.package_version,
     )
     payload = validate_release_truth_texts(facts, texts)
+    payload_json = json.dumps(payload, indent=2)
+    output_error = None
+    if args.output is not None:
+        output_error = write_output_payload(args.output, payload_json)
+        if output_error is not None:
+            print(output_error, file=sys.stderr)
     if args.json:
-        print(json.dumps(payload, indent=2))
+        print(payload_json)
     else:
         print(render_human(payload), end="")
+    if output_error is not None:
+        return 2
     return 1 if payload["status"] == "failed" else 0
 
 

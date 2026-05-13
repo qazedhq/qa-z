@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -542,3 +543,81 @@ def test_collected_facts_count_ahead_from_packet_proof_head(
     assert facts.current_head == POST_COMMIT_HEAD
     assert facts.ahead_count == 17
     assert facts.proof_head_mode == "packet"
+
+
+def test_truth_validator_cli_writes_output_payload(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    module = load_truth_validator_module()
+    output_path = tmp_path / "release-truth.json"
+
+    monkeypatch.setattr(
+        module,
+        "read_release_truth_texts",
+        lambda _repo_root, **_kwargs: valid_release_truth_texts(module),
+    )
+    monkeypatch.setattr(
+        module,
+        "collect_release_truth_facts",
+        lambda _repo_root, **_kwargs: module.ReleaseTruthFacts(
+            head=PROOF_HEAD,
+            branch="main",
+            origin_main=ORIGIN_MAIN,
+            ahead_count=17,
+            package_version="0.9.8a0",
+        ),
+    )
+
+    exit_code = module.main(["--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    stdout_payload = json.loads(captured.out)
+    file_payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert stdout_payload == file_payload
+    assert file_payload["kind"] == "qa_z.alpha_release_truth_validator"
+    assert file_payload["status"] == "passed"
+    assert captured.err == ""
+
+
+def test_truth_validator_cli_reports_output_write_failure(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    module = load_truth_validator_module()
+    output_path = tmp_path / "release-truth.json"
+    original_write_text = module.Path.write_text
+
+    monkeypatch.setattr(
+        module,
+        "read_release_truth_texts",
+        lambda _repo_root, **_kwargs: valid_release_truth_texts(module),
+    )
+    monkeypatch.setattr(
+        module,
+        "collect_release_truth_facts",
+        lambda _repo_root, **_kwargs: module.ReleaseTruthFacts(
+            head=PROOF_HEAD,
+            branch="main",
+            origin_main=ORIGIN_MAIN,
+            ahead_count=17,
+            package_version="0.9.8a0",
+        ),
+    )
+
+    def fail_output_write(path, *args, **kwargs):
+        if path == output_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.Path, "write_text", fail_output_write)
+
+    exit_code = module.main(["--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 2
+    assert payload["status"] == "passed"
+    assert (
+        f"alpha release truth validator: could not write --output {output_path}: disk full"
+        in captured.err
+    )
