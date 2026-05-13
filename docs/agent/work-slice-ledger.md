@@ -937,3 +937,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: long-running operators can identify exactly which loop outcome artifact failed before relying on latest-loop status.
 - Remaining blocker: autonomy outcome artifacts remain local deterministic evidence and do not execute repairs or release actions.
 - Next safe slice: commit autonomy outcome behavior, then run the autonomy validation pack and mine copy/summary writer gaps.
+
+
+## 2026-05-13 Autonomy Latest Outcome Copy Failure Contract
+- Repo: JustTyping
+- Lane: autonomy loop -> latest outcome pointer persistence
+- User-facing flow: `qa-z autonomy --json` and `qa-z autonomy status --json`
+- Slice type: Contract / Evidence
+- Before: a failed copy from the per-loop outcome to `.qa-z/loops/latest/outcome.json` raised raw `OSError` without naming the latest target path.
+- Root cause: `copy_artifact()` called `shutil.copyfile()` directly after creating the parent directory.
+- Change made: wrapped autonomy artifact copies with `could not copy autonomy artifact ... to ...` and added a focused regression for failed latest outcome copy.
+- Validation run: `python -m pytest tests\test_autonomy.py::test_write_outcome_artifact_wraps_latest_copy_failure tests\test_autonomy.py::test_write_outcome_artifact_wraps_json_write_failure tests\test_autonomy.py::test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history -q`.
+- Evidence: the focused RED raised raw `OSError: copy failed`; after implementation the failure includes both source and latest outcome target paths, and the one-loop latest outcome/history regression still passes.
+- Gate delta: autonomy status/current-truth consumers now get precise evidence when the latest outcome pointer cannot be updated.
+- User impact: operators can repair or rerun the local latest-outcome copy path without confusing it for planner or executor-result failure.
+- Remaining blocker: latest outcome copies remain local evidence only; no target repo, remote, package, or release mutation was added.
+- Next safe slice: commit latest outcome copy behavior, then run the autonomy validation pack and select the next runtime summary writer gap.
