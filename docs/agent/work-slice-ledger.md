@@ -1049,3 +1049,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish missing handoff JSON from a failed executor guide before sending instructions to a human or external executor.
 - Remaining blocker: repair-session guide creation remains local handoff packaging and does not execute repairs or mutate target repositories.
 - Next safe slice: commit executor-guide behavior, then continue with verification artifact or publish-summary path clarity.
+
+
+## 2026-05-13 Repair Prompt Packet Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: finding -> repair prompt -> external executor handoff
+- User-facing flow: `qa-z repair-prompt --json`
+- Slice type: Contract / Evidence
+- Before: failed repair-prompt `packet.json` or `prompt.md` writes could surface only through the broad command artifact-write boundary, while adapter handoff files already had per-file context.
+- Root cause: `_write_repair_artifacts_impl()` created the output directory and wrote packet/prompt files inline with no per-artifact persistence helper.
+- Change made: added a path-aware repair-prompt artifact writer, preserved explicit directory-creation failure context, and added a JSON-mode regression for failed `prompt.md` persistence.
+- Validation run: `python -m pytest tests\test_repair_prompt_error_contracts.py tests\test_repair_prompt.py -q`; `python -m pytest tests\test_repair_prompt_architecture.py -q`; `python -m ruff check src\qa_z\reporters\repair_prompt.py tests\test_repair_prompt_error_contracts.py`; `python -m ruff format --check src\qa_z\reporters\repair_prompt.py tests\test_repair_prompt_error_contracts.py`.
+- Evidence: repair-prompt behavior pack passed `13` tests; repair-prompt architecture pack passed `6` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: repair-prompt now distinguishes packet/prompt persistence failures from Codex/Claude handoff Markdown failures and source artifact loading failures.
+- User impact: operators get the exact failed repair-prompt artifact path before handing a packet to an external repair executor.
+- Remaining blocker: repair prompts remain deterministic local handoff artifacts and do not perform repairs or target-repo mutation.
+- Next safe slice: commit repair-prompt packet behavior, then mine verification artifact output or skill-install append/overwrite writers.
