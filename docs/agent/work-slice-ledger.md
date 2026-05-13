@@ -969,3 +969,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can identify exactly which loop plan file failed before handing a plan to a human or external executor.
 - Remaining blocker: loop plans remain local planning artifacts and do not perform autonomous repairs or release mutation.
 - Next safe slice: commit loop-plan behavior, then run the autonomy validation pack and mine another runtime writer.
+
+
+## 2026-05-13 Select-Next Loop Plan Write Failure Contract
+- Repo: JustTyping
+- Lane: self-improvement selection -> latest loop-plan markdown persistence
+- User-facing flow: `qa-z select-next --json`
+- Slice type: Contract / Evidence
+- Before: a failed select-next `loop_plan.md` write returned only `could not write selection artifacts: disk full` without naming the loop-plan path.
+- Root cause: `select_next_tasks()` wrote the rendered latest loop plan inline after writing `selected_tasks.json`.
+- Change made: added a path-aware select-next loop-plan writer and a focused JSON regression for failed `.qa-z/loops/latest/loop_plan.md` persistence.
+- Validation run: `python -m pytest tests\test_self_improvement.py::test_select_next_json_reports_loop_plan_write_failure tests\test_self_improvement.py::test_select_next_json_reports_artifact_write_failure tests\test_self_improvement.py::test_select_next_writes_selected_tasks_plan_and_history -q`.
+- Evidence: the focused RED produced only the generic selection artifact error; after implementation the failure includes `could not write selection loop plan artifact ...`, while selected-tasks and history output still pass.
+- Gate delta: select-next can now distinguish selected-task JSON persistence from loop-plan markdown persistence before autonomy consumes the selection context.
+- User impact: operators can repair or rerun the exact loop-plan path without mistaking the failure for an empty backlog or stale selection.
+- Remaining blocker: select-next remains local task-selection evidence and does not mutate target repositories.
+- Next safe slice: commit select-next loop-plan behavior, then run self-improvement selection validation and mine self-improvement JSON writer gaps.
