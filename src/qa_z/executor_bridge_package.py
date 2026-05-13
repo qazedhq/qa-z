@@ -8,7 +8,7 @@ import shutil
 from typing import Any
 
 from qa_z import executor_bridge as executor_bridge_module
-from qa_z.artifacts import format_path
+from qa_z.artifacts import ArtifactSourceNotFound, format_path
 from qa_z.executor_bridge_context import (
     copy_action_context_inputs,
     copy_input,
@@ -146,6 +146,18 @@ def create_executor_bridge(
         claude_path.write_text(
             render_executor_specific_guide(manifest, "Claude"), encoding="utf-8"
         )
+    except (ArtifactSourceNotFound, FileNotFoundError):
+        if created_bridge_dir:
+            with suppress(OSError):
+                shutil.rmtree(bridge_dir)
+        raise
+    except OSError as exc:
+        if created_bridge_dir:
+            with suppress(OSError):
+                shutil.rmtree(bridge_dir)
+        raise OSError(
+            f"could not write executor bridge package to {bridge_dir}: {exc}"
+        ) from exc
     except Exception:
         if created_bridge_dir:
             with suppress(OSError):

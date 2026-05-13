@@ -63,6 +63,13 @@ def handle_executor_bridge(args: argparse.Namespace) -> int:
             message=f"qa-z executor-bridge: source not found: {exc}",
             exit_code=4,
         )
+    except OSError as exc:
+        return _bridge_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z executor-bridge: artifact error: {exc}",
+            exit_code=2,
+        )
     except ExecutorBridgeError as exc:
         return _bridge_error(
             args,
