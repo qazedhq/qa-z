@@ -17,6 +17,7 @@ from qa_z.verification import (
     verify_exit_code,
     write_verification_artifacts,
 )
+from qa_z.verification_models import VerificationComparison
 
 
 def handle_verify(args: argparse.Namespace) -> int:
@@ -71,7 +72,12 @@ def handle_verify(args: argparse.Namespace) -> int:
             if args.output_dir
             else candidate_source.run_dir / "verify"
         )
-        paths = write_verification_artifacts(comparison, output_dir)
+        paths_or_error = _write_verification_artifacts_or_error(
+            args, comparison, output_dir
+        )
+        if isinstance(paths_or_error, int):
+            return paths_or_error
+        paths = paths_or_error
 
         if args.json:
             print(comparison_json(comparison), end="")
@@ -97,6 +103,22 @@ def handle_verify(args: argparse.Namespace) -> int:
             args,
             error="configuration_error",
             message=f"qa-z verify: configuration error: {exc}",
+            exit_code=2,
+        )
+
+
+def _write_verification_artifacts_or_error(
+    args: argparse.Namespace,
+    comparison: VerificationComparison,
+    output_dir: Path,
+) -> VerificationArtifactPaths | int:
+    try:
+        return write_verification_artifacts(comparison, output_dir)
+    except OSError as exc:
+        return _verify_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z verify: artifact error: {exc}",
             exit_code=2,
         )
 
