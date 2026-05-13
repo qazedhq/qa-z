@@ -27,27 +27,35 @@ __all__ = [
 
 def _write_run_summary_artifacts_impl(summary: RunSummary, artifact_dir: Path) -> Path:
     """Write summary JSON, Markdown, and per-check JSON artifacts."""
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-    checks_dir = artifact_dir / "checks"
-    checks_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        checks_dir = artifact_dir / "checks"
+        checks_dir.mkdir(parents=True, exist_ok=True)
 
-    summary_path = artifact_dir / "summary.json"
-    summary_path.write_text(
-        json.dumps(summary.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    (artifact_dir / "summary.md").write_text(
-        _render_summary_markdown_impl(summary), encoding="utf-8"
-    )
-
-    used_check_names: dict[str, int] = {}
-    for check in summary.checks:
-        check_path = checks_dir / unique_check_artifact_name(check.id, used_check_names)
-        check_path.write_text(
-            json.dumps(check.to_dict(), indent=2, sort_keys=True) + "\n",
+        summary_path = artifact_dir / "summary.json"
+        summary_path.write_text(
+            json.dumps(summary.to_dict(), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        (artifact_dir / "summary.md").write_text(
+            _render_summary_markdown_impl(summary), encoding="utf-8"
+        )
 
-    return summary_path
+        used_check_names: dict[str, int] = {}
+        for check in summary.checks:
+            check_path = checks_dir / unique_check_artifact_name(
+                check.id, used_check_names
+            )
+            check_path.write_text(
+                json.dumps(check.to_dict(), indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+        return summary_path
+    except OSError as exc:
+        raise OSError(
+            f"could not write run summary artifacts to {artifact_dir}: {exc}"
+        ) from exc
 
 
 def unique_check_artifact_name(check_id: str, used_names: dict[str, int]) -> str:

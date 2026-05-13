@@ -53,8 +53,17 @@ def handle_fast(args: argparse.Namespace) -> int:
     artifact_dir = Path(run.summary.artifact_dir or "")
     if not artifact_dir.is_absolute():
         artifact_dir = root / artifact_dir
-    summary_path = write_run_summary_artifacts(run.summary, artifact_dir)
-    write_latest_run_manifest(root, config, artifact_dir.parent)
+    try:
+        summary_path = write_run_summary_artifacts(run.summary, artifact_dir)
+        write_latest_run_manifest(root, config, artifact_dir.parent)
+    except OSError as exc:
+        return _execution_error(
+            args,
+            command="fast",
+            error="artifact_write_error",
+            message=f"qa-z fast: artifact write error: {exc}",
+            exit_code=2,
+        )
 
     if args.json:
         print(summary_json(run.summary), end="")
