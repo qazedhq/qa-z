@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from qa_z.artifacts import resolve_path
+from qa_z.executor_dry_run_artifacts import write_dry_run_report
 from qa_z.executor_dry_run_render import (
     normalize_recommended_actions,
     render_dry_run_report,
@@ -77,14 +78,3 @@ def run_executor_result_dry_run(
         report_path=report_path,
         summary=summary,
     )
-
-
-def write_dry_run_report(path: Path, text: str) -> None:
-    """Write the dry-run Markdown report with path-aware failures."""
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    except OSError as exc:
-        raise OSError(
-            f"could not write executor-result dry-run report {path}: {exc}"
-        ) from exc
