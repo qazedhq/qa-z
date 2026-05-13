@@ -1033,3 +1033,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can identify the exact executor history artifact that failed before trusting verify-resume or dry-run history signals.
 - Remaining blocker: executor history remains local evidence and does not authorize remote release or external executor mutation.
 - Next safe slice: commit executor-history helper behavior, then inspect verification publication or repair-session guide writers.
+
+
+## 2026-05-13 Repair Session Executor Guide Write Failure Contract
+- Repo: JustTyping
+- Lane: repair prompt -> external executor handoff -> repair-session start
+- User-facing flow: `qa-z repair-session start --json`
+- Slice type: Contract / Evidence
+- Before: a failed `executor_guide.md` write was only covered by the broad session-start artifact boundary.
+- Root cause: `write_executor_guide()` resolved and wrote the external executor guide path inline without its own path-aware persistence boundary.
+- Change made: wrapped executor-guide parent creation and Markdown write with `could not write repair-session executor guide ...`, plus a focused regression for the guide writer.
+- Validation run: `python -m pytest tests\test_repair_session.py::test_write_executor_guide_wraps_write_failure tests\test_repair_session.py::test_repair_session_start_json_reports_artifact_write_failure tests\test_repair_session.py::test_repair_session_start_creates_manifest_handoff_and_executor_guide -q`; `python -m pytest tests\test_repair_session.py -q`; `python -m ruff check src\qa_z\repair_session_guides.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\repair_session_guides.py tests\test_repair_session.py`.
+- Evidence: focused guide/start pack passed `3` tests; full repair-session pack passed `19` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: repair-session start failures now carry both the broad session-start artifact context and the exact executor-guide path when that Markdown handoff fails.
+- User impact: operators can distinguish missing handoff JSON from a failed executor guide before sending instructions to a human or external executor.
+- Remaining blocker: repair-session guide creation remains local handoff packaging and does not execute repairs or mutate target repositories.
+- Next safe slice: commit executor-guide behavior, then continue with verification artifact or publish-summary path clarity.
