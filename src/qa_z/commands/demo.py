@@ -58,11 +58,14 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
         copy_resource_tree(demo_auth_bug_resource(), demo_root)
         demo_config = write_demo_runtime_config(demo_root)
     except OSError as exc:
-        print(
-            "qa-z demo auth-bug: artifact write error: "
-            f"could not prepare demo artifacts: {exc}"
+        return demo_auth_bug_error(
+            args,
+            error="artifact_write_error",
+            message=(
+                "qa-z demo auth-bug: artifact write error: "
+                f"could not prepare demo artifacts: {exc}"
+            ),
         )
-        return 2
     plan_exit = run_demo_subcommand(
         [
             "plan",
@@ -99,23 +102,15 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
         suppress_stdout=args.json,
     )
     if plan_exit != 0 or guard_exit != 0:
-        if args.json:
-            print(
-                json.dumps(
-                    {
-                        "kind": "qa_z.demo.auth_bug_error",
-                        "error": "demo_run_error",
-                        "exit_code": 1,
-                        "message": (
-                            "qa-z demo auth-bug: failed to create demo evidence "
-                            f"(plan_exit={plan_exit}, guard_exit={guard_exit})"
-                        ),
-                    },
-                    indent=2,
-                    sort_keys=True,
-                )
-            )
-        return 1
+        return demo_auth_bug_error(
+            args,
+            error="demo_run_error",
+            exit_code=1,
+            message=(
+                "qa-z demo auth-bug: failed to create demo evidence "
+                f"(plan_exit={plan_exit}, guard_exit={guard_exit})"
+            ),
+        )
     if args.json:
         print(
             json.dumps(
@@ -148,6 +143,28 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     print("  qa-z guard --from-run latest --adapter codex")
     print("  qa-z repair-prompt --from-run latest --adapter codex")
     return 0
+
+
+def demo_auth_bug_error(
+    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+) -> int:
+    """Render auth-bug demo errors in human or JSON form."""
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.demo.auth_bug_error",
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def run_demo_subcommand(command: list[str], *, suppress_stdout: bool) -> int:

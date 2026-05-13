@@ -171,6 +171,37 @@ def test_demo_auth_bug_reports_runtime_config_write_failure(
     assert "disk full" in output
 
 
+def test_demo_auth_bug_json_reports_runtime_config_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / ".qa-z" / "demo" / "auth-bug" / "qa-z.demo.yaml"
+    original_write_text = Path.write_text
+
+    def fail_demo_config(path: Path, *args, **kwargs) -> int:
+        if path == config_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_demo_config)
+
+    exit_code = main(["demo", "auth-bug", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.demo.auth_bug_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z demo auth-bug: artifact write error:" in output["message"]
+    assert "could not prepare demo artifacts" in output["message"]
+    assert str(config_path) in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_demo_auth_bug_reports_copied_resource_write_failure(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
