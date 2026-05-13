@@ -39,14 +39,29 @@ def handle_repair_session_start(args: argparse.Namespace) -> int:
         print(render_session_start_stdout(result.session))
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z repair-session start: artifact error: {exc}")
-        return 2
+        return _repair_session_error(
+            args,
+            command="start",
+            error="artifact_error",
+            message=f"qa-z repair-session start: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session start: source not found: {exc}")
-        return 4
+        return _repair_session_error(
+            args,
+            command="start",
+            error="source_not_found",
+            message=f"qa-z repair-session start: source not found: {exc}",
+            exit_code=4,
+        )
     except ValueError as exc:
-        print(f"qa-z repair-session start: configuration error: {exc}")
-        return 2
+        return _repair_session_error(
+            args,
+            command="start",
+            error="configuration_error",
+            message=f"qa-z repair-session start: configuration error: {exc}",
+            exit_code=2,
+        )
 
 
 def handle_repair_session_status(args: argparse.Namespace) -> int:
@@ -74,11 +89,21 @@ def handle_repair_session_status(args: argparse.Namespace) -> int:
             )
         return 0
     except ArtifactLoadError as exc:
-        print(f"qa-z repair-session status: artifact error: {exc}")
-        return 2
+        return _repair_session_error(
+            args,
+            command="status",
+            error="artifact_error",
+            message=f"qa-z repair-session status: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session status: source not found: {exc}")
-        return 4
+        return _repair_session_error(
+            args,
+            command="status",
+            error="source_not_found",
+            message=f"qa-z repair-session status: source not found: {exc}",
+            exit_code=4,
+        )
 
 
 def handle_repair_session_verify(args: argparse.Namespace) -> int:
@@ -92,11 +117,16 @@ def handle_repair_session_verify(args: argparse.Namespace) -> int:
         return 2
 
     if bool(args.candidate_run) == bool(args.rerun):
-        print(
-            "qa-z repair-session verify: configuration error: provide exactly one "
-            "of --candidate-run or --rerun."
+        return _repair_session_error(
+            args,
+            command="verify",
+            error="configuration_error",
+            message=(
+                "qa-z repair-session verify: configuration error: provide exactly one "
+                "of --candidate-run or --rerun."
+            ),
+            exit_code=2,
         )
-        return 2
 
     try:
         session = load_repair_session(root, args.session)
@@ -117,14 +147,55 @@ def handle_repair_session_verify(args: argparse.Namespace) -> int:
             print(render_session_verify_stdout(updated, summary))
         return verify_exit_code(comparison.verdict)
     except ArtifactLoadError as exc:
-        print(f"qa-z repair-session verify: artifact error: {exc}")
-        return 2
+        return _repair_session_error(
+            args,
+            command="verify",
+            error="artifact_error",
+            message=f"qa-z repair-session verify: artifact error: {exc}",
+            exit_code=2,
+        )
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
-        print(f"qa-z repair-session verify: source not found: {exc}")
-        return 4
+        return _repair_session_error(
+            args,
+            command="verify",
+            error="source_not_found",
+            message=f"qa-z repair-session verify: source not found: {exc}",
+            exit_code=4,
+        )
     except ValueError as exc:
-        print(f"qa-z repair-session verify: configuration error: {exc}")
-        return 2
+        return _repair_session_error(
+            args,
+            command="verify",
+            error="configuration_error",
+            message=f"qa-z repair-session verify: configuration error: {exc}",
+            exit_code=2,
+        )
+
+
+def _repair_session_error(
+    args: argparse.Namespace,
+    *,
+    command: str,
+    error: str,
+    message: str,
+    exit_code: int,
+) -> int:
+    if getattr(args, "json", False):
+        print(
+            json.dumps(
+                {
+                    "kind": "qa_z.repair_session_error",
+                    "command": command,
+                    "error": error,
+                    "exit_code": exit_code,
+                    "message": message,
+                },
+                sort_keys=True,
+            )
+        )
+    else:
+        print(message)
+    return exit_code
 
 
 def register_repair_session_command(subparsers: argparse._SubParsersAction) -> None:
