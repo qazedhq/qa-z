@@ -569,3 +569,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: downstream review packet automation can tell artifact persistence failure apart from missing run/contract inputs without raw tracebacks.
 - Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after this slice.
 - Next safe slice: commit review packet changes, then mine another output-failure surface such as verify or executor bridge.
+
+
+## 2026-05-13 Verify Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: verify -> comparison artifact writing
+- User-facing flow: `qa-z verify --json --output-dir <path>` and default candidate-run `verify` artifacts
+- Slice type: Flow / Contract
+- Before: a failed `summary.json`, `compare.json`, or `report.md` write could escape as raw `OSError` after the verification comparison was built.
+- Root cause: `handle_verify()` wrote verification artifacts outside a command-owned OSError boundary, and the writer did not include output-directory context on persistence failures.
+- Change made: added a verify artifact write boundary that returns `qa_z.verify_error` with `artifact_write_error`, made verification artifact writer failures path-aware, and updated the repair/session publish commit-plan ownership and validation command to include the new verify error-contract test.
+- Validation run: `python -m pytest tests\test_verify_cli_error_contracts.py::test_verify_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_verify_cli_error_contracts.py tests\test_verification_artifact_io.py tests\test_verification_artifact_io_architecture.py tests\test_session_commands.py tests\test_worktree_commit_plan_validation_commands.py -q`; `python -m pytest tests\test_cli.py -q -k verify`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\check_text_file_hygiene.py --source working-tree`; `python -m ruff check src\qa_z\commands\session_verify.py src\qa_z\verification_artifact_writing.py scripts\worktree_commit_plan_support.py tests\test_verify_cli_error_contracts.py tests\test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check src\qa_z\commands\session_verify.py src\qa_z\verification_artifact_writing.py scripts\worktree_commit_plan_support.py tests\test_verify_cli_error_contracts.py tests\test_worktree_commit_plan_validation_commands.py`; `git diff --check`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused write-failure test passed, the verify/artifact/session/commit-plan pack passed `11` tests, the verify-filtered CLI pack passed `5` tests, strict worktree plan returned `ready`, and hygiene/Ruff/diff checks passed.
+- Gate delta: verify JSON mode now remains machine-parseable when local verification artifacts cannot be written.
+- User impact: repair verification automation can fail closed on artifact persistence issues without losing the comparison error shape.
+- Remaining blocker: release execution remains approval-blocked; alpha gate should be rerun after committing this slice.
+- Next safe slice: commit verify behavior and commit-plan routing, then continue mining executor bridge or benchmark artifact write failures.
