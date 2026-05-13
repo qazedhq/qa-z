@@ -1385,3 +1385,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair blocked demo file copies without treating the whole deterministic demo as unreliable.
 - Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
 - Next safe slice: commit demo resource path context, then run final latest-HEAD release validation and wall-clock compliance checks.
+
+
+## 2026-05-13 Demo Resource Directory Artifact Path Contract
+- Repo: JustTyping
+- Lane: init/doctor -> demo -> guard/repair proof
+- User-facing flow: `qa-z demo auth-bug`
+- Slice type: Contract / Evidence
+- Before: demo resource directory creation failures surfaced only the broad demo artifact boundary and raw filesystem error.
+- Root cause: `copy_resource_tree()` created target directories directly and relied on the outer demo handler for context.
+- Change made: wrapped demo resource directory creation with the exact target directory path and added a regression for `.qa-z/demo/auth-bug` creation failure.
+- Validation run: `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_resource_directory_create_failure -q`; `python -m pytest tests\test_demo_guard_action_package.py::test_demo_auth_bug_command_writes_repair_and_guard_artifacts tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_runtime_config_write_failure tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_copied_resource_write_failure tests\test_demo_guard_action_package.py::test_demo_auth_bug_reports_resource_directory_create_failure tests\test_demo_guard_action_package.py::test_packaged_auth_bug_demo_matches_public_source_demo -q`; `python -m ruff format src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff format --check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`; `python -m ruff check src\qa_z\commands\demo.py tests\test_demo_guard_action_package.py`.
+- Evidence: regression failed first because output only contained `disk full`, then passed with the demo resource directory path; focused demo pack passed `5` tests; Ruff formatted one file, then format check and Ruff check passed.
+- Gate delta: demo bootstrap failures now distinguish resource directory creation from copied resource files, runtime config, guard output, and repair artifacts.
+- User impact: operators can repair filesystem or permission problems in the demo target directory directly.
+- Remaining blocker: the demo remains local deterministic proof and does not push, publish, deploy, or prove production readiness.
+- Next safe slice: commit demo resource directory path context, then run final latest-HEAD release validation and wall-clock compliance checks.
