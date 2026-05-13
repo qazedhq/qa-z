@@ -953,3 +953,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair or rerun the local latest-outcome copy path without confusing it for planner or executor-result failure.
 - Remaining blocker: latest outcome copies remain local evidence only; no target repo, remote, package, or release mutation was added.
 - Next safe slice: commit latest outcome copy behavior, then run the autonomy validation pack and select the next runtime summary writer gap.
+
+
+## 2026-05-13 Autonomy Loop Plan Write Failure Contract
+- Repo: JustTyping
+- Lane: autonomy loop -> per-loop and latest loop-plan markdown persistence
+- User-facing flow: `qa-z autonomy --json`
+- Slice type: Contract / Evidence
+- Before: a failed `loop_plan.md` write raised raw `OSError` without naming the per-loop or latest loop-plan path.
+- Root cause: `run_autonomy_loop()` wrote both loop-plan markdown files inline after rendering the loop plan.
+- Change made: added a path-aware autonomy loop-plan writer and a focused regression for failed per-loop `loop_plan.md` persistence.
+- Validation run: `python -m pytest tests\test_autonomy.py::test_run_autonomy_wraps_loop_plan_write_failure tests\test_autonomy.py::test_autonomy_one_loop_writes_per_loop_latest_outcome_and_history -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the failure includes `could not write autonomy loop plan artifact ...`, and the one-loop latest outcome/history regression still passes.
+- Gate delta: loop-plan persistence failures now remain separate from self-inspection, selected-task, outcome, and history persistence failures.
+- User impact: operators can identify exactly which loop plan file failed before handing a plan to a human or external executor.
+- Remaining blocker: loop plans remain local planning artifacts and do not perform autonomous repairs or release mutation.
+- Next safe slice: commit loop-plan behavior, then run the autonomy validation pack and mine another runtime writer.
