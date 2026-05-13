@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -35,12 +36,29 @@ def resolve_cli_path(root: Path, value: str) -> Path:
 
 
 def load_cli_config(
-    root: Path, args: argparse.Namespace, command: str
+    root: Path,
+    args: argparse.Namespace,
+    command: str,
+    *,
+    json_error_kind: str | None = None,
+    json_error_command: str | None = None,
 ) -> dict[str, Any] | None:
     """Load config for a CLI command and print normalized errors."""
     config_path = resolve_cli_path(root, args.config) if args.config else None
     try:
         return load_config(root, config_path=config_path)
     except ConfigError as exc:
-        print(f"qa-z {command}: configuration error: {exc}")
+        message = f"qa-z {command}: configuration error: {exc}"
+        if json_error_kind and getattr(args, "json", False):
+            payload: dict[str, Any] = {
+                "kind": json_error_kind,
+                "error": "configuration_error",
+                "exit_code": 2,
+                "message": message,
+            }
+            if json_error_command:
+                payload["command"] = json_error_command
+            print(json.dumps(payload, sort_keys=True))
+        else:
+            print(message)
         return None

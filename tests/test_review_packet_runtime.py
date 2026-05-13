@@ -174,6 +174,24 @@ def test_review_json_reports_missing_contract_as_machine_payload(
     assert "qa-z review: source not found:" in output["message"]
 
 
+def test_review_json_reports_broken_config_as_machine_payload(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("review: [\n", encoding="utf-8")
+
+    exit_code = main(["review", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.review_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z review: configuration error:" in output["message"]
+
+
 def test_review_from_run_includes_selection_context(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

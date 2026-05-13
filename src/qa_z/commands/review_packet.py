@@ -30,7 +30,7 @@ def handle_review(args: argparse.Namespace) -> int:
     """Render a review packet from a generated contract."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "review")
+    config = load_cli_config(root, args, "review", json_error_kind="qa_z.review_error")
     if config is None:
         return 2
 

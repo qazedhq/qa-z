@@ -23,7 +23,7 @@ def handle_verify(args: argparse.Namespace) -> int:
     """Compare a baseline run against a post-repair candidate run."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "verify")
+    config = load_cli_config(root, args, "verify", json_error_kind="qa_z.verify_error")
     if config is None:
         return 2
 

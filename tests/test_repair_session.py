@@ -460,6 +460,37 @@ def test_repair_session_verify_json_reports_argument_error_as_machine_payload(
     assert "qa-z repair-session verify: configuration error:" in output["message"]
 
 
+def test_repair_session_verify_json_reports_broken_config_as_machine_payload(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("repair-session: [\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "repair-session",
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--session",
+            ".qa-z/sessions/session-one",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.repair_session_error",
+        "command": "verify",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z repair-session verify: configuration error:" in output["message"]
+
+
 def test_repair_session_verify_json_reports_missing_session_as_machine_payload(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -112,7 +112,13 @@ def handle_repair_session_verify(args: argparse.Namespace) -> int:
 
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "repair-session verify")
+    config = load_cli_config(
+        root,
+        args,
+        "repair-session verify",
+        json_error_kind="qa_z.repair_session_error",
+        json_error_command="verify",
+    )
     if config is None:
         return 2
 

@@ -1553,6 +1553,25 @@ def test_fast_returns_config_error_for_broken_yaml(
     assert "qa-z fast: configuration error:" in output
 
 
+def test_fast_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("fast: [\n", encoding="utf-8")
+
+    exit_code = main(["fast", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.fast_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z fast: configuration error:" in output["message"]
+
+
 def test_fast_cli_json_reports_config_error_as_machine_payload(
     tmp_path,
     capsys: pytest.CaptureFixture[str],
@@ -1603,6 +1622,25 @@ def test_deep_cli_json_reports_argument_error_as_machine_payload(
         "message": output["message"],
     }
     assert "qa-z deep: argument error:" in output["message"]
+
+
+def test_deep_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("deep: [\n", encoding="utf-8")
+
+    exit_code = main(["deep", "--path", str(tmp_path), "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.deep_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z deep: configuration error:" in output["message"]
 
 
 def test_deep_cli_json_reports_source_not_found_as_machine_payload(
@@ -1764,3 +1802,33 @@ def test_verify_cli_json_reports_source_not_found_as_machine_payload(
         "message": output["message"],
     }
     assert "qa-z verify: source not found:" in output["message"]
+
+
+def test_verify_cli_json_reports_broken_config_as_machine_payload(
+    tmp_path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "qa-z.yaml").write_text("verify: [\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "verify",
+            "--path",
+            str(tmp_path),
+            "--baseline-run",
+            ".qa-z/runs/baseline",
+            "--candidate-run",
+            ".qa-z/runs/candidate",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.verify_error",
+        "error": "configuration_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z verify: configuration error:" in output["message"]

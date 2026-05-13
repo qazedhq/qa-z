@@ -24,7 +24,7 @@ def handle_fast(args: argparse.Namespace) -> int:
     """Run deterministic fast checks."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "fast")
+    config = load_cli_config(root, args, "fast", json_error_kind="qa_z.fast_error")
     if config is None:
         return 2
 
@@ -131,7 +131,7 @@ def handle_deep(args: argparse.Namespace) -> int:
 
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "deep")
+    config = load_cli_config(root, args, "deep", json_error_kind="qa_z.deep_error")
     if config is None:
         return 2
 
