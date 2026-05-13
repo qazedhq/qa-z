@@ -129,4 +129,5 @@ def test_skill_install_reports_artifact_write_failure(
     assert exit_code == 2
     assert "qa-z skill install: artifact write error:" in output
     assert "could not write codex instructions" in output
+    assert str(agents_path) in output
     assert "disk full" in output
