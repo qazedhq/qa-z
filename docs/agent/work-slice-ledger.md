@@ -409,3 +409,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: external executor coordinators can distinguish `status` artifact failures from `verify` argument failures using stable fields.
 - Remaining blocker: repair-session evidence still depends on a real failed baseline, external repair attempt, and candidate verification artifacts.
 - Next safe slice: run a wider validation wave across CLI failure-contract surfaces and release truth proof-head mode before mining another workstream.
+
+
+## 2026-05-13 Config Loader JSON Error Contract
+- Repo: JustTyping
+- Lane: CLI configuration loading -> deterministic JSON failure contracts
+- User-facing flow: `qa-z fast --json`, `qa-z deep --json`, `qa-z review --json`, `qa-z verify --json`, and `qa-z repair-session verify --json`
+- Slice type: Contract / Cleanup
+- Before: command handlers emitted JSON for many runtime failures, but malformed config stopped inside the shared config loader and printed human text before command-specific JSON error helpers could run.
+- Root cause: `load_cli_config()` had only a text output path and no way for JSON-capable callers to provide their error payload kind.
+- Change made: added optional `json_error_kind` and `json_error_command` parameters to the shared config loader, then wired the fast, deep, review, verify, and repair-session verify handlers to their existing JSON error schemas.
+- Validation run: `python -m pytest tests\test_cli.py -q -k "fast_cli_json_reports_broken_config or verify_cli_json_reports_broken_config"`; `python -m pytest tests\test_cli.py tests\test_review_packet_runtime.py tests\test_repair_session.py -q -k "broken_config"`; `python -m pytest tests\test_cli.py tests\test_review_packet_runtime.py tests\test_repair_session.py -q`; `python -m ruff check src\qa_z\commands\common.py src\qa_z\commands\execution_runs.py src\qa_z\commands\review_packet.py src\qa_z\commands\session_verify.py src\qa_z\commands\session_repair.py tests\test_cli.py tests\test_review_packet_runtime.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\commands\common.py src\qa_z\commands\execution_runs.py src\qa_z\commands\review_packet.py src\qa_z\commands\session_verify.py src\qa_z\commands\session_repair.py tests\test_cli.py tests\test_review_packet_runtime.py tests\test_repair_session.py`.
+- Evidence: the initial RED failed with `JSONDecodeError` for malformed fast and verify configs; after implementation five broken-config JSON tests passed, the related CLI/review/repair-session suite passed `76` tests, and Ruff check/format passed.
+- Gate delta: malformed local config is now a machine-parseable failure for the primary analysis, review, verify, and repair-session verify surfaces.
+- User impact: local orchestrators can fail closed on configuration errors using stable JSON fields instead of terminal prose.
+- Remaining blocker: commands without JSON modes still intentionally render human text, and release execution remains approval-blocked.
+- Next safe slice: run a broader validation wave, then mine non-JSON CLI surfaces or release-preflight truth gaps.
