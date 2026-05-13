@@ -64,9 +64,15 @@ def run_executor_result_dry_run(
     )
     summary_path = executor_result_dry_run_summary_path(session_dir)
     report_path = executor_result_dry_run_report_path(session_dir)
-    write_json(summary_path, summary)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_dry_run_report(summary), encoding="utf-8")
+    try:
+        write_json(summary_path, summary)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(render_dry_run_report(summary), encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor-result dry-run artifacts to "
+            f"{summary_path.parent}: {exc}"
+        ) from exc
     return ExecutorDryRunOutcome(
         summary_path=summary_path,
         report_path=report_path,

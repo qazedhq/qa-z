@@ -138,6 +138,14 @@ def handle_executor_result_dry_run(args: argparse.Namespace) -> int:
             message=f"qa-z executor-result dry-run: configuration error: {exc}",
             exit_code=2,
         )
+    except OSError as exc:
+        return _executor_result_error(
+            args,
+            command="dry-run",
+            error="artifact_write_error",
+            message=f"qa-z executor-result dry-run: artifact write error: {exc}",
+            exit_code=2,
+        )
 
 
 def _executor_result_error(
