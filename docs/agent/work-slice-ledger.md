@@ -1065,3 +1065,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators get the exact failed repair-prompt artifact path before handing a packet to an external repair executor.
 - Remaining blocker: repair prompts remain deterministic local handoff artifacts and do not perform repairs or target-repo mutation.
 - Next safe slice: commit repair-prompt packet behavior, then mine verification artifact output or skill-install append/overwrite writers.
+
+
+## 2026-05-13 Verification Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: repair-session verify -> verification artifact persistence
+- User-facing flow: `qa-z verify --json` and `qa-z repair-session verify --json`
+- Slice type: Contract / Evidence
+- Before: verification artifact write failures named the output directory but not whether `summary.json`, `compare.json`, or `report.md` failed.
+- Root cause: `write_verification_artifacts()` wrote all three artifacts inside one broad `try` block with a directory-level failure message.
+- Change made: separated directory creation from per-artifact writes and added `could not write verification artifact ...` for the individual verification files.
+- Validation run: `python -m pytest tests\test_verification_artifact_io.py tests\test_verification.py tests\test_verification_artifact_architecture.py tests\test_verification_artifact_io_architecture.py -q`; `python -m ruff check src\qa_z\verification_artifact_writing.py tests\test_verification_artifact_io.py`; `python -m ruff format --check src\qa_z\verification_artifact_writing.py tests\test_verification_artifact_io.py`.
+- Evidence: verification artifact IO, behavior, and architecture packs passed `9` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: verification failures can now distinguish summary, compare, and report persistence issues from comparison logic and source artifact loading.
+- User impact: maintainers can repair the exact failed verification output before trusting a repair-session completion or publish summary.
+- Remaining blocker: verification artifacts remain local evidence and do not prove remote release, package publication, or production readiness.
+- Next safe slice: commit verification artifact behavior, then run a broader validation wave before selecting the next writer or CLI contract gap.
