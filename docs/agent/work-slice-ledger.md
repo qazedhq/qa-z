@@ -1177,3 +1177,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can identify the exact failed ingest report artifact when external executor output cannot be materialized cleanly.
 - Remaining blocker: executor-result ingest remains local evidence intake and does not execute repairs, push branches, publish packages, or prove production readiness.
 - Next safe slice: commit ingest report path context, then continue with remaining command output/error surfaces or a validation wave.
+
+
+## 2026-05-13 Benchmark Summary and Report Path Contract
+- Repo: JustTyping
+- Lane: benchmark fixture -> regression proof -> report/summary
+- User-facing flow: `qa-z benchmark --json`
+- Slice type: Contract / Evidence
+- Before: benchmark artifact write failures named the results directory but not whether `summary.json` or `report.md` failed.
+- Root cause: `write_benchmark_artifacts()` wrote summary and report files inline inside one broad results-directory boundary.
+- Change made: added path-aware benchmark summary/report writers and CLI JSON regressions for both failed output files.
+- Validation run: `python -m pytest tests\test_benchmark_runtime.py::test_benchmark_cli_json_reports_artifact_write_failure tests\test_benchmark_runtime.py::test_benchmark_cli_json_reports_report_artifact_write_failure tests\test_benchmark_runtime.py::test_run_benchmark_removes_results_lock_after_success -q`; `python -m pytest tests\test_benchmark_runtime.py -q`; `python -m ruff check src\qa_z\benchmark_reporting.py tests\test_benchmark_runtime.py`; `python -m ruff format --check src\qa_z\benchmark_reporting.py tests\test_benchmark_runtime.py`.
+- Evidence: focused benchmark write/lock pack passed `3` tests; full benchmark runtime module passed `8` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: benchmark failures now distinguish summary persistence from report persistence before alpha-gate or release-truth evidence consumes benchmark output.
+- User impact: maintainers can repair the exact failed benchmark artifact instead of treating all benchmark output failures as a locked or corrupt results directory.
+- Remaining blocker: benchmark output remains local deterministic evidence and does not prove remote release or production readiness.
+- Next safe slice: commit benchmark path context, then run a validation wave before mining the next writer surface.
