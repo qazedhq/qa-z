@@ -64,7 +64,9 @@ OWNER_OVERRIDES = (
         "deep_runner_foundation",
         (
             "src/qa_z/commands/execution_runs.py",
+            "src/qa_z/reporters/sarif.py",
             "src/qa_z/runners/selection_deep.py",
+            "tests/test_sarif_cli.py",
         ),
     ),
     (

@@ -414,6 +414,26 @@ def test_commit_plan_assigns_deep_runner_foundation_batch() -> None:
     assert result["unassigned_source_paths"] == []
 
 
+def test_commit_plan_routes_sarif_output_contract_to_deep_batch() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M src/qa_z/commands/execution_runs.py",
+            " M src/qa_z/reporters/sarif.py",
+            " M tests/test_sarif_cli.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["deep_runner_foundation"]["changed_paths"] == [
+        "src/qa_z/commands/execution_runs.py",
+        "src/qa_z/reporters/sarif.py",
+        "tests/test_sarif_cli.py",
+    ]
+    assert result["multi_batch_paths"] == []
+
+
 def test_commit_plan_assigns_runner_contract_spine_batch() -> None:
     module = load_plan_module()
 
