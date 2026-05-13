@@ -404,6 +404,31 @@ def test_write_outcome_artifact_wraps_json_write_failure(
     assert "disk full" in message
 
 
+def test_write_outcome_artifact_wraps_latest_copy_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outcome = {
+        "artifacts": {"outcome": ".qa-z/loops/loop-target/outcome.json"},
+        "state": "session_prepared",
+    }
+    latest_path = tmp_path / ".qa-z" / "loops" / "latest" / "outcome.json"
+
+    def fail_copyfile(source: Path, target: Path) -> None:
+        if Path(target) == latest_path:
+            raise OSError("copy failed")
+        autonomy_records_module.shutil.copyfile(source, target)
+
+    monkeypatch.setattr(autonomy_records_module.shutil, "copyfile", fail_copyfile)
+
+    with pytest.raises(OSError) as excinfo:
+        autonomy_records_module.write_outcome_artifact(tmp_path, outcome)
+
+    message = str(excinfo.value)
+    assert "could not copy autonomy artifact" in message
+    assert str(latest_path) in message
+    assert "copy failed" in message
+
+
 def test_run_autonomy_accepts_dependency_bundle(tmp_path: Path) -> None:
     live_repository = {
         "modified_count": 0,

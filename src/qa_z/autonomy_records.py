@@ -197,8 +197,13 @@ def resolve_evidence_path(root: Path, value: str) -> Path:
 
 def copy_artifact(source: Path, target: Path) -> None:
     """Copy an artifact to a loop directory, preserving exact bytes."""
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, target)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    except OSError as exc:
+        raise OSError(
+            f"could not copy autonomy artifact {source} to {target}: {exc}"
+        ) from exc
 
 
 def read_json_object(path: Path) -> dict[str, Any]:
