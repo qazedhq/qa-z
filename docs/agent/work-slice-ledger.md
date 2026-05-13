@@ -585,3 +585,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: repair verification automation can fail closed on artifact persistence issues without losing the comparison error shape.
 - Remaining blocker: release execution remains approval-blocked; alpha gate should be rerun after committing this slice.
 - Next safe slice: commit verify behavior and commit-plan routing, then continue mining executor bridge or benchmark artifact write failures.
+
+
+## 2026-05-13 Executor Bridge Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: executor bridge -> external executor handoff package writing
+- User-facing flow: `qa-z executor-bridge --json`
+- Slice type: Flow / Contract
+- Before: a failed `bridge.json` or guide/template write could escape as raw `OSError` while creating an executor handoff package.
+- Root cause: `create_executor_bridge()` cleaned up incomplete package directories but re-raised filesystem write failures without a CLI JSON boundary; the first implementation also had to preserve `ArtifactSourceNotFound` because it subclasses `FileNotFoundError`.
+- Change made: added path-aware executor-bridge package write failure context, mapped true OSError persistence failures to `qa_z.executor_bridge_error` with `artifact_write_error`, and preserved source-not-found classification for missing packaged inputs.
+- Validation run: `python -m pytest tests\test_executor_bridge.py::test_executor_bridge_cli_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_executor_bridge.py tests\test_session_commands.py -q`; `python -m mypy src tests`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts\check_text_file_hygiene.py --source working-tree`; `python -m ruff check src\qa_z\commands\runtime_bridge.py src\qa_z\executor_bridge_package.py tests\test_executor_bridge.py`; `python -m ruff format --check src\qa_z\commands\runtime_bridge.py src\qa_z\executor_bridge_package.py tests\test_executor_bridge.py`; `git diff --check`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused test passed, the executor bridge/session pack passed `21` tests, mypy reported no issues, strict worktree plan stayed `ready`, and hygiene/Ruff/diff checks passed.
+- Gate delta: executor-bridge JSON mode now fails closed on package persistence failures while keeping missing source evidence distinct.
+- User impact: external handoff automation receives machine-readable failure context and does not leave partial bridge packages behind.
+- Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after committing this slice.
+- Next safe slice: commit executor bridge changes, then mine benchmark/report artifact write failures or guard workflow persistence failures.
