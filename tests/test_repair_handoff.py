@@ -13,7 +13,11 @@ import yaml
 from qa_z.artifacts import RunSource, load_contract_context
 from qa_z.cli import main
 from qa_z.reporters.repair_prompt import build_repair_packet
-from qa_z.repair_handoff import build_repair_handoff, repair_handoff_json
+from qa_z.repair_handoff import (
+    build_repair_handoff,
+    repair_handoff_json,
+    write_repair_handoff_artifact,
+)
 from qa_z.runners.models import RunSummary
 from qa_z.adapters.claude import render_claude_handoff
 from qa_z.adapters.codex import render_codex_handoff
@@ -350,6 +354,29 @@ def test_handoff_json_is_stable_and_machine_readable(tmp_path: Path) -> None:
         "workflow",
     ]
     assert data["repair"]["targets"][0]["id"] == "check:py_format"
+
+
+def test_write_repair_handoff_artifact_wraps_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    handoff = build_handoff(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "runs" / "repair"
+    original_write_text = Path.write_text
+
+    def fail_handoff(path: Path, *args: Any, **kwargs: Any) -> int:
+        if path == output_dir / "handoff.json":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_handoff)
+
+    with pytest.raises(OSError) as excinfo:
+        write_repair_handoff_artifact(handoff, output_dir)
+
+    message = str(excinfo.value)
+    assert "could not write repair handoff artifact" in message
+    assert str(output_dir) in message
+    assert "disk full" in message
 
 
 def test_repair_prompt_cli_writes_handoff_and_adapter_artifacts(
