@@ -217,3 +217,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get a machine-checkable, immutable-SHA publish command instead of a moving local ref when a new empty repository is approved for direct publish.
 - Remaining blocker: actual push/tag/GitHub release/package/deploy execution still requires explicit human approval and fresh remote proof.
 - Next safe slice: mine preflight/worktree/alpha-gate consistency gaps for another local-only negative test that prevents release-readiness overclaims.
+
+
+## 2026-05-13 Release PR Expected-Branch Command Contract
+- Repo: JustTyping
+- Lane: alpha release preflight -> release command contracts
+- User-facing flow: `scripts/alpha_release_preflight.py --allow-existing-refs --json`
+- Slice type: Contract / Evidence
+- Before: the release-PR path checklist used the caller-provided `expected_branch`, but `next_actions` and `next_commands` still hardcoded the historical `codex/qa-z-bootstrap` branch.
+- Root cause: branch-aware release PR guidance was only applied to the checklist renderer, not to the machine-readable command/action helpers.
+- Change made: `next_actions_for_result` now accepts `expected_branch`, and release-PR `next_commands` push that same expected branch.
+- Validation run: `python -m pytest tests\test_alpha_release_preflight_remote_refs.py::test_preflight_release_pr_guidance_uses_expected_branch -q`; `python -m pytest tests\test_alpha_release_preflight_remote_refs.py tests\test_alpha_release_preflight_remote.py -q`; `python -m ruff check scripts\alpha_release_preflight_evidence.py tests\test_alpha_release_preflight_remote_refs.py`; `python -m ruff format --check scripts\alpha_release_preflight_evidence.py tests\test_alpha_release_preflight_remote_refs.py`.
+- Evidence: the focused RED run failed because the action still said `push codex/qa-z-bootstrap`; after the fix the focused test passed, the remote/ref preflight pack passed `30` tests, and Ruff check/format passed.
+- Gate delta: release PR command packets are now branch-consistent for non-default release branch names without changing approval boundaries or executing a remote mutation.
+- User impact: operators using an explicit release branch no longer receive mismatched human checklist and machine `next_commands` guidance.
+- Remaining blocker: actually pushing the release branch still requires explicit approval and remote proof.
+- Next safe slice: check CLI JSON/status contracts for planner, verify, or doctor output where a failure path may still be under-specified.

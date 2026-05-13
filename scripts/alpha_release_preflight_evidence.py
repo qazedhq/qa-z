@@ -700,6 +700,7 @@ def next_actions_for_result(
     repository_url: str = DEFAULT_REPOSITORY_URL,
     expected_repository: str = DEFAULT_REPOSITORY_FULL_NAME,
     expected_origin_url: str | None = None,
+    expected_branch: str = DEFAULT_BRANCH,
     expected_tag: str = DEFAULT_TAG,
     skip_remote: bool = False,
 ) -> list[str]:
@@ -766,7 +767,7 @@ def next_actions_for_result(
         actions.append(
             (
                 "Remote bootstrap refs are present and the release PR path is ready; "
-                "push codex/qa-z-bootstrap, open the release PR, and wait for remote "
+                f"push {expected_branch}, open the release PR, and wait for remote "
                 "CI before tagging."
             )
         )
@@ -910,7 +911,7 @@ def next_commands_for_result(
         commands.append(approved_sha_push_command(publish_branch))
         return commands
     if result.exit_code == 0 and publish_strategy == "push_release_branch":
-        commands.append(f"git push -u origin {DEFAULT_BRANCH}")
+        commands.append(f"git push -u origin {expected_branch}")
         return commands
     if remote_decision.remote_blocker == "origin_target_mismatch":
         intended_origin_url = repository_url
@@ -1090,6 +1091,7 @@ def result_payload(
         repository_url=repository_url,
         expected_repository=expected_repository,
         expected_origin_url=expected_origin_url,
+        expected_branch=expected_branch,
         expected_tag=expected_tag,
         skip_remote=skip_remote,
     )
