@@ -95,6 +95,44 @@ def test_fast_json_reports_run_summary_artifact_write_failure(
     assert "disk full" in output["message"]
 
 
+def test_fast_json_reports_latest_run_manifest_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_fast_config(tmp_path)
+    write_contract(tmp_path)
+    manifest_path = tmp_path / ".qa-z" / "runs" / "latest-run.json"
+    original_write_text = Path.write_text
+
+    def fail_latest_run_manifest(path: Path, *args, **kwargs) -> int:
+        if path == manifest_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_latest_run_manifest)
+
+    exit_code = main(
+        [
+            "fast",
+            "--path",
+            str(tmp_path),
+            "--output-dir",
+            str(tmp_path / ".qa-z" / "runs" / "local"),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.fast_error"
+    assert output["error"] == "artifact_write_error"
+    assert "qa-z fast: artifact write error:" in output["message"]
+    assert "could not write latest run manifest" in output["message"]
+    assert str(manifest_path) in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_deep_json_reports_run_summary_artifact_write_failure(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

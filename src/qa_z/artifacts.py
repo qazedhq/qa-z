@@ -184,12 +184,19 @@ def write_latest_run_manifest(
 ) -> Path:
     """Write a stable manifest pointing at the latest fast run directory."""
     manifest_path = latest_run_manifest_path(root, config)
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(
-        json.dumps({"run_dir": format_path(run_dir, root)}, indent=2, sort_keys=True)
-        + "\n",
-        encoding="utf-8",
-    )
+    try:
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(
+            json.dumps(
+                {"run_dir": format_path(run_dir, root)}, indent=2, sort_keys=True
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise OSError(
+            f"could not write latest run manifest {manifest_path}: {exc}"
+        ) from exc
     return manifest_path
 
 
