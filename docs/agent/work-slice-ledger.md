@@ -665,3 +665,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish a bad external result from a local artifact persistence failure before trusting ingest/verify state.
 - Remaining blocker: executor-result ingest still consumes local handoff artifacts only; no external executor or target repository mutation was added.
 - Next safe slice: commit executor-result ingest behavior and validation routing, then mine repair-session lifecycle artifact persistence or run a release-quality validation wave.
+
+
+## 2026-05-13 Repair Session Verification Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: repair-session verify -> outcome persistence
+- User-facing flow: `qa-z repair-session verify --json`
+- Slice type: Flow / Contract
+- Before: a failed session `summary.json`, `outcome.md`, or manifest update during verification could escape as raw `OSError`.
+- Root cause: `complete_session_verification()` wrote verification outcome artifacts without a path-aware boundary, and the repair-session CLI did not classify local persistence failures.
+- Change made: added repair-session verification artifact write context, mapped start/verify persistence failures to `qa_z.repair_session_error` with `artifact_write_error`, and preserved the existing source/config/artifact-load failure contracts.
+- Validation run: `python -m pytest tests\test_repair_session.py::test_repair_session_verify_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_repair_session.py tests\test_session_commands.py tests\test_verify_cli_error_contracts.py -q`; `python -m ruff check src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`; `python -m ruff format --check src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`; `python -m mypy src\qa_z\commands\session_repair.py src\qa_z\repair_session_lifecycle.py tests\test_repair_session.py`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the focused test passed, the repair-session/session/verify pack passed `22` tests, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: repair-session verify JSON mode now distinguishes local persistence failure from verification verdicts and source/config errors.
+- User impact: external repair workflows do not mistake a disk/output failure for an actual verification result.
+- Remaining blocker: repair-session still waits for external human/agent repair work; QA-Z does not edit target repositories.
+- Next safe slice: commit repair-session verify behavior, then mine remaining start-session handoff or executor dry-run persistence paths.
