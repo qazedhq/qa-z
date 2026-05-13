@@ -157,10 +157,22 @@ def test_select_next_records_reason_when_no_backlog_tasks_are_open(
     assert selected["state"] == "blocked_no_candidates"
     assert selected["selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert selected["open_backlog_count"] == 0
+    assert selected["next_actions"] == [
+        "Review docs/agent/next-real-slices.md for the next safe manually selected Flow, Contract, Evidence, or Cleanup slice.",
+        "Rerun backlog and strict worktree evidence before treating an empty backlog as safe exhaustion.",
+    ]
+    assert selected["next_commands"] == [
+        "python -m qa_z backlog --refresh --json",
+        "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting",
+    ]
     assert "- State: `blocked_no_candidates`" in plan
     assert "- Selection gap reason: `no_open_backlog_after_inspection`" in plan
     assert "- Open backlog items: 0" in plan
-    assert "- Open backlog items: 0\n\n## Verification After External Repair" in plan
+    assert "- Next actions:" in plan
+    assert "docs/agent/next-real-slices.md" in plan
+    assert "- Next commands:" in plan
+    assert "`python -m qa_z backlog --refresh --json`" in plan
+    assert "## Verification After External Repair" in plan
     assert history["state"] == "blocked_no_candidates"
     assert history["selection_gap_reason"] == "no_open_backlog_after_inspection"
     assert history["open_backlog_count"] == 0

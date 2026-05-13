@@ -1114,6 +1114,8 @@ latest-loop context even though each individual command is deterministic.
 - `state`: optional taskless selection state, currently `blocked_no_candidates` when no task is selected
 - `selection_gap_reason`: optional compact reason when no open task is selected, such as `no_open_backlog_after_inspection`
 - `open_backlog_count`: optional open-backlog count recorded alongside `selection_gap_reason`
+- `next_actions`: optional operator guidance for taskless selection, including a pointer to `docs/agent/next-real-slices.md` before claiming safe exhaustion
+- `next_commands`: optional copyable refresh commands for taskless selection, currently including `python -m qa_z backlog --refresh --json` and the strict worktree commit-plan command
 
 Each selected task may include:
 
@@ -1129,6 +1131,7 @@ The plain-text `qa-z select-next` output now mirrors compact selected-task detai
 - live repository context when the latest self-inspection artifact supplied it
 - stale self-inspection provenance and a copyable refresh command when the latest self-inspection artifact is older than the backlog
 - taskless-loop diagnostics, including `selection_gap_reason` and open backlog count when no task is selected
+- taskless selection `next_actions` and `next_commands` so empty backlog output still has deterministic follow-through
 - selected task id plus title
 - `recommendation`
 - deterministic action hint derived from `recommendation`

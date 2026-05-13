@@ -389,6 +389,9 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`source_self_inspection_stale_for_backlog`" in schema
     assert "`source_self_inspection_refresh_commands`" in schema
     assert "`python -m qa_z select-next --refresh --count 3 --json`" in schema
+    assert "`next_actions`" in schema
+    assert "`next_commands`" in schema
+    assert "`python -m qa_z backlog --refresh --json`" in schema
     assert "stale selection omits `live_repository`" in schema
     assert "`python -m qa_z autonomy --loops 1 --json`" in schema
     assert "`python -m qa_z autonomy status --json`" in schema

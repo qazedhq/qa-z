@@ -32,6 +32,8 @@ def render_loop_plan(
     state: str | None = None,
     selection_gap_reason: str | None = None,
     open_backlog_count: int | None = None,
+    next_actions: object | None = None,
+    next_commands: object | None = None,
 ) -> str:
     """Render a concise Markdown plan for the selected self-improvement tasks."""
     lines = [
@@ -79,6 +81,11 @@ def render_loop_plan(
             lines.append(f"- Selection gap reason: `{selection_gap_reason}`")
         if open_backlog_count is not None:
             lines.append(f"- Open backlog items: {open_backlog_count}")
+        guidance_lines = taskless_guidance_lines(
+            next_actions=next_actions, next_commands=next_commands
+        )
+        if guidance_lines:
+            lines.extend(guidance_lines)
         lines.append("")
     for index, item in enumerate(selected_items, start=1):
         lines.extend(
@@ -139,6 +146,29 @@ def render_loop_plan(
         ]
     )
     return "\n".join(lines).strip() + "\n"
+
+
+def taskless_guidance_lines(
+    *, next_actions: object | None, next_commands: object | None
+) -> list[str]:
+    """Render optional taskless-selection recovery guidance."""
+    lines: list[str] = []
+    actions = clean_string_list(next_actions)
+    commands = clean_string_list(next_commands)
+    if actions:
+        lines.append("- Next actions:")
+        lines.extend(f"  - {action}" for action in actions)
+    if commands:
+        lines.append("- Next commands:")
+        lines.extend(f"  - `{command}`" for command in commands)
+    return lines
+
+
+def clean_string_list(value: object | None) -> list[str]:
+    """Return non-empty strings from an optional list-like value."""
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
 
 
 def source_self_inspection_lines(
