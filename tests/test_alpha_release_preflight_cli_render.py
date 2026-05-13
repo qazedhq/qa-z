@@ -593,3 +593,33 @@ def test_preflight_cli_writes_failed_output_with_counters(
             "then rerun remote preflight for https://github.com/qazedhq/qa-z.git."
         )
     ]
+
+
+def test_preflight_cli_reports_output_write_failure(monkeypatch, tmp_path, capsys):
+    module = load_preflight_module()
+    output_path = tmp_path / "preflight.json"
+    original_write_text = module.Path.write_text
+
+    def fake_run_preflight(_repo_root, **_kwargs):
+        return module.PreflightResult(
+            [module.CheckResult("current_branch", "passed", "codex/qa-z-bootstrap")]
+        )
+
+    def fail_output_write(path, *args, **kwargs):
+        if path == output_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(module, "run_preflight", fake_run_preflight)
+    monkeypatch.setattr(module.Path, "write_text", fail_output_write)
+
+    exit_code = module.main(["--skip-remote", "--json", "--output", str(output_path)])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 2
+    assert payload["summary"] == "release preflight passed"
+    assert (
+        f"alpha release preflight: could not write --output {output_path}: disk full"
+        in captured.err
+    )
