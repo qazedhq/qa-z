@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from qa_z.cli import main
-from tests.repair_prompt_test_support import write_config
+from tests.repair_prompt_test_support import write_config, write_contract
 
 
 def test_review_json_reports_missing_run_as_machine_payload(
@@ -72,3 +72,44 @@ def test_review_json_reports_broken_config_as_machine_payload(
         "message": output["message"],
     }
     assert "qa-z review: configuration error:" in output["message"]
+
+
+def test_review_json_reports_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "review"
+    original_write_text = Path.write_text
+
+    def fail_review_markdown(path: Path, *args: object, **kwargs: object) -> int:
+        if path == output_dir / "review.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_review_markdown)
+
+    exit_code = main(
+        [
+            "review",
+            "--path",
+            str(tmp_path),
+            "--json",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.review_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z review: artifact error:" in output["message"]
+    assert "could not write review artifacts" in output["message"]
+    assert "disk full" in output["message"]

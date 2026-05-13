@@ -58,9 +58,11 @@ def handle_review(args: argparse.Namespace) -> int:
                 deep_summary=deep_summary,
             )
             if args.output_dir:
-                write_review_artifacts(
-                    markdown, json_text, resolve_cli_path(root, args.output_dir)
+                write_error = _write_review_artifacts_or_error(
+                    args, markdown, json_text, resolve_cli_path(root, args.output_dir)
                 )
+                if write_error is not None:
+                    return write_error
             if args.json:
                 print(json_text, end="")
             else:
@@ -75,9 +77,11 @@ def handle_review(args: argparse.Namespace) -> int:
         markdown = render_review_packet(contract_path, root)
         json_text = review_packet_json(contract_path, root)
         if args.output_dir:
-            write_review_artifacts(
-                markdown, json_text, resolve_cli_path(root, args.output_dir)
+            write_error = _write_review_artifacts_or_error(
+                args, markdown, json_text, resolve_cli_path(root, args.output_dir)
             )
+            if write_error is not None:
+                return write_error
         if args.json:
             print(json_text, end="")
         else:
@@ -97,6 +101,24 @@ def handle_review(args: argparse.Namespace) -> int:
             message=f"qa-z review: source not found: {exc}",
             exit_code=4,
         )
+
+
+def _write_review_artifacts_or_error(
+    args: argparse.Namespace,
+    markdown: str,
+    json_text: str | None,
+    output_dir: Path,
+) -> int | None:
+    try:
+        write_review_artifacts(markdown, json_text, output_dir)
+    except OSError as exc:
+        return _review_error(
+            args,
+            error="artifact_write_error",
+            message=f"qa-z review: artifact error: {exc}",
+            exit_code=2,
+        )
+    return None
 
 
 def _review_error(
