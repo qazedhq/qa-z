@@ -617,3 +617,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish benchmark corpus failures from local disk/output-path failures in automation.
 - Remaining blocker: release execution remains approval-blocked; a broader alpha gate should be rerun after committing this slice.
 - Next safe slice: commit benchmark write failure handling, then mine guard workflow or run-summary artifact write failures.
+
+
+## 2026-05-13 Guard Verdict Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: guard verdict -> deterministic operator output
+- User-facing flow: `qa-z guard --json`
+- Slice type: Flow / Contract
+- Before: a failed `guard/verdict.json` or `guard/verdict.md` write could escape as raw `OSError` after the guard verdict was computed.
+- Root cause: `write_verdict_artifacts()` wrote guard artifacts without path-aware error context, and `handle_guard()` only normalized configuration and guard input failures.
+- Change made: added guard verdict artifact write context, mapped true persistence errors to `qa_z.guard_error` with `artifact_write_error`, and updated planning/runtime commit-plan validation to include the direct guard CLI test file.
+- Validation run: `python -m pytest tests\test_guard_cli.py::test_guard_json_reports_verdict_artifact_write_failure -q`; `python -m pytest tests\test_guard_cli.py -q`; `python -m pytest tests\test_worktree_commit_plan_validation_commands.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python -m ruff check src\qa_z\commands\guard.py src\qa_z\guard\verdict.py tests\test_guard_cli.py`; `python -m ruff format --check src\qa_z\commands\guard.py src\qa_z\guard\verdict.py tests\test_guard_cli.py`; `python -m mypy src\qa_z\commands\guard.py src\qa_z\guard\verdict.py tests\test_guard_cli.py`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused test passed, the guard CLI file passed `12` tests, the commit-plan validation command canary passed, Ruff check/format passed, and focused mypy reported no issues.
+- Gate delta: guard JSON mode now fails closed when verdict artifacts cannot be persisted instead of leaking a traceback after checks have run.
+- User impact: merge-guard automation can distinguish local persistence failure from merge risk, stale current-truth, or bad config.
+- Remaining blocker: this does not prove remote release readiness; push/tag/release/package/deploy remain approval-blocked.
+- Next safe slice: commit guard behavior and validation routing, then mine the remaining guard repair or run-summary persistence surfaces.
