@@ -58,6 +58,7 @@ def test_demo_auth_bug_json_prints_single_machine_payload(
     assert exit_code == 0
     assert payload == {
         "kind": "qa_z.demo.auth_bug",
+        "schema_version": 1,
         "demo": "auth-bug",
         "status": "created",
         "demo_root": str(demo),
@@ -192,6 +193,7 @@ def test_demo_auth_bug_json_reports_runtime_config_write_failure(
     assert exit_code == 2
     assert output == {
         "kind": "qa_z.demo.auth_bug_error",
+        "schema_version": 1,
         "error": "artifact_write_error",
         "exit_code": 2,
         "message": output["message"],

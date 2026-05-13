@@ -116,6 +116,7 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
             json.dumps(
                 {
                     "kind": "qa_z.demo.auth_bug",
+                    "schema_version": 1,
                     "demo": "auth-bug",
                     "status": "created",
                     "demo_root": str(demo_root),
@@ -154,6 +155,7 @@ def demo_auth_bug_error(
             json.dumps(
                 {
                     "kind": "qa_z.demo.auth_bug_error",
+                    "schema_version": 1,
                     "error": error,
                     "exit_code": exit_code,
                     "message": message,

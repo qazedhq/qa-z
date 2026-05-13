@@ -26,6 +26,7 @@ creating the isolated auth-bug demo under `.qa-z/demo/auth-bug`.
 Required success fields:
 
 - `kind`: `qa_z.demo.auth_bug`
+- `schema_version`: integer schema marker, currently `1`
 - `demo`: stable demo id, currently `auth-bug`
 - `status`: `created`
 - `demo_root`: absolute path to the isolated generated demo

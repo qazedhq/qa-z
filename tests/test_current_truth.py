@@ -29,6 +29,7 @@ def test_artifact_schema_documents_auth_bug_demo_json_contract() -> None:
     assert "## Demo Command JSON Summary" in schema
     assert "`qa-z demo auth-bug --json`" in schema
     assert "`kind`: `qa_z.demo.auth_bug`" in schema
+    assert "`schema_version`: integer schema marker, currently `1`" in schema
     assert "`demo_root`: absolute path to the isolated generated demo" in schema
     assert "`next_commands`: ordered follow-up commands" in schema
     assert "`qa_z.demo.auth_bug_error`" in schema
