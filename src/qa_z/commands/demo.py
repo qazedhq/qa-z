@@ -49,10 +49,17 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     """Run the bundled auth-bug demo in an isolated temp-style directory."""
     root = Path(args.path).expanduser().resolve()
     demo_root = root / ".qa-z" / "demo" / "auth-bug"
-    if demo_root.exists():
-        shutil.rmtree(demo_root)
-    copy_resource_tree(demo_auth_bug_resource(), demo_root)
-    demo_config = write_demo_runtime_config(demo_root)
+    try:
+        if demo_root.exists():
+            shutil.rmtree(demo_root)
+        copy_resource_tree(demo_auth_bug_resource(), demo_root)
+        demo_config = write_demo_runtime_config(demo_root)
+    except OSError as exc:
+        print(
+            "qa-z demo auth-bug: artifact write error: "
+            f"could not prepare demo artifacts: {exc}"
+        )
+        return 2
     from qa_z.cli import main as qa_z_main
 
     plan_exit = qa_z_main(

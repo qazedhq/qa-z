@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 
 from qa_z.cli import main
@@ -39,6 +40,30 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     )
     assert "can_view_invoice" in failure_output
     assert (demo / ".qa-z" / "runs" / "latest" / "repair" / "codex.md").exists()
+
+
+def test_demo_auth_bug_reports_runtime_config_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / ".qa-z" / "demo" / "auth-bug" / "qa-z.demo.yaml"
+    original_write_text = Path.write_text
+
+    def fail_demo_config(path: Path, *args, **kwargs) -> int:
+        if path == config_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_demo_config)
+
+    exit_code = main(["demo", "auth-bug", "--path", str(tmp_path)])
+    output = capsys.readouterr().out
+
+    assert exit_code == 2
+    assert "qa-z demo auth-bug: artifact write error:" in output
+    assert "could not prepare demo artifacts" in output
+    assert "disk full" in output
 
 
 def test_agent_skill_pack_and_templates_exist() -> None:
