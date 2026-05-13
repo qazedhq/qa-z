@@ -473,3 +473,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: alpha release rehearsals and automation wrappers can archive truth-validator payloads beside gate/preflight evidence and detect output-write failures consistently.
 - Remaining blocker: default validator output still correctly fails when the release packet proof head is stale against the current local HEAD; release execution remains approval-blocked.
 - Next safe slice: validate strict plan and continue backlog mining for another release/preflight or core CLI contract gap.
+
+
+## 2026-05-13 Release Truth Output Command Propagation
+- Repo: JustTyping
+- Lane: worktree commit plan -> alpha release validation commands
+- User-facing flow: changed alpha release batches in `python scripts\worktree_commit_plan.py --json`
+- Slice type: Evidence / Contract
+- Before: the truth validator supported `--output`, but the alpha release closure batch still recommended stdout-only truth validation.
+- Root cause: the commit-plan support rule had not been updated after adding persistent truth-validator evidence.
+- Change made: updated the alpha release closure validation command to include `--output .qa-z/tmp/alpha-release-truth-validator.json`.
+- Validation run: `python -m pytest tests\test_worktree_commit_plan.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m ruff check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py`.
+- Evidence: the focused RED showed the batch still emitted the stdout-only command; after implementation the targeted commit-plan test passed, strict worktree plan stayed `ready`, and Ruff check/format passed.
+- Gate delta: release-closure batches now carry a persistent truth-validator evidence command beside gate/preflight output artifacts.
+- User impact: maintainers following commit-plan validation no longer need to remember an extra output path by hand.
+- Remaining blocker: remote release execution remains approval-blocked; output files under `.qa-z/tmp` remain local evidence and are not staged.
+- Next safe slice: run a wider commit-plan validation wave or mine the next release/preflight truth gap.
