@@ -1321,3 +1321,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can fix a bad contract output directory or blocked draft file without guessing which path failed.
 - Remaining blocker: plan contracts remain local deterministic input scaffolding and do not prove remote release, package publish, deployment, or production readiness.
 - Next safe slice: commit plan draft path context, then run final latest-HEAD release validation wave.
+
+
+## 2026-05-13 Init Bootstrap Artifact Path Contract
+- Repo: JustTyping
+- Lane: init/doctor -> starter configuration -> first local QA-Z run
+- User-facing flow: `qa-z init`
+- Slice type: Contract / Evidence
+- Before: init write failures said bootstrap files could not be written but did not identify the exact starter file path.
+- Root cause: the shared `write_text_if_missing()` helper wrote starter files directly and let the raw filesystem error escape to the broad init boundary.
+- Change made: made `write_text_if_missing()` preserve the failed path and strengthened the init write-failure regression to require `qa-z.yaml`.
+- Validation run: `python -m pytest tests\test_cli.py::test_init_reports_artifact_write_failure -q`; `python -m pytest tests\test_cli.py::test_init_creates_bootstrap_files tests\test_cli.py::test_init_config_matches_public_example tests\test_cli.py::test_init_is_idempotent tests\test_cli.py::test_init_reports_artifact_write_failure -q`; `python -m ruff check src\qa_z\commands\common.py src\qa_z\commands\bootstrap_init.py tests\test_cli.py`; `python -m ruff format --check src\qa_z\commands\common.py src\qa_z\commands\bootstrap_init.py tests\test_cli.py`.
+- Evidence: regression failed first because output only contained `disk full`, then passed with the starter file path; focused init pack passed `4` tests; Ruff check passed; Ruff format reported `3 files already formatted`.
+- Gate delta: init bootstrap failures now identify the exact starter artifact before operators can run doctor, fast, deep, or repair flows.
+- User impact: new QA-Z users can repair a blocked starter config or template path without guessing which init file failed.
+- Remaining blocker: init bootstrap remains local setup and does not prove remote release, package publish, deployment, or production readiness.
+- Next safe slice: commit init path context, then run latest-HEAD release validation and wall-clock compliance checks.
