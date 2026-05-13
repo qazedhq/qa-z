@@ -1081,3 +1081,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can repair the exact failed verification output before trusting a repair-session completion or publish summary.
 - Remaining blocker: verification artifacts remain local evidence and do not prove remote release, package publication, or production readiness.
 - Next safe slice: commit verification artifact behavior, then run a broader validation wave before selecting the next writer or CLI contract gap.
+
+
+## 2026-05-13 Verify CLI Error Contract Sync
+- Repo: JustTyping
+- Lane: verify CLI -> JSON artifact-write failure contract
+- User-facing flow: `qa-z verify --json`
+- Slice type: Contract / Evidence
+- Before: the full alpha gate caught `tests/test_verify_cli_error_contracts.py` still expecting the old directory-level verification artifact failure phrase after verification writes became per-file.
+- Root cause: the verification writer contract moved from `could not write verification artifacts ...` to `could not write verification artifact <path> ...`, but the CLI JSON regression had not been updated with the exact artifact path expectation.
+- Change made: tightened the verify CLI JSON failure test to require the per-file phrase and failed `summary.json` path.
+- Validation run: `python -m pytest tests\test_verify_cli_error_contracts.py tests\test_verification_artifact_io.py tests\test_verification.py -q`; `python -m ruff check tests\test_verify_cli_error_contracts.py`; `python -m ruff format --check tests\test_verify_cli_error_contracts.py`.
+- Evidence: alpha gate failed on this stale assertion with `1690 passed, 1 failed`; after the test contract sync, the focused verify pack passed `6` tests, Ruff check passed, and Ruff format reported `1 file already formatted`.
+- Gate delta: verify CLI JSON tests now enforce the same exact-path artifact-write contract as the verification artifact writer.
+- User impact: maintainers get regression coverage for the precise failed verification file in CLI JSON mode.
+- Remaining blocker: this only repairs local test-contract drift; remote proof and release execution remain approval-blocked.
+- Next safe slice: commit the verify CLI contract sync, then rerun the alpha gate quick.
