@@ -315,14 +315,25 @@ def write_guard_repair(
     )
     write_repair_artifacts(packet, output_dir)
     write_repair_handoff_artifact(handoff, output_dir)
-    (output_dir / "repair.json").write_text(
+    write_guard_repair_text_artifact(
+        output_dir / "repair.json",
         (output_dir / "packet.json").read_text(encoding="utf-8"),
-        encoding="utf-8",
+        label="json",
     )
-    (output_dir / "codex.md").write_text(
-        render_codex_handoff(handoff), encoding="utf-8"
+    write_guard_repair_text_artifact(
+        output_dir / "codex.md", render_codex_handoff(handoff), label="codex"
     )
-    (output_dir / "claude.md").write_text(
-        render_claude_handoff(handoff), encoding="utf-8"
+    write_guard_repair_text_artifact(
+        output_dir / "claude.md", render_claude_handoff(handoff), label="claude"
     )
     return True
+
+
+def write_guard_repair_text_artifact(path: Path, text: str, *, label: str) -> None:
+    """Write guard repair companion artifacts with path-aware errors."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard repair {label} artifact to {path}: {exc}"
+        ) from exc

@@ -203,6 +203,56 @@ def test_guard_failed_fast_check_returns_do_not_merge(tmp_path: Path, capsys) ->
     assert (tmp_path / ".qa-z" / "runs" / "latest" / "repair" / "repair.json").exists()
 
 
+def test_guard_repair_json_reports_adapter_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(
+        tmp_path,
+        fast_checks=[
+            {
+                "id": "py_test",
+                "kind": "test",
+                "run": python_command("import sys; sys.exit(1)"),
+            }
+        ],
+    )
+    write_contract(tmp_path)
+    codex_path = tmp_path / ".qa-z" / "runs" / "latest" / "repair" / "codex.md"
+    original_write_text = Path.write_text
+
+    def fail_codex_handoff(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == codex_path:
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_codex_handoff)
+
+    exit_code = main(["guard", "--path", str(tmp_path), "--deep", "never", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.guard_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z guard: artifact error:" in output["message"]
+    assert "could not write guard repair codex artifact" in output["message"]
+    assert str(codex_path) in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_guard_from_run_replays_existing_fast_summary(tmp_path: Path, capsys) -> None:
     write_config(tmp_path)
     write_contract(tmp_path)
