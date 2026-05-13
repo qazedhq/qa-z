@@ -13,6 +13,9 @@ from tests.alpha_release_preflight_test_support import (
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "alpha_release_preflight.py"
 MAIN_TEST_PATH = ROOT / "tests" / "test_alpha_release_preflight.py"
+DIRECT_PUBLISH_TEST_PATH = (
+    ROOT / "tests" / "test_alpha_release_preflight_direct_publish.py"
+)
 
 
 def _function_names(path: Path) -> set[str]:
@@ -34,7 +37,6 @@ def test_alpha_release_preflight_remote_contracts_live_in_split_pack() -> None:
     moved_tests = [
         "test_preflight_passes_when_local_clean_and_empty_remote_reachable",
         "test_preflight_preserves_github_repository_metadata_in_payload",
-        "test_preflight_direct_publish_guidance_uses_repository_default_branch",
         "test_preflight_fails_when_remote_is_missing",
         "test_preflight_dirty_worktree_failure_has_next_action",
         "test_preflight_skip_remote_marks_repository_probe_state_skipped",
@@ -58,6 +60,13 @@ def test_alpha_release_preflight_remote_contracts_live_in_split_pack() -> None:
     for name in moved_tests:
         assert f"def {name}" not in main_text
         assert f"def {name}" in split_text
+    direct_publish_text = DIRECT_PUBLISH_TEST_PATH.read_text(encoding="utf-8")
+    direct_publish_test = (
+        "test_preflight_direct_publish_guidance_uses_repository_default_branch"
+    )
+    assert f"def {direct_publish_test}" not in main_text
+    assert f"def {direct_publish_test}" not in split_text
+    assert f"def {direct_publish_test}" in direct_publish_text
 
 
 def test_alpha_release_preflight_main_file_stays_under_split_budget() -> None:
