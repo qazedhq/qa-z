@@ -345,3 +345,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish "regenerate for current HEAD" from "review historical proof packet" directly from JSON output.
 - Remaining blocker: current local HEAD is still not remote-proven, and unapproved push/tag/GitHub release/package/deploy actions remain blocked.
 - Next safe slice: run a broader validation wave across changed release truth and CLI failure-contract surfaces before choosing another release or core workflow hardening cycle.
+
+
+## 2026-05-13 Release Truth Validator Human Recovery Output
+- Repo: JustTyping
+- Lane: release truth validator -> operator UX failure clarity
+- User-facing flow: `python scripts\alpha_release_truth_validator.py`
+- Slice type: Flow / Contract
+- Before: the JSON truth-validator payload exposed stale-packet recovery guidance, but default human output still printed only failed check names.
+- Root cause: `render_human()` did not render additive `next_actions` or `next_commands` from the same payload.
+- Change made: human output now prints `next actions:` and `next commands:` sections when the truth-validator payload carries recovery guidance; passing proof-head mode remains terse.
+- Validation run: `python -m pytest tests\test_alpha_release_truth_validator.py::test_validator_human_output_renders_recovery_guidance -q`; `python -m pytest tests\test_alpha_release_truth_validator.py -q`; `python -m ruff check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts\alpha_release_truth_validator.py tests\test_alpha_release_truth_validator.py`; `python scripts\alpha_release_truth_validator.py`; `python scripts\alpha_release_truth_validator.py --proof-head-from-packet`.
+- Evidence: the focused RED failed because `next actions:` was absent; after implementation the focused test passed, the full truth-validator pack passed `15` tests, non-JSON default output still failed honestly while printing recovery sections, proof-head human output passed `19/19`, and Ruff check/format passed.
+- Gate delta: operators using human output receive the same safe proof-head rerun guidance as JSON callers without weakening fail-closed current-HEAD validation.
+- User impact: a terminal-only release operator can recover from stale packet/current-head mismatch without opening JSON.
+- Remaining blocker: actual current-HEAD remote proof and release execution still require explicit approval and external/remote evidence.
+- Next safe slice: run another backlog expansion pass and choose a different workstream instead of repeatedly polishing the same validator surface.
