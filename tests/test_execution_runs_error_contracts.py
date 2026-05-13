@@ -92,6 +92,86 @@ def test_fast_json_reports_run_summary_artifact_write_failure(
     assert output["error"] == "artifact_write_error"
     assert "qa-z fast: artifact write error:" in output["message"]
     assert "could not write run summary artifacts" in output["message"]
+    assert "could not write run summary summary json artifact" in output["message"]
+    assert str(output_dir / "fast" / "summary.json") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_fast_json_reports_run_summary_markdown_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_fast_config(tmp_path)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "runs" / "local"
+    original_write_text = Path.write_text
+
+    def fail_summary_markdown(path: Path, *args, **kwargs) -> int:
+        if path == output_dir / "fast" / "summary.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_summary_markdown)
+
+    exit_code = main(
+        [
+            "fast",
+            "--path",
+            str(tmp_path),
+            "--output-dir",
+            str(output_dir),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.fast_error"
+    assert output["error"] == "artifact_write_error"
+    assert "qa-z fast: artifact write error:" in output["message"]
+    assert "could not write run summary artifacts" in output["message"]
+    assert "could not write run summary summary markdown artifact" in output["message"]
+    assert str(output_dir / "fast" / "summary.md") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_fast_json_reports_run_summary_check_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_fast_config(tmp_path)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "runs" / "local"
+    original_write_text = Path.write_text
+
+    def fail_check_json(path: Path, *args, **kwargs) -> int:
+        if path == output_dir / "fast" / "checks" / "py_test.json":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_check_json)
+
+    exit_code = main(
+        [
+            "fast",
+            "--path",
+            str(tmp_path),
+            "--output-dir",
+            str(output_dir),
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output["kind"] == "qa_z.fast_error"
+    assert output["error"] == "artifact_write_error"
+    assert "qa-z fast: artifact write error:" in output["message"]
+    assert "could not write run summary artifacts" in output["message"]
+    assert "could not write run summary check json artifact" in output["message"]
+    assert str(output_dir / "fast" / "checks" / "py_test.json") in output["message"]
     assert "disk full" in output["message"]
 
 
@@ -166,4 +246,6 @@ def test_deep_json_reports_run_summary_artifact_write_failure(
     assert output["error"] == "artifact_write_error"
     assert "qa-z deep: artifact write error:" in output["message"]
     assert "could not write run summary artifacts" in output["message"]
+    assert "could not write run summary summary json artifact" in output["message"]
+    assert str(output_dir / "deep" / "summary.json") in output["message"]
     assert "disk full" in output["message"]

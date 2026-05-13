@@ -33,12 +33,15 @@ def _write_run_summary_artifacts_impl(summary: RunSummary, artifact_dir: Path) -
         checks_dir.mkdir(parents=True, exist_ok=True)
 
         summary_path = artifact_dir / "summary.json"
-        summary_path.write_text(
+        write_run_summary_artifact(
+            summary_path,
             json.dumps(summary.to_dict(), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+            "summary json",
         )
-        (artifact_dir / "summary.md").write_text(
-            _render_summary_markdown_impl(summary), encoding="utf-8"
+        write_run_summary_artifact(
+            artifact_dir / "summary.md",
+            _render_summary_markdown_impl(summary),
+            "summary markdown",
         )
 
         used_check_names: dict[str, int] = {}
@@ -46,15 +49,26 @@ def _write_run_summary_artifacts_impl(summary: RunSummary, artifact_dir: Path) -
             check_path = checks_dir / unique_check_artifact_name(
                 check.id, used_check_names
             )
-            check_path.write_text(
+            write_run_summary_artifact(
+                check_path,
                 json.dumps(check.to_dict(), indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
+                "check json",
             )
 
         return summary_path
     except OSError as exc:
         raise OSError(
             f"could not write run summary artifacts to {artifact_dir}: {exc}"
+        ) from exc
+
+
+def write_run_summary_artifact(path: Path, text: str, label: str) -> None:
+    """Write one run summary artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write run summary {label} artifact {path}: {exc}"
         ) from exc
 
 
