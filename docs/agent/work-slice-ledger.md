@@ -1161,3 +1161,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get the exact failed dry-run report path when local executor safety rehearsal cannot persist its operator-facing evidence.
 - Remaining blocker: executor-result dry-run remains local pre-live evidence and does not authorize remote release, package publishing, deployment, or executor mutation.
 - Next safe slice: commit dry-run report path context, then inspect executor-result ingest report writer path clarity.
+
+
+## 2026-05-13 Executor Result Ingest Report Path Contract
+- Repo: JustTyping
+- Lane: external executor handoff -> executor-result ingest
+- User-facing flow: `qa-z executor-result ingest --json`
+- Slice type: Contract / Evidence
+- Before: failed ingest Markdown report writes named the ingest result directory but not the exact `ingest_report.md` path.
+- Root cause: `finalized_ingest_outcome()` wrote the Markdown report inline inside the same broad artifact boundary as `ingest.json`.
+- Change made: added a path-aware ingest report writer and tightened the existing failure regression to require the failed report path.
+- Validation run: `python -m pytest tests\test_executor_ingest_outcome.py -q`; `python -m pytest tests\test_executor_result.py::test_executor_result_ingest_json_reports_artifact_write_failure tests\test_executor_result.py::test_executor_result_ingest_accepts_no_op_with_warning_when_explanation_is_missing tests\test_executor_result.py::test_executor_result_ingest_warns_when_bridge_timestamp_is_missing -q`; `python -m ruff check src\qa_z\executor_ingest_outcome.py tests\test_executor_ingest_outcome.py`; `python -m ruff format --check src\qa_z\executor_ingest_outcome.py tests\test_executor_ingest_outcome.py`.
+- Evidence: executor ingest outcome pack passed `4` tests; focused CLI ingest pack passed `3` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor-result ingest failures now distinguish machine-summary persistence from Markdown report persistence before history, dry-run, or verify-resume signals are trusted.
+- User impact: maintainers can identify the exact failed ingest report artifact when external executor output cannot be materialized cleanly.
+- Remaining blocker: executor-result ingest remains local evidence intake and does not execute repairs, push branches, publish packages, or prove production readiness.
+- Next safe slice: commit ingest report path context, then continue with remaining command output/error surfaces or a validation wave.
