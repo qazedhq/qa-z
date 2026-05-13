@@ -905,3 +905,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair the local latest-run manifest path directly instead of misreading the failure as a check failure or missing run artifact.
 - Remaining blocker: latest-run manifests remain local deterministic state; this does not add remote proof or release execution approval.
 - Next safe slice: commit latest-run manifest behavior, then run fast/executor-ingest validation and mine another shared artifact writer.
+
+
+## 2026-05-13 Autonomy History Write Failure Contract
+- Repo: JustTyping
+- Lane: autonomy loop/executor-result ingest -> loop history JSONL persistence
+- User-facing flow: `qa-z autonomy --json` and executor-result history updates
+- Slice type: Contract / Evidence
+- Before: failed autonomy `history.jsonl` rewrites in loop update or executor-result merge paths raised raw `OSError` without naming the history file.
+- Root cause: `update_history_entry()` and `record_executor_result()` both rewrote JSONL history inline after mutating entries.
+- Change made: added a shared path-aware autonomy history writer and focused regressions for both loop outcome history updates and executor-result history updates.
+- Validation run: `python -m pytest tests\test_autonomy.py::test_record_executor_result_wraps_history_write_failure tests\test_autonomy.py::test_update_history_entry_wraps_history_write_failure tests\test_autonomy.py::test_record_executor_result_updates_matching_history_entry -q`.
+- Evidence: both focused RED tests raised raw `OSError: disk full`; after implementation both failures include `could not write autonomy history ...`, and the existing executor-result history merge test still passes.
+- Gate delta: autonomy current-truth/history failures now preserve the exact JSONL path before planner, backlog, or executor-result status reads stale state.
+- User impact: long-running operators can distinguish history persistence failure from no-op, blocked, or completed autonomy loop outcomes.
+- Remaining blocker: autonomy remains local planning/handoff only and does not mutate target repositories or dispatch live executors.
+- Next safe slice: commit autonomy history behavior, then run the autonomy/executor-result validation pack and mine the next runtime artifact writer.
