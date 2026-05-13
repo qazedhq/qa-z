@@ -1113,3 +1113,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish a target refusal from a filesystem failure on `AGENTS.md`, `CLAUDE.md`, Cursor rules, or Copilot instructions.
 - Remaining blocker: skill install only writes local instruction files and does not prove release readiness or remote publication.
 - Next safe slice: commit skill-install path context, then continue mining CLI output/error surfaces.
+
+
+## 2026-05-13 Executor Bridge JSON Artifact Path Contract
+- Repo: JustTyping
+- Lane: repair-session -> external executor handoff package
+- User-facing flow: `qa-z executor-bridge --json`
+- Slice type: Contract / Evidence
+- Before: executor-bridge package write failures named the bridge directory but not the exact JSON artifact when `bridge.json` or `result_template.json` failed.
+- Root cause: `executor_bridge_support.write_json()` wrote deterministic bridge JSON artifacts without an inner path-aware boundary; only the outer package cleanup boundary wrapped the error.
+- Change made: wrapped executor-bridge JSON writes with `could not write executor bridge JSON artifact ...` and tightened the CLI write-failure regression to require `bridge.json`.
+- Validation run: `python -m pytest tests\test_executor_bridge.py::test_executor_bridge_cli_json_reports_artifact_write_failure tests\test_executor_bridge.py::test_executor_bridge_from_loop_packages_manifest_guides_and_inputs tests\test_executor_bridge.py::test_executor_bridge_cli_json_missing_session_reports_machine_payload -q`; `python -m pytest tests\test_executor_bridge.py -q`; `python -m ruff check src\qa_z\executor_bridge_support.py tests\test_executor_bridge.py`; `python -m ruff format --check src\qa_z\executor_bridge_support.py tests\test_executor_bridge.py`.
+- Evidence: focused bridge pack passed `3` tests; full executor-bridge pack passed `16` tests; Ruff check passed; Ruff format reported `2 files already formatted`.
+- Gate delta: executor bridge package failures now preserve both cleanup-safe package context and the exact JSON artifact path that failed.
+- User impact: operators can distinguish a manifest/template persistence failure from source-copy, guide, or missing-session failures before handing work to an external executor.
+- Remaining blocker: executor bridge remains a local package for external handoff and does not execute repairs or remote release actions.
+- Next safe slice: commit bridge JSON path context, then inspect remaining Markdown writer paths.
