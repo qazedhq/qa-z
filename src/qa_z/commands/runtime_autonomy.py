@@ -32,7 +32,9 @@ def handle_autonomy(args: argparse.Namespace) -> int:
             print(render_autonomy_status(status))
         return 0
 
-    config = load_cli_config(root, args, "autonomy")
+    config = load_cli_config(
+        root, args, "autonomy", json_error_kind="qa_z.autonomy_error"
+    )
     if config is None:
         return 2
     summary = run_autonomy(

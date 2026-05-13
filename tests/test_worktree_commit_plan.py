@@ -539,6 +539,20 @@ def test_commit_plan_routes_fast_gate_environment_into_planning_runtime_batch() 
     assert result["unassigned_source_paths"] == []
 
 
+def test_commit_plan_routes_cli_config_error_contracts() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        ["?? tests/test_cli_config_error_contracts.py"]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["planning_runtime_foundation"]["changed_paths"] == [
+        "tests/test_cli_config_error_contracts.py"
+    ]
+    assert result["unassigned_source_paths"] == []
+
+
 def test_commit_plan_routes_current_public_docs_and_sarif_tests() -> None:
     module = load_plan_module()
 

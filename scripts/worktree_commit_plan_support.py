@@ -249,6 +249,7 @@ BATCH_RULES = (
             "tests/ast_test_support.py",
             "tests/conftest.py",
             "tests/test_bootstrap_commands.py",
+            "tests/test_cli_config_error_contracts.py",
             "tests/test_command_registry_architecture.py",
             "tests/test_config_validation.py",
             "tests/test_contract_planner.py",

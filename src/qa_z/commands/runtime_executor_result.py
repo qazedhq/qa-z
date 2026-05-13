@@ -37,7 +37,13 @@ def handle_executor_result_ingest(args: argparse.Namespace) -> int:
     """Ingest an external executor result and optionally resume verification."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "executor-result ingest")
+    config = load_cli_config(
+        root,
+        args,
+        "executor-result ingest",
+        json_error_kind="qa_z.executor_result_error",
+        json_error_command="ingest",
+    )
     if config is None:
         return 2
 

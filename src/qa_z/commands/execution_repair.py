@@ -34,7 +34,13 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
     """Render deterministic repair artifacts from a failed run."""
     root = Path(args.path).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
-    config = load_cli_config(root, args, "repair-prompt")
+    config = load_cli_config(
+        root,
+        args,
+        "repair-prompt",
+        json_error_kind="qa_z.repair_prompt_error",
+        json_error_when=args.json or args.handoff_json,
+    )
     if config is None:
         return 2
 

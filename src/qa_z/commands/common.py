@@ -42,6 +42,7 @@ def load_cli_config(
     *,
     json_error_kind: str | None = None,
     json_error_command: str | None = None,
+    json_error_when: bool | None = None,
 ) -> dict[str, Any] | None:
     """Load config for a CLI command and print normalized errors."""
     config_path = resolve_cli_path(root, args.config) if args.config else None
@@ -49,7 +50,10 @@ def load_cli_config(
         return load_config(root, config_path=config_path)
     except ConfigError as exc:
         message = f"qa-z {command}: configuration error: {exc}"
-        if json_error_kind and getattr(args, "json", False):
+        json_mode = (
+            getattr(args, "json", False) if json_error_when is None else json_error_when
+        )
+        if json_error_kind and json_mode:
             payload: dict[str, Any] = {
                 "kind": json_error_kind,
                 "error": "configuration_error",
