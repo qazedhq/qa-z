@@ -505,3 +505,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can distinguish a summary write failure from missing input artifacts without raw tracebacks or silent success.
 - Remaining blocker: missing source artifacts remain hard failures, and remote release execution remains approval-blocked.
 - Next safe slice: commit this pair, rerun strict plan, then mine another CLI/write-failure or guard-current-truth gap.
+
+
+## 2026-05-13 Worktree Commit Plan Validation Test Split
+- Repo: JustTyping
+- Lane: worktree commit plan tests -> architecture budget gate
+- User-facing flow: `python scripts\alpha_release_gate.py --quick --allow-dirty --json`
+- Slice type: Cleanup / Evidence
+- Before: the mid-run alpha gate caught `tests/test_worktree_commit_plan.py` at `732` lines, above the enforced `720` line split budget.
+- Root cause: validation-command coverage had grown inside the main commit-plan behavior test file instead of a focused split file.
+- Change made: moved validation-command assertions into `tests/test_worktree_commit_plan_validation_commands.py`, updated the architecture support-import check, and updated the commit-plan support validation command to include the new split file.
+- Validation run: `python -m pytest tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_validation_commands.py tests\test_worktree_commit_plan_architecture.py::test_worktree_commit_plan_main_test_file_stays_under_split_budget -q`; `python -m pytest tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_validation_commands.py tests\test_worktree_commit_plan_architecture.py -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m ruff check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_validation_commands.py tests\test_worktree_commit_plan_architecture.py`; `python -m ruff format --check scripts\worktree_commit_plan_support.py tests\test_worktree_commit_plan.py tests\test_worktree_commit_plan_validation_commands.py tests\test_worktree_commit_plan_architecture.py`.
+- Evidence: the split-focused pack passed `29` tests, the full commit-plan/architecture split pack passed `34` tests, `tests/test_worktree_commit_plan.py` is now `678` lines, strict worktree plan stayed `ready`, and Ruff check/format passed; Ruff format still reported non-fatal cache write warnings from `.ruff_cache`.
+- Gate delta: the full alpha gate failure was traced to a real test-architecture budget breach and repaired without weakening the budget.
+- User impact: future worktree plan behavior tests have room to grow in focused files instead of bloating the main regression pack.
+- Remaining blocker: alpha gate must be rerun after this split before claiming the release-quality wave is green again.
+- Next safe slice: rerun alpha gate, then continue backlog mining.
