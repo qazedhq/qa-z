@@ -66,8 +66,7 @@ def run_executor_result_dry_run(
     report_path = executor_result_dry_run_report_path(session_dir)
     try:
         write_json(summary_path, summary)
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(render_dry_run_report(summary), encoding="utf-8")
+        write_dry_run_report(report_path, render_dry_run_report(summary))
     except OSError as exc:
         raise OSError(
             f"could not write executor-result dry-run artifacts to "
@@ -78,3 +77,14 @@ def run_executor_result_dry_run(
         report_path=report_path,
         summary=summary,
     )
+
+
+def write_dry_run_report(path: Path, text: str) -> None:
+    """Write the dry-run Markdown report with path-aware failures."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor-result dry-run report {path}: {exc}"
+        ) from exc

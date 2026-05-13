@@ -175,6 +175,60 @@ def test_executor_result_dry_run_json_reports_artifact_write_failure(
     assert "disk full" in output["message"]
 
 
+def test_executor_result_dry_run_json_reports_report_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path, "baseline", status="failed", exit_code=1)
+    start_session_and_bridge(tmp_path, capsys)
+    report_path = (
+        tmp_path
+        / ".qa-z"
+        / "sessions"
+        / "session-one"
+        / "executor_results"
+        / "dry_run_report.md"
+    )
+    original_write_text = Path.write_text
+
+    def fail_dry_run_report(path: Path, *args, **kwargs) -> int:
+        if path == report_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_dry_run_report)
+
+    exit_code = main(
+        [
+            "executor-result",
+            "dry-run",
+            "--path",
+            str(tmp_path),
+            "--session",
+            "session-one",
+            "--json",
+        ]
+    )
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.executor_result_error",
+        "command": "dry-run",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z executor-result dry-run: artifact write error:" in output["message"]
+    assert "could not write executor-result dry-run artifacts" in output["message"]
+    assert "could not write executor-result dry-run report" in output["message"]
+    assert str(report_path) in output["message"]
+    assert "disk full" in output["message"]
+
+
 def test_executor_result_dry_run_reports_attention_for_repeated_partial_history(
     tmp_path: Path, capsys
 ) -> None:
