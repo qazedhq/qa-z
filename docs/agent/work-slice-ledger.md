@@ -825,3 +825,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: prospective operators running the built-in demo get a clear local artifact failure instead of a traceback before trusting the demo result.
 - Remaining blocker: demo remains local-only proof and does not add remote, publish, or production readiness.
 - Next safe slice: commit demo behavior, then run the demo/artifact-smoke validation pack before mining another command-contract gap.
+
+
+## 2026-05-13 Executor Safety Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: repair-session/executor-bridge -> pre-live executor safety package persistence
+- User-facing flow: `qa-z repair-session start --json` and `qa-z executor-bridge --json`
+- Slice type: Contract / Evidence
+- Before: the shared executor safety package writer could raise a raw `OSError` without naming the executor safety artifact directory when `executor_safety.json` or `executor_safety.md` failed to persist.
+- Root cause: `write_executor_safety_artifacts()` created and wrote both artifacts without a path-aware filesystem boundary, while the consuming CLI commands had to add higher-level context later.
+- Change made: wrapped the shared writer with a deterministic `could not write executor safety artifacts to ...` message and added a focused regression that simulates a failed `executor_safety.json` write.
+- Validation run: `python -m pytest tests\test_artifact_schema.py::test_write_executor_safety_artifacts_wraps_write_failures -q`; `python -m pytest tests\test_artifact_schema.py::test_write_executor_safety_artifacts_wraps_write_failures tests\test_artifact_schema.py::test_executor_safety_package_schema_v1_required_fields_are_stable tests\test_repair_session.py::test_repair_session_start_json_reports_artifact_write_failure tests\test_executor_bridge.py::test_executor_bridge_cli_json_reports_artifact_write_failure -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the new writer regression, safety schema canary, repair-session artifact failure contract, and executor-bridge artifact failure contract passed.
+- Gate delta: both repair-session and executor-bridge now inherit path-aware safety package persistence failures before any live executor or target-repo mutation can be implied.
+- User impact: operators can distinguish a failed local safety package write from a repair handoff, bridge manifest, or executor-result failure.
+- Remaining blocker: the safety package remains pre-live/local-only and does not authorize external executor dispatch or remote release execution.
+- Next safe slice: commit executor safety behavior, then mine the repair handoff writer or run a broader repair/executor validation wave.
