@@ -51,15 +51,30 @@ def write_verdict_artifacts(
         output_dir.mkdir(parents=True, exist_ok=True)
         json_path = output_dir / "verdict.json"
         markdown_path = output_dir / "verdict.md"
-        json_path.write_text(
+        write_guard_verdict_artifact(
+            json_path,
             json.dumps(verdict.to_dict(), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+            "json",
         )
-        markdown_path.write_text(render_verdict_markdown(verdict), encoding="utf-8")
+        write_guard_verdict_artifact(
+            markdown_path,
+            render_verdict_markdown(verdict),
+            "markdown",
+        )
         return json_path, markdown_path
     except OSError as exc:
         raise OSError(
             f"could not write guard verdict artifacts to {output_dir}: {exc}"
+        ) from exc
+
+
+def write_guard_verdict_artifact(path: Path, text: str, label: str) -> None:
+    """Write one guard verdict artifact with path-aware failures."""
+    try:
+        path.write_text(text, encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write guard verdict {label} artifact {path}: {exc}"
         ) from exc
 
 

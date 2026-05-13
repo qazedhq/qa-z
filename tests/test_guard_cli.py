@@ -408,6 +408,50 @@ def test_guard_json_reports_verdict_artifact_write_failure(
     }
     assert "qa-z guard: artifact error:" in output["message"]
     assert "could not write guard verdict artifacts" in output["message"]
+    assert "could not write guard verdict json artifact" in output["message"]
+    assert str(output_dir / "verdict.json") in output["message"]
+    assert "disk full" in output["message"]
+
+
+def test_guard_json_reports_verdict_markdown_artifact_write_failure(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    output_dir = tmp_path / ".qa-z" / "runs" / "latest" / "guard"
+    original_write_text = Path.write_text
+
+    def fail_verdict_markdown(
+        path: Path,
+        data: str,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ) -> int:
+        if path == output_dir / "verdict.md":
+            raise OSError("disk full")
+        return original_write_text(
+            path, data, encoding=encoding, errors=errors, newline=newline
+        )
+
+    monkeypatch.setattr(Path, "write_text", fail_verdict_markdown)
+
+    exit_code = main(["guard", "--path", str(tmp_path), "--deep", "never", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert output == {
+        "kind": "qa_z.guard_error",
+        "error": "artifact_write_error",
+        "exit_code": 2,
+        "message": output["message"],
+    }
+    assert "qa-z guard: artifact error:" in output["message"]
+    assert "could not write guard verdict artifacts" in output["message"]
+    assert "could not write guard verdict markdown artifact" in output["message"]
+    assert str(output_dir / "verdict.md") in output["message"]
     assert "disk full" in output["message"]
 
 
