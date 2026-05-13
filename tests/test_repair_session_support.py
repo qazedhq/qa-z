@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from qa_z.repair_session import RepairSession
-from qa_z.repair_session_support import ensure_session_safety_artifacts
+from qa_z.repair_session_support import (
+    ensure_session_safety_artifacts,
+    write_session_manifest,
+)
 
 
 def _session(tmp_path: Path) -> RepairSession:
@@ -40,3 +46,30 @@ def test_ensure_session_safety_artifacts_backfills_missing_policy_files(
     assert (tmp_path / updated.safety_artifacts["policy_json"]).is_file()
     assert (tmp_path / updated.safety_artifacts["policy_markdown"]).is_file()
     assert updated.updated_at.endswith("Z")
+
+
+def test_write_session_manifest_reports_manifest_path_on_write_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = _session(tmp_path)
+    manifest_path = tmp_path / ".qa-z" / "sessions" / "session-one" / "session.json"
+    original_write_text = Path.write_text
+
+    def fail_manifest_write(
+        self: Path,
+        data: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> int:
+        if self.resolve() == manifest_path.resolve():
+            raise OSError("disk full")
+        return original_write_text(self, data, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_manifest_write)
+
+    with pytest.raises(
+        OSError,
+        match=r"could not write repair-session manifest .*session\.json.*disk full",
+    ):
+        write_session_manifest(session, tmp_path)

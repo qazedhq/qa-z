@@ -23,10 +23,13 @@ def write_session_manifest(session: object, root: Path) -> Path:
     session_dir.mkdir(parents=True, exist_ok=True)
     path = session_dir / "session.json"
     payload = getattr(session, "to_dict")()
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        raise OSError(f"could not write repair-session manifest {path}: {exc}") from exc
     return path
 
 
