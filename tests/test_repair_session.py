@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 from textwrap import dedent
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,6 +15,7 @@ import yaml
 from qa_z.artifacts import ArtifactLoadError
 from qa_z.cli import main
 from qa_z.repair_session import load_repair_session
+from qa_z.repair_session_guides import write_executor_guide
 
 
 def python_command(source: str) -> list[str]:
@@ -359,6 +361,39 @@ def test_repair_session_start_json_reports_artifact_write_failure(
     assert "qa-z repair-session start: artifact write error:" in output["message"]
     assert "could not write repair-session start artifacts" in output["message"]
     assert "disk full" in output["message"]
+
+
+def test_write_executor_guide_wraps_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    guide_path = tmp_path / ".qa-z" / "sessions" / "session-one" / "executor_guide.md"
+    session = SimpleNamespace(
+        session_id="session-one",
+        session_dir=".qa-z/sessions/session-one",
+        executor_guide_path=".qa-z/sessions/session-one/executor_guide.md",
+        state="waiting_for_external_repair",
+        baseline_run_dir=".qa-z/runs/baseline",
+        handoff_dir=".qa-z/sessions/session-one/handoff",
+        handoff_artifacts={},
+        safety_artifacts={},
+    )
+    handoff = SimpleNamespace(targets=[], non_goals=[])
+    original_write_text = Path.write_text
+
+    def fail_executor_guide(path: Path, *args, **kwargs) -> int:
+        if path == guide_path:
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_executor_guide)
+
+    with pytest.raises(OSError) as excinfo:
+        write_executor_guide(session, handoff, tmp_path)
+
+    message = str(excinfo.value)
+    assert "could not write repair-session executor guide" in message
+    assert str(guide_path) in message
+    assert "disk full" in message
 
 
 def test_repair_session_load_rejects_manifest_session_dir_mismatch(

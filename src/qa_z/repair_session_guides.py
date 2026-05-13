@@ -10,8 +10,13 @@ from qa_z.artifacts import resolve_path
 def write_executor_guide(session: object, handoff: object, root: Path) -> Path:
     """Write a guide for an external human or agent executor."""
     path = resolve_path(root, str(getattr(session, "executor_guide_path")))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_executor_guide(session, handoff), encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(render_executor_guide(session, handoff), encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write repair-session executor guide {path}: {exc}"
+        ) from exc
     return path
 
 
