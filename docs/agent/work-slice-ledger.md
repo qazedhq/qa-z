@@ -729,3 +729,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: long-running local autonomy operators get a machine-readable failure reason instead of a traceback if the artifact store fails.
 - Remaining blocker: release execution remains approval-blocked and autonomy still prepares local planning/handoff artifacts only; it does not mutate target repositories.
 - Next safe slice: commit autonomy behavior, then mine self-inspection/select-next artifact persistence or run another release-quality validation wave.
+
+
+## 2026-05-13 Self-Improvement Planner Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: self-inspect/select-next -> backlog and selected-task artifact persistence
+- User-facing flow: `qa-z self-inspect --json` and `qa-z select-next --json`
+- Slice type: Flow / Contract
+- Before: failed self-inspection or selected-task artifact writes could escape as raw `OSError` from the planner CLI commands.
+- Root cause: `handle_self_inspect()` and `handle_select_next()` delegated to artifact-writing helpers and then read their outputs without command-owned OSError boundaries.
+- Change made: mapped planner persistence failures to `qa_z.self_inspect_error` or `qa_z.select_next_error` with `artifact_write_error`, and added focused regressions for failed `self_inspect.json` and `selected_tasks.json` writes.
+- Validation run: `python -m pytest tests\test_self_improvement.py::test_self_inspect_json_reports_artifact_write_failure tests\test_self_improvement.py::test_select_next_json_reports_artifact_write_failure -q`; `python -m pytest tests\test_self_improvement.py::test_self_improvement_cli_commands_write_expected_paths -q`.
+- Evidence: both focused RED tests raised raw `OSError: disk full`; after implementation both artifact write contracts passed and the existing CLI path regression still passed.
+- Gate delta: the self-improvement planning loop now keeps local persistence failures machine-readable before autonomy, repair, or guard workflows consume stale planner state.
+- User impact: maintainers can distinguish a planner output-store failure from a true empty backlog or task-selection outcome.
+- Remaining blocker: planner commands remain local-only; they do not create commits, mutate target repositories, or prove release execution readiness.
+- Next safe slice: commit planner behavior, then rerun strict plan and a broader self-improvement validation wave.
