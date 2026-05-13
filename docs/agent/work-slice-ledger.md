@@ -985,3 +985,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can repair or rerun the exact loop-plan path without mistaking the failure for an empty backlog or stale selection.
 - Remaining blocker: select-next remains local task-selection evidence and does not mutate target repositories.
 - Next safe slice: commit select-next loop-plan behavior, then run self-improvement selection validation and mine self-improvement JSON writer gaps.
+
+
+## 2026-05-13 Self-Improvement JSON Write Failure Contract
+- Repo: JustTyping
+- Lane: self-inspection/select-next -> JSON artifact persistence
+- User-facing flow: `qa-z self-inspect --json` and `qa-z select-next --json`
+- Slice type: Contract / Evidence
+- Before: a failed selected-task JSON write returned the generic selection artifact failure without naming `selected_tasks.json`.
+- Root cause: the shared `write_json()` helper in `self_improvement_runtime.py` created parent directories and wrote JSON without a path-aware boundary.
+- Change made: wrapped self-improvement JSON writes with `could not write self-improvement JSON artifact ...` and tightened the selected-task write failure regression to require the exact path.
+- Validation run: `python -m pytest tests\test_self_improvement.py::test_select_next_json_reports_artifact_write_failure tests\test_self_improvement.py::test_self_inspect_json_reports_artifact_write_failure tests\test_self_improvement.py::test_select_next_json_reports_loop_plan_write_failure -q`.
+- Evidence: the focused RED lacked the JSON writer detail; after implementation selected-task JSON, self-inspect JSON, and loop-plan write failure contracts passed.
+- Gate delta: self-improvement commands now distinguish JSON artifact persistence from loop-plan markdown persistence and stale-selection logic.
+- User impact: operators can repair the exact selected-task or self-inspection JSON path before autonomy consumes stale planning state.
+- Remaining blocker: self-improvement JSON artifacts remain local planning evidence and do not mutate target repositories.
+- Next safe slice: commit self-improvement JSON behavior, then run selection/backlog validation and mine history writer gaps.
