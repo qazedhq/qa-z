@@ -489,3 +489,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers following commit-plan validation no longer need to remember an extra output path by hand.
 - Remaining blocker: remote release execution remains approval-blocked; output files under `.qa-z/tmp` remain local evidence and are not staged.
 - Next safe slice: run a wider commit-plan validation wave or mine the next release/preflight truth gap.
+
+
+## 2026-05-13 GitHub Summary Output Failure Contract
+- Repo: JustTyping
+- Lane: review/github-summary -> CI summary artifact writing
+- User-facing flow: `qa-z github-summary --output <path>`
+- Slice type: Flow / Contract
+- Before: GitHub summary wrote successful `--output` files, but filesystem write failures could escape as raw Python exceptions instead of a deterministic command failure.
+- Root cause: `handle_github_summary()` wrote directly to the output path without an OSError boundary, and the repair/session publish commit-plan validation omitted GitHub summary tests.
+- Change made: added a small `write_github_summary_output()` helper that returns a stable write-failure message, keeps the rendered Markdown on stdout, reports the write failure on stderr, and exits `2`; updated the repair/session publish validation command to include GitHub summary tests.
+- Validation run: `python -m pytest tests\test_github_summary_render.py::test_github_summary_cli_reports_output_write_failure -q`; `python -m pytest tests\test_github_summary_render.py tests\test_github_summary_session.py tests\test_review_commands.py -q`; `python -m pytest tests\test_github_summary_render.py tests\test_github_summary_session.py tests\test_review_commands.py tests\test_worktree_commit_plan.py::test_commit_plan_batches_include_targeted_validation_commands -q`; `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m ruff check src\qa_z\commands\review_github.py scripts\worktree_commit_plan_support.py tests\test_github_summary_render.py tests\test_worktree_commit_plan.py`; `python -m ruff format --check src\qa_z\commands\review_github.py scripts\worktree_commit_plan_support.py tests\test_github_summary_render.py tests\test_worktree_commit_plan.py`.
+- Evidence: the focused RED raised `OSError: disk full`; after implementation the focused test passed, the GitHub summary/review pack passed `14` tests, the combined GitHub summary plus commit-plan validation passed `15` tests, strict worktree plan stayed `ready`, and Ruff check/format passed.
+- Gate delta: CI/job-summary wrappers now get deterministic failure semantics when Markdown cannot be persisted.
+- User impact: operators can distinguish a summary write failure from missing input artifacts without raw tracebacks or silent success.
+- Remaining blocker: missing source artifacts remain hard failures, and remote release execution remains approval-blocked.
+- Next safe slice: commit this pair, rerun strict plan, then mine another CLI/write-failure or guard-current-truth gap.
