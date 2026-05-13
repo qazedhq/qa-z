@@ -441,3 +441,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: future review packet behavior changes can add runtime tests without immediately colliding with JSON error-contract coverage.
 - Remaining blocker: the alpha gate still needs to be rerun after this split to confirm the full release-quality wave returns green.
 - Next safe slice: rerun alpha gate and then continue backlog mining.
+
+
+## 2026-05-13 Remaining JSON Config Loader Hookups
+- Repo: JustTyping
+- Lane: CLI configuration loading -> repair/executor/autonomy JSON contracts
+- User-facing flow: `qa-z repair-prompt --json`, `qa-z repair-prompt --handoff-json`, `qa-z executor-result ingest --json`, and `qa-z autonomy --json`
+- Slice type: Contract / Cleanup
+- Before: the shared config loader supported JSON-capable callers, but repair-prompt, executor-result ingest, and autonomy had not yet wired their config-load failures to command-specific JSON payloads.
+- Root cause: repair-prompt needed a JSON condition that includes `--handoff-json`, while executor-result and autonomy still used the default text-only loader call.
+- Change made: added an explicit `json_error_when` option to `load_cli_config()`, then wired repair-prompt, executor-result ingest, and autonomy to their stable JSON error kinds.
+- Validation run: `python -m pytest tests\test_cli_config_error_contracts.py -q`; `python -m pytest tests\test_cli_config_error_contracts.py tests\test_repair_prompt.py tests\test_repair_prompt_error_contracts.py tests\test_executor_result.py tests\test_executor_result_dry_run.py tests\test_autonomy.py -q`; `python -m ruff check src\qa_z\commands\common.py src\qa_z\commands\execution_repair.py src\qa_z\commands\runtime_executor_result.py src\qa_z\commands\runtime_autonomy.py tests\test_cli_config_error_contracts.py`; `python -m ruff format --check src\qa_z\commands\common.py src\qa_z\commands\execution_repair.py src\qa_z\commands\runtime_executor_result.py src\qa_z\commands\runtime_autonomy.py tests\test_cli_config_error_contracts.py`.
+- Evidence: the focused RED failed with `JSONDecodeError` for all four newly covered malformed-config paths; after implementation the focused config-loader contract tests passed, the broader repair/executor/autonomy pack passed `88` tests, and Ruff check/format passed.
+- Gate delta: malformed config is now machine-parseable across the primary JSON command family used in repair handoff, executor return, and autonomy planning.
+- User impact: unattended wrappers can distinguish local configuration failure from artifact/source failure across more of the core QA-Z loop.
+- Remaining blocker: commands without JSON output remain human-output-only, and remote release execution is still approval-blocked.
+- Next safe slice: mine non-config JSON/stderr gaps or release-preflight truth gaps.
