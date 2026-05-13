@@ -74,6 +74,11 @@ def render_verdict_markdown(verdict: GuardVerdict) -> str:
         source = current_truth.get("source_self_inspection")
         if source:
             lines.append(f"- Current truth source: `{source}`")
+        refresh_commands = current_truth.get("source_self_inspection_refresh_commands")
+        if isinstance(refresh_commands, list):
+            for command in refresh_commands:
+                if isinstance(command, str) and command.strip():
+                    lines.append(f"- Current truth refresh: `{command.strip()}`")
     lines.extend(["", "## Reasons", ""])
     lines.extend(f"- {reason}" for reason in verdict.reasons)
     return "\n".join(lines).rstrip() + "\n"

@@ -131,6 +131,55 @@ def test_guard_marks_stale_current_truth_context_as_needs_review(
     )
 
 
+def test_guard_marks_missing_self_inspection_as_stale_current_truth(
+    tmp_path: Path, capsys
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_json(
+        tmp_path / ".qa-z" / "improvement" / "backlog.json",
+        {
+            "kind": "qa_z.improvement_backlog",
+            "schema_version": 1,
+            "updated_at": "2026-04-22T00:00:00Z",
+            "items": [
+                {
+                    "id": "fresh-work",
+                    "title": "Fresh backlog work",
+                    "category": "workflow_gap",
+                    "status": "open",
+                    "priority_score": 50,
+                }
+            ],
+        },
+    )
+
+    exit_code = main(["guard", "--path", str(tmp_path), "--deep", "never", "--json"])
+    output = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert output["status"] == "needs_review"
+    assert output["current_truth"]["status"] == "stale"
+    assert output["current_truth"]["source_self_inspection"] == (
+        ".qa-z/loops/latest/self_inspect.json"
+    )
+    assert output["current_truth"]["source_self_inspection_stale_for_backlog"] is True
+    assert output["current_truth"]["source_self_inspection_refresh_commands"] == [
+        "python -m qa_z select-next --refresh --count 3 --json"
+    ]
+    verdict_md = (
+        tmp_path / ".qa-z" / "runs" / "latest" / "guard" / "verdict.md"
+    ).read_text(encoding="utf-8")
+    assert "- Current truth: `stale`" in verdict_md
+    assert (
+        "- Current truth source: `.qa-z/loops/latest/self_inspect.json`" in verdict_md
+    )
+    assert (
+        "- Current truth refresh: `python -m qa_z select-next --refresh --count 3 --json`"
+        in verdict_md
+    )
+
+
 def test_guard_failed_fast_check_returns_do_not_merge(tmp_path: Path, capsys) -> None:
     write_config(
         tmp_path,
