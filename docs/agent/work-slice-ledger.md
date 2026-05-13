@@ -745,3 +745,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can distinguish a planner output-store failure from a true empty backlog or task-selection outcome.
 - Remaining blocker: planner commands remain local-only; they do not create commits, mutate target repositories, or prove release execution readiness.
 - Next safe slice: commit planner behavior, then rerun strict plan and a broader self-improvement validation wave.
+
+
+## 2026-05-13 Init Bootstrap Artifact Write Failure Contract
+- Repo: JustTyping
+- Lane: init/doctor onboarding -> starter file persistence
+- User-facing flow: `qa-z init`
+- Slice type: Flow / Contract
+- Before: a failed starter `qa-z.yaml`, contracts README, agent template, or workflow write could escape as raw `OSError`.
+- Root cause: `handle_init()` called starter file writers directly and only reported created/skipped paths after all writes succeeded.
+- Change made: wrapped bootstrap artifact writes in a command-owned OSError boundary that returns exit code `2` and prints a deterministic `qa-z init: artifact write error` message.
+- Validation run: `python -m pytest tests\test_cli.py::test_init_reports_artifact_write_failure -q`; `python -m pytest tests\test_cli.py::test_init_reports_artifact_write_failure tests\test_cli.py::test_init_creates_bootstrap_files tests\test_cli.py::test_init_is_idempotent -q`; `python -m pytest tests\test_init_options.py -q`.
+- Evidence: the focused RED raised raw `OSError: disk full`; after implementation the focused init failure contract passed, the core init create/idempotent tests passed, and the optional init profile/template/workflow pack passed `14` tests.
+- Gate delta: onboarding failure output is deterministic before doctor or fast/deep workflows run.
+- User impact: new QA-Z adopters get a clear local filesystem failure instead of a traceback during repository bootstrap.
+- Remaining blocker: init remains local-only and does not prove any remote, package, or production readiness.
+- Next safe slice: commit init behavior, then run an init/doctor/CLI validation wave before mining the next command-contract gap.
