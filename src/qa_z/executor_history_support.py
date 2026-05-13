@@ -8,11 +8,16 @@ from typing import Any
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write one deterministic JSON artifact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    """Write one deterministic JSON artifact with path-aware errors."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor history JSON artifact {path}: {exc}"
+        ) from exc
 
 
 def allocate_attempt_id(*, base: str, used_ids: set[str]) -> str:

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from qa_z.executor_history_support import (
     allocate_attempt_id,
     legacy_attempt_base,
@@ -48,3 +50,25 @@ def test_write_json_writes_sorted_payload_with_trailing_newline(tmp_path: Path) 
 
     assert json.loads(path.read_text(encoding="utf-8")) == {"a": 1, "b": 2}
     assert path.read_text(encoding="utf-8").endswith("\n")
+
+
+def test_write_json_wraps_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "nested" / "history.json"
+    original_write_text = Path.write_text
+
+    def fail_history(path_obj: Path, *args, **kwargs) -> int:
+        if path_obj == path:
+            raise OSError("disk full")
+        return original_write_text(path_obj, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_history)
+
+    with pytest.raises(OSError) as excinfo:
+        write_json(path, {"b": 2, "a": 1})
+
+    message = str(excinfo.value)
+    assert "could not write executor history JSON artifact" in message
+    assert str(path) in message
+    assert "disk full" in message
