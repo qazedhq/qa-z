@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from qa_z.executor_ingest_outcome import (
     compact_timestamp,
     executor_result_id,
@@ -101,3 +103,48 @@ def test_finalized_ingest_outcome_writes_machine_and_human_artifacts(
     assert "QA-Z Executor Result Ingest Report" in report
     assert "## Source Context" in report
     assert "## Live Repository Context" in report
+
+
+def test_finalized_ingest_outcome_reports_artifact_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    result = SimpleNamespace(
+        bridge_id="bridge-one",
+        status="completed",
+        verification_hint="rerun",
+    )
+    result_id = "bridge-one-20260422t030405z"
+    ingest_dir = tmp_path / ".qa-z" / "executor-results" / result_id
+    original_write_text = Path.write_text
+
+    def fail_ingest_report(path: Path, *args, **kwargs) -> int:
+        if path == ingest_dir / "ingest_report.md":
+            raise OSError("disk full")
+        return original_write_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", fail_ingest_report)
+
+    with pytest.raises(OSError) as excinfo:
+        finalized_ingest_outcome(
+            root=tmp_path,
+            result=result,
+            result_id=result_id,
+            session_id="session-one",
+            source_loop_id="loop-001",
+            ingest_status="accepted",
+            warnings=[],
+            freshness_check={"status": "passed", "details": []},
+            provenance_check={"status": "passed", "details": []},
+            verify_resume_status="ready_for_verify",
+            backlog_implications=[],
+            next_recommendation="run verification",
+            stored_result_path=None,
+            session_state="completed",
+            verification_triggered=False,
+            verification_verdict=None,
+            verify_summary_path=None,
+            source_context=None,
+        )
+
+    assert "could not write executor result ingest artifacts" in str(excinfo.value)
+    assert "disk full" in str(excinfo.value)

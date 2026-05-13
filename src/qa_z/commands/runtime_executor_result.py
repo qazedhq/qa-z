@@ -93,6 +93,14 @@ def handle_executor_result_ingest(args: argparse.Namespace) -> int:
             message=f"qa-z executor-result ingest: configuration error: {exc}",
             exit_code=2,
         )
+    except OSError as exc:
+        return _executor_result_error(
+            args,
+            command="ingest",
+            error="artifact_write_error",
+            message=f"qa-z executor-result ingest: artifact write error: {exc}",
+            exit_code=2,
+        )
 
 
 def handle_executor_result_dry_run(args: argparse.Namespace) -> int:

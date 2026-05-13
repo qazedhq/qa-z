@@ -123,9 +123,14 @@ def finalized_ingest_outcome(
             else None
         ),
     )
-    write_json(ingest_artifact_path, summary)
-    ingest_report_path.parent.mkdir(parents=True, exist_ok=True)
-    ingest_report_path.write_text(render_ingest_report(summary), encoding="utf-8")
+    try:
+        write_json(ingest_artifact_path, summary)
+        ingest_report_path.parent.mkdir(parents=True, exist_ok=True)
+        ingest_report_path.write_text(render_ingest_report(summary), encoding="utf-8")
+    except OSError as exc:
+        raise OSError(
+            f"could not write executor result ingest artifacts to {ingest_dir}: {exc}"
+        ) from exc
     return ExecutorResultIngestOutcome(
         summary=summary,
         verification_verdict=verification_verdict,
