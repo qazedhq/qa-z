@@ -19,10 +19,10 @@ def test_demo_auth_bug_json_reports_copied_resource_write_failure(
     copied_readme = tmp_path / ".qa-z" / "demo" / "auth-bug" / "README.md"
     original_write_bytes = Path.write_bytes
 
-    def fail_demo_copy(path: Path, *args: object, **kwargs: object) -> int:
+    def fail_demo_copy(path: Path, data: bytes) -> int:
         if path == copied_readme:
             raise OSError("disk full")
-        return original_write_bytes(path, *args, **kwargs)
+        return original_write_bytes(path, data)
 
     monkeypatch.setattr(Path, "write_bytes", fail_demo_copy)
 
@@ -51,10 +51,15 @@ def test_demo_auth_bug_json_reports_resource_directory_create_failure(
     demo_root = tmp_path / ".qa-z" / "demo" / "auth-bug"
     original_mkdir = Path.mkdir
 
-    def fail_demo_dir(path: Path, *args: object, **kwargs: object) -> None:
+    def fail_demo_dir(
+        path: Path,
+        mode: int = 0o777,
+        parents: bool = False,
+        exist_ok: bool = False,
+    ) -> None:
         if path == demo_root:
             raise OSError("disk full")
-        return original_mkdir(path, *args, **kwargs)
+        return original_mkdir(path, mode=mode, parents=parents, exist_ok=exist_ok)
 
     monkeypatch.setattr(Path, "mkdir", fail_demo_dir)
 

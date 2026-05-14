@@ -269,6 +269,7 @@ BATCH_RULES = (
             "tests/test_contract_planner.py",
             "tests/test_contract_resolution.py",
             "tests/test_coverage_gap_discovery.py",
+            "tests/test_demo_json_failure_contracts.py",
             "tests/test_demo_guard_action_package.py",
             "tests/test_execution*.py",
             "tests/test_git_runtime*.py",
