@@ -17,7 +17,7 @@ qa-z deep --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
-Expected: `py_test` fails because a non-owner can read another user's invoice. Semgrep flags the risky `return user_id is not None` flow.
+Expected: `py_test` fails because a non-owner can read another user's invoice. Semgrep reports 2 findings: the risky `return user_id is not None` flow and the broader helper shape that rejects anonymous users without returning a `user_id == invoice.owner_id` owner check. QA-Z writes local evidence under `.qa-z/runs/baseline`. Do not commit generated `.qa-z` runtime evidence.
 
 ## Candidate
 

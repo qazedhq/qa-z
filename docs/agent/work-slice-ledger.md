@@ -1673,3 +1673,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can apply GitHub discoverability settings from one tested doc without implying unapproved package publish, release, tag, or deployment.
 - Remaining blocker: applying repository description/topics/social preview still requires approved GitHub settings mutation.
 - Next safe slice: inspect release/package proof docs for stale publish wording or run a wider alpha gate validation wave.
+
+
+## 2026-05-15 Auth Demo Semgrep Owner-Check Evidence
+- Repo: JustTyping
+- Lane: examples / Semgrep deep evidence
+- User-facing flow: auth-bug demo -> Semgrep deep -> repair prompt -> verify.
+- Slice type: Flow / Contract / Evidence
+- Before: the Python and FastAPI auth-bug examples only pinned the signed-in-user shortcut rule, while PR #38's owner-check work was open, draft, behind current `main`, and not covered by repo-local parity tests.
+- Root cause: the public examples and packaged auth-bug template did not have a deterministic test asserting the second owner-check rule across source and template rule files, and the FastAPI/Semgrep docs did not describe the two-finding custom-rule flow.
+- Change made: added the missing owner-check Semgrep rule to the public Python auth demo, nested demo repo, FastAPI auth demo, and packaged auth-bug template rule files; added YAML-parsing parity tests; updated example docs, FastAPI walkthrough, and Semgrep custom-rule docs to name the two-finding local flow and generated-artifact boundary.
+- Validation run: `python -m pytest tests/test_auth_demo_semgrep_rules.py -q`; `python -m pytest tests/test_demo_guard_action_package.py::test_packaged_auth_bug_demo_matches_public_source_demo tests/test_launch_growth_package.py::test_agent_bug_examples_are_documented_and_configured -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `semgrep --config semgrep-rules/auth-bypass.yml --json --metrics off app` in both auth examples; fixed-file Semgrep scans for `app/auth.fixed.py` and `app/main.fixed.py`; `python -m ruff check tests/test_auth_demo_semgrep_rules.py`; `python -m ruff format --check tests/test_auth_demo_semgrep_rules.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new parity test failed first on the one-rule state, then passed `4`; packaged-demo and launch example checks passed `2`; public docs current-truth passed `15`; Semgrep `1.159.0` reported `2` findings on each vulnerable baseline and `0` findings on both fixed files; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: the auth demos now have two deterministic Semgrep signals and repo-local tests to prevent public/template drift.
+- User impact: maintainers can merge the refreshed equivalent of PR #38 with concrete local evidence, and users get FastAPI/custom-rule docs that explain what QA-Z deep adds beyond raw Semgrep.
+- Remaining blocker: no GitHub issue was closed or commented on, no branch/commit/push/tag/release/package publish/deploy was performed, and package publish remains blocked pending explicit human release-owner approval.
+- Next safe slice: close #14 only after the refreshed branch is merged, update or close #22 based on maintainer acceptance of the new Semgrep docs, keep #13 open if a fuller artifact walkthrough is still desired, and keep #5 open until TestPyPI/PyPI approval and evidence exist.
