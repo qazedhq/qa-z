@@ -324,6 +324,7 @@ def test_commit_plan_routes_guard_skill_demo_and_hygiene_surfaces() -> None:
             "?? tests/test_public_raw_urls.py",
             "?? tests/test_guard_cli.py",
             "?? tests/test_skill_install_cli.py",
+            "?? tests/test_demo_json_failure_contracts.py",
             "?? tests/test_demo_guard_action_package.py",
         ]
     )
@@ -348,6 +349,7 @@ def test_commit_plan_routes_guard_skill_demo_and_hygiene_surfaces() -> None:
         "src/qa_z/guard/workflow.py",
         "tests/test_guard_cli.py",
         "tests/test_skill_install_cli.py",
+        "tests/test_demo_json_failure_contracts.py",
         "tests/test_demo_guard_action_package.py",
     ]
     assert result["unassigned_source_paths"] == []

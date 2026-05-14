@@ -102,13 +102,23 @@ SURFACE_DISCOVERY_STAGES = [
     DiscoveryStage(
         "docs_drift",
         lambda root, backlog, candidates, live_signals, generated_at: (
-            discover_docs_drift_candidates(root)
+            discover_docs_drift_candidates(
+                root,
+                generated_at=generated_at,
+                current_branch=live_signals.get("current_branch"),
+                current_head=live_signals.get("current_head"),
+            )
         ),
     ),
     DiscoveryStage(
         "coverage_gap",
         lambda root, backlog, candidates, live_signals, generated_at: (
-            discover_coverage_gap_candidates(root)
+            discover_coverage_gap_candidates(
+                root,
+                generated_at=generated_at,
+                current_branch=live_signals.get("current_branch"),
+                current_head=live_signals.get("current_head"),
+            )
         ),
     ),
 ]

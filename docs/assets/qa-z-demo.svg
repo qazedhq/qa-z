@@ -7,7 +7,7 @@
   <circle cx="88" cy="64" r="7" fill="#ffbd2e"/>
   <circle cx="112" cy="64" r="7" fill="#27c93f"/>
   <text x="146" y="70" fill="#9fb3c8" font-family="Cascadia Mono, Consolas, monospace" font-size="18">QA-Z terminal demo</text>
-  <g font-family="Cascadia Mono, Consolas, monospace" font-size="20">
+  <g font-family="Cascadia Mono, Consolas, monospace" font-size="18">
     <text x="64" y="120" fill="#8bd5ff">$ pipx install git+https://github.com/qazedhq/qa-z.git</text>
     <text x="64" y="154" fill="#d7e1ea">installed package qa-z from GitHub alpha source</text>
     <text x="64" y="190" fill="#8bd5ff">$ qa-z init --profile python --with-agent-templates</text>
@@ -16,8 +16,9 @@
     <text x="64" y="294" fill="#7ee787">qa-z doctor: passed</text>
     <text x="64" y="330" fill="#8bd5ff">$ qa-z demo auth-bug</text>
     <text x="64" y="364" fill="#d7e1ea">baseline: risky auth change captured</text>
-    <text x="64" y="400" fill="#8bd5ff">$ qa-z guard --from-run latest --adapter codex</text>
-    <text x="64" y="434" fill="#ffdf5d">QA-Z Guard - Verdict: DO NOT MERGE YET</text>
-    <text x="64" y="468" fill="#ffb86c">Next: qa-z repair-prompt --from-run latest --adapter codex</text>
+    <text x="64" y="400" fill="#8bd5ff">$ cd .qa-z/demo/auth-bug</text>
+    <text x="64" y="434" fill="#8bd5ff">$ qa-z guard --from-run latest --adapter codex</text>
+    <text x="64" y="468" fill="#ffdf5d">QA-Z Guard - Verdict: DO NOT MERGE YET</text>
+    <text x="64" y="500" fill="#ffb86c">Next: qa-z repair-prompt --from-run latest --adapter codex</text>
   </g>
 </svg>

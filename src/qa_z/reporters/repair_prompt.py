@@ -39,6 +39,8 @@ from qa_z.reporters.repair_prompt_sections import (
     format_list,
     format_severity_summary_dict,
     has_blocking_deep_findings,
+    repair_prompt_affected_files,
+    repair_prompt_validation_commands,
     render_failure_markdown,
     render_optional_list,
     render_security_findings,
@@ -51,6 +53,7 @@ from qa_z.runners.models import RunSummary
 __all__ = [
     "DEFAULT_CONSTRAINTS",
     "DEFAULT_DONE_WHEN",
+    "DEFAULT_NON_GOALS",
     "FailureContext",
     "PASSING_DONE_WHEN",
     "RepairPacket",
@@ -70,6 +73,8 @@ __all__ = [
     "format_list",
     "format_severity_summary_dict",
     "has_blocking_deep_findings",
+    "repair_prompt_affected_files",
+    "repair_prompt_validation_commands",
     "ordered_candidate_files",
     "repair_packet_json",
     "render_failure_markdown",
@@ -87,6 +92,12 @@ DEFAULT_CONSTRAINTS = [
     "Do not weaken tests.",
     "Do not remove lint/type checks to make the run pass.",
     "Preserve existing CLI flags and artifact names unless the contract explicitly changes them.",
+]
+
+DEFAULT_NON_GOALS = [
+    "Do not call Codex, Claude, or any external LLM/API from QA-Z.",
+    "Do not build a scheduler, queue, or remote execution controller.",
+    "Do not make unrelated refactors or broad architecture changes.",
 ]
 
 DEFAULT_DONE_WHEN = [
@@ -257,6 +268,21 @@ def _render_repair_prompt_impl(packet: RepairPacket) -> str:
         lines.extend(["No failing checks were found for this run.", ""])
     for failure in packet.failures:
         lines.extend(render_failure_markdown(failure))
+
+    affected_files = repair_prompt_affected_files(packet)
+    lines.extend(
+        render_optional_list(
+            "## Affected Files", [f"`{path}`" for path in affected_files], bullet="*"
+        )
+    )
+    lines.extend(render_optional_list("## Non-Goals", DEFAULT_NON_GOALS, bullet="*"))
+    lines.extend(
+        render_optional_list(
+            "## Validation Commands",
+            [f"`{command}`" for command in repair_prompt_validation_commands(packet)],
+            bullet="*",
+        )
+    )
 
     constraints = unique_preserve_order(
         [*packet.contract.get("constraints", []), *DEFAULT_CONSTRAINTS]

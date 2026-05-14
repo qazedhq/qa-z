@@ -4,6 +4,10 @@ QA-Z is a Codex-first, model-agnostic QA control plane. Contributions should kee
 
 ## Local Setup
 
+Use [SUPPORT.md](SUPPORT.md) for usage questions and release approval routing.
+Use [SECURITY.md](SECURITY.md) for private vulnerability reporting before
+opening any public issue.
+
 ```bash
 python -m pip install -e .[dev]
 ```

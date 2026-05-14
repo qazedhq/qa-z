@@ -3,7 +3,7 @@
 Final copy:
 
 ```text
-QA-Z 🛡️
+QA-Z
 Make AI coding safe to merge.
 Contracts. Checks. Repair prompts. Verification.
 ```

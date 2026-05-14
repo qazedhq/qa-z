@@ -183,17 +183,17 @@ with `product_decision_paths_present`, but the current five groups roll up into
 
 ## Alpha Release-Candidate Decision Packet - 2026-05-12
 
-This packet refreshes the release-candidate boundary after the local alpha
-closure commits, read-only remote proof, and the human-approved release
-execution worktrain audit. Approval flags were absent, so the result is an
-execution-ready packet, not a publish.
+This packet refreshes the release-candidate boundary after the current-head
+proof alignment worktrain, read-only remote proof, and proof-branch execution
+readiness audit. Approval flags were absent, so the result is an
+execution-ready current-head packet, not a publish.
 
-- Proof timestamp: `2026-05-12T22:50Z`.
-- Source HEAD at proof time: `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`.
+- Proof timestamp: `2026-05-13T14:39Z`.
+- Source HEAD at proof time: `1ede65172f770c66159b2cc5e9e7d4f2063bf634`.
 - Branch at proof time: `main`.
 - Remote target: `https://github.com/qazedhq/qa-z.git`.
 - Remote `main` at proof time:
-  `8f647619418b884afa3bef3d839326680bec70af`.
+  `b9a2504ad07d15776eb900f07d6ee83f22ef9076`.
 - Publish mode for this packet: `PROOF_ONLY`; approval flags
   `RELEASE_EXECUTION_APPROVED`, `PUSH_ALLOWED`, `TAG_ALLOWED`,
   `GITHUB_RELEASE_ALLOWED`, `PACKAGE_PUBLISH_ALLOWED`, and `DEPLOY_ALLOWED`
@@ -204,17 +204,20 @@ Current local evidence:
 
 - Strict worktree plan:
   `python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`
-  returned `status=attention_required` with `changed_batch_count=5`,
-  `changed_path_count=42`, `product_decision_path_count=0`,
+  returned `status=ready` with `changed_batch_count=2`,
+  `changed_path_count=33`, `product_decision_path_count=0`,
   `product_decision_group_count=0`, `unassigned_source_path_count=0`,
-  `report_path_count=1`, `shared_patch_add_count=1`,
-  `cross_cutting_count=0`, `cross_cutting_group_count=1`, and
-  `deferred_alpha_scope_path_count=25`. The attention reason is the dirty
-  tracked report patch-add review surface: `cross_cutting_paths_present`.
+  `report_path_count=0`, `shared_patch_add_count=0`,
+  `cross_cutting_count=0`, `cross_cutting_group_count=0`, and
+  `release_scope_decision_path_count=25`,
+  `approved_alpha_support_path_count=0`, and
+  `deferred_alpha_scope_path_count=25`. The alpha decision packet report is
+  now owned by the alpha release closure batch, so the strict helper does not
+  require report patch-add for this packet-only release proof update.
 - Include-ignored worktree plan:
   `python scripts\worktree_commit_plan.py --include-ignored --summary-only --json`
-  returned `status=ready` with `changed_batch_count=5`,
-  `changed_path_count=16275`, `generated_artifact_count=37`,
+  returned `status=ready` with `changed_batch_count=2`,
+  `changed_path_count=16277`, `generated_artifact_count=37`,
   `generated_local_only_count=23`, `generated_local_by_default_count=14`,
   and the same `25` deferred out-of-alpha paths.
 - Alpha gate:
@@ -224,6 +227,14 @@ Current local evidence:
   `--output` write failures now return exit code `2` with deterministic stderr
   while still printing the JSON evidence payload, so file-system errors do not
   look like release-check failures.
+- Default release truth validator:
+  `python scripts\alpha_release_truth_validator.py --json` validates this
+  packet against the current local HEAD and passes only while the packet is
+  current-head aligned. The JSON facts expose
+  `proof_branch=codex/alpha-rc-1ede65172f77-20260513` and
+  `current_head_remote_proof=local_only_not_remote_visible`, so the next
+  approval packet is copyable while recognizing that current HEAD still needs
+  remote raw proof.
 - Commit-safe release truth validator:
   `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`
   validates this packet against the pinned proof HEAD instead of requiring the
@@ -240,8 +251,8 @@ Current local evidence:
   `release_path_state=local_only_remote_preflight`. Skip-remote local preflight remains separate from read-only remote proof, and its remote checks stayed skipped by design.
 - Full local proof refresh:
   `python scripts\alpha_release_gate.py --quick --allow-dirty --json` carried
-  the local proof bundle through `pytest` (`1622 passed`), Ruff check, Ruff
-  format check, mypy (`534` source files), CLI help smoke, text hygiene, and
+  the local proof bundle through `pytest` (`1723 passed`), Ruff check, Ruff
+  format check, mypy (`544` source files), CLI help smoke, text hygiene, and
   worktree-plan evidence.
 
 Read-only remote proof:
@@ -250,40 +261,40 @@ Read-only remote proof:
   returned `release preflight passed`, `9` passed, `1` skipped,
   `repository_http_status=200`, `repository_visibility=public`,
   `repository_archived=false`, `repository_default_branch=main`,
-  `remote_ref_count=24`, `remote_ref_head_count=5`,
+  `remote_ref_count=26`, `remote_ref_head_count=6`,
   `remote_ref_tag_count=2`, and
   `release_path_state=blocked_remote_publish`.
 - The same read-only preflight with `--allow-existing-refs` also passed the
   read checks, but still reported `release_path_state=blocked_remote_publish`
   because no publish action was approved and existing remote tags/refs need
   explicit release decisioning.
-- `git ls-remote --refs origin` returned remote refs without credentials or
-  mutation. Remote `main` is `8f647619418b884afa3bef3d839326680bec70af`; tags include
-  `v0.9.8-alpha` and `v0.9.9-alpha`.
+- `git ls-remote --heads --tags origin` returned remote refs without
+  credentials or mutation. Remote `main` is
+  `b9a2504ad07d15776eb900f07d6ee83f22ef9076`; tags include `v0.9.8-alpha`
+  and `v0.9.9-alpha`.
 - GitHub API proof returned repository `qazedhq/qa-z`, `private=false`,
-  `archived=false`, `default_branch=main`, release tags
-  `v0.9.9-alpha,v0.9.8-alpha`, and `main_sha=8f647619418b884afa3bef3d839326680bec70af`.
+  `archived=false`, `default_branch=main`, `stargazerCount=0`, and repository
+  topics including `ai-agents`, `coding-agents`, `code-review`, `qa`, `sarif`,
+  `semgrep`, and `testing`.
 - Latest read-only workflow proof for remote `main` is for
-  `8f647619418b884afa3bef3d839326680bec70af`, not local
-  `9bbd1294d3b25fd45216b6cb14f2d97dd087351a`: `CI`, `Public Raw Hygiene`,
-  and `OpenSSF Scorecard` were completed successfully on the remote-visible
-  SHA.
-- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 8f647619418b884afa3bef3d839326680bec70af`
-  passed for branch and exact-commit raw URLs.
-- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 9bbd1294d3b25fd45216b6cb14f2d97dd087351a`
+  `b9a2504ad07d15776eb900f07d6ee83f22ef9076`: `CI` run `25798333000` and
+  `Public Raw Hygiene` run `25798332977` completed successfully.
+- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 1ede65172f770c66159b2cc5e9e7d4f2063bf634`
   passed branch `main` URLs but failed exact-commit raw URLs with HTTP `404`,
-  proving the local HEAD is not yet public on the remote.
-- Local proof HEAD is 17 commits ahead of remote `main`, so this is not an
-  empty-remote direct publish. Remote alpha readiness is partial: repository
-  existence and readability are proven, but the current local proof SHA has not
-  been pushed, CI-validated, tagged, released, or package-published.
+  proving the current local HEAD is not yet public on the remote.
+- local `1ede65172f770c66159b2cc5e9e7d4f2063bf634` is not yet remote-visible.
+- Local proof HEAD is 1 commit ahead of remote `main`, so current main has
+  branch public raw and read-only CI proof for
+  `b9a2504ad07d15776eb900f07d6ee83f22ef9076`, but not for the new local proof
+  SHA. Remote alpha readiness is partial until the proof SHA is pushed and
+  remote CI/public raw proof is captured.
 
 Approval matrix:
 
 | Action | Approved? | Executed? | Evidence / blocker |
 |---|---:|---:|---|
 | Read-only remote proof | Yes, safe read-only | Yes | GitHub API, `git ls-remote`, preflight, workflow API, and public raw checks captured. |
-| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 17 commits ahead of remote `main`. |
+| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 1 commit ahead of remote `main`. |
 | Tag | No | No | `TAG_ALLOWED` unset; existing tags `v0.9.8-alpha` and `v0.9.9-alpha` must not be reused. |
 | GitHub release | No | No | `GITHUB_RELEASE_ALLOWED` unset; release requires approved tag, notes, and post-CI evidence. |
 | Package publish | No | No | `PACKAGE_PUBLISH_ALLOWED` unset; `docs/package-publish-plan.md` keeps registry publishing for a later explicit plan. |
@@ -306,21 +317,23 @@ The conservative push packet is a proof branch, not a direct default-branch
 publish:
 
 ```bash
-test "$(git rev-parse HEAD)" = "<approved-sha>"
-git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512
-git ls-remote --heads origin codex/alpha-rc-<approved-sha>-20260512
+test "$(git rev-parse HEAD)" = "1ede65172f770c66159b2cc5e9e7d4f2063bf634"
+git push -u origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:refs/heads/codex/alpha-rc-1ede65172f77-20260513
+git ls-remote --heads origin codex/alpha-rc-1ede65172f77-20260513
 ```
 
-Expected proof branch output must resolve `<approved-sha>` to
-`refs/heads/codex/alpha-rc-<approved-sha>-20260512`.
+Expected proof branch output must resolve
+`1ede65172f770c66159b2cc5e9e7d4f2063bf634` to
+`refs/heads/codex/alpha-rc-1ede65172f77-20260513`.
 
 Direct `main` update needs separate explicit approval:
 
 ```bash
-git push origin <approved-sha>:main
+git push origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:main
 ```
 
-Direct `main` update must use `git push origin <approved-sha>:main`, not a
+Direct `main` update must use
+`git push origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:main`, not a
 moving `HEAD:main` refspec.
 
 After any approved push, capture remote CI and public raw proof for the pushed
@@ -412,7 +425,7 @@ Rollback and incident packet:
   `git reset` for shared release history.
 - Mistaken proof branch push: if approved by a release owner, delete only the
   proof branch with
-  `git push origin --delete codex/alpha-rc-<approved-sha>-20260512`.
+  `git push origin --delete codex/alpha-rc-1ede65172f77-20260513`.
 - Mistaken direct `main` push: do not force-push by default. Open a rollback PR
   or run `git revert <bad-sha>` on a reviewed branch, then rerun the alpha gate
   and remote proof.
@@ -467,11 +480,15 @@ Remote and publishing proof packet:
 - Configured origin target is `qazedhq/qa-z`; local and read-only remote
   preflight both confirm that target.
 - Remote repository checks and reachability are proven current as of the proof
-  timestamp, but remote publish remains blocked by `PROOF_ONLY` approval
-  boundaries, the non-empty remote state, and the fact that local `9bbd1294d3b25fd45216b6cb14f2d97dd087351a` is not yet remote-visible.
+  timestamp. Current HEAD
+  `1ede65172f770c66159b2cc5e9e7d4f2063bf634` is not yet remote-visible, and
+  publish remains blocked by `PROOF_ONLY` approval boundaries and the non-empty
+  remote state.
 - QA-Z local alpha RC readiness: `Yes` for the local proof packet.
-- QA-Z remote alpha readiness: `Partial`; remote read proof is current, but the
-  local proof SHA is not pushed and no current-SHA CI/public raw evidence exists.
+- QA-Z remote alpha readiness: `Partial`; remote `main` has CI and public raw
+  evidence for `b9a2504ad07d15776eb900f07d6ee83f22ef9076`, but the current
+  local proof SHA has not been pushed and no new tag, GitHub release, package
+  publish, or deploy approval has been granted or executed.
 - QA-Z release-execution readiness: `Partial`; exact push, tag, release,
   package, rollback, and incident packets are prepared, but approval flags are
   absent.

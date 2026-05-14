@@ -18,6 +18,28 @@ The manifest contains:
 
 Follow-up commands such as `qa-z review --from-run latest`, `qa-z repair-prompt --from-run latest`, `qa-z github-summary --from-run latest`, and `qa-z deep` prefer this manifest. If it points at stale data, QA-Z falls back to scanning the configured runs directory for `*/fast/summary.json`. `qa-z deep` consumes the manifest for attachment but does not update it.
 
+## Demo Command JSON Summary
+
+`qa-z demo auth-bug --json` writes a single machine-readable stdout payload after
+creating the isolated auth-bug demo under `.qa-z/demo/auth-bug`.
+
+Required success fields:
+
+- `kind`: `qa_z.demo.auth_bug`
+- `schema_version`: integer schema marker, currently `1`
+- `demo`: stable demo id, currently `auth-bug`
+- `status`: `created`
+- `demo_root`: absolute path to the isolated generated demo
+- `config`: demo-local runtime config filename, currently `qa-z.demo.yaml`
+- `guard_verdict`: demo-relative guard verdict path
+- `repair_prompt`: demo-relative Codex repair prompt path
+- `next_commands`: ordered follow-up commands for entering the demo root and
+  inspecting guard and repair evidence
+
+JSON-mode failures use `kind` `qa_z.demo.auth_bug_error` with `error`,
+`exit_code`, and `message`. Demo setup persistence failures use
+`artifact_write_error` and include the failing local path in `message`.
+
 ## Fast And Deep Summaries
 
 `qa-z fast` writes `summary.json` to:
@@ -1092,6 +1114,8 @@ latest-loop context even though each individual command is deterministic.
 - `state`: optional taskless selection state, currently `blocked_no_candidates` when no task is selected
 - `selection_gap_reason`: optional compact reason when no open task is selected, such as `no_open_backlog_after_inspection`
 - `open_backlog_count`: optional open-backlog count recorded alongside `selection_gap_reason`
+- `next_actions`: optional operator guidance for taskless selection, including a pointer to `docs/agent/next-real-slices.md` before claiming safe exhaustion
+- `next_commands`: optional copyable refresh commands for taskless selection, currently including `python -m qa_z backlog --refresh --json` and the strict worktree commit-plan command
 
 Each selected task may include:
 
@@ -1107,6 +1131,7 @@ The plain-text `qa-z select-next` output now mirrors compact selected-task detai
 - live repository context when the latest self-inspection artifact supplied it
 - stale self-inspection provenance and a copyable refresh command when the latest self-inspection artifact is older than the backlog
 - taskless-loop diagnostics, including `selection_gap_reason` and open backlog count when no task is selected
+- taskless selection `next_actions` and `next_commands` so empty backlog output still has deterministic follow-through
 - selected task id plus title
 - `recommendation`
 - deterministic action hint derived from `recommendation`

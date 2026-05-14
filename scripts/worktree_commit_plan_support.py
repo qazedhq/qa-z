@@ -181,6 +181,8 @@ BATCH_RULES = (
             "tests/test_alpha_release_truth_validator.py",
             "tests/test_public_raw_urls.py",
             "tests/test_text_file_hygiene.py",
+            "docs/package-publish-plan.md",
+            "docs/reports/worktree-commit-plan.md",
             "docs/releases/**",
         ),
         validation_commands=(
@@ -195,10 +197,19 @@ BATCH_RULES = (
         title="Current-truth and release surfaces",
         message="Keep release-facing docs and current-truth guards aligned with the shipped surface.",
         patterns=(
+            "CONTRIBUTING.md",
+            "CODE_OF_CONDUCT.md",
+            "SUPPORT.md",
+            "SECURITY.md",
+            ".github/ISSUE_TEMPLATE/**",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            ".github/pull_request_template.md",
             "tests/test_current_truth*.py",
             "tests/test_*current_truth*.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
+            "docs/product/**",
+            "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
             "docs/superpowers/plans/*github*launch*.md",
             "docs/launch/**",
@@ -221,7 +232,7 @@ BATCH_RULES = (
             "tests/worktree_commit_plan*_support.py",
         ),
         validation_commands=(
-            "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
+            "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
             "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
             "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
         ),
@@ -258,6 +269,7 @@ BATCH_RULES = (
             "tests/test_contract_planner.py",
             "tests/test_contract_resolution.py",
             "tests/test_coverage_gap_discovery.py",
+            "tests/test_demo_json_failure_contracts.py",
             "tests/test_demo_guard_action_package.py",
             "tests/test_execution*.py",
             "tests/test_git_runtime*.py",
@@ -522,6 +534,7 @@ CROSS_CUTTING_PATTERNS = (
 )
 
 REPORT_PATTERNS = ("docs/reports/**",)
+RELEASE_OWNED_REPORT_PATTERNS = ("docs/reports/worktree-commit-plan.md",)
 
 CROSS_CUTTING_GROUP_RULES = (
     (
@@ -1045,6 +1058,7 @@ def analyze_paths(
         for path in source_paths
         if path not in release_scope_decision_paths
         and matches_any(path, REPORT_PATTERNS)
+        and not matches_any(path, RELEASE_OWNED_REPORT_PATTERNS)
     ]
     patch_add_paths = shared_patch_add_paths(
         cross_cutting_paths=cross_cutting_paths,

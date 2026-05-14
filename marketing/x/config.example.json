@@ -1,0 +1,15 @@
+{
+  "account": "qazedhq",
+  "github_url": "https://github.com/qazedhq/qa-z",
+  "release_url": "https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha",
+  "max_post_chars": 260,
+  "max_mentions_per_post": 1,
+  "posting_enabled_env": "QA_Z_X_POST_ENABLE",
+  "token_env": "X_USER_ACCESS_TOKEN",
+  "client_id_env": "X_CLIENT_ID",
+  "client_secret_env": "X_CLIENT_SECRET",
+  "oauth_state_file": ".state/oauth-state.json",
+  "token_file": ".state/x_tokens.json",
+  "redirect_uri": "http://127.0.0.1:8080/callback",
+  "scopes": ["tweet.read", "tweet.write", "users.read", "offline.access"]
+}

@@ -1,0 +1,46 @@
+{
+  "posts": [
+    {
+      "id": "day-00-launch",
+      "file": "content/posts/day-00-launch.md",
+      "status": "approved",
+      "posted_id": null
+    },
+    {
+      "id": "day-01-demo",
+      "file": "content/posts/day-01-demo.md",
+      "status": "draft",
+      "posted_id": null
+    },
+    {
+      "id": "day-02-agent-safety",
+      "file": "content/posts/day-02-agent-safety.md",
+      "status": "draft",
+      "posted_id": null
+    },
+    {
+      "id": "day-03-security-angle",
+      "file": "content/posts/day-03-security-angle.md",
+      "status": "draft",
+      "posted_id": null
+    },
+    {
+      "id": "day-04-skill-pack",
+      "file": "content/posts/day-04-skill-pack.md",
+      "status": "draft",
+      "posted_id": null
+    },
+    {
+      "id": "day-05-feedback-ask",
+      "file": "content/posts/day-05-feedback-ask.md",
+      "status": "draft",
+      "posted_id": null
+    },
+    {
+      "id": "day-06-weekly-recap",
+      "file": "content/posts/day-06-weekly-recap.md",
+      "status": "draft",
+      "posted_id": null
+    }
+  ]
+}

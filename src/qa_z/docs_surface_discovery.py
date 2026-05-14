@@ -18,13 +18,22 @@ __all__ = [
 ]
 
 
-def discover_docs_drift_candidates(root: Path) -> list[Any]:
+def discover_docs_drift_candidates(
+    root: Path,
+    *,
+    generated_at: str | None = None,
+    current_branch: str | None = None,
+    current_head: str | None = None,
+) -> list[Any]:
     """Create candidates when public docs omit the self-improvement surface."""
     candidates: list[Any] = []
     for candidate_input in discover_docs_drift_candidate_inputs(
         root,
         expected_command_doc_terms=EXPECTED_COMMAND_DOC_TERMS,
         report_evidence_files=REPORT_EVIDENCE_FILES,
+        generated_at=generated_at,
+        current_branch=current_branch,
+        current_head=current_head,
     ):
         evidence = [
             {

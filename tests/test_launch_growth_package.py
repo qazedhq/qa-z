@@ -16,6 +16,8 @@ def read(path: str) -> str:
 def test_launch_growth_package_covers_requested_surfaces() -> None:
     required_paths = [
         "CODE_OF_CONDUCT.md",
+        "SUPPORT.md",
+        ".github/ISSUE_TEMPLATE/config.yml",
         ".github/workflows/scorecard.yml",
         "templates/.github/workflows/qa-z-pr-comment.yml",
         "docs/launch-checklist.md",
@@ -116,6 +118,7 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
         "qa-z init --profile python --with-agent-templates",
         "qa-z doctor",
         "qa-z demo auth-bug",
+        "cd .qa-z/demo/auth-bug",
         "qa-z guard --from-run latest --adapter codex",
         "Verdict: DO NOT MERGE YET",
         "qa-z repair-prompt --from-run latest --adapter codex",
@@ -126,6 +129,46 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
     public_surfaces = "\n".join([readme, body, demo_svg])
     for forbidden in ("F:\\", "C:\\Users", "SECRET", "TOKEN", "BEGIN PRIVATE"):
         assert forbidden not in public_surfaces
+
+
+def test_readme_short_quickstart_uses_runnable_demo_flow() -> None:
+    readme = read("README.md")
+    quickstart = readme.split("## Quickstart", 1)[1].split(
+        "## GitHub Alpha Install", 1
+    )[0]
+
+    assert "qa-z init\nqa-z guard" not in quickstart
+    for command in (
+        "qa-z demo auth-bug",
+        "qa-z demo auth-bug --json",
+        "cd .qa-z/demo/auth-bug",
+        "qa-z guard --from-run latest --adapter codex",
+        "qa-z repair-prompt --from-run latest --adapter codex",
+    ):
+        assert command in quickstart
+    assert "For your own repository" in quickstart
+    assert "qa-z init --profile python --with-agent-templates" in quickstart
+
+
+def test_docs_quickstart_leads_with_packaged_demo_before_example_repo_flow() -> None:
+    quickstart = read("docs/quickstart.md")
+    packaged_demo = quickstart.split("## Run The 60-Second Packaged Demo", 1)[1].split(
+        "## Run The Example Repository Demo", 1
+    )[0]
+
+    for command in (
+        "qa-z demo auth-bug",
+        "qa-z demo auth-bug --json",
+        "cd .qa-z/demo/auth-bug",
+        "qa-z guard --from-run latest --adapter codex",
+        "qa-z repair-prompt --from-run latest --adapter codex",
+    ):
+        assert command in packaged_demo
+
+    assert "cd examples/agent-auth-bug" not in packaged_demo
+    assert quickstart.index("qa-z demo auth-bug") < quickstart.index(
+        "cd examples/agent-auth-bug"
+    )
 
 
 def test_examples_index_links_visual_proof_and_labels_run_status() -> None:
@@ -167,6 +210,30 @@ def test_agent_bug_examples_are_documented_and_configured() -> None:
     assert "TypeScript agent bug" in read("examples/typescript-agent-bug/README.md")
 
 
+def test_github_issue_templates_route_support_security_and_release_contacts() -> None:
+    config = yaml.safe_load(read(".github/ISSUE_TEMPLATE/config.yml"))
+    bug_report = yaml.safe_load(read(".github/ISSUE_TEMPLATE/bug_report.yml"))
+    feature_request = yaml.safe_load(read(".github/ISSUE_TEMPLATE/feature_request.yml"))
+
+    assert config["blank_issues_enabled"] is False
+    contact_links = {link["name"]: link["url"] for link in config["contact_links"]}
+    assert contact_links == {
+        "Support questions": ("https://github.com/qazedhq/qa-z/blob/main/SUPPORT.md"),
+        "Private security reports": (
+            "https://github.com/qazedhq/qa-z/security/advisories/new"
+        ),
+        "Release, package, tag, or deploy approvals": (
+            "https://github.com/qazedhq/qa-z/blob/main/docs/package-publish-plan.md"
+        ),
+    }
+
+    bug_intro = bug_report["body"][0]["attributes"]["value"]
+    feature_intro = feature_request["body"][0]["attributes"]["value"]
+    assert "SUPPORT.md" in bug_intro
+    assert "GitHub Security Advisory" in bug_intro
+    assert "Release, package, tag, or deploy approvals" in feature_intro
+
+
 def test_docs_index_and_readme_link_full_growth_package() -> None:
     combined = read("README.md") + "\n" + read("docs/README.md")
 
@@ -192,6 +259,38 @@ def test_optional_pr_comment_and_scorecard_surfaces_are_opt_in() -> None:
     assert "do not enable this template unless" in pr_comment.lower()
     assert "ossf/scorecard-action" in scorecard
     assert "security-events: write" in scorecard
+
+
+def test_scorecard_docs_describe_permissions_triggers_and_local_limits() -> None:
+    scorecard_docs = read("docs/scorecard.md")
+    workflow = yaml.safe_load(read(".github/workflows/scorecard.yml"))
+    triggers = workflow[True]
+
+    assert {"schedule", "workflow_dispatch", "branch_protection_rule"} <= set(triggers)
+    assert workflow["permissions"] == {
+        "contents": "read",
+        "security-events": "write",
+    }
+
+    scorecard_step = next(
+        step
+        for step in workflow["jobs"]["scorecard"]["steps"]
+        if step.get("uses") == "ossf/scorecard-action@v2.4.0"
+    )
+    assert scorecard_step["with"]["publish_results"] is False
+    assert scorecard_step["with"]["results_format"] == "sarif"
+
+    for text in (
+        "weekly schedule",
+        "manual `workflow_dispatch`",
+        "`branch_protection_rule` updates",
+        "`contents: read`",
+        "`security-events: write`",
+        "`publish_results: false`",
+        "does not post pull request comments",
+        "Do not claim a current OpenSSF score from local validation.",
+    ):
+        assert text in scorecard_docs
 
 
 def test_good_first_issue_seed_count_and_specificity() -> None:
@@ -239,3 +338,49 @@ def test_launch_asset_docs_avoid_fabricated_public_claims() -> None:
     assert "qa-z-agent-auth-bug.cast" in combined
     assert "No package registry publish has happened yet." in combined
     assert "fake adoption" in combined
+
+
+def test_social_preview_copy_matches_asset_and_stays_ascii_safe() -> None:
+    social_preview = read("docs/launch/social-preview.md")
+    launch_package = read("docs/launch-package.md")
+    social_svg = read("docs/assets/qa-z-social-preview.svg")
+
+    expected_lines = (
+        "QA-Z",
+        "Make AI coding safe to merge.",
+        "Contracts. Checks. Repair prompts. Verification.",
+    )
+
+    for text in (social_preview, launch_package):
+        for line in expected_lines:
+            assert line in text
+        assert all(ord(char) < 128 for char in text)
+
+    assert "QA-Z social preview" in social_svg
+    assert "Make AI coding safe to merge." in social_svg
+    assert "Contracts. Checks. Repair prompts. Verification." in social_svg
+
+
+def test_launch_package_pins_github_description_and_topics() -> None:
+    launch_package = read("docs/launch-package.md")
+    description = (
+        "Make AI coding safe to merge. Deterministic QA contracts, checks, "
+        "repair prompts, and verification for coding agents."
+    )
+    topics_block = launch_package.split("Recommended topics:", 1)[1].split(
+        "## Social Preview", 1
+    )[0]
+    topics = [
+        line.strip()
+        for line in topics_block.splitlines()
+        if line.strip() and not line.startswith("```")
+    ]
+
+    assert "## Repository Settings" in launch_package
+    assert description in launch_package
+    assert len(topics) == 20
+    assert len(set(topics)) == len(topics)
+    assert all(topic == topic.lower() for topic in topics)
+    assert all(" " not in topic for topic in topics)
+    assert {"ai-agents", "coding-agents", "sarif", "semgrep"} <= set(topics)
+    assert "requires repository settings mutation" in launch_package

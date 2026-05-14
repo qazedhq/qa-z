@@ -20,6 +20,7 @@ DEFAULT_RELEASE_HANDOFF = Path("docs/releases/v0.9.8-alpha-publish-handoff.md")
 RELEASE_PACKET_HEADER = "## Alpha Release-Candidate Decision Packet - 2026-05-12"
 SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
 SOURCE_HEAD_RE = re.compile(r"Source HEAD at proof time:\s*`(?P<head>[0-9a-f]{40})`")
+PROOF_BRANCH_RE_TEMPLATE = r"\bcodex/alpha-rc-{short_head}-\d{{8}}\b"
 VERSION_RE = re.compile(r'^version\s*=\s*"(?P<version>[^"]+)"', re.MULTILINE)
 
 
@@ -177,6 +178,21 @@ def has_all(text: str, values: Sequence[str]) -> bool:
     return all(value in text for value in values)
 
 
+def ahead_count_phrase(ahead_count: int) -> str:
+    unit = "commit" if ahead_count == 1 else "commits"
+    return f"{ahead_count} {unit} ahead of remote `main`"
+
+
+def proof_branch_from_packet(packet: str, head: str) -> str | None:
+    pattern = re.compile(
+        PROOF_BRANCH_RE_TEMPLATE.format(short_head=re.escape(head[:12]))
+    )
+    match = pattern.search(packet)
+    if match is None:
+        return None
+    return match.group(0)
+
+
 def check(name: str, passed: bool, detail: str) -> TruthCheck:
     return TruthCheck(name=name, passed=passed, detail=detail)
 
@@ -229,6 +245,7 @@ def validate_release_truth_texts(
     packet_header_count = texts.worktree_packet.count(RELEASE_PACKET_HEADER)
     if packet is None:
         packet = ""
+    source_head_count = len(SOURCE_HEAD_RE.findall(packet))
     package_plan = texts.package_plan
     handoff = texts.release_handoff
     safe_package_dry_run = text_between_markers(
@@ -238,6 +255,48 @@ def validate_release_truth_texts(
         package_plan, "Blocked upload packet:"
     )
     stale_shas = sorted(set(SHA_RE.findall(packet)) - {facts.head, facts.origin_main})
+    proof_branch = proof_branch_from_packet(packet, facts.head)
+    current_head_remote_not_visible = has_all(
+        packet,
+        [
+            f"--commit {facts.head}",
+            "failed exact-commit raw URLs with HTTP `404`",
+            f"local `{facts.head}` is not yet remote-visible",
+        ],
+    )
+    current_head_remote_visible = has_all(
+        packet,
+        [
+            f"--commit {facts.head}",
+            "passed for branch and exact-commit raw URLs",
+            f"local `{facts.head}` is remote-visible",
+        ],
+    )
+    current_head_remote_proof = (
+        "remote_visible"
+        if current_head_remote_visible
+        else (
+            "local_only_not_remote_visible"
+            if current_head_remote_not_visible
+            else "unverified"
+        )
+    )
+    proof_branch_requirements = [
+        f'test "$(git rev-parse HEAD)" = "{facts.head}"',
+        f"git push -u origin {facts.head}:refs/heads/{proof_branch}",
+        f"git ls-remote --heads origin {proof_branch}",
+        "Expected proof branch output must resolve",
+        f"`refs/heads/{proof_branch}`",
+        "Direct `main` update needs separate explicit approval",
+        f"git push origin {facts.head}:main",
+    ]
+    proof_branch_uses_exact_head = (
+        proof_branch is not None
+        and has_all(packet, proof_branch_requirements)
+        and "<approved-sha>" not in packet
+        and "git push -u origin HEAD:" not in packet
+        and "git push origin HEAD:main" not in packet
+    )
 
     checks = [
         check(
@@ -254,6 +313,11 @@ def validate_release_truth_texts(
             "current_head_pinned",
             has_all(packet, ["Source HEAD at proof time", f"`{facts.head}`"]),
             "release packet must pin the current local HEAD",
+        ),
+        check(
+            "source_head_unique",
+            source_head_count == 1,
+            f"release packet must contain exactly one Source HEAD at proof time; found {source_head_count}",
         ),
         check(
             "current_head_after_proof_recorded",
@@ -273,7 +337,7 @@ def validate_release_truth_texts(
         ),
         check(
             "ahead_count_current",
-            f"{facts.ahead_count} commits ahead of remote `main`" in packet,
+            ahead_count_phrase(facts.ahead_count) in packet,
             "release packet must use the current ahead count",
         ),
         check(
@@ -302,36 +366,13 @@ def validate_release_truth_texts(
         ),
         check(
             "current_head_remote_not_visible",
-            has_all(
-                packet,
-                [
-                    f"--commit {facts.head}",
-                    "failed exact-commit raw URLs with HTTP `404`",
-                    f"local `{facts.head}` is not yet remote-visible",
-                ],
-            ),
-            "remote proof must distinguish branch proof from current-HEAD proof",
+            current_head_remote_proof != "unverified",
+            "remote proof must classify current-HEAD visibility",
         ),
         check(
             "proof_branch_packet",
-            (
-                has_all(
-                    packet,
-                    [
-                        'test "$(git rev-parse HEAD)" = "<approved-sha>"',
-                        "git push -u origin <approved-sha>:refs/heads/codex/alpha-rc-<approved-sha>-20260512",
-                        "git ls-remote --heads origin codex/alpha-rc-<approved-sha>-20260512",
-                        "Expected proof branch output must resolve `<approved-sha>`",
-                        "`refs/heads/codex/alpha-rc-<approved-sha>-20260512`",
-                        "Direct `main` update needs separate explicit approval",
-                        "Direct `main` update must use `git push origin <approved-sha>:main`",
-                    ],
-                )
-                and "git push -u origin HEAD:codex/alpha-rc-<approved-sha>-20260512"
-                not in packet
-                and "git push origin HEAD:main" not in packet
-            ),
-            "proof branch packet must use an explicit approved SHA and post-push equality proof",
+            proof_branch_uses_exact_head,
+            "proof branch packet must use the current proof SHA and post-push equality proof",
         ),
         check(
             "tag_release_packet",
@@ -358,6 +399,7 @@ def validate_release_truth_texts(
                     [
                         f"Package metadata version: `{facts.package_version}`",
                         f"Package metadata version is `{facts.package_version}`",
+                        f"Current release proof HEAD: `{facts.head}`",
                         "No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved.",
                         "Rollback is registry-owned",
                     ],
@@ -384,10 +426,11 @@ def validate_release_truth_texts(
         check(
             "rollback_incident_packet",
             (
-                has_all(
+                proof_branch is not None
+                and has_all(
                     packet,
                     [
-                        "git push origin --delete codex/alpha-rc-<approved-sha>-20260512",
+                        f"git push origin --delete {proof_branch}",
                         "Package rollback/yank policy is registry-owned",
                         "Incident record must include actor, time, affected ref or artifact",
                         "After any rollback, rerun:",
@@ -483,6 +526,8 @@ def validate_release_truth_texts(
             "origin_main": facts.origin_main,
             "ahead_count": facts.ahead_count,
             "package_version": facts.package_version,
+            "proof_branch": proof_branch,
+            "current_head_remote_proof": current_head_remote_proof,
         },
     }
 

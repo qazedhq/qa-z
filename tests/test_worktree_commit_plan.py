@@ -146,7 +146,7 @@ def test_commit_plan_reports_unassigned_source_paths() -> None:
         [
             " M src/qa_z/new_surface.py",
             " M tests/test_new_surface.py",
-            " M docs/reports/worktree-commit-plan.md",
+            " M docs/reports/current-state-analysis.md",
         ]
     )
 
@@ -154,8 +154,29 @@ def test_commit_plan_reports_unassigned_source_paths() -> None:
         "src/qa_z/new_surface.py",
         "tests/test_new_surface.py",
     ]
-    assert result["report_paths"] == ["docs/reports/worktree-commit-plan.md"]
+    assert result["report_paths"] == ["docs/reports/current-state-analysis.md"]
     assert result["status"] == "attention_required"
+
+
+def test_commit_plan_routes_alpha_decision_packet_report_to_release_batch() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M docs/package-publish-plan.md",
+            " M docs/reports/worktree-commit-plan.md",
+            " M scripts/alpha_release_truth_validator.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["alpha_release_closure"]["changed_paths"] == [
+        "docs/package-publish-plan.md",
+        "docs/reports/worktree-commit-plan.md",
+        "scripts/alpha_release_truth_validator.py",
+    ]
+    assert result["report_paths"] == result["shared_patch_add_paths"] == []
+    assert result["status"] == "ready"
 
 
 def test_commit_plan_next_actions_explain_generated_and_unassigned_work() -> None:
@@ -315,7 +336,7 @@ def test_commit_plan_payload_includes_compact_summary_counts() -> None:
         [
             " M src/qa_z/benchmark.py",
             " M README.md",
-            " M docs/reports/worktree-commit-plan.md",
+            " M docs/reports/current-state-analysis.md",
             "?? dist/alpha-release-gate.json",
         ]
     )

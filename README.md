@@ -21,6 +21,7 @@ pipx install git+https://github.com/qazedhq/qa-z.git
 qa-z init --profile python --with-agent-templates
 qa-z doctor
 qa-z demo auth-bug
+cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
 ```
@@ -28,7 +29,19 @@ qa-z repair-prompt --from-run latest --adapter codex
 ## Quickstart
 
 ```bash
-qa-z init
+qa-z demo auth-bug
+cd .qa-z/demo/auth-bug
+qa-z guard --from-run latest --adapter codex
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+Automation can use `qa-z demo auth-bug --json` for demo root, verdict, repair prompt, and follow-up commands.
+
+For your own repository:
+
+```bash
+qa-z init --profile python --with-agent-templates
+qa-z doctor
 qa-z guard --adapter codex --deep auto --fail-on-risk
 qa-z repair-prompt --from-run latest --adapter codex
 ```
@@ -172,21 +185,12 @@ See [docs/github-action.md](docs/github-action.md). Add `security-events: write`
 
 These commands are local planning and evidence surfaces. When `self-inspect` or
 `select-next` sees strict worktree commit-plan evidence, dirty-worktree tasks can
-point at scoped patch-add commands from `.qa-z/tmp/worktree-commit-plan.json`
-instead of asking operators to stage cross-cutting files wholesale.
-`qa-z autonomy --loops 1 --json` writes a loop plan with the selected task's
-action hint, validation command, prepared action commands, and context paths.
-`qa-z autonomy status` mirrors the same prepared action commands as line-broken
-operator output for copyable follow-through, and selected-task patch-add commands
-are shown as their own bullets when strict worktree evidence provides them. Dirty
-worktree prepared actions use a fresh backlog check (`python -m qa_z backlog
---refresh --json`) so operators do not act on stale backlog residue after
-patch-add triage. If `qa-z autonomy status` detects that prepared actions came
-from an older outcome than the latest selected-task artifact, it prints the
-copyable refresh pair `python -m qa_z autonomy --loops 1 --json` and
-`python -m qa_z autonomy status --json` before the stale action packet. The
-same stale-output guard applies to next recommendations copied from an older
-outcome.
+point at scoped patch-add commands from `.qa-z/tmp/worktree-commit-plan.json`.
+`qa-z autonomy --loops 1 --json` writes selected-task action hints, validation,
+and context paths; `qa-z autonomy status` renders the same actions as
+line-broken operator output. `selected-task patch-add commands` appear as their
+own bullets, and dirty-worktree actions use a fresh backlog check
+(`python -m qa_z backlog --refresh --json`) before stale action packets.
 
 - `qa-z self-inspect`
 - `qa-z select-next`
@@ -197,13 +201,9 @@ outcome.
 
 ## What QA-Z Is Not
 
-QA-Z is not:
-
-- an autonomous code editor
-- an LLM judge
-- a replacement for tests, Semgrep, or human review
-- a package-registry publish yet
-- a tool that commits, pushes, opens PRs, or comments on GitHub by itself
+QA-Z is not an autonomous code editor, an LLM judge, a replacement for tests,
+Semgrep, or human review, a package-registry publish yet, or a tool that
+commits, pushes, opens PRs, or comments on GitHub by itself.
 
 ## Roadmap
 
@@ -215,7 +215,7 @@ See [docs/roadmap.md](docs/roadmap.md).
 
 ## Contributing
 
-Start with:
+Read [CONTRIBUTING.md](CONTRIBUTING.md), [SUPPORT.md](SUPPORT.md), [SECURITY.md](SECURITY.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), then run:
 
 ```bash
 python -m pip install -e .[dev]

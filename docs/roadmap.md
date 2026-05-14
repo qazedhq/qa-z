@@ -1,6 +1,6 @@
 # Roadmap
 
-## v0.9.9-alpha
+## v0.9.9-alpha - published
 
 - Repository hygiene checks.
 - `qa-z guard`.
@@ -8,6 +8,9 @@
 - Merge-safety skill pack.
 - Composite GitHub Action guard surface.
 - Install docs and packaged templates.
+
+Current public alpha: `v0.9.9-alpha`. The package metadata remains
+`0.9.8a0` until the package-publish lane receives explicit approval.
 
 ## v0.10.0-beta
 

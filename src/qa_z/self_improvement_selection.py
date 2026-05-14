@@ -32,6 +32,14 @@ __all__ = [
 
 SELECTED_TASKS_KIND = "qa_z.selected_tasks"
 RECENT_SELECTION_WINDOW = 2
+TASKLESS_SELECTION_NEXT_ACTIONS = [
+    "Review docs/agent/next-real-slices.md for the next safe manually selected Flow, Contract, Evidence, or Cleanup slice.",
+    "Rerun backlog and strict worktree evidence before treating an empty backlog as safe exhaustion.",
+]
+TASKLESS_SELECTION_NEXT_COMMANDS = [
+    "python -m qa_z backlog --refresh --json",
+    "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting",
+]
 
 
 @dataclass(frozen=True)
@@ -107,6 +115,12 @@ def select_next_tasks(
         selected_artifact["state"] = selection_state
         selected_artifact["selection_gap_reason"] = selection_gap_reason
         selected_artifact["open_backlog_count"] = open_backlog_count
+        selected_artifact["next_actions"] = selection_gap_next_actions(
+            selection_gap_reason
+        )
+        selected_artifact["next_commands"] = selection_gap_next_commands(
+            selection_gap_reason
+        )
     selected_artifact.update(selection_context)
     write_json(selected_tasks_path, selected_artifact)
     write_selection_loop_plan(
@@ -138,6 +152,8 @@ def select_next_tasks(
             open_backlog_count=(
                 open_backlog_count if selection_gap_reason is not None else None
             ),
+            next_actions=selected_artifact.get("next_actions"),
+            next_commands=selected_artifact.get("next_commands"),
         ),
     )
     append_history(
@@ -190,3 +206,17 @@ def selection_gap_reason_for_selected_items(
     if open_backlog_count <= 0:
         return "no_open_backlog_after_inspection"
     return "open_backlog_items_not_selected"
+
+
+def selection_gap_next_actions(selection_gap_reason: str) -> list[str]:
+    """Return deterministic operator guidance for taskless selection artifacts."""
+    if selection_gap_reason:
+        return list(TASKLESS_SELECTION_NEXT_ACTIONS)
+    return []
+
+
+def selection_gap_next_commands(selection_gap_reason: str) -> list[str]:
+    """Return deterministic refresh commands for taskless selection artifacts."""
+    if selection_gap_reason:
+        return list(TASKLESS_SELECTION_NEXT_COMMANDS)
+    return []

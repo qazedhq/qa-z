@@ -708,6 +708,10 @@ def test_select_next_refresh_runs_self_inspection_before_selection(
     assert "State: blocked_no_candidates" in output
     assert "Selection gap reason: no_open_backlog_after_inspection" in output
     assert "Open backlog items: 0" in output
+    assert "Next actions:" in output
+    assert "Review docs/agent/next-real-slices.md" in output
+    assert "Next commands:" in output
+    assert "python -m qa_z backlog --refresh --json" in output
     assert "Selected task details:\n- none" in output
     assert "docs_drift-current_truth_sync" not in output
 

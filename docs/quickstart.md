@@ -28,7 +28,26 @@ Install Semgrep when running deep checks:
 python -m pip install semgrep
 ```
 
-## Run The Demo
+## Run The 60-Second Packaged Demo
+
+Start with the packaged auth-bug demo before adapting QA-Z to your own repository:
+
+```bash
+qa-z demo auth-bug
+cd .qa-z/demo/auth-bug
+qa-z guard --from-run latest --adapter codex
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+The guard is expected to block the change. That is the point: QA-Z turns the risky agent edit into deterministic evidence and a repair handoff.
+
+Use `qa-z demo auth-bug --json` when scripts or docs validators need the demo
+root, guard verdict path, repair prompt path, and follow-up commands as one
+machine-readable payload.
+
+## Run The Example Repository Demo
+
+For deeper fast/deep/review artifacts from a source checkout:
 
 ```bash
 cd examples/agent-auth-bug

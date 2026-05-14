@@ -23,6 +23,19 @@ def read_readme() -> str:
     return (ROOT / "README.md").read_text(encoding="utf-8")
 
 
+def test_artifact_schema_documents_auth_bug_demo_json_contract() -> None:
+    schema = (ROOT / "docs" / "artifact-schema-v1.md").read_text(encoding="utf-8")
+
+    assert "## Demo Command JSON Summary" in schema
+    assert "`qa-z demo auth-bug --json`" in schema
+    assert "`kind`: `qa_z.demo.auth_bug`" in schema
+    assert "`schema_version`: integer schema marker, currently `1`" in schema
+    assert "`demo_root`: absolute path to the isolated generated demo" in schema
+    assert "`next_commands`: ordered follow-up commands" in schema
+    assert "`qa_z.demo.auth_bug_error`" in schema
+    assert "`artifact_write_error`" in schema
+
+
 def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
@@ -376,6 +389,9 @@ def test_current_truth_docs_cover_dry_run_publish_and_session_residue() -> None:
     assert "`source_self_inspection_stale_for_backlog`" in schema
     assert "`source_self_inspection_refresh_commands`" in schema
     assert "`python -m qa_z select-next --refresh --count 3 --json`" in schema
+    assert "`next_actions`" in schema
+    assert "`next_commands`" in schema
+    assert "`python -m qa_z backlog --refresh --json`" in schema
     assert "stale selection omits `live_repository`" in schema
     assert "`python -m qa_z autonomy --loops 1 --json`" in schema
     assert "`python -m qa_z autonomy status --json`" in schema

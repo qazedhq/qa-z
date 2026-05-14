@@ -143,7 +143,9 @@ def resolve_latest_run_source(root: Path, config: dict[str, Any]) -> RunSource:
     """Resolve the latest run containing fast/summary.json."""
     runs_dir = fast_runs_dir(root, config)
     if not runs_dir.exists():
-        raise ArtifactSourceNotFound(f"No run directory found at {runs_dir}")
+        raise ArtifactSourceNotFound(
+            f"No run directory found at {runs_dir}{demo_auth_bug_followup_hint(root)}"
+        )
 
     manifest_path = latest_run_manifest_path(root, config)
     if manifest_path.is_file():
@@ -153,7 +155,10 @@ def resolve_latest_run_source(root: Path, config: dict[str, Any]) -> RunSource:
 
     summaries = list(runs_dir.glob("*/fast/summary.json"))
     if not summaries:
-        raise ArtifactSourceNotFound(f"No fast summary artifacts found in {runs_dir}")
+        raise ArtifactSourceNotFound(
+            f"No fast summary artifacts found in {runs_dir}"
+            f"{demo_auth_bug_followup_hint(root)}"
+        )
 
     summary_path = max(
         summaries,
@@ -163,6 +168,22 @@ def resolve_latest_run_source(root: Path, config: dict[str, Any]) -> RunSource:
         run_dir=summary_path.parent.parent,
         fast_dir=summary_path.parent,
         summary_path=summary_path,
+    )
+
+
+def demo_auth_bug_followup_hint(root: Path) -> str:
+    """Return a hint when latest run lookup is probably outside the demo root."""
+    demo_root = root / ".qa-z" / "demo" / "auth-bug"
+    if not (
+        demo_root / ".qa-z" / "runs" / "latest" / "fast" / "summary.json"
+    ).is_file():
+        return ""
+    relative_demo_root = format_path(demo_root, root)
+    return (
+        f". Detected auth-bug demo evidence in {relative_demo_root}; run "
+        f"`cd {relative_demo_root}` first, then "
+        "`qa-z guard --from-run latest --adapter codex` or "
+        "`qa-z repair-prompt --from-run latest --adapter codex`."
     )
 
 

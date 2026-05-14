@@ -29,10 +29,13 @@ uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 ## Alpha RC package dry-run packet - 2026-05-12
 
 Package metadata version: `0.9.8a0`.
+Current release proof HEAD: `1ede65172f770c66159b2cc5e9e7d4f2063bf634`.
 
 No PyPI, TestPyPI, npm, GitHub Packages, or other package registry publish is approved.
 `RELEASE_EXECUTION_APPROVED` and `PACKAGE_PUBLISH_ALLOWED` must both be set to
 `true` by a human release owner before any upload command is run.
+The proof HEAD must have proof-branch remote CI and public raw evidence before
+any package upload command becomes eligible for release-owner approval.
 
 Safe local-only dry-run packet:
 

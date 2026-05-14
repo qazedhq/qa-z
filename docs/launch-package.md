@@ -23,6 +23,18 @@ Category:
 AI Code QA
 ```
 
+## Repository Settings
+
+Recommended GitHub repository description:
+
+```text
+Make AI coding safe to merge. Deterministic QA contracts, checks, repair prompts, and verification for coding agents.
+```
+
+Apply the description, topics, and social preview only through an approved
+GitHub settings change. This requires repository settings mutation and is not
+proof that package publish, tags, releases, or deployment happened.
+
 ## Repository Topics
 
 Recommended topics:
@@ -58,7 +70,7 @@ Text:
 
 ```text
 QA-Z
-The safety belt for AI-generated code.
+Make AI coding safe to merge.
 Contracts. Checks. Repair prompts. Verification.
 github.com/qazedhq/qa-z
 ```

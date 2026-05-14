@@ -106,6 +106,14 @@ def render_select_next_stdout(
         lines.append(f"Selection gap reason: {selection_gap_reason}")
     if selected.get("open_backlog_count") is not None:
         lines.append(f"Open backlog items: {selected.get('open_backlog_count')}")
+    next_actions = clean_string_list(selected.get("next_actions"))
+    if next_actions:
+        lines.append("Next actions:")
+        lines.extend(f"  - {action}" for action in next_actions)
+    next_commands = clean_string_list(selected.get("next_commands"))
+    if next_commands:
+        lines.append("Next commands:")
+        lines.extend(f"  - {command}" for command in next_commands)
     source_self_inspection = str(selected.get("source_self_inspection") or "").strip()
     if source_self_inspection:
         lines.append(f"Source self-inspection: {source_self_inspection}")
@@ -237,3 +245,10 @@ def patch_command_lines(item: dict[str, Any]) -> list[str]:
     if not commands:
         return []
     return ["  patch-add commands:", *(f"    - {command}" for command in commands)]
+
+
+def clean_string_list(value: object) -> list[str]:
+    """Return non-empty strings from an optional list-like value."""
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]

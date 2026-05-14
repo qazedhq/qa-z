@@ -216,9 +216,31 @@ def test_benchmarking_docs_include_ci_safe_results_dir() -> None:
 
 def test_security_policy_names_private_disclosure_path() -> None:
     security_policy = read_security_policy()
+    support = (ROOT / "SUPPORT.md").read_text(encoding="utf-8")
 
     assert "GitHub Security Advisory" in security_policy
     assert "Do not include live secrets in public issues" in security_policy
+    assert "[SUPPORT.md](SUPPORT.md)" in security_policy
+    assert "Release, package, tag, or deploy approvals" in support
+    assert "QA-Z does not edit target repositories" in support
+
+
+def test_readme_contributing_section_links_community_health_files() -> None:
+    readme = read_readme()
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+    readme_contributing = readme.split("## Contributing", 1)[1].split("## License", 1)[
+        0
+    ]
+    for link in (
+        "[CONTRIBUTING.md](CONTRIBUTING.md)",
+        "[SUPPORT.md](SUPPORT.md)",
+        "[SECURITY.md](SECURITY.md)",
+        "[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)",
+    ):
+        assert link in readme_contributing
+    assert "[SUPPORT.md](SUPPORT.md)" in contributing
+    assert "[SECURITY.md](SECURITY.md)" in contributing
 
 
 def test_current_state_snapshot_includes_doctor_onboarding_validation() -> None:
