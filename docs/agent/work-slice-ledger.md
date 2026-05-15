@@ -1739,6 +1739,22 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Next safe slice: install or provision `twine`, `pipx`, and `uv` in a controlled release-rehearsal environment, then rerun the no-upload checklist and keep `registry_upload_executed=false` until explicit release-owner approval exists.
 
 
+## 2026-05-15 Verify Baseline/Candidate Workflow
+- Repo: JustTyping
+- Lane: verify workflow -> baseline/candidate evidence
+- User-facing flow: baseline run -> repair prompt -> candidate run -> `qa-z verify` -> verification artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: verify verdicts existed in repair-session docs and artifact schema docs, but no focused baseline/candidate walkthrough showed the standalone `qa-z verify` loop.
+- Root cause: contributors had to piece together commands, artifact paths, and verdict meanings from schema, repair-session, and auth-bug walkthrough docs.
+- Change made: added a focused `qa-z verify` guide with baseline/candidate commands, required artifact paths, verdict interpretation, common failure modes, deterministic evidence language, and generated-artifact policy; linked it from the docs index; added focused docs coverage.
+- Validation run: `python -m pytest tests/test_verify_workflow_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_verify_workflow_docs.py`; `python -m ruff format --check tests/test_verify_workflow_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing walkthrough and docs index link, then passed `5`; public docs current-truth passed `16`; launch docs index check passed `1`; public text hygiene passed; Ruff check passed; Ruff format check passed; diff whitespace check passed.
+- Gate delta: verify evidence becomes a standalone contributor workflow for proving repaired candidates against baseline runs.
+- User impact: contributors can prove repaired candidates improved baseline evidence without relying on LLM-only claims.
+- Remaining blocker: no local blocker; remote CI still depends on the PR run after push.
+- Next safe slice: after validation and PR review, use real verify artifacts from a future repair loop to refine any missing troubleshooting cases.
+
+
 ## 2026-05-15 Scorecard Trust Evidence Follow-up
 - Repo: JustTyping
 - Lane: Scorecard trust surface -> deterministic follow-up tasks
