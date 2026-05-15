@@ -31,6 +31,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [Product decisions](product/PRODUCT_DECISIONS.md) | Confirmed decisions, inferred decisions, deferred decisions, non-goals, and open questions |
 | [Artifact schema v1](artifact-schema-v1.md) | Artifact formats and field-level contracts |
 | [Repair sessions](repair-sessions.md) | Local repair-session packaging and handoff model |
+| [Verify baseline/candidate](walkthroughs/verify-baseline-candidate.md) | Compare repaired candidates against baseline QA-Z evidence |
 | [Pre-live executor safety](pre-live-executor-safety.md) | Safety boundaries before any live executor integration |
 | [Generated vs frozen evidence policy](generated-vs-frozen-evidence-policy.md) | Rules for local runtime artifacts, benchmark evidence, and frozen fixtures |
 | [Current-truth maintenance anchors](current-truth-maintenance-anchors.md) | Internal operator-contract anchors and release-continuity guard text |
