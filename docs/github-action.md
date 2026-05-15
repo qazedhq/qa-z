@@ -48,4 +48,6 @@ steps:
       upload-sarif: "true"
 ```
 
+For a walkthrough of where uploaded SARIF appears in GitHub code scanning, see `docs/walkthroughs/sarif-code-scanning.md`.
+
 The action does not comment on pull requests, commit, push, or require write permissions by default.
