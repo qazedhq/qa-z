@@ -5,3 +5,31 @@ rules:
     languages:
       - python
     pattern: return actor_id is not None
+  - id: qa-z-demo-missing-owner-check
+    message: Authorization helper accepts an invoice but never checks actor_id against invoice.owner_id.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: |
+          def $FUNC($ACTOR, $INVOICE, ...):
+              ...
+              if $ACTOR is None:
+                  return False
+              ...
+      - metavariable-regex:
+          metavariable: $ACTOR
+          regex: ^actor_id$
+      - metavariable-regex:
+          metavariable: $INVOICE
+          regex: ^invoice$
+      - pattern-not: |
+          def $FUNC($ACTOR, $INVOICE, ...):
+              ...
+              return $ACTOR == $INVOICE.owner_id
+              ...
+      - pattern-not: |
+          def $FUNC($ACTOR, $INVOICE, ...):
+              ...
+              return $INVOICE.owner_id == $ACTOR
+              ...
