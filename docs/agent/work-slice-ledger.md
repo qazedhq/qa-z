@@ -1801,3 +1801,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can propose roadmap items without implying live model execution, package publish, tag/release/deploy, branch mutation, bot-comment automation, or source commits of generated runtime artifacts.
 - Remaining blocker: roadmap proposals still require maintainer prioritization before implementation; no assignment or bot comment was made for the external contributor request on #20.
 - Next safe slice: triage remaining public-launch good-first issues by choosing the next evidence-backed docs/test closeout that does not require release approval.
+
+
+## 2026-05-15 Community Examples Evidence Guide
+- Repo: JustTyping
+- Lane: community examples -> deterministic evidence intake
+- User-facing flow: community example proposal -> deterministic evidence -> artifact policy -> maintainer review.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/community-distribution.md` listed launch channels, but did not define how contributors should submit example evidence.
+- Root cause: community examples could arrive without reproducible evidence, validation commands, privacy rules, or generated-output boundaries.
+- Change made: added community example submission guidance, required evidence, acceptable artifacts, forbidden generated outputs, validation commands, and public roadmap linkage.
+- Validation run: `python -m pytest tests/test_community_examples_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_public_roadmap_issue_template.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m ruff check tests/test_community_examples_docs.py`; `python -m ruff format --check tests/test_community_examples_docs.py`.
+- Evidence: the new focused docs guard first failed on the missing community example sections and missing public-roadmap link, then passed `4`; public docs current-truth passed `16`; public roadmap issue-template checks passed `4`; launch docs index check passed `1`; Ruff check and format passed.
+- Gate delta: community example intake now requires deterministic evidence, validation commands, privacy notes, and generated-artifact boundaries before maintainer review.
+- User impact: contributors can submit examples without leaking private data or committing generated runtime output.
+- Remaining blocker: community examples still require maintainer review before acceptance; no assignment or bot comment was made for the external contributor request on #25.
+- Next safe slice: triage the next public-launch docs/test closeout that can be proven without release approval, live automation, or generated runtime artifacts.

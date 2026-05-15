@@ -62,6 +62,8 @@ A roadmap proposal must include:
 
 Roadmap proposals do not approve package publishing, tags, releases, deployments, live model execution, bot comments, branch mutation, or hosted automation. Those require separate maintainer approval and the appropriate release or safety handoff.
 
+Community example proposals should also follow `docs/community-distribution.md`, including the required evidence, validation commands, privacy rules, and generated-artifact policy.
+
 ## Current Non-Goals
 
 - QA-Z does not autonomously edit code.
