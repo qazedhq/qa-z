@@ -193,6 +193,51 @@ def test_public_docs_point_to_latest_github_prerelease_without_package_publish()
     )
 
 
+def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
+    package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
+        encoding="utf-8"
+    )
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    heading = "## TestPyPI Publish Rehearsal Checklist - Local Only"
+    assert heading in package_plan
+    rehearsal = package_plan.split(heading, 1)[1].split("Blocked upload packet:", 1)[0]
+    blocked_upload = package_plan.split("Blocked upload packet:", 1)[1].split(
+        "## v0.10.0-beta", 1
+    )[0]
+
+    for command in (
+        "python -m build --sdist --wheel",
+        "python scripts\\alpha_release_artifact_smoke.py --with-deps --json",
+        "python -m twine check dist/*",
+        "pipx run --spec dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
+        "uvx --from dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
+    ):
+        assert command in rehearsal
+
+    assert "twine upload" not in rehearsal
+    assert "uv publish" not in rehearsal
+    assert "`registry_upload_executed=false`" in rehearsal
+    assert "No TestPyPI package URL exists yet." in package_plan
+    assert "No package registry publish has happened yet." in package_plan
+    assert (
+        "GitHub prerelease credentials do not authorize TestPyPI or PyPI upload."
+        in package_plan
+    )
+    assert (
+        "TestPyPI and PyPI credentials are registry-owned release credentials."
+        in package_plan
+    )
+    assert "python -m twine upload --repository testpypi dist/*" in blocked_upload
+    assert "python -m twine upload dist/*" in blocked_upload
+    assert (
+        "TestPyPI rehearsal stays local-only; registry upload remains blocked."
+        in release_handoff
+    )
+
+
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:
     launch_package = (ROOT / "docs" / "launch-package.md").read_text(encoding="utf-8")
     issue_seeds = (ROOT / "docs" / "issues" / "good-first-issues.md").read_text(

@@ -1721,3 +1721,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can trust `docs/use-with-semgrep.md` as executable local guidance for custom Semgrep rules without inferring live services, model APIs, package registries, or hidden network behavior.
 - Remaining blocker: runtime Semgrep scans are not required for this docs closeout; local Windows Semgrep startup can remain a separate environment issue.
 - Next safe slice: decide whether #5 TestPyPI rehearsal docs are ready for a small publish-boundary checklist slice.
+
+
+## 2026-05-15 TestPyPI Rehearsal No-Upload Checklist
+- Repo: JustTyping
+- Lane: package publish / release governance
+- User-facing flow: release proof -> package dry-run -> TestPyPI credential boundary -> blocked upload.
+- Slice type: Contract / Evidence
+- Before: #5 was still open and `docs/package-publish-plan.md` had a local dry-run packet, but it did not pin the full TestPyPI rehearsal checklist with `pipx`, `uvx`, credential separation, and a no-upload evidence field.
+- Root cause: package dry-run evidence and registry publish approval were documented close together, making the local rehearsal boundary easier to blur.
+- Change made: added a local-only TestPyPI publish rehearsal checklist with build, artifact smoke, `twine check`, `pipx`, and `uvx` commands; documented GitHub prerelease credentials as separate from TestPyPI/PyPI registry credentials; added `registry_upload_executed=false`; kept upload commands only in the blocked packet; added current-truth coverage and a release-handoff pointer.
+- Validation run: `python -m pytest tests/test_public_docs_current_truth.py::test_package_publish_plan_documents_no_upload_testpypi_rehearsal -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_current_truth_worktree_commit_plan.py::test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contract -q`; `python -m ruff check tests/test_public_docs_current_truth.py`; `python -m ruff format --check tests/test_public_docs_current_truth.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`; `python -m build --sdist --wheel`; `python scripts/alpha_release_artifact_smoke.py --json`.
+- Evidence: the new current-truth test failed first on the missing checklist, then passed; public docs current-truth passed `16`; package dry-run preflight contract test passed `1`; Ruff check and format passed after formatting the test file once; public text hygiene and diff whitespace passed; local build produced `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`; artifact smoke passed for both wheel and sdist after network-approved dependency resolution.
+- Gate delta: package rehearsal is now test-pinned as local-only evidence and cannot be mistaken for a TestPyPI/PyPI publish claim.
+- User impact: maintainers can work #5 from a copy-paste checklist that proves local artifact readiness while preserving the release-owner approval boundary.
+- Remaining blocker: no PyPI/TestPyPI upload, tag, release, push, or package registry mutation was performed; `python -m twine check dist/*` could not run because `twine` is not installed, and `pipx`/`uvx` smoke commands could not run because those tools are not installed in this environment.
+- Next safe slice: install or provision `twine`, `pipx`, and `uv` in a controlled release-rehearsal environment, then rerun the no-upload checklist and keep `registry_upload_executed=false` until explicit release-owner approval exists.
