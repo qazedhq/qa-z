@@ -1849,3 +1849,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can replay a TypeScript agent bug without live agents and inspect deterministic QA-Z evidence before merge.
 - Remaining blocker: no local blocker; generated contract and `.qa-z/**` smoke output were removed and must stay uncommitted.
 - Next safe slice: use real TypeScript verify artifacts from a future repair loop to refine troubleshooting guidance if contributors hit environment-specific Semgrep setup failures.
+
+
+## 2026-05-15 GitHub Actions Summary Capture
+- Repo: JustTyping
+- Lane: GitHub Action summary -> reviewer evidence capture
+- User-facing flow: QA-Z GitHub Actions guard -> Job Summary -> `qa-z-runs` artifact pointers -> reviewer decision.
+- Slice type: Docs / Contract / Evidence
+- Before: the GitHub Action docs explained the composite guard action, optional SARIF upload, and artifact preservation, but did not include a sanitized capture of the Job Summary and reviewer artifact pointers.
+- Root cause: issue #16 needed screenshot-or-capture evidence for the GitHub Actions summary surface, while a real private repository screenshot could expose repository data, user emails, branch names, PR comments, or secrets.
+- Change made: added a Job Summary and artifact pointer section to `docs/github-action.md`, added a sanitized textual capture at `docs/assets/github-actions-summary-capture.md`, and added focused tests pinning `GITHUB_STEP_SUMMARY`, `github-summary.md`, `verdict.md`, `qa-z-runs`, and `.qa-z/runs/latest`.
+- Validation run: `python -m pytest tests/test_github_actions_summary_docs.py -q`; `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_github_actions_summary_docs.py`; `python -m ruff format --check tests/test_github_actions_summary_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing Job Summary docs section and missing capture file, then passed `3`; final validation covered the GitHub workflow suite, launch docs index check, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a deterministic capture for the GitHub Actions Job Summary and uploaded artifact pointers without relying on private UI screenshots.
+- User impact: reviewers can start with the QA-Z Job Summary and follow `qa-z-runs` machine-readable evidence without exposing private repository data or secrets.
+- Remaining blocker: actual GitHub UI layout can vary by repository permissions and workflow configuration; no live `.qa-z/**` runtime artifacts were generated for this docs slice.
+- Next safe slice: after PR merge closes #16, continue with the next public-launch docs/test closeout that can be proven without release approval, live model calls, bot comments, package publish, or generated runtime artifacts.
