@@ -165,12 +165,12 @@ jobs:
 ```
 
 See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
-
 ## Agent QA Playbook
 
 - [Agent QA Playbook](docs/agent-qa-playbook.md)
 - [AI Code Merge Checklist](docs/ai-code-merge-checklist.md)
 - [Bad AI Code Examples](docs/bad-ai-code-examples.md)
+- [Use with Codex](docs/use-with-codex.md)
 - [Codex Repair Recipes](docs/codex-repair-recipes.md)
 - [Claude Code Repair Recipes](docs/claude-code-repair-recipes.md)
 - [Cursor Safety Rules](docs/cursor-safety-rules.md)
