@@ -1881,3 +1881,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can prepare case studies with explicit before/after evidence, commands, non-goals, redaction, and generated-artifact boundaries.
 - Remaining blocker: real customer, adoption, usage, performance, revenue, or security-impact claims still require explicit approval and source evidence.
 - Next safe slice: after PR merge closes #27, continue with monthly benchmark report or hosted-demo proof surfaces that reuse the same evidence and claims-boundary pattern.
+
+
+## 2026-05-15 Hosted Demo Static Replay Plan
+- Repo: JustTyping
+- Lane: hosted demo -> static replay plan -> local evidence boundary
+- User-facing flow: hosted demo page -> static docs assets -> `examples/agent-auth-bug` local replay -> QA-Z artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/hosted-demo.md` stated the static/no-cloud direction but lacked the replay command spine and artifact list needed to recreate the demo.
+- Root cause: issue #24 needed a hosted demo plan that stays replayable locally without implying QA-Z Cloud, live-agent execution, or hidden backend state.
+- Change made: added a static page boundary, local replay commands, demo artifact list, checked-in asset list, docs-site integration, and focused tests.
+- Validation run: `python -m pytest tests/test_hosted_demo_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_launch_growth_package_covers_requested_surfaces -q`; `python -m pytest tests/test_launch_growth_package.py::test_demo_asciinema_asset_is_real_cast_shape -q`; `python -m pytest tests/test_launch_growth_package.py::test_readme_demo_visual_is_checked_in_and_public_safe -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_hosted_demo_docs.py`; `python -m ruff format --check tests/test_hosted_demo_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing hosted-demo command spine, artifact list, boundary language, and docs-site source linkage, then passed `4`; final validation covered launch growth asset checks, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a static hosted-demo plan that points to local replay evidence instead of a hosted service.
+- User impact: users can understand the hosted demo as a static replay page, not QA-Z Cloud or live-agent execution.
+- Remaining blocker: actual public hosted site remains future scope until static-site tooling and domain decisions are made; no generated `.qa-z/**` runtime artifacts were committed.
+- Next safe slice: after PR merge closes #24, continue with monthly benchmark report or comparison/positioning docs that reuse the same evidence and no-fake-claims boundary.
