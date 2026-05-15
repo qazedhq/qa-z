@@ -1753,3 +1753,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can inspect the first Scorecard run, verify SARIF/code scanning evidence, and open scoped hardening tasks with source, affected setting, validation, non-goals, and generated-artifact boundaries.
 - Remaining blocker: the live Scorecard score and findings still come only from GitHub Actions or uploaded SARIF, not local validation.
 - Next safe slice: after the PR merges and issues #19/#28 close, inspect any real `openssf-scorecard` code scanning findings and convert them into separate deterministic follow-up issues.
+
+
+## 2026-05-15 SARIF Code Scanning Walkthrough
+- Repo: JustTyping
+- Lane: SARIF evidence -> GitHub code scanning walkthrough
+- User-facing flow: `qa-z deep` -> `deep/results.sarif` -> optional GitHub SARIF upload -> code scanning alerts.
+- Slice type: Docs / Evidence
+- Before: SARIF generation and upload were documented separately, but the walkthrough did not pin the CI SARIF path, `qa-z-semgrep` category, optional permission boundary, or a capture that avoids private data.
+- Root cause: issue #17 needed a screenshot-or-capture proof surface, while a real screenshot could expose private repository details or secrets.
+- Change made: expanded the SARIF code scanning walkthrough with local and CI SARIF paths, `github/codeql-action/upload-sarif@v4`, `security-events: write`, `qa-z-semgrep`, GitHub code scanning inspection guidance, and no-mutation boundaries; added a sanitized textual capture and a focused docs current-truth test; linked the walkthrough from `docs/github-action.md`.
+- Validation run: `python -m pytest tests/test_sarif_code_scanning_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_github_workflow.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_sarif_code_scanning_docs.py`; `python -m ruff format --check tests/test_sarif_code_scanning_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing `<run-id>` SARIF path and missing capture file, then passed `2`; launch docs index check passed `1`; GitHub workflow suite passed `23`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: maintainers now have a deterministic capture for where QA-Z SARIF appears in GitHub code scanning without relying on private UI screenshots.
+- User impact: contributors can explain the path from `.qa-z/runs/ci/deep/results.sarif` to code scanning alerts while keeping SARIF upload optional and permission-scoped.
+- Remaining blocker: actual GitHub code scanning UI details can vary by repository settings and permissions; live `.qa-z/**` runtime artifacts were not generated for this docs slice.
+- Next safe slice: if needed, inspect a real public code scanning alert after CI upload and open a separate deterministic follow-up task for any remaining SARIF presentation gap.
