@@ -68,6 +68,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
         [
             "?? docs/reports/v0.10.0-beta-readiness.md",
             "?? tests/test_beta_readiness_docs.py",
+            "?? docs/reports/v0.10.0-beta-release-decision.md",
+            "?? tests/test_beta_release_decision_docs.py",
         ],
         fail_on_cross_cutting=True,
     )
@@ -76,6 +78,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
     assert batches["current_truth_release_surface"]["changed_paths"] == [
         "docs/reports/v0.10.0-beta-readiness.md",
         "tests/test_beta_readiness_docs.py",
+        "docs/reports/v0.10.0-beta-release-decision.md",
+        "tests/test_beta_release_decision_docs.py",
     ]
     assert result["report_paths"] == []
     assert result["shared_patch_add_paths"] == []
