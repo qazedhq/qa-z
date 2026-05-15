@@ -38,3 +38,17 @@ qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candid
 ```
 
 The demo does not call live agents or mutate branches.
+
+## Evidence checklist
+
+After running the baseline and candidate commands, inspect:
+
+- `.qa-z/runs/baseline/fast/summary.json`
+- `.qa-z/runs/baseline/deep/summary.json`
+- `.qa-z/runs/baseline/repair/codex.md`
+- `.qa-z/runs/candidate/verify/summary.json`
+- `.qa-z/runs/candidate/verify/report.md`
+
+Expected: baseline fails, candidate passes, and verification reports `improved`.
+
+Generated `.qa-z/**` files are local runtime evidence. Do not commit generated `.qa-z` runtime evidence.

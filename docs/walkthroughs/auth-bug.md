@@ -54,3 +54,39 @@ findings, and `qa-z verify` reports `improved`.
 
 QA-Z writes local artifacts under `.qa-z/runs/baseline` and
 `.qa-z/runs/candidate`. Do not commit generated `.qa-z` runtime evidence.
+
+## FastAPI Evidence Tour
+
+After the baseline commands, inspect these local artifacts:
+
+- `.qa-z/runs/baseline/fast/summary.json`
+- `.qa-z/runs/baseline/deep/summary.json`
+- `.qa-z/runs/baseline/deep/checks/sg_scan.json`
+- `.qa-z/runs/baseline/deep/results.sarif`
+- `.qa-z/runs/baseline/repair/codex.md`
+
+Expected baseline evidence:
+
+- baseline fast evidence fails because the non-owner invoice access test still fails.
+- baseline deep evidence records 2 auth findings from `semgrep-rules/auth-bypass.yml`.
+- repair prompt points at the owner-check problem and the FastAPI auth helper.
+
+After copying `app/main.fixed.py` over `app/main.py` and running the
+candidate commands, inspect these local artifacts:
+
+- `.qa-z/runs/candidate/fast/summary.json`
+- `.qa-z/runs/candidate/deep/summary.json`
+- `.qa-z/runs/candidate/verify/summary.json`
+- `.qa-z/runs/candidate/verify/compare.json`
+- `.qa-z/runs/candidate/verify/report.md`
+
+Expected candidate evidence:
+
+- candidate fast and deep evidence pass after the fixed owner check is in place.
+- fixed-file Semgrep scans report 0 findings for `app/main.fixed.py`.
+- verification verdict is `improved`.
+- `compare.json` is the machine-readable source of truth for the verdict.
+- `repair_improved` is `true` in `verify/summary.json`.
+
+Generated `.qa-z/**` files are local runtime evidence. Do not commit generated
+`.qa-z` runtime evidence.

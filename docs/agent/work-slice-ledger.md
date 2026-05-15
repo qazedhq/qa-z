@@ -1689,3 +1689,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can merge the refreshed equivalent of PR #38 with concrete local evidence, and users get FastAPI/custom-rule docs that explain what QA-Z deep adds beyond raw Semgrep.
 - Remaining blocker: no GitHub issue was closed or commented on, no branch/commit/push/tag/release/package publish/deploy was performed, and package publish remains blocked pending explicit human release-owner approval.
 - Next safe slice: close #14 only after the refreshed branch is merged, update or close #22 based on maintainer acceptance of the new Semgrep docs, keep #13 open if a fuller artifact walkthrough is still desired, and keep #5 open until TestPyPI/PyPI approval and evidence exist.
+
+
+## 2026-05-15 FastAPI Auth-Bug Verification Evidence Walkthrough
+- Repo: JustTyping
+- Lane: examples / verification evidence
+- User-facing flow: FastAPI auth-bug baseline -> fast/deep -> repair prompt -> fixed candidate -> verify -> artifact inspection.
+- Slice type: Evidence / Docs Truth
+- Before: after the owner-check Semgrep slice, issue #13 remained open because the FastAPI walkthrough listed baseline and candidate commands but did not guide contributors through the concrete fast, deep, repair, and verify artifacts.
+- Root cause: the docs named `.qa-z/runs/baseline` and `.qa-z/runs/candidate` as directories, but did not pin the specific `summary.json`, Semgrep, SARIF, repair prompt, compare, and report files that prove the repair outcome.
+- Change made: added a FastAPI evidence tour to `docs/walkthroughs/auth-bug.md`, added a compact artifact checklist to `examples/fastapi-agent-bug/README.md`, and added a docs regression that pins the artifact paths, `improved` verdict expectation, `repair_improved` signal, and generated `.qa-z` no-commit policy.
+- Validation run: `python -m pytest tests/test_fastapi_auth_walkthrough_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m ruff check tests/test_fastapi_auth_walkthrough_docs.py`; `python -m ruff format --check tests/test_fastapi_auth_walkthrough_docs.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new docs guard first failed on missing FastAPI artifact-tour paths and the missing README checklist, then passed `2`; public docs current-truth passed `15`; launch example docs check passed `1`; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: contributors can now follow the FastAPI demo from failing baseline through machine-readable verification evidence without treating generated runtime artifacts as source.
+- User impact: issue #13 can be closed if maintainers do not require a separate screenshot or capture walkthrough.
+- Remaining blocker: optional screenshot/capture evidence remains a separate follow-up if maintainers want a visual tour.
+- Next safe slice: close or narrow #13 after review, then decide whether #22's Semgrep docs acceptance is complete or needs a small follow-up.
