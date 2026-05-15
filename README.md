@@ -64,7 +64,7 @@ python -m pip install semgrep
 
 ## Why QA-Z?
 
-AI-generated code often arrives with a confident summary and scattered evidence. QA-Z answers the merge question directly:
+AI-generated code often arrives with a confident summary and scattered evidence. QA-Z answers the merge question directly; see [Comparison](docs/comparison.md) for where it fits around Codex, Claude Code, Cursor, aider, OpenHands, Goose, Semgrep, CI tools, and human review.
 
 > Is this AI-generated change safe to merge? If not, what should the agent fix next? After repair, did it actually improve?
 
