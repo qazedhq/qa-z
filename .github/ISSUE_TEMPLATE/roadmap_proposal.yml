@@ -1,0 +1,83 @@
+name: Public roadmap proposal
+description: Propose a public roadmap item with evidence, validation, and explicit boundaries.
+title: "[Roadmap]: "
+labels:
+  - enhancement
+  - docs
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for public roadmap proposals. QA-Z roadmap work must stay evidence-backed and must not imply live automation, package publishing, tags, releases, deployments, branch mutation, or bot comments without explicit maintainer approval.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Roadmap proposal
+      description: What should be added, clarified, or reprioritized?
+      placeholder: Add a new walkthrough for...
+    validations:
+      required: true
+  - type: dropdown
+    id: roadmap_area
+    attributes:
+      label: Roadmap area
+      description: Which public roadmap band or product area does this affect?
+      options:
+        - Alpha polish
+        - GitHub Actions / CI evidence
+        - Semgrep / SARIF / security evidence
+        - Benchmarks
+        - Docs / examples / walkthroughs
+        - Package publish readiness
+        - Integrations
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: user_impact
+    attributes:
+      label: User impact
+      description: Who benefits, and what outcome becomes clearer or safer?
+      placeholder: Contributors can...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Link issues, docs, commands, artifacts, CI runs, or examples that justify this roadmap item.
+      placeholder: docs/...; .qa-z/runs/...; GitHub Actions run...
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: Which deterministic commands, tests, docs checks, or artifact checks should prove the change?
+      render: bash
+      placeholder: python -m pytest ...
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should this proposal not do?
+      placeholder: No live model execution, no package publish, no deploy, no bot comments.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundary checks
+      options:
+        - label: This proposal does not require live Codex, Claude, or other model execution.
+          required: true
+        - label: This proposal does not imply PyPI/TestPyPI/package-registry publishing.
+          required: true
+        - label: This proposal does not imply tag, release, deployment, branch mutation, or bot-comment automation.
+          required: true
+        - label: This proposal includes deterministic evidence and validation, not LLM-only judgment.
+          required: true
+        - label: Generated `.qa-z/**`, `build/**`, `dist/**`, cache, and benchmark runtime artifacts will stay out of source commits unless intentionally frozen with context.
+          required: true

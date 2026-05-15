@@ -43,6 +43,25 @@ QA-Z is aiming to become the AI Code QA layer: deterministic merge evidence befo
 - Publish monthly benchmark reports.
 - Collect 2 to 3 company use cases.
 
+## Propose A Roadmap Item
+
+Use the GitHub issue template:
+
+```text
+.github/ISSUE_TEMPLATE/roadmap_proposal.yml
+```
+
+A roadmap proposal must include:
+
+- user impact;
+- evidence from issues, docs, artifacts, CI runs, or examples;
+- deterministic validation commands;
+- explicit non-goals;
+- generated-artifact policy;
+- whether the proposal affects docs, CI, examples, package readiness, benchmarks, or integrations.
+
+Roadmap proposals do not approve package publishing, tags, releases, deployments, live model execution, bot comments, branch mutation, or hosted automation. Those require separate maintainer approval and the appropriate release or safety handoff.
+
 ## Current Non-Goals
 
 - QA-Z does not autonomously edit code.
