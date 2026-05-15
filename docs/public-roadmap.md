@@ -31,7 +31,7 @@ QA-Z is aiming to become the AI Code QA layer: deterministic merge evidence befo
 - Provide a stable GitHub Action entry point.
 - Add optional PR comment behavior.
 - Improve SARIF/code-scanning examples.
-- Add monorepo, TypeScript-first, and security-focused demos.
+- Keep monorepo, TypeScript-first, and security-focused docs/demos current.
 - Publish the Agent Merge Safety Benchmark.
 
 ## 10,000 to 30,000 stars
@@ -44,6 +44,8 @@ QA-Z is aiming to become the AI Code QA layer: deterministic merge evidence befo
 - Collect 2 to 3 company use cases.
 
 ## Propose A Roadmap Item
+
+The monorepo quickstart path is documented in `docs/quickstart.md` and should remain deterministic/local.
 
 Use the GitHub issue template:
 

@@ -103,3 +103,27 @@ empty check kinds and malformed Semgrep policy fields.
 The starter GitHub workflow installs the public alpha, then runs `qa-z doctor --json` before `qa-z fast --json` with read-only repository contents permission.
 
 Root `.qa-z/**` evidence is local by default. Commit source, tests, docs, and intentional fixtures, not incidental local runs.
+
+## Mixed Python/TypeScript Monorepo
+
+For repositories that contain both Python and TypeScript code, start with the monorepo profile:
+
+```bash
+qa-z init --profile monorepo --with-agent-templates --with-github-workflow
+qa-z doctor --json
+qa-z plan --title "Review mixed Python/TypeScript change" --slug monorepo-change --overwrite
+qa-z fast
+qa-z deep --from-run latest
+qa-z review --from-run latest
+qa-z repair-prompt --from-run latest --adapter codex
+```
+
+The monorepo profile writes a `qa-z.yaml` with:
+
+- `project.languages: ["python", "typescript"]`
+- Python and TypeScript fast-check surfaces
+- smart fast selection as the default mode
+
+QA-Z remains a deterministic local gate. This flow does not call live model APIs, run live agents, publish packages, deploy, create branches, commit, push, or post bot comments.
+
+Root `.qa-z/**` evidence is local by default. Commit source, tests, docs, and intentional fixtures, not incidental local runs.
