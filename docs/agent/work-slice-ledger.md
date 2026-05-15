@@ -1929,3 +1929,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can hand Codex the right QA-Z repair artifact without turning QA-Z into a live Codex executor or LLM judge.
 - Remaining blocker: actual Codex edits and validation remain human-operated and outside QA-Z.
 - Next safe slice: after PR merge closes #21, continue with the next small public proof or handoff clarity issue that can be verified without live model calls, release approval, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Monorepo Quickstart Evidence Slice
+- Repo: JustTyping
+- Lane: quickstart -> monorepo profile -> mixed Python/TypeScript local gate
+- User-facing flow: repository onboarding -> monorepo init -> deterministic fast/deep/review/repair evidence.
+- Slice type: Docs / Contract / Evidence
+- Before: `qa-z init` supported the monorepo profile, but `docs/quickstart.md` did not show a mixed Python/TypeScript install and gate path.
+- Root cause: #15 needed current-truth docs for the existing monorepo profile without implying live-agent execution or cloud automation.
+- Change made: added monorepo quickstart commands, profile semantics, deterministic/local boundary, public roadmap linkage, and focused docs tests.
+- Validation run: `python -m pytest tests/test_monorepo_quickstart_docs.py -q`; `python -m pytest tests/test_init_options.py::test_init_with_profile_monorepo_uses_smart_selection -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_monorepo_quickstart_docs.py`; `python -m ruff format --check tests/test_monorepo_quickstart_docs.py`; `git diff --check`.
+- Evidence: the focused monorepo docs guard first failed on the missing mixed Python/TypeScript path, then passed after the quickstart and roadmap truth updates.
+- Gate delta: the documented onboarding path now matches the existing `monorepo` init profile and its smart fast selection behavior.
+- User impact: users can initialize mixed Python/TypeScript repositories without assuming live-agent execution or cloud automation.
+- Remaining blocker: real monorepo project adoption still depends on users mapping their concrete check commands into `qa-z.yaml`.
+- Next safe slice: continue with #18 positioning or #4 runnable Next.js demo after this PR merges, preserving deterministic/local boundaries and avoiding generated runtime artifacts.
