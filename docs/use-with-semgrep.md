@@ -48,6 +48,11 @@ From `examples/fastapi-agent-bug`, the vulnerable baseline is expected to
 produce 2 findings: `qa-z.fastapi-auth-bypass-any-signed-in-user` and
 `qa-z.fastapi-auth-bypass-missing-owner-check`.
 
+This example satisfies the custom-rule workflow: the local `qa-z.yaml` config
+points QA-Z deep at `semgrep-rules/auth-bypass.yml`, QA-Z writes SARIF under
+`.qa-z/runs/baseline/deep/results.sarif`, and the flow remains local and
+deterministic without live services.
+
 ```bash
 qa-z fast --output-dir .qa-z/runs/baseline
 qa-z deep --from-run .qa-z/runs/baseline
