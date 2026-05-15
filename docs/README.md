@@ -52,4 +52,4 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [../examples/typescript-agent-bug/](../examples/typescript-agent-bug/) | TypeScript permission-bug walkthrough for the launch story |
 | [../examples/typescript-demo/](../examples/typescript-demo/) | Runnable TypeScript fast-gate demo |
 | [../examples/fastapi-demo/](../examples/fastapi-demo/) | Dependency-light Python/FastAPI demo |
-| [../examples/nextjs-demo/](../examples/nextjs-demo/) | Honest placeholder boundary for a future Next.js demo |
+| [../examples/nextjs-demo/](../examples/nextjs-demo/) | Runnable Next.js and TypeScript fast-gate demo |

@@ -947,11 +947,11 @@ def test_agent_templates_reflect_current_alpha_workflow_and_boundaries() -> None
         assert "does not call live agents" in lowered
 
 
-def test_readme_repository_map_marks_placeholder_examples_honestly() -> None:
+def test_readme_repository_map_marks_examples_as_runnable() -> None:
     readme = read_current_truth_anchors()
 
     assert (
-        "examples/                 runnable Python and TypeScript demos plus placeholder examples"
+        "examples/                 runnable Python, TypeScript, and Next.js demos"
         in readme
     )
 
@@ -1113,7 +1113,7 @@ def test_reports_record_fastapi_demo_deterministic_boundary_sync() -> None:
     assert "FastAPI demo deterministic boundary" in roadmap
 
 
-def test_reports_record_nextjs_placeholder_live_free_boundary_sync() -> None:
+def test_reports_record_nextjs_runnable_live_free_boundary_sync() -> None:
     current_state = (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )
@@ -1123,7 +1123,10 @@ def test_reports_record_nextjs_placeholder_live_free_boundary_sync() -> None:
     mvp_issues = (ROOT / "docs" / "mvp-issues.md").read_text(encoding="utf-8")
 
     for text in (current_state, roadmap, mvp_issues):
-        assert "Next.js placeholder live-free boundary" in " ".join(text.split())
+        assert "runnable Next.js fast-gate" in " ".join(text.split())
 
-    assert "placeholder-only" in mvp_issues
+    assert "package.json" in mvp_issues
+    assert "qa-z.yaml" in mvp_issues
     assert "does not call live agents" in mvp_issues
+    assert "executor bridge/result workflow" in current_state
+    assert "executor bridge/result workflow" in " ".join(roadmap.split())

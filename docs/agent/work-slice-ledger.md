@@ -1961,3 +1961,20 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can understand QA-Z as a model-agnostic QA evidence layer around coding agents, not a competing agent, before they decide whether to use it with their own agent workflow.
 - Remaining blocker: detailed feature-by-feature claims about aider, OpenHands, Goose, or model quality still require official-source verification before expansion.
 - Next safe slice: after PR merge closes #18, continue with #4 runnable Next.js demo only if it can be built from deterministic local artifacts without live model calls, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Next.js Runnable Demo Slice
+- Repo: JustTyping
+- Lane: Next.js example -> runnable demo -> deterministic fast gate
+- User-facing flow: examples index -> Next.js demo -> local npm checks -> QA-Z plan/fast evidence.
+- Slice type: Docs / Contract / Evidence / Test
+- Before: `examples/nextjs-demo` was placeholder-only and the examples index, docs index, reports, and current-truth tests described it as non-runnable.
+- Root cause: #4 needed a small runnable Next.js project that shows QA-Z around a real TypeScript fast gate without implying hosted services, live agents, package publish, deploy, or executor automation.
+- Change made: added package files, TypeScript and ESLint config, a minimal Next.js `app/` surface, deterministic invoice-access source, Vitest coverage, QA-Z fast-check config, issue/spec inputs, README commands, examples/docs index updates, and focused current-truth tests.
+- Validation run: `npm install`; `npm run lint`; `npm run typecheck`; `npm test`; `python -m qa_z plan --path . --title "Protect Next.js invoice access" --issue issue.md --spec spec.md`; `python -m qa_z fast --path . --selection smart`; `python -m pytest tests/test_nextjs_demo_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_launch_growth_package_covers_requested_surfaces -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m pytest tests/test_examples.py::test_nextjs_demo_is_runnable_fast_gate tests/test_current_truth.py::test_readme_repository_map_marks_examples_as_runnable tests/test_current_truth.py::test_reports_record_nextjs_runnable_live_free_boundary_sync -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_nextjs_demo_current_truth.py`; `python -m ruff format --check tests/test_nextjs_demo_current_truth.py`; `git diff --check`.
+- Evidence: the new focused current-truth test first failed on missing package/config/source/test/docs surfaces, then passed `4`; local npm lint, typecheck, and Vitest passed with `3` tests; QA-Z plan generated the invoice-access contract and QA-Z fast passed after the Windows npm shim path was made deterministic through the local wrapper script; public docs and launch-growth guards passed after stale placeholder labels were updated.
+- Gate delta: the Next.js example now exercises `ts_lint`, `ts_type`, and `ts_test` through local npm scripts instead of remaining a placeholder.
+- User impact: users can try QA-Z on a small Next.js/TypeScript project and see deterministic fast evidence without starting a server or using networked services after dependencies are installed.
+- Generated cleanup: `node_modules`, `.qa-z/**`, generated `qa/contracts/**`, `.next`, coverage, and the incidental `package-lock.json` are not intended source artifacts and must be removed before staging.
+- Remaining blocker: broader Next.js app patterns still require project-specific `qa-z.yaml` mapping; `npm install` reported `2` moderate advisories from the resolved dependency tree, which were not auto-fixed to avoid unreviewed dependency churn.
+- Next safe slice: after PR merge closes #4, continue with the next runnable public proof surface that can be validated locally without live model calls, package publish, deploy, release, branch mutation, or bot comments.
