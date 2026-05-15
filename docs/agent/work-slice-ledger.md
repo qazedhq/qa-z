@@ -1833,3 +1833,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can submit examples without leaking private data or committing generated runtime output.
 - Remaining blocker: community examples still require maintainer review before acceptance; no assignment or bot comment was made for the external contributor request on #25.
 - Next safe slice: triage the next public-launch docs/test closeout that can be proven without release approval, live automation, or generated runtime artifacts.
+
+
+## 2026-05-15 TypeScript Agent Bug Evidence Walkthrough
+- Repo: JustTyping
+- Lane: TypeScript example -> baseline/candidate verification evidence
+- User-facing flow: TypeScript authorization bug -> baseline failure -> candidate owner-check fix -> QA-Z verification artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: the TypeScript example was runnable and documented basic commands, but lacked a standalone walkthrough and artifact inspection guide.
+- Root cause: contributors could run the TypeScript demo but had to infer the same baseline/candidate evidence tour already documented for the Python and FastAPI auth paths.
+- Change made: added a TypeScript walkthrough, README evidence checklist, tests for commands/artifacts/source/config consistency, and docs index link.
+- Validation run: `python -m pytest tests/test_typescript_agent_bug_walkthrough_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_typescript_agent_bug_walkthrough_docs.py`; `python -m ruff format --check tests/test_typescript_agent_bug_walkthrough_docs.py`; `git diff --check`; `qa-z plan --title "TypeScript agent bug caught by QA-Z" --issue issue.md --spec spec.md --slug typescript-auth-bug --overwrite`; `qa-z fast --path examples/typescript-agent-bug --output-dir .qa-z/runs/qa-z-ts-agent-bug`.
+- Evidence: focused walkthrough tests passed `5`, examples index smoke passed `1`, public current-truth tests passed `16`, public text hygiene passed, Ruff check and format passed, diff whitespace passed; optional smoke first required a generated contract, then produced baseline fast evidence with `ts_lint` and `ts_type` passed and expected `ts_test` failure: `non-owner user_2 was allowed to view inv_1`.
+- Gate delta: #6 can close after merge because the TypeScript agent bug flow now has a deterministic evidence walkthrough.
+- User impact: contributors can replay a TypeScript agent bug without live agents and inspect deterministic QA-Z evidence before merge.
+- Remaining blocker: no local blocker; generated contract and `.qa-z/**` smoke output were removed and must stay uncommitted.
+- Next safe slice: use real TypeScript verify artifacts from a future repair loop to refine troubleshooting guidance if contributors hit environment-specific Semgrep setup failures.

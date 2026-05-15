@@ -36,3 +36,27 @@ qa-z fast --output-dir .qa-z/runs/candidate
 qa-z deep --from-run .qa-z/runs/candidate
 qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
+
+The demo does not invoke live agents, package registries, hosted services, or
+network APIs.
+
+## Evidence checklist
+
+After running the baseline and candidate commands, inspect:
+
+- `.qa-z/runs/baseline/fast/summary.json`
+- `.qa-z/runs/baseline/deep/summary.json`
+- `.qa-z/runs/baseline/deep/checks/sg_scan.json`
+- `.qa-z/runs/baseline/deep/results.sarif`
+- `.qa-z/runs/baseline/repair/codex.md`
+- `.qa-z/runs/candidate/fast/summary.json`
+- `.qa-z/runs/candidate/deep/summary.json`
+- `.qa-z/runs/candidate/verify/summary.json`
+- `.qa-z/runs/candidate/verify/compare.json`
+- `.qa-z/runs/candidate/verify/report.md`
+
+Expected: baseline fails, candidate passes, and verification reports
+`improved`.
+
+Generated `.qa-z/**` files are local runtime evidence. Do not commit generated
+`.qa-z` runtime evidence.
