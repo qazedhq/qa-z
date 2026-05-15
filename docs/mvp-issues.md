@@ -550,7 +550,7 @@ Excluded until later milestones:
 
 - Goal: add one FastAPI demo and one Next.js demo.
 - Acceptance: examples show both fast and deep policy modes with realistic config.
-- Status: The dependency-light FastAPI demo is runnable as a deterministic fast and repair-prompt example. The TypeScript demo is runnable as a fast-only ESLint, `tsc --noEmit`, and Vitest example. The Next.js placeholder live-free boundary is now explicit: `examples/nextjs-demo` remains placeholder-only and non-runnable until it has its own `package.json`, `qa-z.yaml`, source, tests, and deterministic expected commands. It does not call live agents and does not run `executor-bridge` or `executor-result`. TypeScript-specific deep automation remains future work; current deep examples are Semgrep-backed.
+- Status: The dependency-light FastAPI demo is runnable as a deterministic fast and repair-prompt example. The TypeScript demo is runnable as a fast-only ESLint, `tsc --noEmit`, and Vitest example. The runnable Next.js fast-gate demo now includes its own `package.json`, `qa-z.yaml`, source, tests, and deterministic expected commands. It does not call live agents, require hosted services, publish packages, or run `executor-bridge` or `executor-result`. TypeScript-specific deep automation remains future work; current deep examples are Semgrep-backed.
 
 ## Issue 12: Benchmark seed set
 

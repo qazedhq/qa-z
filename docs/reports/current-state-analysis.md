@@ -433,11 +433,12 @@ Next.js demo, TypeScript-specific deep automation example, or live executor
 workflow. A FastAPI demo deterministic boundary sync pass now pins the runnable
 Python example as a dependency-light deterministic fast and repair-prompt demo,
 not a mandatory web-server, deep automation, repair-session, executor bridge,
-executor-result, or live-agent workflow. A Next.js placeholder live-free
-boundary sync pass now pins `examples/nextjs-demo` as a placeholder-only,
-non-runnable directory with no `package.json`, no `qa-z.yaml`, no live-agent
-call, and no executor bridge/result workflow. These surfaces still need regular
-sync so self-inspection is not driven by stale roadmap assumptions.
+executor-result, or live-agent workflow. A runnable Next.js fast-gate sync pass
+now pins `examples/nextjs-demo` as a small TypeScript project with
+`package.json`, `qa-z.yaml`, source, tests, and deterministic commands, while
+still avoiding live-agent calls, hosted services, package publishing, and
+executor bridge/result workflow. These surfaces still need regular sync so
+self-inspection is not driven by stale roadmap assumptions.
 
 This is a narrower current-truth problem than before, but it is still real as
 the alpha surface keeps changing.
@@ -685,4 +686,3 @@ python -m qa_z repair-session --help
 python -m qa_z executor-bridge --help
 python -m qa_z github-summary --help
 ```
-

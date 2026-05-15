@@ -264,19 +264,39 @@ def test_fastapi_demo_readme_states_dependency_light_deterministic_boundary() ->
     )
 
 
-def test_nextjs_demo_readme_is_honest_placeholder() -> None:
+def test_nextjs_demo_is_runnable_fast_gate() -> None:
     demo = ROOT / "examples" / "nextjs-demo"
     readme = (demo / "README.md").read_text(encoding="utf-8")
+    config = yaml.safe_load((demo / "qa-z.yaml").read_text(encoding="utf-8"))
 
-    assert sorted(path.name for path in demo.iterdir()) == ["README.md"]
-    assert "placeholder-only" in readme
-    assert "not a runnable Next.js project" in readme
-    assert "does not include `package.json`" in readme
-    assert "does not include `qa-z.yaml`" in readme
-    assert "does not call live agents" in readme
-    assert "does not run `executor-bridge` or `executor-result`" in readme
-    assert "not wired" in readme.lower()
-    assert "examples/typescript-demo" in readme
+    for path in (
+        "package.json",
+        "tsconfig.json",
+        "eslint.config.js",
+        "vitest.config.ts",
+        "app/page.tsx",
+        "scripts/npm-run.mjs",
+        "src/invoice-access.ts",
+        "tests/invoice-access.test.ts",
+        "qa-z.yaml",
+    ):
+        assert (demo / path).is_file()
+    assert "runnable, minimal Next.js" in readme
+    assert "npm run lint" in readme
+    assert "npm run typecheck" in readme
+    assert "npm test" in readme
+    assert "python -m qa_z fast --path . --selection smart" in readme
+    assert "scripts/npm-run.mjs" in readme
+    assert "no live agents" in readme
+    assert "no executor-bridge/result behavior" in readme
+    assert "generated `.qa-z/**` evidence remains local" in readme.lower()
+    assert [check["id"] for check in config["fast"]["checks"]] == [
+        "ts_lint",
+        "ts_type",
+        "ts_test",
+    ]
+    assert config["deep"]["checks"] == []
+    assert "placeholder-only" not in readme.lower()
     assert "Stryker" not in readme
     assert "Playwright smoke coverage" not in readme
 

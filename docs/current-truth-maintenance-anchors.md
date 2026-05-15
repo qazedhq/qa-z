@@ -78,7 +78,7 @@ every internal operator field.
 - The generated workflow template is a deterministic CI gate and does not run
   `executor-bridge`.
 - README repository map honesty:
-  `examples/                 runnable Python and TypeScript demos plus placeholder examples`.
+  `examples/                 runnable Python, TypeScript, and Next.js demos`.
 - Guard verdicts may include `current_truth`; if the latest self-inspection is
   stale for the backlog timestamp, `qa-z guard` returns `needs_review` rather
   than `merge_ok` and preserves source self-inspection provenance plus refresh
