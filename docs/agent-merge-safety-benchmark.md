@@ -49,3 +49,17 @@ qa-z fast --output-dir .qa-z/runs/candidate
 qa-z deep --from-run .qa-z/runs/candidate
 qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
 ```
+
+## Monthly Report Rows
+
+Monthly benchmark reports should not summarize lanes without evidence. Each row
+should point back to:
+
+- fixture name;
+- `expected.json`;
+- baseline/candidate QA-Z run artifacts;
+- verify verdict artifacts;
+- repair handoff artifacts when applicable;
+- generated-results policy.
+
+Use `docs/monthly-benchmark-report-template.md` as the report format.

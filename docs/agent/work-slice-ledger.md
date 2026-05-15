@@ -1897,3 +1897,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can understand the hosted demo as a static replay page, not QA-Z Cloud or live-agent execution.
 - Remaining blocker: actual public hosted site remains future scope until static-site tooling and domain decisions are made; no generated `.qa-z/**` runtime artifacts were committed.
 - Next safe slice: after PR merge closes #24, continue with monthly benchmark report or comparison/positioning docs that reuse the same evidence and no-fake-claims boundary.
+
+
+## 2026-05-15 Monthly Benchmark Report Evidence Slice
+- Repo: JustTyping
+- Lane: benchmark reporting -> fixture rows -> QA-Z evidence provenance
+- User-facing flow: monthly benchmark report -> fixture contract -> QA-Z run artifacts -> maintainer closeout.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/monthly-benchmark-report-template.md` listed high-level metrics but did not require row-level artifact pointers, fixture provenance, validation commands, claims boundaries, or generated-artifact stop rules.
+- Root cause: #23 needed a monthly report sample that ties benchmark rows to QA-Z run evidence without fabricating adoption, performance, user, security-impact, package, hosted-automation, or leaderboard claims.
+- Change made: added a report boundary, summary fields, fixture row template, artifact evidence list, fixture provenance, validation commands, claims boundary, generated-artifact policy, and benchmark overview linkage.
+- Validation run: `python -m pytest tests/test_monthly_benchmark_report_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_monthly_benchmark_report_docs.py`; `python -m ruff format --check tests/test_monthly_benchmark_report_docs.py`; `git diff --check`; optional `python -m pytest tests/test_public_docs_current_truth.py -q`; optional `python -m pytest tests/test_case_studies_docs.py -q`.
+- Evidence: the new focused docs guard first failed on the missing monthly report evidence sections and benchmark overview linkage, then passed `5`; launch docs index check passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed; optional public docs current-truth passed `16`; optional case-study docs passed `5`.
+- Gate delta: monthly benchmark reports now require fixture rows to point at `expected.json`, baseline/candidate QA-Z artifacts, verify artifacts, provenance, validation evidence, and generated-results policy.
+- User impact: maintainers can publish benchmark reports that point to deterministic QA-Z evidence without fabricating adoption, performance, user-impact, security-impact, package, hosted-automation, or leaderboard claims.
+- Remaining blocker: actual monthly reports still require real benchmark runs and explicit freeze decisions before committing generated outputs.
+- Next safe slice: after PR merge closes #23, continue with the next public proof surface that can be verified without live model calls, benchmark artifact commits, release approval, deploy, package publish, or bot comments.
