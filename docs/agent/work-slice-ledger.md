@@ -1705,3 +1705,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: issue #13 can be closed if maintainers do not require a separate screenshot or capture walkthrough.
 - Remaining blocker: optional screenshot/capture evidence remains a separate follow-up if maintainers want a visual tour.
 - Next safe slice: close or narrow #13 after review, then decide whether #22's Semgrep docs acceptance is complete or needs a small follow-up.
+
+
+## 2026-05-15 Semgrep Custom Rule Docs Closeout Guard
+- Repo: JustTyping
+- Lane: Semgrep docs -> custom rule acceptance -> issue #22 closeout.
+- User-facing flow: local custom Semgrep rule -> `qa-z deep` -> SARIF/summary -> review and repair packets.
+- Slice type: Contract / Evidence
+- Before: PR #41 substantially addressed #22, but the docs were only partially pinned by tests that checked the baseline deep command shape.
+- Root cause: the #22 acceptance criteria covered local custom rule config, SARIF output, deterministic/no-live-service boundaries, and QA-Z-deep-vs-raw-Semgrep guidance, but no focused current-truth guard covered that full contract.
+- Change made: added `tests/test_semgrep_docs_current_truth.py` to pin the Semgrep docs acceptance text and the FastAPI `sg_scan` config, and added one explicit closeout sentence tying the custom-rule example to local `qa-z.yaml`, SARIF output, and local deterministic execution.
+- Validation run: `python -m pytest tests/test_semgrep_docs_current_truth.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m ruff check tests/test_semgrep_docs_current_truth.py`; `python -m ruff format --check tests/test_semgrep_docs_current_truth.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing custom-rule workflow closeout sentence, then passed `2`; public docs current-truth passed `15`; launch growth package docs-link check passed `1`; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: #22 can be closed after merge because the custom-rule documentation contract is now test-protected.
+- User impact: contributors can trust `docs/use-with-semgrep.md` as executable local guidance for custom Semgrep rules without inferring live services, model APIs, package registries, or hidden network behavior.
+- Remaining blocker: runtime Semgrep scans are not required for this docs closeout; local Windows Semgrep startup can remain a separate environment issue.
+- Next safe slice: decide whether #5 TestPyPI rehearsal docs are ready for a small publish-boundary checklist slice.
