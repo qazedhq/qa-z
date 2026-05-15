@@ -165,7 +165,6 @@ jobs:
 ```
 
 See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
-
 ## Agent QA Playbook
 
 - [Agent QA Playbook](docs/agent-qa-playbook.md)
