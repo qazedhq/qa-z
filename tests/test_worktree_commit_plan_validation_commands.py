@@ -93,3 +93,39 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
             "python -m qa_z benchmark --json",
         ],
     }
+
+
+def test_commit_plan_assigns_alpha_release_support_surfaces_to_closure_batch() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            " M scripts/alpha_release_artifact_smoke.py",
+            " M scripts/alpha_release_bundle_manifest.py",
+            "?? scripts/alpha_release_truth_validator.py",
+            "?? scripts/package_smoke_rehearsal.py",
+            "?? scripts/package_smoke_rehearsal_support.py",
+            " M tests/test_alpha_release_artifact_smoke_architecture.py",
+            " M tests/test_alpha_release_bundle_manifest.py",
+            "?? tests/test_alpha_release_truth_validator.py",
+            "?? tests/test_package_smoke_rehearsal.py",
+            " M tests/alpha_release_artifact_smoke_test_support.py",
+            " M tests/alpha_release_bundle_manifest_test_support.py",
+        ]
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["alpha_release_closure"]["changed_paths"] == [
+        "scripts/alpha_release_artifact_smoke.py",
+        "scripts/alpha_release_bundle_manifest.py",
+        "scripts/alpha_release_truth_validator.py",
+        "scripts/package_smoke_rehearsal.py",
+        "scripts/package_smoke_rehearsal_support.py",
+        "tests/test_alpha_release_artifact_smoke_architecture.py",
+        "tests/test_alpha_release_bundle_manifest.py",
+        "tests/test_alpha_release_truth_validator.py",
+        "tests/test_package_smoke_rehearsal.py",
+        "tests/alpha_release_artifact_smoke_test_support.py",
+        "tests/alpha_release_bundle_manifest_test_support.py",
+    ]
+    assert result["unassigned_source_paths"] == []
