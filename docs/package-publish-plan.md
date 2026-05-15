@@ -85,8 +85,7 @@ emitted by `python -m build --sdist --wheel`.
 
 No-upload guarantee:
 
-- Stop before any `twine upload`, `uv publish`, or registry-specific upload
-  command.
+- Stop before any registry-specific package upload command.
 - Record `registry_upload_executed=false` in the rehearsal notes.
 - Record the built artifact names, artifact smoke result, `twine check` result,
   `pipx` help smoke result, `uvx` help smoke result, and the credential-boundary

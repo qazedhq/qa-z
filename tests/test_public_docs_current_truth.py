@@ -217,8 +217,8 @@ def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
     ):
         assert command in rehearsal
 
-    assert "\npython -m twine upload" not in rehearsal
-    assert "\nuv publish" not in rehearsal
+    assert "twine upload" not in rehearsal
+    assert "uv publish" not in rehearsal
     assert "`registry_upload_executed=false`" in rehearsal
     assert "No TestPyPI package URL exists yet." in package_plan
     assert "No package registry publish has happened yet." in package_plan
