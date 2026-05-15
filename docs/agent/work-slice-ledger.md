@@ -1785,3 +1785,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can review the dry-run contract before granting `pull-requests: write` or enabling PR comments.
 - Remaining blocker: actual PR comment posting remains opt-in and requires maintainer approval; `QA_Z_POST_PR_COMMENT=true` was not run.
 - Next safe slice: if maintainers later approve comment posting, add a separate explicit opt-in validation packet without changing the default template behavior.
+
+
+## 2026-05-15 Public Roadmap Proposal Template
+- Repo: JustTyping
+- Lane: public roadmap proposal -> evidence-backed contributor workflow
+- User-facing flow: public roadmap proposal -> evidence, validation, user impact, non-goals -> maintainer prioritization.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/public-roadmap.md` listed roadmap bands, but there was no roadmap-specific issue template requiring evidence, validation, user impact, non-goals, or generated-artifact policy.
+- Root cause: public roadmap proposals could arrive as vague requests and accidentally imply package publish, live automation, tag/release/deploy, branch mutation, or bot-comment approval.
+- Change made: added `.github/ISSUE_TEMPLATE/roadmap_proposal.yml` with required proposal, roadmap area, user impact, evidence, validation plan, non-goals, and boundary checks; linked the template from `docs/public-roadmap.md`; added current-truth tests for the template, docs link, overclaim prevention, and blank-issue policy.
+- Validation run: `python -m pytest tests/test_public_roadmap_issue_template.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_public_roadmap_issue_template.py`; `python -m ruff format --check tests/test_public_roadmap_issue_template.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing roadmap proposal template and missing public-roadmap docs link, then passed `4`; public docs current-truth passed `16`; launch docs index check passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: roadmap intake now requires deterministic evidence and validation before a proposal enters maintainer prioritization.
+- User impact: contributors can propose roadmap items without implying live model execution, package publish, tag/release/deploy, branch mutation, bot-comment automation, or source commits of generated runtime artifacts.
+- Remaining blocker: roadmap proposals still require maintainer prioritization before implementation; no assignment or bot comment was made for the external contributor request on #20.
+- Next safe slice: triage remaining public-launch good-first issues by choosing the next evidence-backed docs/test closeout that does not require release approval.
