@@ -1737,3 +1737,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can work #5 from a copy-paste checklist that proves local artifact readiness while preserving the release-owner approval boundary.
 - Remaining blocker: no PyPI/TestPyPI upload, tag, release, push, or package registry mutation was performed; `python -m twine check dist/*` could not run because `twine` is not installed, and `pipx`/`uvx` smoke commands could not run because those tools are not installed in this environment.
 - Next safe slice: install or provision `twine`, `pipx`, and `uv` in a controlled release-rehearsal environment, then rerun the no-upload checklist and keep `registry_upload_executed=false` until explicit release-owner approval exists.
+
+
+## 2026-05-15 Scorecard Trust Evidence Follow-up
+- Repo: JustTyping
+- Lane: Scorecard trust surface -> deterministic follow-up tasks
+- User-facing flow: Scorecard workflow -> SARIF/code scanning -> deterministic QA-Z follow-up task.
+- Slice type: Contract / Evidence
+- Before: the Scorecard workflow and basic trust docs existed, but first-run inspection and finding-to-task conversion were not pinned by focused current-truth tests.
+- Root cause: Scorecard evidence was documented as a workflow and permission boundary, but maintainers still lacked a deterministic pattern for turning live findings into actionable QA-Z hardening work.
+- Change made: documented first Scorecard run inspection, uploaded SARIF and GitHub code scanning evidence, the `openssf-scorecard` category, numeric badge caution, finding-to-task mapping, and a follow-up issue template; added current-truth coverage for the workflow permission and publish boundaries.
+- Validation run: `python -m pytest tests/test_scorecard_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_optional_pr_comment_and_scorecard_surfaces_are_opt_in tests/test_launch_growth_package.py::test_scorecard_docs_describe_permissions_triggers_and_local_limits -q`; `python -m pytest tests/test_github_workflow.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_scorecard_docs_current_truth.py`; `python -m ruff format --check tests/test_scorecard_docs_current_truth.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing first-run inspection section, then passed `2`; launch growth Scorecard checks passed `2`; GitHub workflow suite passed `23`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: Scorecard output is now a deterministic trust-evidence input for follow-up tasks instead of a loose score/badge claim.
+- User impact: maintainers can inspect the first Scorecard run, verify SARIF/code scanning evidence, and open scoped hardening tasks with source, affected setting, validation, non-goals, and generated-artifact boundaries.
+- Remaining blocker: the live Scorecard score and findings still come only from GitHub Actions or uploaded SARIF, not local validation.
+- Next safe slice: after the PR merges and issues #19/#28 close, inspect any real `openssf-scorecard` code scanning findings and convert them into separate deterministic follow-up issues.
