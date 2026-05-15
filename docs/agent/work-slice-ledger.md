@@ -1913,3 +1913,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can publish benchmark reports that point to deterministic QA-Z evidence without fabricating adoption, performance, user-impact, security-impact, package, hosted-automation, or leaderboard claims.
 - Remaining blocker: actual monthly reports still require real benchmark runs and explicit freeze decisions before committing generated outputs.
 - Next safe slice: after PR merge closes #23, continue with the next public proof surface that can be verified without live model calls, benchmark artifact commits, release approval, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Codex Repair Prompt Snippet Card Slice
+- Repo: JustTyping
+- Lane: Codex handoff -> copyable prompt snippet -> deterministic evidence boundary
+- User-facing flow: QA-Z repair prompt -> human-operated Codex handoff -> validation evidence.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/use-with-codex.md` described the Codex loop, but the compact copy-this prompt did not pin `.qa-z/runs/latest/repair/codex.md` as the default handoff path.
+- Root cause: #21 needed a copyable Codex prompt that preserves QA-Z artifacts as source of truth without implying live Codex API execution or LLM-only judgment.
+- Change made: added a copy-this-prompt-to-Codex snippet, clarified latest-run versus reproducible run paths, linked README to the deeper Codex guide, and pinned the evidence boundary with focused tests.
+- Validation run: `python -m pytest tests/test_codex_prompt_snippet_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_codex_prompt_snippet_docs.py`; `python -m ruff format --check tests/test_codex_prompt_snippet_docs.py`; `git diff --check`; optional `python -m pytest tests/test_verify_workflow_docs.py -q`.
+- Evidence: the new focused docs guard first failed on the missing copy-this prompt, human-operated Codex boundary, and README guide link, then passed `3`; launch docs index check passed `1`; public docs current-truth passed `16`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed; optional verify workflow docs passed `5`.
+- Gate delta: Codex handoff guidance now points at latest QA-Z repair evidence while keeping deterministic artifacts as the source of truth.
+- User impact: users can hand Codex the right QA-Z repair artifact without turning QA-Z into a live Codex executor or LLM judge.
+- Remaining blocker: actual Codex edits and validation remain human-operated and outside QA-Z.
+- Next safe slice: after PR merge closes #21, continue with the next small public proof or handoff clarity issue that can be verified without live model calls, release approval, deploy, package publish, or bot comments.
