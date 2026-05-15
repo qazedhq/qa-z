@@ -1945,3 +1945,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can initialize mixed Python/TypeScript repositories without assuming live-agent execution or cloud automation.
 - Remaining blocker: real monorepo project adoption still depends on users mapping their concrete check commands into `qa-z.yaml`.
 - Next safe slice: continue with #18 positioning or #4 runnable Next.js demo after this PR merges, preserving deterministic/local boundaries and avoiding generated runtime artifacts.
+
+
+## 2026-05-15 Comparison Positioning Evidence Slice
+- Repo: JustTyping
+- Lane: comparison / positioning / model-agnostic merge evidence
+- User-facing flow: comparison page -> agent-tool fit -> deterministic merge evidence boundary.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/comparison.md` compared Codex, Claude Code, Cursor, Semgrep, test tools, and QA-Z, but it did not mention aider, OpenHands, or Goose, and the root README did not link to the deeper comparison surface.
+- Root cause: #18 needed the comparison page to frame QA-Z around popular coding agents without making QA-Z look like a coding-agent replacement or unsupported superiority claim.
+- Change made: expanded `docs/comparison.md` with role-based positioning for Codex, Claude Code, Cursor, aider, OpenHands, Goose, Semgrep, CI/test tools, human review, and QA-Z; added a concise README comparison link; added focused current-truth tests for agent mentions, model-agnostic merge evidence wording, non-goal boundaries, and README clutter protection.
+- Validation run: `python -m pytest tests/test_comparison_positioning_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_codex_prompt_snippet_docs.py tests/test_monorepo_quickstart_docs.py -q`; `python -m pytest tests/test_current_truth.py::test_readme_is_public_landing_page_linking_to_internal_anchors -q`; `python -m pytest -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_comparison_positioning_docs.py`; `python -m ruff format --check tests/test_comparison_positioning_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on missing aider/OpenHands/Goose, missing model-agnostic evidence and non-goal boundary text, and missing README comparison link, then passed `3`; the first remote CI run exposed the README line-budget guard at `232 <= 230`, so the link was folded into an existing paragraph without weakening the cap; public docs current-truth passed `16`; launch docs link check passed `1`; adjacent Codex/monorepo docs checks passed `7`; README line-budget guard passed `1`; full local pytest passed `1795`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: comparison positioning is now pinned by focused tests instead of relying only on narrative docs.
+- User impact: users can understand QA-Z as a model-agnostic QA evidence layer around coding agents, not a competing agent, before they decide whether to use it with their own agent workflow.
+- Remaining blocker: detailed feature-by-feature claims about aider, OpenHands, Goose, or model quality still require official-source verification before expansion.
+- Next safe slice: after PR merge closes #18, continue with #4 runnable Next.js demo only if it can be built from deterministic local artifacts without live model calls, deploy, package publish, or bot comments.
