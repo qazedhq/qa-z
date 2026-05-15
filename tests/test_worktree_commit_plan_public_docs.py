@@ -59,3 +59,26 @@ def test_commit_plan_routes_github_community_templates_to_current_truth_batch() 
     assert result["unassigned_source_paths"] == []
     assert result["cross_cutting_paths"] == []
     assert result["status"] == "ready"
+
+
+def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            "?? docs/reports/v0.10.0-beta-readiness.md",
+            "?? tests/test_beta_readiness_docs.py",
+        ],
+        fail_on_cross_cutting=True,
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["current_truth_release_surface"]["changed_paths"] == [
+        "docs/reports/v0.10.0-beta-readiness.md",
+        "tests/test_beta_readiness_docs.py",
+    ]
+    assert result["report_paths"] == []
+    assert result["shared_patch_add_paths"] == []
+    assert result["unassigned_source_paths"] == []
+    assert result["cross_cutting_paths"] == []
+    assert result["status"] == "ready"
