@@ -52,6 +52,48 @@ The dry-run is evidence only. Required evidence after a dry-run is the built
 artifact names, artifact smoke result, `twine check` result, and confirmation
 that no registry upload command ran.
 
+## TestPyPI Publish Rehearsal Checklist - Local Only
+
+This checklist rehearses package publish readiness without publishing a package.
+No package registry publish has happened yet. No TestPyPI package URL exists yet.
+
+Credential boundary:
+
+- GitHub prerelease credentials do not authorize TestPyPI or PyPI upload.
+- TestPyPI and PyPI credentials are registry-owned release credentials.
+- Do not load `.pypirc`, `TWINE_USERNAME`, `TWINE_PASSWORD`,
+  `TWINE_API_TOKEN`, or `UV_PUBLISH_TOKEN` for this local-only rehearsal.
+- Credential presence is not approval. A human release owner still must set
+  `RELEASE_EXECUTION_APPROVED=true` and `PACKAGE_PUBLISH_ALLOWED=true` before
+  any upload packet can be run.
+
+Local-only rehearsal commands:
+
+```bash
+git status --short -uall
+python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting
+python scripts\alpha_release_gate.py --quick --allow-dirty --json
+python -m build --sdist --wheel
+python scripts\alpha_release_artifact_smoke.py --with-deps --json
+python -m twine check dist/*
+pipx run --spec dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help
+uvx --from dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help
+```
+
+If package metadata changes, replace the wheel filename with the exact wheel
+emitted by `python -m build --sdist --wheel`.
+
+No-upload guarantee:
+
+- Stop before any `twine upload`, `uv publish`, or registry-specific upload
+  command.
+- Record `registry_upload_executed=false` in the rehearsal notes.
+- Record the built artifact names, artifact smoke result, `twine check` result,
+  `pipx` help smoke result, `uvx` help smoke result, and the credential-boundary
+  confirmation.
+- A successful rehearsal proves only local package readiness. It does not prove
+  TestPyPI, PyPI, tag, release, or deployment readiness.
+
 Blocked upload packet:
 
 ```bash
