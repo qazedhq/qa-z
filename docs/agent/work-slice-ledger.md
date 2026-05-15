@@ -1865,3 +1865,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: reviewers can start with the QA-Z Job Summary and follow `qa-z-runs` machine-readable evidence without exposing private repository data or secrets.
 - Remaining blocker: actual GitHub UI layout can vary by repository permissions and workflow configuration; no live `.qa-z/**` runtime artifacts were generated for this docs slice.
 - Next safe slice: after PR merge closes #16, continue with the next public-launch docs/test closeout that can be proven without release approval, live model calls, bot comments, package publish, or generated runtime artifacts.
+
+
+## 2026-05-15 Enterprise Case Study Template
+- Repo: JustTyping
+- Lane: case studies -> adoption proof -> evidence boundaries
+- User-facing flow: case study draft -> before/after QA-Z evidence -> redaction and claims review -> publishable proof.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/case-studies.md` had seed ideas but no template that required before/after evidence, commands, non-goals, redaction, or claims boundaries.
+- Root cause: issue #27 needed a case-study template for adoption proof, and the seed page could encourage vague stories, unsupported customer claims, or accidental private-data exposure.
+- Change made: added an enterprise case study template, before/after evidence checklist, command template, artifact pointers, validation guidance, redaction guidance, fake-claim boundary, generated-artifact policy, and focused tests pinning those requirements.
+- Validation run: `python -m pytest tests/test_case_studies_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_case_studies_docs.py`; `python -m ruff format --check tests/test_case_studies_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the seed-only case-study page, then passed `5`; final validation covered launch docs index, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a deterministic template for publishing case studies without inventing adoption or customer claims.
+- User impact: contributors can prepare case studies with explicit before/after evidence, commands, non-goals, redaction, and generated-artifact boundaries.
+- Remaining blocker: real customer, adoption, usage, performance, revenue, or security-impact claims still require explicit approval and source evidence.
+- Next safe slice: after PR merge closes #27, continue with monthly benchmark report or hosted-demo proof surfaces that reuse the same evidence and claims-boundary pattern.
