@@ -82,7 +82,8 @@ Package publish dry-run packet:
 ```bash
 python -m build --sdist --wheel
 python scripts\\alpha_release_artifact_smoke.py --with-deps --json
-python -m twine check dist/*
+python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools
+registry_upload_executed=false
 ```
 Registry publish remains blocked until approval.
 Rollback and incident packet:
@@ -125,7 +126,8 @@ Safe local-only dry-run packet:
 
 python -m build --sdist --wheel
 python scripts\\alpha_release_artifact_smoke.py --with-deps --json
-python -m twine check dist/*
+python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools
+registry_upload_executed=false
 
 Blocked upload packet:
 
@@ -566,8 +568,8 @@ def test_validator_rejects_upload_command_inside_safe_dry_run_packet() -> None:
     )
     texts = valid_release_truth_texts(module)
     package_plan = texts.package_plan.replace(
-        "python -m twine check dist/*\n\nBlocked upload packet:",
-        "python -m twine check dist/*\npython -m twine upload dist/*\n\nBlocked upload packet:",
+        "registry_upload_executed=false\n\nBlocked upload packet:",
+        "registry_upload_executed=false\npython -m twine upload dist/*\n\nBlocked upload packet:",
     )
     mutated = module.ReleaseTruthTexts(
         worktree_packet=texts.worktree_packet,

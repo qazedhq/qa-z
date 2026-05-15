@@ -87,6 +87,8 @@ def test_beta_release_decision_blocks_upload_tag_release_commands() -> None:
 def test_beta_release_decision_records_unproven_smoke_and_advisory_blockers() -> None:
     packet = read_packet()
 
+    assert "scripts/package_smoke_rehearsal.py" in packet
+    assert "`PASS`/`FAIL`/`NOT RUN` statuses" in packet
     for blocker in (
         "`twine check` not run if still unavailable",
         "`pipx` wheel smoke not run if still unavailable",

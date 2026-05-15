@@ -45,12 +45,12 @@ python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated
 python scripts\alpha_release_gate.py --quick --allow-dirty --json
 python -m build --sdist --wheel
 python scripts\alpha_release_artifact_smoke.py --with-deps --json
-python -m twine check dist/*
+python scripts\package_smoke_rehearsal.py --json --allow-missing-tools
 ```
 
 The dry-run is evidence only. Required evidence after a dry-run is the built
-artifact names, artifact smoke result, `twine check` result, and confirmation
-that no registry upload command ran.
+artifact names, artifact smoke result, package smoke rehearsal JSON, and
+confirmation that no registry upload command ran.
 
 ## TestPyPI Publish Rehearsal Checklist - Local Only
 
@@ -75,21 +75,28 @@ python scripts\worktree_commit_plan.py --summary-only --json --fail-on-generated
 python scripts\alpha_release_gate.py --quick --allow-dirty --json
 python -m build --sdist --wheel
 python scripts\alpha_release_artifact_smoke.py --with-deps --json
-python -m twine check dist/*
-pipx run --spec dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help
-uvx --from dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help
+python scripts\package_smoke_rehearsal.py --json --allow-missing-tools
 ```
 
-If package metadata changes, replace the wheel filename with the exact wheel
-emitted by `python -m build --sdist --wheel`.
+`scripts/package_smoke_rehearsal.py` discovers exactly one `dist/*.whl` and the
+matching `dist/*.tar.gz` when present. If multiple wheels or sdists exist, pass
+`--wheel` and/or `--sdist` with the exact artifact emitted by
+`python -m build --sdist --wheel`. The script runs `twine check`, `pipx run
+--spec <wheel> qa-z --help`, and `uvx --from <wheel> qa-z --help` only when the
+corresponding tool is already available. It does not install global tools.
 
 No-upload guarantee:
 
 - Stop before any registry-specific package upload command.
 - Record `registry_upload_executed=false` in the rehearsal notes.
-- Record the built artifact names, artifact smoke result, `twine check` result,
-  `pipx` help smoke result, `uvx` help smoke result, and the credential-boundary
-  confirmation.
+- Record the built artifact names, artifact smoke result, package smoke
+  rehearsal result, `twine check` result, `pipx` help smoke result, `uvx` help
+  smoke result, and the credential-boundary confirmation.
+- Treat package smoke statuses literally: `PASS` means the local command passed,
+  `FAIL` means an available local command failed, and `NOT RUN` means the tool
+  was unavailable or the check did not execute. Missing tools remain blockers
+  for release execution even when `--allow-missing-tools` lets the local
+  rehearsal command exit successfully for evidence capture.
 - A successful rehearsal proves only local package readiness. It does not prove
   TestPyPI, PyPI, tag, release, or deployment readiness.
 
