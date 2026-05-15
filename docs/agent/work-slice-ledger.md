@@ -1769,3 +1769,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: contributors can explain the path from `.qa-z/runs/ci/deep/results.sarif` to code scanning alerts while keeping SARIF upload optional and permission-scoped.
 - Remaining blocker: actual GitHub code scanning UI details can vary by repository settings and permissions; live `.qa-z/**` runtime artifacts were not generated for this docs slice.
 - Next safe slice: if needed, inspect a real public code scanning alert after CI upload and open a separate deterministic follow-up task for any remaining SARIF presentation gap.
+
+
+## 2026-05-15 PR Comment Dry-Run Capture
+- Repo: JustTyping
+- Lane: optional PR comment -> dry-run capture -> permission boundary
+- User-facing flow: optional PR comment template -> default non-posting dry run -> maintainer permission decision.
+- Slice type: Docs / Contract / Evidence
+- Before: the optional PR comment workflow defaulted to `QA_Z_POST_PR_COMMENT=false`, but no sanitized capture showed the default non-posting behavior.
+- Root cause: issue #26 needed screenshot-or-capture evidence for the dry-run path, and a real PR screenshot could expose private repository data, user emails, or comments.
+- Change made: documented the Default Dry Run, linked a sanitized textual capture, clarified that job summaries and artifacts remain the review surface, documented the `pull-requests: write` tradeoff, and added current-truth tests for the docs, capture, default env value, posting guards, and permission boundary.
+- Validation run: `python -m pytest tests/test_pr_comment_docs_current_truth.py -q`; `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_optional_pr_comment_and_scorecard_surfaces_are_opt_in -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_pr_comment_docs_current_truth.py`; `python -m ruff format --check tests/test_pr_comment_docs_current_truth.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing Default Dry Run section and missing capture file, then passed `3`; GitHub workflow suite passed `23`; launch opt-in surface test passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: optional PR comments are now pinned as disabled-by-default evidence rather than an implied bot-comment behavior.
+- User impact: maintainers can review the dry-run contract before granting `pull-requests: write` or enabling PR comments.
+- Remaining blocker: actual PR comment posting remains opt-in and requires maintainer approval; `QA_Z_POST_PR_COMMENT=true` was not run.
+- Next safe slice: if maintainers later approve comment posting, add a separate explicit opt-in validation packet without changing the default template behavior.

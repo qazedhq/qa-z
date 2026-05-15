@@ -8,6 +8,23 @@ For teams that want visible PR feedback, use the opt-in template:
 templates/.github/workflows/qa-z-pr-comment.yml
 ```
 
+## Default Dry Run
+
+The template defaults to:
+
+```yaml
+QA_Z_POST_PR_COMMENT: "false"
+```
+
+With the default value, the QA-Z gate can still produce job summaries and artifacts, but the optional comment body and post-comment steps are skipped.
+
+Expected dry-run behavior:
+
+- no pull request comment is created
+- no GitHub issue/comment API call is made
+- QA-Z job summary and run artifacts remain the review surface
+- maintainers can inspect the workflow run before enabling comment posting
+
 ## Comment Shape
 
 ```text
@@ -25,6 +42,16 @@ Deep checks:
 Repair prompt:
 qa-z repair-prompt --from-run .qa-z/runs/pr --adapter codex
 ```
+
+## Dry-Run Capture
+
+See `docs/assets/pr-comment-dry-run-capture.md` for a sanitized capture of the default non-posting behavior.
+
+## Permission Tradeoff
+
+`pull-requests: write` is required only for the optional comment-posting step. It is broader than the default QA-Z summary workflow, so maintainers should enable this template only when they explicitly accept bot-comment behavior.
+
+Keep `QA_Z_POST_PR_COMMENT=false` until the repository owner approves the permission tradeoff.
 
 ## Safety Boundary
 
