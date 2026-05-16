@@ -409,10 +409,12 @@ def validate_release_truth_texts(
                     [
                         "python -m build --sdist --wheel",
                         "python scripts\\alpha_release_artifact_smoke.py --with-deps --json",
-                        "python -m twine check dist/*",
+                        "python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools",
+                        "registry_upload_executed=false",
                     ],
                 )
                 and "twine upload" not in safe_package_dry_run
+                and "uv publish" not in safe_package_dry_run
                 and has_all(
                     blocked_package_upload,
                     [

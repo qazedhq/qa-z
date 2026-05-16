@@ -211,15 +211,18 @@ def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
     for command in (
         "python -m build --sdist --wheel",
         "python scripts\\alpha_release_artifact_smoke.py --with-deps --json",
-        "python -m twine check dist/*",
-        "pipx run --spec dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
-        "uvx --from dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
+        "python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools",
     ):
         assert command in rehearsal
 
     assert "twine upload" not in rehearsal
     assert "uv publish" not in rehearsal
     assert "`registry_upload_executed=false`" in rehearsal
+    assert "discovers exactly one `dist/*.whl`" in rehearsal
+    assert "`PASS` means the local command passed" in rehearsal
+    assert "`FAIL` means an available local command failed" in rehearsal
+    assert "`NOT RUN` means the tool" in rehearsal
+    assert "It does not install global tools." in rehearsal
     assert "No TestPyPI package URL exists yet." in package_plan
     assert "No package registry publish has happened yet." in package_plan
     assert (
