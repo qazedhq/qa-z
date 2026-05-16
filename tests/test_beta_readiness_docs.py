@@ -90,8 +90,18 @@ def test_beta_readiness_report_records_validation_and_cleanup_contract() -> None
         "`qa_z-0.9.8a0-py3-none-any.whl`",
         "`No module named twine`",
         "`2` moderate advisories",
+        "`GHSA-qx2v-qp2m-jg93`",
+        "`CVE-2026-41305`",
+        "`next@15.5.18`",
+        "`postcss@8.4.31`",
+        "`8.5.10`",
+        "`next@latest`",
     ):
         assert evidence in report
+
+    assert "a blind Next.js major bump does not prove closure" in report
+    assert "does not run `npm audit fix --force`" in report
+    assert "does not downgrade or override Next.js" in report
 
     for artifact in (
         "`build/`",

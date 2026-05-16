@@ -2027,3 +2027,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Generated cleanup: removed `build/`, `dist/`, `src/qa_z.egg-info/`, `.pytest_cache/`, and `.ruff_cache/` before staging.
 - Remaining blocker: `twine`, `pipx`, and `uvx` remain unavailable in this environment, so those smokes are still `NOT RUN`; release-owner approval, package credentials, version policy, exact release SHA proof, public raw proof, Next.js moderate advisories, and registry rollback/yank policy remain blocked.
 - Next safe slice: run the same harness in a provisioned release rehearsal environment where `twine`, `pipx`, and `uvx` are already available, still with `registry_upload_executed=false`, or split a separate version-policy PR if the release owner chooses metadata first.
+
+
+## 2026-05-16 Next.js Advisory Decision Evidence
+- Repo: JustTyping
+- Lane: Next.js demo dependency advisory -> release-owner decision
+- User-facing flow: Next.js demo install -> npm audit -> v0.10.0-beta blocker classification.
+- Slice type: Evidence / Contract / Cleanup
+- Before: the beta readiness and release decision packets recorded `2` moderate Next.js advisories, but did not name the exact advisory, resolved dependency versions, or why an automatic dependency fix would not close the blocker.
+- Root cause: `examples/nextjs-demo/package.json` has no checked-in lockfile; a current temporary install resolves `next@15.5.18`, and that package still declares `postcss@8.4.31` while `GHSA-qx2v-qp2m-jg93` / `CVE-2026-41305` is patched in PostCSS `8.5.10`.
+- Change made: updated the v0.10.0-beta readiness and release-owner decision packets to record the advisory ID, resolved Next.js/PostCSS versions, `postcss@latest`, `next@latest` still declaring `postcss@8.4.31`, and the explicit no-auto-fix/no-downgrade/no-override boundary; added focused docs tests.
+- Validation run: `npm install --package-lock-only --ignore-scripts --audit=false --fund=false` in a temporary directory outside the repo; `npm audit --json --omit=dev`; `npm view next@15.5.18 dependencies --json`; `npm view next@latest version dependencies --json`; `npm view postcss@latest version`; `python -m pytest tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py -q`; `git diff --check`.
+- Evidence: temporary audit reproduced `2` moderate advisories; requested `next@^15.0.0` resolved to `next@15.5.18`; resolved PostCSS was `8.4.31`; GitHub advisory patched version is `8.5.10`; `postcss@latest` was `8.5.14`; `next@latest` was `16.2.6` and still declared `postcss@8.4.31`; focused docs tests passed.
+- Gate delta: the Next.js advisory blocker is now classified as an upstream dependency decision rather than a local package-smoke or blind `npm audit fix` task.
+- User impact: release owners can see why release execution remains `NO-GO` without confusing a passing Next.js demo fast gate with dependency advisory closure.
+- Remaining blocker: the advisory is not locally closed; closing it requires a reviewed Next.js/PostCSS compatibility decision, an upstream Next.js package update, a release policy exception, or replacing/removing the Next.js dependency from the beta release scope.
+- Next safe slice: rerun the advisory audit after Next.js publishes a version that declares `postcss >=8.5.10`, or write a separate dependency decision PR that explicitly chooses defer/exception/remove without touching package publish, tag, release, deploy, or registry state.

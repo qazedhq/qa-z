@@ -95,6 +95,14 @@ def test_beta_release_decision_records_unproven_smoke_and_advisory_blockers() ->
         "`uvx` wheel smoke not run if still unavailable",
         "Next.js npm moderate advisories",
         "no automatic dependency fix is implied",
+        "GHSA-qx2v-qp2m-jg93",
+        "CVE-2026-41305",
+        "next@15.5.18",
+        "postcss@8.4.31",
+        "PostCSS is patched at `8.5.10`",
+        "next@latest",
+        "do not run `npm audit fix --force`",
+        "downgrade Next.js",
     ):
         assert blocker in packet
 
