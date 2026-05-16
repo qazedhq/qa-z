@@ -43,10 +43,36 @@ def test_exact_sha_proof_report_exists_and_pins_candidate_sha() -> None:
         in report
     )
     assert "PR #65" in report
-    assert "Open GitHub issues: `0`" in report
-    assert "Open GitHub pull requests: `0`" in report
+    assert "Open GitHub issues at baseline collection: `0`" in report
+    assert "Open GitHub pull requests before this proof PR opened: `0`" in report
     assert "`v0.10.0-beta` is not released by this packet." in report
     assert "release execution remains `NO-GO`" in report
+
+
+def test_exact_sha_proof_is_marked_as_pre_packet_baseline_not_post_merge_truth() -> (
+    None
+):
+    report = read(PROOF_REPORT)
+    text = normalized(report)
+
+    assert "pre-packet main baseline" in text
+    assert (
+        "does not prove the eventual post-merge SHA that contains this proof packet"
+        in text
+    )
+    assert (
+        "After this proof PR merges, refresh exact SHA proof for the merge commit"
+        in report
+    )
+    assert (
+        "The recorded CI and public raw proof apply to the PR #65 main baseline,"
+        in report
+    )
+    assert "current `origin/main` release-candidate proof basis" not in report
+    assert (
+        "Exact candidate SHA proof is recorded for the current `origin/main` commit."
+        not in report
+    )
 
 
 def test_exact_sha_proof_records_remote_ci_without_pr_ci_confusion() -> None:
@@ -122,6 +148,7 @@ def test_exact_sha_proof_preserves_remaining_blockers() -> None:
         "registry credentials",
         "package registry rollback/yank policy",
         "package metadata/version policy",
+        "post-merge exact SHA refresh",
     ):
         assert blocker in report
 
