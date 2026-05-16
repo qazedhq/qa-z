@@ -2043,3 +2043,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can see why release execution remains `NO-GO` without confusing a passing Next.js demo fast gate with dependency advisory closure.
 - Remaining blocker: the advisory is not locally closed; closing it requires a reviewed Next.js/PostCSS compatibility decision, an upstream Next.js package update, a release policy exception, or replacing/removing the Next.js dependency from the beta release scope.
 - Next safe slice: rerun the advisory audit after Next.js publishes a version that declares `postcss >=8.5.10`, or write a separate dependency decision PR that explicitly chooses defer/exception/remove without touching package publish, tag, release, deploy, or registry state.
+
+
+## 2026-05-16 v0.10.0-beta Version Policy
+- Repo: JustTyping
+- Lane: v0.10.0-beta release decision -> version policy
+- User-facing flow: release-owner decision packet -> version/tag/package metadata choice -> release execution remains blocked.
+- Slice type: Evidence / Contract
+- Before: the release decision packet existed and kept release execution `NO-GO`, but the version policy was still unresolved across `v0.9.9-alpha`, package metadata `0.9.8a0`, and planned `v0.10.0-beta`.
+- Root cause: release owners could confuse a GitHub prerelease tag, Python package metadata, TestPyPI/PyPI package versions, and future `pipx install qa-z` / `uv tool install qa-z` commands unless the choice matrix was separately documented and test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-version-policy.md`, linked it from the release decision packet and package publish plan, clarified future PyPI install commands, added focused current-truth tests, and routed the new report/test through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_version_policy_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_version_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `python -m ruff format --check tests/test_beta_version_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `git diff --check`.
+- Evidence: focused version policy tests cover the policy doc, unreleased beta state, current public alpha, current package metadata, `0.10.0b0` as candidate-only metadata, unchanged `pyproject.toml`, release decision linkage, future PyPI install wording, and approval-gated blocked actions.
+- Gate delta: version policy is now separated from release execution and from package publish mechanics.
+- User impact: release owners can choose no release, GitHub prerelease-only, TestPyPI rehearsal, TestPyPI publish, PyPI publish, or metadata-only PR without mistaking policy documentation for an actual release.
+- Remaining blocker: release-owner version choice, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js advisory decision, exact SHA proof, public raw proof, and rollback/yank policy remain blocked.
+- Next safe slice: run tool-equipped package smoke in a provisioned no-upload environment or open a separate approved metadata PR if the release owner chooses `0.10.0b0`.
