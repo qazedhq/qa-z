@@ -2059,3 +2059,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can choose no release, GitHub prerelease-only, TestPyPI rehearsal, TestPyPI publish, PyPI publish, or metadata-only PR without mistaking policy documentation for an actual release.
 - Remaining blocker: release-owner version choice, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js advisory decision, exact SHA proof, public raw proof, and rollback/yank policy remain blocked.
 - Next safe slice: run tool-equipped package smoke in a provisioned no-upload environment or open a separate approved metadata PR if the release owner chooses `0.10.0b0`.
+
+
+## 2026-05-16 Next.js/PostCSS Advisory Decision Packet
+- Repo: JustTyping
+- Lane: Next.js advisory blocker -> release-owner decision
+- User-facing flow: release-readiness docs -> advisory option packet -> release execution remains blocked.
+- Slice type: Evidence / Contract / Cleanup
+- Before: the Next.js/PostCSS advisory was documented as a release blocker, but release owners did not have a separate option packet that distinguished upstream fix, compatibility exception, replacement/removal, reviewed pin/change, explicit defer, and continued `NO-GO`.
+- Root cause: the advisory evidence could be confused with a dependency fix or release recommendation unless decision options, required proof, explicit non-actions, and remaining blockers were separately test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-nextjs-advisory-decision.md`, linked readiness/release-decision/version-policy reports, added focused docs tests, and routed the new packet through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_nextjs_advisory_decision_docs.py`; `python -m ruff format --check tests/test_nextjs_advisory_decision_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing packet and links, then passed after the packet and report links were added.
+- Gate delta: the advisory remains unresolved, but the release owner now has proof requirements and release impact for each decision path.
+- User impact: maintainers can choose a safe advisory handling path without mistaking documentation for dependency remediation, package publish, version bump, tag, GitHub Release, deploy, bot comment, or live service action.
+- Remaining blocker: release-owner selected option, upstream/dependency proof, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, exact SHA proof, public raw proof, rollback/yank policy, and version policy remain blocked.
+- Next safe slice: after this packet merges, the release owner should choose explicit defer, compatibility exception, wait-for-upstream, dependency replacement/removal, or a reviewed dependency change PR before any release execution packet.
