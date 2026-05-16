@@ -103,6 +103,8 @@ def test_beta_release_decision_records_unproven_smoke_and_advisory_blockers() ->
         "next@latest",
         "do not run `npm audit fix --force`",
         "downgrade Next.js",
+        "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
+        "release execution `NO-GO` remains unchanged",
     ):
         assert blocker in packet
 

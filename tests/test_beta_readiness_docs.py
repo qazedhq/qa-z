@@ -102,6 +102,8 @@ def test_beta_readiness_report_records_validation_and_cleanup_contract() -> None
     assert "a blind Next.js major bump does not prove closure" in report
     assert "does not run `npm audit fix --force`" in report
     assert "does not downgrade or override Next.js" in report
+    assert "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md" in report
+    assert "release execution `NO-GO` remains unchanged" in " ".join(report.split())
 
     for artifact in (
         "`build/`",
