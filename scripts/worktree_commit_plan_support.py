@@ -211,10 +211,12 @@ BATCH_RULES = (
             "tests/test_*current_truth*.py",
             "tests/test_beta_readiness_docs.py",
             "tests/test_beta_release_decision_docs.py",
+            "tests/test_beta_version_policy_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
             "docs/reports/v0.10.0-beta-readiness.md",
             "docs/reports/v0.10.0-beta-release-decision.md",
+            "docs/reports/v0.10.0-beta-version-policy.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -224,7 +226,7 @@ BATCH_RULES = (
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(
-            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py tests/test_examples.py -q",
+            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py tests/test_beta_version_policy_docs.py tests/test_examples.py -q",
             "python -m qa_z --help",
         ),
     ),
@@ -545,6 +547,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/worktree-commit-plan.md",
     "docs/reports/v0.10.0-beta-readiness.md",
     "docs/reports/v0.10.0-beta-release-decision.md",
+    "docs/reports/v0.10.0-beta-version-policy.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (

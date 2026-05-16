@@ -115,13 +115,22 @@ policy instead of assuming a local undo command exists.
 
 ## v0.10.0-beta
 
-- PyPI publish.
-- Front-page install:
+- Version policy: `docs/reports/v0.10.0-beta-version-policy.md`.
+- Version policy must be decided before package publish.
+- Current package metadata remains `0.9.8a0` until a separate approved version
+  PR changes `pyproject.toml`.
+- No package registry publish is claimed complete.
+- The current active install path remains the GitHub source/tag install path
+  unless and until package publish happens.
+- Future PyPI-published target commands, not current live install claims:
 
 ```bash
 pipx install qa-z
 uv tool install qa-z
 ```
+
+Do not present these commands as live until PyPI publish is approved, executed,
+and proven with the selected package metadata version and package URL.
 
 ## Future Installer
 
