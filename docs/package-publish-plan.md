@@ -112,6 +112,9 @@ the registry, confirms credentials out of band, confirms the pushed SHA has
 remote CI and public raw proof, and records the resulting package URL/version.
 Rollback is registry-owned: follow the selected registry's yank or retention
 policy instead of assuming a local undo command exists.
+The v0.10.0-beta rollback/yank policy packet is
+`docs/reports/v0.10.0-beta-rollback-yank-policy.md`; it is policy-only, does not
+execute rollback/yank actions, and release execution remains `NO-GO`.
 
 ## v0.10.0-beta
 

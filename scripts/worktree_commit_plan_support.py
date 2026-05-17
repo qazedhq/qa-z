@@ -216,6 +216,7 @@ BATCH_RULES = (
             "tests/test_beta_exact_sha_proof_docs.py",
             "tests/test_beta_final_sha_proof_protocol_docs.py",
             "tests/test_beta_release_execution_checklist_docs.py",
+            "tests/test_beta_rollback_yank_policy_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
             "docs/reports/v0.10.0-beta-readiness.md",
@@ -225,6 +226,7 @@ BATCH_RULES = (
             "docs/reports/v0.10.0-beta-exact-sha-proof.md",
             "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
             "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+            "docs/reports/v0.10.0-beta-rollback-yank-policy.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -234,7 +236,7 @@ BATCH_RULES = (
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(
-            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py tests/test_beta_exact_sha_proof_docs.py tests/test_beta_final_sha_proof_protocol_docs.py tests/test_beta_release_execution_checklist_docs.py tests/test_examples.py -q",
+            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py tests/test_beta_exact_sha_proof_docs.py tests/test_beta_final_sha_proof_protocol_docs.py tests/test_beta_release_execution_checklist_docs.py tests/test_beta_rollback_yank_policy_docs.py tests/test_examples.py -q",
             "python -m qa_z --help",
         ),
     ),
@@ -560,6 +562,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.10.0-beta-exact-sha-proof.md",
     "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
     "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+    "docs/reports/v0.10.0-beta-rollback-yank-policy.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (
