@@ -2107,3 +2107,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can distinguish historical PR #65 proof from current PR #66 merge proof without mistaking it for tag creation, GitHub Release creation, package publish, deploy, version bump, bot comment, settings mutation, or live model action.
 - Remaining blocker: release-owner approval, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js/PostCSS advisory option and proof, package registry rollback/yank policy, and package metadata/version policy remain blocked.
 - Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record a release-owner advisory decision path before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Final SHA Proof Protocol
+- Repo: JustTyping
+- Lane: release readiness -> final SHA proof protocol
+- User-facing flow: historical exact-SHA proof reports -> release-candidate SHA freeze -> final execution proof outside the PR-merge loop.
+- Slice type: Evidence / Contract / Cleanup
+- Before: exact SHA proof PRs recorded useful remote CI and public raw evidence, but each proof became historical after its PR merged and moved `main`.
+- Root cause: committing exact SHA proof to `main` changes the SHA being proven, so repeated proof-refresh PRs cannot produce final release-execution proof.
+- Change made: added `docs/reports/v0.10.0-beta-final-sha-proof-protocol.md`, updated the exact SHA proof report to mark PR-committed proof as historical, linked the protocol from beta release reports, added focused protocol tests, and routed the new protocol report/test through commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_final_sha_proof_protocol_docs.py -q`; `python -m pytest tests/test_beta_exact_sha_proof_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_final_sha_proof_protocol_docs.py`; `python -m ruff format --check tests/test_beta_final_sha_proof_protocol_docs.py`; `git diff --check`.
+- Evidence: focused protocol docs tests require the PR proof loop explanation, release-candidate SHA freeze timing, final proof fields, allowed storage locations, disallowed release actions, preserved blockers, and links from release reports. Existing exact SHA proof docs tests now require historical proof wording and the final protocol link.
+- Gate delta: repeated PR-based SHA refresh is no longer the recommended next action; final release proof stays blocked until release-candidate SHA freeze and release-owner execution review.
+- User impact: release owners can use historical proof reports without mistaking them for final proof, and operators have a protocol for where final SHA proof belongs.
+- Remaining blocker: release-owner approval, final release-execution-time SHA proof, tool-equipped `twine`/`pipx`/`uvx` smoke, Next.js/PostCSS advisory option and proof, registry credentials, package metadata/version execution decision, and package registry rollback/yank policy remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record the release-owner advisory decision before any release execution packet.

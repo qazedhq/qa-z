@@ -46,6 +46,7 @@ def test_beta_version_policy_keeps_pyproject_metadata_current() -> None:
     )
     assert "Candidate only, not current metadata" in policy
     assert "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md" in policy
+    assert "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md" in policy
     assert "release execution `NO-GO` remains unchanged" in policy
 
 
