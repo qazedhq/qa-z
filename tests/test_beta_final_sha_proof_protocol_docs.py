@@ -120,7 +120,6 @@ def test_final_sha_proof_protocol_preserves_remaining_blockers() -> None:
     for blocker in (
         "release-owner approval",
         "final release-execution-time SHA proof",
-        "tool-equipped `twine`/`pipx`/`uvx` smoke",
         "Next.js/PostCSS advisory option and proof",
         "registry credentials",
         "package metadata/version execution decision",
@@ -128,6 +127,8 @@ def test_final_sha_proof_protocol_preserves_remaining_blockers() -> None:
     ):
         assert blocker in protocol
 
+    assert "Tool-equipped no-upload package smoke has passed" in protocol
+    assert "Refresh package-smoke proof if the release" in protocol
     assert "credentials are not approval" in protocol
     assert (
         "Final proof must be generated after the release-candidate SHA is frozen"

@@ -86,6 +86,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
             "?? tests/test_beta_no_release_decision_docs.py",
             "?? docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
             "?? tests/test_beta_tool_smoke_preflight_docs.py",
+            "?? docs/reports/v0.10.0-beta-tool-smoke-execution.md",
+            "?? tests/test_beta_tool_smoke_execution_docs.py",
         ],
         fail_on_cross_cutting=True,
     )
@@ -112,6 +114,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
         "tests/test_beta_no_release_decision_docs.py",
         "docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
         "tests/test_beta_tool_smoke_preflight_docs.py",
+        "docs/reports/v0.10.0-beta-tool-smoke-execution.md",
+        "tests/test_beta_tool_smoke_execution_docs.py",
     ]
     assert result["report_paths"] == []
     assert result["shared_patch_add_paths"] == []

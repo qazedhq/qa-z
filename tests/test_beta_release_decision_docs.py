@@ -84,15 +84,17 @@ def test_beta_release_decision_blocks_upload_tag_release_commands() -> None:
     assert "not part of this packet" in packet
 
 
-def test_beta_release_decision_records_unproven_smoke_and_advisory_blockers() -> None:
+def test_beta_release_decision_records_package_smoke_proof_and_advisory_blockers() -> (
+    None
+):
     packet = read_packet()
 
     assert "scripts/package_smoke_rehearsal.py" in packet
     assert "`PASS`/`FAIL`/`NOT RUN` statuses" in packet
     for blocker in (
-        "`twine check` not run if still unavailable",
-        "`pipx` wheel smoke not run if still unavailable",
-        "`uvx` wheel smoke not run if still unavailable",
+        "Tool-equipped package smoke rehearsal",
+        "`twine_check`, `pipx_wheel_help`, and `uvx_wheel_help` as `PASS`",
+        "registry_upload_executed=false",
         "Next.js npm moderate advisories",
         "no automatic dependency fix is implied",
         "GHSA-qx2v-qp2m-jg93",
@@ -108,5 +110,8 @@ def test_beta_release_decision_records_unproven_smoke_and_advisory_blockers() ->
     ):
         assert blocker in packet
 
-    assert "claim that `twine`, `pipx`, or `uvx` smoke passed" in packet
+    assert (
+        "publish or upload from the passing `twine`, `pipx`, or `uvx` smoke proof"
+        in packet
+    )
     assert "hide the Next.js npm moderate advisories" in packet

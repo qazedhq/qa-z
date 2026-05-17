@@ -2187,3 +2187,35 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can see that this clean environment is not eligible for tool-equipped no-upload package smoke until `twine`, `pipx`, and `uvx` are already provisioned, without confusing missing tools with a passing smoke.
 - Remaining blocker: tool-equipped `twine`/`pipx`/`uvx` smoke, release-owner approval, registry credentials, advisory option/proof, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
 - Next safe slice: re-run the same preflight in a clean environment where `twine`, `pipx`, and `uvx` are already available, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Tool-smoke Execution
+- Repo: JustTyping
+- Lane: release readiness -> no-upload package smoke
+- User-facing flow: package build -> package-smoke rehearsal -> release-owner blocker matrix.
+- Slice type: Evidence
+- Before: PR #72 correctly recorded this workstation's clean base environment as `BLOCKED_TOOL_MISSING`, so `twine`, `pipx`, and `uvx` package smokes remained `NOT RUN`.
+- Root cause: the base environment lacked release smoke tools; actual blocker reduction needed a tool-equipped no-upload environment while preserving the no-upload and no-release boundaries.
+- Change made: created `docs/reports/v0.10.0-beta-tool-smoke-execution.md`, updated release decision/checklist/readiness/version/exact-SHA/advisory/rollback truth surfaces, and kept the earlier preflight packet as historical missing-tool evidence.
+- Validation run: `python -m build --sdist --wheel --outdir <temp-dist>`; `python scripts/package_smoke_rehearsal.py --wheel <temp-wheel> --sdist <temp-sdist> --json`; focused release-truth docs tests.
+- Evidence: temporary artifacts were `qa_z-0.9.8a0-py3-none-any.whl` and `qa_z-0.9.8a0.tar.gz`; `scripts/package_smoke_rehearsal.py` returned `package smoke rehearsal passed`, `exit_code=0`, `twine_check=PASS`, `pipx_wheel_help=PASS`, `uvx_wheel_help=PASS`, and `registry_upload_executed=false`.
+- Gate delta: tool-equipped no-upload package smoke is now `PASS` local evidence. Release execution remains `NO-GO`; no tag, GitHub Release, package upload, deploy, version bump, registry credential use, or bot comment was performed.
+- User impact: release owners can stop treating tool-smoke availability as unresolved and focus on approval, advisory, credentials, version, final SHA proof, and rollback/yank decisions.
+- Remaining blocker: release-owner approval and selected release path, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
+- Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.
+
+
+## 2026-05-17 Historical Alpha Proof Packet Validator Stabilization
+- Repo: JustTyping
+- Lane: release truth -> historical proof validation
+- User-facing flow: proof packet -> `alpha_release_truth_validator --proof-head-from-packet` -> strict worktree plan.
+- Slice type: Contract
+- Before: `--proof-head-from-packet` read the packet proof SHA but still defaulted branch, `origin/main`, and ahead-count facts from the current worktree, so a later merge or branch-specific worktree could make a truthful historical packet fail validation.
+- Root cause: packet mode was only partially historical; it treated proof head as packet-owned but treated the rest of the proof facts as live git state unless every value was manually overridden.
+- Change made: added packet fact extraction for source HEAD, branch, remote `main`, and ahead count; packet mode now uses those historical values by default while preserving explicit CLI overrides and still reporting the current local HEAD separately.
+- Validation run: `python -m pytest tests/test_alpha_release_truth_validator.py -q`; `python scripts/alpha_release_truth_validator.py --proof-head-from-packet --json --output .qa-z/tmp/alpha-release-truth-validator-tool-smoke.json`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/alpha_release_gate.py --allow-dirty --json`; `python -m ruff check scripts/alpha_release_truth_validator.py tests/test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts/alpha_release_truth_validator.py tests/test_alpha_release_truth_validator.py`.
+- Evidence: the focused validator pack passed `26`; the live historical packet validator passed `20/20` and reported packet facts `head=1ede65172f770c66159b2cc5e9e7d4f2063bf634`, `branch=main`, `origin_main=b9a2504ad07d15776eb900f07d6ee83f22ef9076`, `ahead_count=1`, and current local HEAD `b63d1f43f6a194e2c9302238a7557760e5cc492b`; strict worktree plan returned `status=ready`, `changed_path_count=27`, and zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, product-decision, or attention blockers; full alpha release gate passed `33/33`, including `1869` pytest tests, Ruff, mypy, QA-Z fast/deep/benchmark, build, and artifact smoke.
+- Gate delta: historical alpha packet validation is stable across current branch/origin drift again. This does not approve release execution, package upload, tag creation, GitHub Release creation, deploy, version bump, bot comment, or credential use.
+- User impact: operators can run the commit-safe validator after later worktree or main movement without rewriting historical proof packets just to match live git state.
+- Remaining blocker: release-owner approval and selected release path, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
+- Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.

@@ -77,6 +77,7 @@ def test_beta_readiness_report_records_validation_and_cleanup_contract() -> None
         "python -m mypy src tests",
         "python -m build --sdist --wheel",
         "python scripts/alpha_release_artifact_smoke.py --json",
+        "python scripts/package_smoke_rehearsal.py --wheel <temp-wheel> --sdist <temp-sdist> --json",
         "python -m qa_z benchmark --results-dir benchmarks/results-ci --json",
         "git diff --check",
     ):
@@ -88,7 +89,8 @@ def test_beta_readiness_report_records_validation_and_cleanup_contract() -> None
         "`overall_rate=1.0`",
         "`qa_z-0.9.8a0.tar.gz`",
         "`qa_z-0.9.8a0-py3-none-any.whl`",
-        "`No module named twine`",
+        "`twine_check`, `pipx_wheel_help`, and `uvx_wheel_help` as `PASS`",
+        "`registry_upload_executed=false`",
         "`2` moderate advisories",
         "`GHSA-qx2v-qp2m-jg93`",
         "`CVE-2026-41305`",

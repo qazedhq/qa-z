@@ -445,6 +445,57 @@ def test_validator_extracts_proof_head_from_packet_for_commit_safe_mode() -> Non
     assert proof_head == PROOF_HEAD
 
 
+def test_validator_extracts_historical_packet_facts_for_commit_safe_mode() -> None:
+    module = load_truth_validator_module()
+
+    facts = module.packet_proof_facts_from_texts(valid_release_truth_texts(module))
+
+    assert facts.head == PROOF_HEAD
+    assert facts.branch == "main"
+    assert facts.origin_main == ORIGIN_MAIN
+    assert facts.ahead_count == 17
+
+
+def test_truth_validator_cli_packet_mode_uses_historical_packet_facts(
+    monkeypatch, capsys
+) -> None:
+    module = load_truth_validator_module()
+    moved_origin_main = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+    def fake_run_git(_repo_root, *args):
+        if args == ("rev-parse", "HEAD"):
+            return POST_COMMIT_HEAD
+        if args == ("branch", "--show-current"):
+            return "codex/post-proof-work"
+        if args == ("rev-parse", "origin/main"):
+            return moved_origin_main
+        raise AssertionError(f"unexpected git command: {args}")
+
+    monkeypatch.setattr(
+        module,
+        "read_release_truth_texts",
+        lambda _repo_root, **_kwargs: valid_release_truth_texts(module),
+    )
+    monkeypatch.setattr(module, "run_git", fake_run_git)
+    monkeypatch.setattr(
+        module, "package_version_from_pyproject", lambda _repo_root: "0.9.8a0"
+    )
+
+    exit_code = module.main(["--proof-head-from-packet", "--json"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert payload["facts"]["head"] == PROOF_HEAD
+    assert payload["facts"]["branch"] == "main"
+    assert payload["facts"]["origin_main"] == ORIGIN_MAIN
+    assert payload["facts"]["ahead_count"] == 17
+    assert payload["facts"]["current_head"] == POST_COMMIT_HEAD
+    assert payload["facts"]["proof_head_mode"] == "packet"
+    assert captured.err == ""
+
+
 def test_truth_validator_cli_rejects_missing_source_head_for_packet_mode(
     monkeypatch,
 ) -> None:

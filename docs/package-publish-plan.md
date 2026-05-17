@@ -100,6 +100,16 @@ No-upload guarantee:
 - A successful rehearsal proves only local package readiness. It does not prove
   TestPyPI, PyPI, tag, release, or deployment readiness.
 
+Current no-upload tool-smoke evidence:
+
+- `docs/reports/v0.10.0-beta-tool-smoke-execution.md` records
+  `scripts/package_smoke_rehearsal.py` passing `twine_check`,
+  `pipx_wheel_help`, and `uvx_wheel_help`.
+- `registry_upload_executed=false` remains the required package-registry
+  boundary.
+- This local proof does not authorize any registry upload, tag, GitHub Release,
+  deploy, version bump, or registry credential use.
+
 Blocked upload packet:
 
 ```bash

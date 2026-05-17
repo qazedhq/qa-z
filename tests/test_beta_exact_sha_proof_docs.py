@@ -167,7 +167,6 @@ def test_exact_sha_proof_preserves_remaining_blockers() -> None:
 
     for blocker in (
         "release-owner approval",
-        "tool-equipped `twine`/`pipx`/`uvx` smoke",
         "Next.js/PostCSS advisory option and proof",
         "registry credentials",
         "package registry rollback/yank policy",
@@ -178,9 +177,10 @@ def test_exact_sha_proof_preserves_remaining_blockers() -> None:
 
     assert "Exact SHA proof does not replace release-owner approval." in report
     assert (
-        "Exact SHA proof does not replace tool-equipped `twine`/`pipx`/`uvx` smoke."
+        "Exact SHA proof does not replace tool-equipped `twine`/`pipx`/`uvx` smoke;"
         in report
     )
+    assert "docs/reports/v0.10.0-beta-tool-smoke-execution.md" in report
     assert "Exact SHA proof does not resolve the Next.js/PostCSS advisory." in report
     assert "Exact SHA proof does not provide registry credentials." in report
     assert (

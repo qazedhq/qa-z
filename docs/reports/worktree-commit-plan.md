@@ -239,6 +239,9 @@ Current local evidence:
   `python scripts\alpha_release_truth_validator.py --proof-head-from-packet --json`
   validates this packet against the pinned proof HEAD instead of requiring the
   packet to pin any later local commit that records or stages the packet.
+  In packet mode, the validator also uses the packet-pinned branch, remote
+  `main`, and ahead count as historical defaults unless the CLI explicitly
+  overrides them, while still reporting the current local HEAD separately.
 - Literal no-argument skip-remote preflight:
   `python scripts\alpha_release_preflight.py --skip-remote --json` returned
   `release preflight failed` because the historical defaults still expect
