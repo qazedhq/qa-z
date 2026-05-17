@@ -95,13 +95,14 @@ def test_nextjs_advisory_decision_packet_preserves_separate_blockers() -> None:
     for blocker in (
         "release-owner selected option",
         "upstream or dependency proof",
-        "tool-equipped `twine`/`pipx`/`uvx` smoke",
         "registry credentials",
         "rollback/yank policy",
         "version policy",
     ):
         assert blocker in packet
 
+    assert "docs/reports/v0.10.0-beta-tool-smoke-execution.md" in packet
+    assert "local no-upload" in packet
     assert "docs/reports/v0.10.0-beta-exact-sha-proof.md" in packet
     assert "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md" in packet
     assert "final release-execution-time SHA proof" in packet

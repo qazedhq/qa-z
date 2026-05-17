@@ -55,7 +55,7 @@ def test_no_release_decision_preserves_all_remaining_blockers() -> None:
 
     for status_line in (
         "| Release-owner selected registry/release path | `BLOCKED` |",
-        "| Tool-equipped twine/pipx/uvx smoke | `NOT RUN` |",
+        "| Tool-equipped twine/pipx/uvx smoke | `PASS` |",
         "| Registry credentials | `BLOCKED` |",
         "| Final release-execution-time SHA proof | `BLOCKED` |",
     ):

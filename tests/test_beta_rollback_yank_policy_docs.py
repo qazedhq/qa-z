@@ -132,7 +132,7 @@ def test_rollback_yank_policy_preserves_approval_and_blockers() -> None:
         "release-owner approval",
         "credentials are not approval",
         "Rollback/yank policy remains `BLOCKED` until release-owner approval.",
-        "tool-equipped twine/pipx/uvx smoke remains `NOT RUN`",
+        "tool-equipped twine/pipx/uvx smoke is proven as local no-upload evidence",
         "Next.js/PostCSS advisory option/proof remains `BLOCKED`",
         "registry credentials remain `BLOCKED`",
         "version/package metadata execution decision remains `BLOCKED`",

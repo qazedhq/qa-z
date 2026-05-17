@@ -98,7 +98,7 @@ def test_release_execution_checklist_status_matrix_has_required_gates() -> None:
 
     for current_state in (
         "| release-owner approval | `NOT APPROVED` |",
-        "| tool-equipped twine/pipx/uvx smoke | `NOT RUN` |",
+        "| tool-equipped twine/pipx/uvx smoke | `PASS` |",
         "| Next.js/PostCSS advisory option/proof | `BLOCKED` |",
         "| registry credentials | `BLOCKED` |",
         "| version/package metadata execution decision | `BLOCKED` |",
@@ -142,6 +142,7 @@ def test_release_execution_checklist_links_proofs_and_preserves_blockers() -> No
         "docs/reports/v0.10.0-beta-readiness.md",
         "docs/reports/v0.10.0-beta-release-decision.md",
         "docs/reports/v0.10.0-beta-version-policy.md",
+        "docs/reports/v0.10.0-beta-tool-smoke-execution.md",
         "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
         "docs/reports/v0.10.0-beta-exact-sha-proof.md",
         FINAL_PROTOCOL_PATH,
@@ -151,7 +152,7 @@ def test_release_execution_checklist_links_proofs_and_preserves_blockers() -> No
 
     for blocker in (
         "Final SHA proof must be generated after release-candidate SHA freeze.",
-        "Tool-equipped twine/pipx/uvx smoke is separate and still required.",
+        "Tool-equipped twine/pipx/uvx smoke is satisfied as local no-upload evidence",
         "Next.js/PostCSS advisory option/proof is separate and still required.",
         "Registry credentials and rollback/yank policy are separate and still required.",
     ):
