@@ -97,9 +97,10 @@ def test_nextjs_advisory_decision_packet_preserves_separate_blockers() -> None:
         "upstream or dependency proof",
         "tool-equipped `twine`/`pipx`/`uvx` smoke",
         "registry credentials",
-        "exact release SHA proof",
-        "public raw proof",
         "rollback/yank policy",
         "version policy",
     ):
         assert blocker in packet
+
+    assert "docs/reports/v0.10.0-beta-exact-sha-proof.md" in packet
+    assert "7ec919b8ed255e623c7b684d296d8256d82d16ca" in packet
