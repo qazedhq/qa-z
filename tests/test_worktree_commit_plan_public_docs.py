@@ -78,6 +78,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
             "?? tests/test_beta_exact_sha_proof_docs.py",
             "?? docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
             "?? tests/test_beta_final_sha_proof_protocol_docs.py",
+            "?? docs/reports/v0.10.0-beta-release-execution-checklist.md",
+            "?? tests/test_beta_release_execution_checklist_docs.py",
         ],
         fail_on_cross_cutting=True,
     )
@@ -96,6 +98,8 @@ def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> No
         "tests/test_beta_exact_sha_proof_docs.py",
         "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
         "tests/test_beta_final_sha_proof_protocol_docs.py",
+        "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+        "tests/test_beta_release_execution_checklist_docs.py",
     ]
     assert result["report_paths"] == []
     assert result["shared_patch_add_paths"] == []
