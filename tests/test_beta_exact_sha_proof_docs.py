@@ -187,10 +187,7 @@ def test_exact_sha_proof_preserves_remaining_blockers() -> None:
         "Exact SHA proof does not provide package registry rollback/yank policy."
         in report
     )
-    assert (
-        "Exact SHA proof committed through a PR does not provide final"
-        in report
-    )
+    assert "Exact SHA proof committed through a PR does not provide final" in report
 
 
 def test_existing_beta_reports_link_current_exact_sha_proof_without_unlocking_release() -> (
