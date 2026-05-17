@@ -103,4 +103,5 @@ def test_nextjs_advisory_decision_packet_preserves_separate_blockers() -> None:
         assert blocker in packet
 
     assert "docs/reports/v0.10.0-beta-exact-sha-proof.md" in packet
-    assert "7ec919b8ed255e623c7b684d296d8256d82d16ca" in packet
+    assert "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md" in packet
+    assert "final release-execution-time SHA proof" in packet
