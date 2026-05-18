@@ -47,10 +47,22 @@ def read_current_state() -> str:
 def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     readme = read_readme()
 
+    assert "Make AI coding safe to merge." in readme
+    assert "deterministic merge evidence" in readme
+    assert "Run the auth-bug demo from the GitHub source install" in readme
+    assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert "Verdict: do_not_merge" in readme
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
     assert "verdict `improved`" in readme
     assert "no regressions" in readme
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
+        assert forbidden not in readme
     for command in (
         "`qa-z self-inspect`",
         "`qa-z select-next`",

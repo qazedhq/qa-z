@@ -40,13 +40,24 @@ def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
     assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.")
-    assert "AI agents write code fast." in readme
+    assert (
+        "QA-Z tells you whether their changes are safe to merge by turning agent diffs into deterministic merge evidence"
+        in readme
+    )
     assert "Is this AI-generated change safe to merge?" in readme
+    assert "Run the auth-bug demo from the GitHub source install" in readme
     assert "qa-z demo auth-bug" in readme
+    assert "Verdict: do_not_merge" in readme
+    assert "Reason: auth/owner-check risk detected" in readme
+    assert "Next: use the generated repair prompt, then run qa-z verify" in readme
     assert "qa-z guard --adapter codex --deep auto --fail-on-risk" in readme
     assert "qa-z skill install all" in readme
     assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
     assert "uv tool install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert "pipx install qa-z" not in readme
+    assert "uv tool install qa-z" not in readme
+    assert "PyPI package available" not in readme
+    assert "Install from PyPI" not in readme
     assert "python -m pip install semgrep" in readme
     assert "## Agent QA Playbook" in readme
     assert "## Advanced Commands" in readme
