@@ -46,7 +46,7 @@ The composite action validates `qa-z doctor --json`, runs the guard verdict
 step, then preserves the summary, optional SARIF, and QA-Z run artifacts with
 `always()` cleanup steps.
 
-## 2. PR Summary / Artifacts
+## 2. PR Summary / Artifacts - Job Summary And Artifact Pointers
 
 The composite action writes QA-Z reviewer output to the GitHub Actions Job Summary.
 
