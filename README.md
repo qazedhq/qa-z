@@ -141,6 +141,10 @@ The reusable skill lives at [skills/qa-z-merge-safety/SKILL.md](skills/qa-z-merg
 
 ## GitHub Action
 
+After the CLI demo, the next step is a copy-paste PR gate for your own repo.
+Start with read-only permissions; the Job Summary and `qa-z-runs` artifact give
+reviewers the merge evidence without bot comments or write permissions.
+
 ```yaml
 name: QA-Z
 
@@ -164,7 +168,11 @@ jobs:
           adapter: codex
 ```
 
-See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
+See [docs/github-action.md](docs/github-action.md) for the 5-minute path:
+minimal PR gate, PR summary/artifacts, then SARIF upload opt-in. Add
+`security-events: write` only when SARIF upload is explicitly enabled; PR and
+bot comments stay opt-in.
+
 ## Agent QA Playbook
 
 - [Agent QA Playbook](docs/agent-qa-playbook.md)

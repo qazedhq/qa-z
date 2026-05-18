@@ -54,6 +54,12 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "Verdict: do_not_merge" in readme
     assert "Reason: auth/owner-check risk detected" in readme
     assert "Next: use the generated repair prompt, then run qa-z verify" in readme
+    assert "After the CLI demo, the next step is a copy-paste PR gate" in readme
+    assert "minimal PR gate, PR summary/artifacts, then SARIF upload opt-in" in readme
+    assert "`security-events: write` only when SARIF upload is explicitly enabled" in (
+        readme
+    )
+    assert "bot comments stay opt-in" in readme
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
     assert "verdict `improved`" in readme

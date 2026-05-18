@@ -1,6 +1,13 @@
 # GitHub Action
 
-Use the composite guard action for pull-request evidence.
+Use the composite guard action when you want QA-Z's demo story to become a real
+pull-request gate: `qa-z guard` runs in CI, reviewers read deterministic merge
+evidence, and optional outputs stay explicit.
+
+## 1. Minimal PR Gate
+
+Start here. This is the 5-minute copy-paste path for pull requests. It keeps the
+workflow token read-only and does not enable SARIF upload or bot comments.
 
 ```yaml
 name: QA-Z
@@ -25,13 +32,21 @@ jobs:
           adapter: codex
 ```
 
-The action installs QA-Z from GitHub during alpha, validates the `profile` input, runs `qa-z doctor`, then runs `qa-z guard --deep <input> --adapter <input> --github-summary`.
+Start with `contents: read` and `actions: read`.
 
-The `profile` input records the intended starter profile for examples and validates accepted values. Existing `qa-z.yaml` remains the source of truth for guard execution.
+The action installs QA-Z from GitHub during alpha, validates the `profile`
+input, runs `qa-z doctor`, then runs
+`qa-z guard --deep <input> --adapter <input> --github-summary`.
 
-The composite action validates `qa-z doctor --json`, runs the guard verdict step, then preserves the summary, optional SARIF, and QA-Z run artifacts with `always()` cleanup steps.
+The `profile` input records the intended starter profile for examples and
+validates accepted values. Existing `qa-z.yaml` remains the source of truth for
+guard execution.
 
-## Job Summary And Artifact Pointers
+The composite action validates `qa-z doctor --json`, runs the guard verdict
+step, then preserves the summary, optional SARIF, and QA-Z run artifacts with
+`always()` cleanup steps.
+
+## 2. PR Summary / Artifacts
 
 The composite action writes QA-Z reviewer output to the GitHub Actions Job Summary.
 
@@ -68,9 +83,17 @@ publishing, commits, pushes, tags, releases, or deployments.
 
 See `docs/assets/github-actions-summary-capture.md` for a sanitized capture.
 
-SARIF upload is disabled by default because code scanning permissions can be repository-specific.
+PR comments and bot comments are opt-in. Do not enable bot comments by default.
+If you later use a comment template, enable it intentionally and review the
+extra `pull-requests: write` permission first.
 
-To upload SARIF, add `security-events: write` and set `upload-sarif: "true"`:
+## 3. SARIF Upload Opt-In
+
+SARIF upload is disabled by default because code scanning permissions can be
+repository-specific.
+
+Add `security-events: write` only when SARIF upload is enabled. To upload SARIF,
+add that permission and set `upload-sarif: "true"`:
 
 ```yaml
 permissions:
@@ -80,11 +103,15 @@ permissions:
 
 steps:
   - uses: actions/checkout@v6
+    with:
+      persist-credentials: false
   - uses: qazedhq/qa-z/.github/actions/guard@main
     with:
       upload-sarif: "true"
 ```
 
-For a walkthrough of where uploaded SARIF appears in GitHub code scanning, see `docs/walkthroughs/sarif-code-scanning.md`.
+For a walkthrough of where uploaded SARIF appears in GitHub code scanning, see
+`docs/walkthroughs/sarif-code-scanning.md`.
 
-The action does not comment on pull requests, commit, push, or require write permissions by default.
+The action does not comment on pull requests, commit, push, or require write
+permissions by default.

@@ -274,6 +274,42 @@ def test_docs_index_and_readme_link_full_growth_package() -> None:
         assert link in combined
 
 
+def test_github_action_adoption_docs_are_copy_paste_safe() -> None:
+    readme = read("README.md")
+    docs = read("docs/github-action.md")
+    combined = readme + "\n" + docs
+    minimal = docs.split("## 1. Minimal PR Gate", 1)[1].split(
+        "## 2. PR Summary / Artifacts", 1
+    )[0]
+    sarif = docs.split("## 3. SARIF Upload Opt-In", 1)[1]
+
+    for text in (
+        "After the CLI demo, the next step is a copy-paste PR gate",
+        "5-minute path",
+        "minimal PR gate",
+        "PR summary/artifacts",
+        "SARIF upload opt-in",
+        "qazedhq/qa-z/.github/actions/guard@main",
+    ):
+        assert text in combined
+
+    assert "permissions:\n      contents: read\n      actions: read" in readme
+    assert "permissions:\n      contents: read\n      actions: read" in minimal
+    assert "security-events: write" not in minimal
+    assert "pull-requests: write" not in minimal
+    assert "Do not enable bot comments by default." in docs
+    assert "Add `security-events: write` only when SARIF upload is enabled." in docs
+    assert 'upload-sarif: "true"' in sarif
+
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
+        assert forbidden not in combined
+
+
 def test_optional_pr_comment_and_scorecard_surfaces_are_opt_in() -> None:
     pr_comment = read("templates/.github/workflows/qa-z-pr-comment.yml")
     scorecard = read(".github/workflows/scorecard.yml")
