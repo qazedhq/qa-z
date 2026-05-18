@@ -5,6 +5,7 @@
 [2.0,"o","qa-z fast: failed\r\npy_lint: passed\r\npy_format: passed\r\npy_test: failed\r\nFAILED tests/test_auth.py::test_non_owner_cannot_view_invoice\r\n"]
 [2.3,"o","$ qa-z deep --from-run .qa-z/runs/baseline\r\n"]
 [3.2,"o","qa-z deep: failed\r\nsg_scan: failed\r\napp/auth.py:24 qa-z.auth-bypass-any-authenticated-user\r\n"]
+[3.3,"o","verdict: do_not_merge\r\nreason: auth/owner-check risk detected\r\n"]
 [3.5,"o","$ qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex\r\n"]
 [4.1,"o","repair needed: true\r\nsuggested fix order: py_test, sg_scan\r\nrepair prompt: .qa-z/runs/baseline/repair/codex.md\r\n"]
 [4.5,"o","$ Copy-Item app\\auth.fixed.py app\\auth.py -Force\r\n"]

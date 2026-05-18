@@ -52,6 +52,8 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "Run the auth-bug demo from the GitHub source install" in readme
     assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
     assert "Verdict: do_not_merge" in readme
+    assert "Reason: auth/owner-check risk detected" in readme
+    assert "Next: use the generated repair prompt, then run qa-z verify" in readme
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
     assert "verdict `improved`" in readme
