@@ -97,7 +97,7 @@ def compact_generated_action_basis(item: dict[str, Any], primary_summary: str) -
 
 
 def compact_commit_plan_action_basis(item: dict[str, Any], primary_summary: str) -> str:
-    """Return strict commit-plan evidence behind dirty-worktree reduction work."""
+    """Return commit-plan evidence behind dirty-worktree reduction work."""
     if str(item.get("recommendation") or "").strip() != "reduce_integration_risk":
         return ""
     if "worktree_commit_plan_json:" in primary_summary:
