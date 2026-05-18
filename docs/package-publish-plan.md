@@ -129,7 +129,11 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
 ## v0.10.0-beta
 
 - Version policy: `docs/reports/v0.10.0-beta-version-policy.md`.
+- Package publish path decision:
+  `docs/reports/v0.10.0-beta-package-publish-path-decision.md`.
 - Version policy must be decided before package publish.
+- The package publish path decision is decision-only, keeps the current
+  `No release yet` state, and release execution remains `NO-GO`.
 - Current package metadata remains `0.9.8a0` until a separate approved version
   PR changes `pyproject.toml`.
 - No package registry publish is claimed complete.

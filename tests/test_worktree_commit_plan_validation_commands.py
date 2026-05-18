@@ -83,6 +83,10 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
         in batches["current_truth_release_surface"]["validation_commands"][0]
     )
     assert (
+        "tests/test_beta_package_publish_path_decision_docs.py"
+        in batches["current_truth_release_surface"]["validation_commands"][0]
+    )
+    assert (
         "tests/test_github_summary_render.py"
         in batches["repair_session_publish"]["validation_commands"][0]
     )

@@ -2205,6 +2205,23 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.
 
 
+## 2026-05-18 v0.10.0-beta Package Publish Path Decision
+
+- Repo: JustTyping
+- Lane: package publish readiness -> release-owner path decision
+- User-facing flow: no-release decision -> no-upload smoke proof -> package publish path decision.
+- Slice type: Evidence
+- Before: no-release decision exists, tool-equipped no-upload smoke is `PASS`, and package publish path selection remained undecided.
+- Root cause: release owners could confuse local no-upload smoke with TestPyPI/PyPI publish proof, live `pipx install qa-z` availability, version execution, or approval to upload packages.
+- Change made: added `docs/reports/v0.10.0-beta-package-publish-path-decision.md`, linked package publish plan/no-release/checklist/version truth surfaces, added focused docs tests, and routed the packet through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_package_publish_path_decision_docs.py -q`; linked beta docs, public docs truth, worktree plan, hygiene, Ruff, and diff whitespace checks.
+- Evidence: the focused docs guard failed first on the missing packet and links, then passed after the packet and links were added. The packet records `No release yet`, `v0.10.0-beta` not released, current package metadata `0.9.8a0`, `registry_upload_executed=false`, future-only `pipx install qa-z` / `uv tool install qa-z`, blocked `twine upload`, and explicit non-actions.
+- Gate delta: release-owner path options are now separated from release execution. No TestPyPI/PyPI upload, tag, GitHub Release, deploy, version bump, credential load, bot comment, or README growth slice change was performed.
+- User impact: release owners can choose `No release yet`, `TestPyPI rehearsal only`, `TestPyPI publish`, `PyPI beta publish`, `metadata-only version PR`, or `GitHub prerelease only` without mistaking the decision packet for publish approval.
+- Remaining blockers: selected path, release-owner approval, registry credentials, version execution decision, final release-execution-time SHA proof, advisory option/proof, and rollback/yank execution proof remain blocked.
+- Next safe slice: release owner chooses `TestPyPI rehearsal only`, `PyPI beta publish`, or another explicit path in a separate approved packet; README first-screen growth remains a separate PR.
+
+
 ## 2026-05-17 Historical Alpha Proof Packet Validator Stabilization
 - Repo: JustTyping
 - Lane: release truth -> historical proof validation
