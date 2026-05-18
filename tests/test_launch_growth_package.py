@@ -181,7 +181,8 @@ def test_examples_index_links_visual_proof_and_labels_run_status() -> None:
     assert "../docs/assets/qa-z-demo.svg" in examples_index
     assert "../docs/assets/qa-z-agent-auth-bug.cast" in examples_index
     assert "Runnable" in examples_index
-    assert "Placeholder-only" in examples_index
+    assert "| [nextjs-demo](nextjs-demo/) | Runnable |" in examples_index
+    assert "Placeholder-only | Planned future Next.js" not in examples_index
 
     for doc in (agent_demo, fastapi_agent, ts_agent):
         assert "Terminal proof" in doc

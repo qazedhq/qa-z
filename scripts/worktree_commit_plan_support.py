@@ -168,6 +168,8 @@ BATCH_RULES = (
             "scripts/alpha_release_preflight.py",
             "scripts/alpha_release_preflight_*.py",
             "scripts/alpha_release_truth_validator.py",
+            "scripts/package_smoke_rehearsal.py",
+            "scripts/package_smoke_rehearsal_*.py",
             "scripts/check_public_raw_urls.py",
             "scripts/check_text_file_hygiene.py",
             ".github/workflows/*.yml",
@@ -183,6 +185,7 @@ BATCH_RULES = (
             "tests/test_alpha_release_preflight*.py",
             "tests/alpha_release_preflight*_support.py",
             "tests/test_alpha_release_truth_validator.py",
+            "tests/test_package_smoke_rehearsal*.py",
             "tests/test_public_raw_urls.py",
             "tests/test_text_file_hygiene.py",
             "docs/package-publish-plan.md",
@@ -190,7 +193,7 @@ BATCH_RULES = (
             "docs/releases/**",
         ),
         validation_commands=(
-            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_alpha_release_truth_validator.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
+            "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_package_smoke_rehearsal.py tests/test_alpha_release_bundle_manifest.py tests/test_alpha_release_truth_validator.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
             "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
             "python scripts/alpha_release_truth_validator.py --proof-head-from-packet --json --output .qa-z/tmp/alpha-release-truth-validator.json",
             "python scripts/alpha_release_gate.py --allow-dirty --json",
@@ -210,8 +213,30 @@ BATCH_RULES = (
             ".github/pull_request_template.md",
             "tests/test_current_truth*.py",
             "tests/test_*current_truth*.py",
+            "tests/test_beta_readiness_docs.py",
+            "tests/test_beta_release_decision_docs.py",
+            "tests/test_beta_version_policy_docs.py",
+            "tests/test_nextjs_advisory_decision_docs.py",
+            "tests/test_beta_exact_sha_proof_docs.py",
+            "tests/test_beta_final_sha_proof_protocol_docs.py",
+            "tests/test_beta_release_execution_checklist_docs.py",
+            "tests/test_beta_rollback_yank_policy_docs.py",
+            "tests/test_beta_no_release_decision_docs.py",
+            "tests/test_beta_tool_smoke_preflight_docs.py",
+            "tests/test_beta_tool_smoke_execution_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
+            "docs/reports/v0.10.0-beta-readiness.md",
+            "docs/reports/v0.10.0-beta-release-decision.md",
+            "docs/reports/v0.10.0-beta-version-policy.md",
+            "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
+            "docs/reports/v0.10.0-beta-exact-sha-proof.md",
+            "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
+            "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+            "docs/reports/v0.10.0-beta-rollback-yank-policy.md",
+            "docs/reports/v0.10.0-beta-no-release-decision.md",
+            "docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
+            "docs/reports/v0.10.0-beta-tool-smoke-execution.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -221,7 +246,7 @@ BATCH_RULES = (
             "docs/generated-vs-frozen-evidence-policy.md",
         ),
         validation_commands=(
-            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_examples.py -q",
+            "python -m pytest tests/test_current_truth.py tests/test_current_truth_architecture.py tests/test_current_truth_executor_bridge.py tests/test_current_truth_release_continuity.py tests/test_current_truth_release_handoff.py tests/test_current_truth_release_surfaces.py tests/test_current_truth_worktree_commit_plan.py tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py tests/test_beta_exact_sha_proof_docs.py tests/test_beta_final_sha_proof_protocol_docs.py tests/test_beta_release_execution_checklist_docs.py tests/test_beta_rollback_yank_policy_docs.py tests/test_beta_no_release_decision_docs.py tests/test_beta_tool_smoke_preflight_docs.py tests/test_beta_tool_smoke_execution_docs.py tests/test_examples.py -q",
             "python -m qa_z --help",
         ),
     ),
@@ -538,7 +563,20 @@ CROSS_CUTTING_PATTERNS = (
 )
 
 REPORT_PATTERNS = ("docs/reports/**",)
-RELEASE_OWNED_REPORT_PATTERNS = ("docs/reports/worktree-commit-plan.md",)
+RELEASE_OWNED_REPORT_PATTERNS = (
+    "docs/reports/worktree-commit-plan.md",
+    "docs/reports/v0.10.0-beta-readiness.md",
+    "docs/reports/v0.10.0-beta-release-decision.md",
+    "docs/reports/v0.10.0-beta-version-policy.md",
+    "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
+    "docs/reports/v0.10.0-beta-exact-sha-proof.md",
+    "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
+    "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+    "docs/reports/v0.10.0-beta-rollback-yank-policy.md",
+    "docs/reports/v0.10.0-beta-no-release-decision.md",
+    "docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
+    "docs/reports/v0.10.0-beta-tool-smoke-execution.md",
+)
 
 CROSS_CUTTING_GROUP_RULES = (
     (

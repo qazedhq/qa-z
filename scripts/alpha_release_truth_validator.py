@@ -20,6 +20,13 @@ DEFAULT_RELEASE_HANDOFF = Path("docs/releases/v0.9.8-alpha-publish-handoff.md")
 RELEASE_PACKET_HEADER = "## Alpha Release-Candidate Decision Packet - 2026-05-12"
 SHA_RE = re.compile(r"\b[0-9a-f]{40}\b")
 SOURCE_HEAD_RE = re.compile(r"Source HEAD at proof time:\s*`(?P<head>[0-9a-f]{40})`")
+BRANCH_RE = re.compile(r"Branch at proof time:\s*`(?P<branch>[^`]+)`")
+ORIGIN_MAIN_RE = re.compile(
+    r"Remote `main` at proof time:\s*\n\s*`(?P<origin_main>[0-9a-f]{40})`"
+)
+AHEAD_COUNT_RE = re.compile(
+    r"Local proof HEAD is (?P<ahead_count>\d+) commits? ahead of remote `main`"
+)
 PROOF_BRANCH_RE_TEMPLATE = r"\bcodex/alpha-rc-{short_head}-\d{{8}}\b"
 VERSION_RE = re.compile(r'^version\s*=\s*"(?P<version>[^"]+)"', re.MULTILINE)
 
@@ -40,6 +47,14 @@ class ReleaseTruthTexts:
     worktree_packet: str
     package_plan: str
     release_handoff: str
+
+
+@dataclass(frozen=True)
+class PacketProofFacts:
+    head: str | None
+    branch: str | None
+    origin_main: str | None
+    ahead_count: int | None
 
 
 @dataclass(frozen=True)
@@ -150,13 +165,50 @@ def section_from_header(text: str, header: str) -> str | None:
 
 
 def proof_head_from_texts(texts: ReleaseTruthTexts) -> str | None:
+    return packet_proof_facts_from_texts(texts).head
+
+
+def packet_proof_facts_from_texts(texts: ReleaseTruthTexts) -> PacketProofFacts:
     packet = section_from_header(texts.worktree_packet, RELEASE_PACKET_HEADER)
     if packet is None:
-        return None
-    match = SOURCE_HEAD_RE.search(packet)
-    if match is None:
-        return None
-    return match.group("head")
+        return PacketProofFacts(
+            head=None,
+            branch=None,
+            origin_main=None,
+            ahead_count=None,
+        )
+    head_match = SOURCE_HEAD_RE.search(packet)
+    branch_match = BRANCH_RE.search(packet)
+    origin_main_match = ORIGIN_MAIN_RE.search(packet)
+    ahead_count_match = AHEAD_COUNT_RE.search(packet)
+    return PacketProofFacts(
+        head=head_match.group("head") if head_match else None,
+        branch=branch_match.group("branch") if branch_match else None,
+        origin_main=origin_main_match.group("origin_main")
+        if origin_main_match
+        else None,
+        ahead_count=int(ahead_count_match.group("ahead_count"))
+        if ahead_count_match
+        else None,
+    )
+
+
+def historical_packet_overrides(
+    texts: ReleaseTruthTexts,
+    *,
+    branch: str | None,
+    origin_main: str | None,
+    ahead_count: int | None,
+) -> tuple[str, str | None, str | None, int | None]:
+    packet_facts = packet_proof_facts_from_texts(texts)
+    if packet_facts.head is None:
+        raise SystemExit("release packet does not contain a Source HEAD at proof time")
+    return (
+        packet_facts.head,
+        branch or packet_facts.branch,
+        origin_main or packet_facts.origin_main,
+        ahead_count if ahead_count is not None else packet_facts.ahead_count,
+    )
 
 
 def text_between_markers(
@@ -409,10 +461,12 @@ def validate_release_truth_texts(
                     [
                         "python -m build --sdist --wheel",
                         "python scripts\\alpha_release_artifact_smoke.py --with-deps --json",
-                        "python -m twine check dist/*",
+                        "python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools",
+                        "registry_upload_executed=false",
                     ],
                 )
                 and "twine upload" not in safe_package_dry_run
+                and "uv publish" not in safe_package_dry_run
                 and has_all(
                     blocked_package_upload,
                     [
@@ -602,12 +656,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         release_handoff_path=args.release_handoff,
     )
     proof_head = args.proof_head
+    branch = args.branch
+    origin_main = args.origin_main
+    ahead_count = args.ahead_count
     if args.proof_head_from_packet:
-        proof_head = proof_head_from_texts(texts)
-        if proof_head is None:
-            raise SystemExit(
-                "release packet does not contain a Source HEAD at proof time"
-            )
+        proof_head, branch, origin_main, ahead_count = historical_packet_overrides(
+            texts,
+            branch=branch,
+            origin_main=origin_main,
+            ahead_count=ahead_count,
+        )
         proof_head_mode = "packet"
     else:
         proof_head_mode = None
@@ -616,9 +674,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         head=args.head,
         proof_head=proof_head,
         proof_head_mode=proof_head_mode,
-        branch=args.branch,
-        origin_main=args.origin_main,
-        ahead_count=args.ahead_count,
+        branch=branch,
+        origin_main=origin_main,
+        ahead_count=ahead_count,
         package_version=args.package_version,
     )
     payload = validate_release_truth_texts(facts, texts)

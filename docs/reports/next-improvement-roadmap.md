@@ -227,9 +227,9 @@ executor workflow. A FastAPI demo deterministic boundary sync pass now pins the
 runnable Python example as a dependency-light deterministic fast and
 repair-prompt demo, not a mandatory web-server, deep automation,
 repair-session, executor bridge, executor-result, or live-agent workflow. A
-Next.js placeholder live-free boundary sync pass now pins
-`examples/nextjs-demo` as placeholder-only and non-runnable until real
-package/config/source/test files exist, with no live-agent call and no executor
+runnable Next.js fast-gate sync pass now pins `examples/nextjs-demo` as a small
+TypeScript project with package/config/source/test files and deterministic
+commands, with no live-agent call, hosted service, package publish, or executor
 bridge/result workflow. A benchmark report generated-output policy sync pass
 now makes `report.md` repeat its local generated-artifact policy and label
 category rows as covered or not covered for selected runs. Report-style docs,
@@ -331,4 +331,3 @@ suppress the repeated family long enough for a real remediation candidate to
 surface first. A one-loop autonomy run now confirms that behavior end to end by
 leaving `qa-z self-inspect` with only the concrete worktree integration tasks
 open instead of reintroducing `autonomy_selection_gap-repeated-fallback-cleanup`.
-

@@ -1673,3 +1673,549 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can apply GitHub discoverability settings from one tested doc without implying unapproved package publish, release, tag, or deployment.
 - Remaining blocker: applying repository description/topics/social preview still requires approved GitHub settings mutation.
 - Next safe slice: inspect release/package proof docs for stale publish wording or run a wider alpha gate validation wave.
+
+
+## 2026-05-15 Auth Demo Semgrep Owner-Check Evidence
+- Repo: JustTyping
+- Lane: examples / Semgrep deep evidence
+- User-facing flow: auth-bug demo -> Semgrep deep -> repair prompt -> verify.
+- Slice type: Flow / Contract / Evidence
+- Before: the Python and FastAPI auth-bug examples only pinned the signed-in-user shortcut rule, while PR #38's owner-check work was open, draft, behind current `main`, and not covered by repo-local parity tests.
+- Root cause: the public examples and packaged auth-bug template did not have a deterministic test asserting the second owner-check rule across source and template rule files, and the FastAPI/Semgrep docs did not describe the two-finding custom-rule flow.
+- Change made: added the missing owner-check Semgrep rule to the public Python auth demo, nested demo repo, FastAPI auth demo, and packaged auth-bug template rule files; added YAML-parsing parity tests; updated example docs, FastAPI walkthrough, and Semgrep custom-rule docs to name the two-finding local flow and generated-artifact boundary.
+- Validation run: `python -m pytest tests/test_auth_demo_semgrep_rules.py -q`; `python -m pytest tests/test_demo_guard_action_package.py::test_packaged_auth_bug_demo_matches_public_source_demo tests/test_launch_growth_package.py::test_agent_bug_examples_are_documented_and_configured -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `semgrep --config semgrep-rules/auth-bypass.yml --json --metrics off app` in both auth examples; fixed-file Semgrep scans for `app/auth.fixed.py` and `app/main.fixed.py`; `python -m ruff check tests/test_auth_demo_semgrep_rules.py`; `python -m ruff format --check tests/test_auth_demo_semgrep_rules.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new parity test failed first on the one-rule state, then passed `4`; packaged-demo and launch example checks passed `2`; public docs current-truth passed `15`; Semgrep `1.159.0` reported `2` findings on each vulnerable baseline and `0` findings on both fixed files; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: the auth demos now have two deterministic Semgrep signals and repo-local tests to prevent public/template drift.
+- User impact: maintainers can merge the refreshed equivalent of PR #38 with concrete local evidence, and users get FastAPI/custom-rule docs that explain what QA-Z deep adds beyond raw Semgrep.
+- Remaining blocker: no GitHub issue was closed or commented on, no branch/commit/push/tag/release/package publish/deploy was performed, and package publish remains blocked pending explicit human release-owner approval.
+- Next safe slice: close #14 only after the refreshed branch is merged, update or close #22 based on maintainer acceptance of the new Semgrep docs, keep #13 open if a fuller artifact walkthrough is still desired, and keep #5 open until TestPyPI/PyPI approval and evidence exist.
+
+
+## 2026-05-15 FastAPI Auth-Bug Verification Evidence Walkthrough
+- Repo: JustTyping
+- Lane: examples / verification evidence
+- User-facing flow: FastAPI auth-bug baseline -> fast/deep -> repair prompt -> fixed candidate -> verify -> artifact inspection.
+- Slice type: Evidence / Docs Truth
+- Before: after the owner-check Semgrep slice, issue #13 remained open because the FastAPI walkthrough listed baseline and candidate commands but did not guide contributors through the concrete fast, deep, repair, and verify artifacts.
+- Root cause: the docs named `.qa-z/runs/baseline` and `.qa-z/runs/candidate` as directories, but did not pin the specific `summary.json`, Semgrep, SARIF, repair prompt, compare, and report files that prove the repair outcome.
+- Change made: added a FastAPI evidence tour to `docs/walkthroughs/auth-bug.md`, added a compact artifact checklist to `examples/fastapi-agent-bug/README.md`, and added a docs regression that pins the artifact paths, `improved` verdict expectation, `repair_improved` signal, and generated `.qa-z` no-commit policy.
+- Validation run: `python -m pytest tests/test_fastapi_auth_walkthrough_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m ruff check tests/test_fastapi_auth_walkthrough_docs.py`; `python -m ruff format --check tests/test_fastapi_auth_walkthrough_docs.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new docs guard first failed on missing FastAPI artifact-tour paths and the missing README checklist, then passed `2`; public docs current-truth passed `15`; launch example docs check passed `1`; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: contributors can now follow the FastAPI demo from failing baseline through machine-readable verification evidence without treating generated runtime artifacts as source.
+- User impact: issue #13 can be closed if maintainers do not require a separate screenshot or capture walkthrough.
+- Remaining blocker: optional screenshot/capture evidence remains a separate follow-up if maintainers want a visual tour.
+- Next safe slice: close or narrow #13 after review, then decide whether #22's Semgrep docs acceptance is complete or needs a small follow-up.
+
+
+## 2026-05-15 Semgrep Custom Rule Docs Closeout Guard
+- Repo: JustTyping
+- Lane: Semgrep docs -> custom rule acceptance -> issue #22 closeout.
+- User-facing flow: local custom Semgrep rule -> `qa-z deep` -> SARIF/summary -> review and repair packets.
+- Slice type: Contract / Evidence
+- Before: PR #41 substantially addressed #22, but the docs were only partially pinned by tests that checked the baseline deep command shape.
+- Root cause: the #22 acceptance criteria covered local custom rule config, SARIF output, deterministic/no-live-service boundaries, and QA-Z-deep-vs-raw-Semgrep guidance, but no focused current-truth guard covered that full contract.
+- Change made: added `tests/test_semgrep_docs_current_truth.py` to pin the Semgrep docs acceptance text and the FastAPI `sg_scan` config, and added one explicit closeout sentence tying the custom-rule example to local `qa-z.yaml`, SARIF output, and local deterministic execution.
+- Validation run: `python -m pytest tests/test_semgrep_docs_current_truth.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m ruff check tests/test_semgrep_docs_current_truth.py`; `python -m ruff format --check tests/test_semgrep_docs_current_truth.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing custom-rule workflow closeout sentence, then passed `2`; public docs current-truth passed `15`; launch growth package docs-link check passed `1`; Ruff check and format passed; public text hygiene and diff whitespace passed.
+- Gate delta: #22 can be closed after merge because the custom-rule documentation contract is now test-protected.
+- User impact: contributors can trust `docs/use-with-semgrep.md` as executable local guidance for custom Semgrep rules without inferring live services, model APIs, package registries, or hidden network behavior.
+- Remaining blocker: runtime Semgrep scans are not required for this docs closeout; local Windows Semgrep startup can remain a separate environment issue.
+- Next safe slice: decide whether #5 TestPyPI rehearsal docs are ready for a small publish-boundary checklist slice.
+
+
+## 2026-05-15 TestPyPI Rehearsal No-Upload Checklist
+- Repo: JustTyping
+- Lane: package publish / release governance
+- User-facing flow: release proof -> package dry-run -> TestPyPI credential boundary -> blocked upload.
+- Slice type: Contract / Evidence
+- Before: #5 was still open and `docs/package-publish-plan.md` had a local dry-run packet, but it did not pin the full TestPyPI rehearsal checklist with `pipx`, `uvx`, credential separation, and a no-upload evidence field.
+- Root cause: package dry-run evidence and registry publish approval were documented close together, making the local rehearsal boundary easier to blur.
+- Change made: added a local-only TestPyPI publish rehearsal checklist with build, artifact smoke, `twine check`, `pipx`, and `uvx` commands; documented GitHub prerelease credentials as separate from TestPyPI/PyPI registry credentials; added `registry_upload_executed=false`; kept upload commands only in the blocked packet; added current-truth coverage and a release-handoff pointer.
+- Validation run: `python -m pytest tests/test_public_docs_current_truth.py::test_package_publish_plan_documents_no_upload_testpypi_rehearsal -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_current_truth_worktree_commit_plan.py::test_alpha_rc_packet_documents_package_publish_dry_run_and_preflight_contract -q`; `python -m ruff check tests/test_public_docs_current_truth.py`; `python -m ruff format --check tests/test_public_docs_current_truth.py`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `git diff --check`; `python -m build --sdist --wheel`; `python scripts/alpha_release_artifact_smoke.py --json`.
+- Evidence: the new current-truth test failed first on the missing checklist, then passed; public docs current-truth passed `16`; package dry-run preflight contract test passed `1`; Ruff check and format passed after formatting the test file once; public text hygiene and diff whitespace passed; local build produced `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`; artifact smoke passed for both wheel and sdist after network-approved dependency resolution.
+- Gate delta: package rehearsal is now test-pinned as local-only evidence and cannot be mistaken for a TestPyPI/PyPI publish claim.
+- User impact: maintainers can work #5 from a copy-paste checklist that proves local artifact readiness while preserving the release-owner approval boundary.
+- Remaining blocker: no PyPI/TestPyPI upload, tag, release, push, or package registry mutation was performed; `python -m twine check dist/*` could not run because `twine` is not installed, and `pipx`/`uvx` smoke commands could not run because those tools are not installed in this environment.
+- Next safe slice: install or provision `twine`, `pipx`, and `uv` in a controlled release-rehearsal environment, then rerun the no-upload checklist and keep `registry_upload_executed=false` until explicit release-owner approval exists.
+
+
+## 2026-05-15 Verify Baseline/Candidate Workflow
+- Repo: JustTyping
+- Lane: verify workflow -> baseline/candidate evidence
+- User-facing flow: baseline run -> repair prompt -> candidate run -> `qa-z verify` -> verification artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: verify verdicts existed in repair-session docs and artifact schema docs, but no focused baseline/candidate walkthrough showed the standalone `qa-z verify` loop.
+- Root cause: contributors had to piece together commands, artifact paths, and verdict meanings from schema, repair-session, and auth-bug walkthrough docs.
+- Change made: added a focused `qa-z verify` guide with baseline/candidate commands, required artifact paths, verdict interpretation, common failure modes, deterministic evidence language, and generated-artifact policy; linked it from the docs index; added focused docs coverage.
+- Validation run: `python -m pytest tests/test_verify_workflow_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_verify_workflow_docs.py`; `python -m ruff format --check tests/test_verify_workflow_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing walkthrough and docs index link, then passed `5`; public docs current-truth passed `16`; launch docs index check passed `1`; public text hygiene passed; Ruff check passed; Ruff format check passed; diff whitespace check passed.
+- Gate delta: verify evidence becomes a standalone contributor workflow for proving repaired candidates against baseline runs.
+- User impact: contributors can prove repaired candidates improved baseline evidence without relying on LLM-only claims.
+- Remaining blocker: no local blocker; remote CI still depends on the PR run after push.
+- Next safe slice: after validation and PR review, use real verify artifacts from a future repair loop to refine any missing troubleshooting cases.
+
+
+## 2026-05-15 Scorecard Trust Evidence Follow-up
+- Repo: JustTyping
+- Lane: Scorecard trust surface -> deterministic follow-up tasks
+- User-facing flow: Scorecard workflow -> SARIF/code scanning -> deterministic QA-Z follow-up task.
+- Slice type: Contract / Evidence
+- Before: the Scorecard workflow and basic trust docs existed, but first-run inspection and finding-to-task conversion were not pinned by focused current-truth tests.
+- Root cause: Scorecard evidence was documented as a workflow and permission boundary, but maintainers still lacked a deterministic pattern for turning live findings into actionable QA-Z hardening work.
+- Change made: documented first Scorecard run inspection, uploaded SARIF and GitHub code scanning evidence, the `openssf-scorecard` category, numeric badge caution, finding-to-task mapping, and a follow-up issue template; added current-truth coverage for the workflow permission and publish boundaries.
+- Validation run: `python -m pytest tests/test_scorecard_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_optional_pr_comment_and_scorecard_surfaces_are_opt_in tests/test_launch_growth_package.py::test_scorecard_docs_describe_permissions_triggers_and_local_limits -q`; `python -m pytest tests/test_github_workflow.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_scorecard_docs_current_truth.py`; `python -m ruff format --check tests/test_scorecard_docs_current_truth.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing first-run inspection section, then passed `2`; launch growth Scorecard checks passed `2`; GitHub workflow suite passed `23`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: Scorecard output is now a deterministic trust-evidence input for follow-up tasks instead of a loose score/badge claim.
+- User impact: maintainers can inspect the first Scorecard run, verify SARIF/code scanning evidence, and open scoped hardening tasks with source, affected setting, validation, non-goals, and generated-artifact boundaries.
+- Remaining blocker: the live Scorecard score and findings still come only from GitHub Actions or uploaded SARIF, not local validation.
+- Next safe slice: after the PR merges and issues #19/#28 close, inspect any real `openssf-scorecard` code scanning findings and convert them into separate deterministic follow-up issues.
+
+
+## 2026-05-15 SARIF Code Scanning Walkthrough
+- Repo: JustTyping
+- Lane: SARIF evidence -> GitHub code scanning walkthrough
+- User-facing flow: `qa-z deep` -> `deep/results.sarif` -> optional GitHub SARIF upload -> code scanning alerts.
+- Slice type: Docs / Evidence
+- Before: SARIF generation and upload were documented separately, but the walkthrough did not pin the CI SARIF path, `qa-z-semgrep` category, optional permission boundary, or a capture that avoids private data.
+- Root cause: issue #17 needed a screenshot-or-capture proof surface, while a real screenshot could expose private repository details or secrets.
+- Change made: expanded the SARIF code scanning walkthrough with local and CI SARIF paths, `github/codeql-action/upload-sarif@v4`, `security-events: write`, `qa-z-semgrep`, GitHub code scanning inspection guidance, and no-mutation boundaries; added a sanitized textual capture and a focused docs current-truth test; linked the walkthrough from `docs/github-action.md`.
+- Validation run: `python -m pytest tests/test_sarif_code_scanning_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_github_workflow.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_sarif_code_scanning_docs.py`; `python -m ruff format --check tests/test_sarif_code_scanning_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing `<run-id>` SARIF path and missing capture file, then passed `2`; launch docs index check passed `1`; GitHub workflow suite passed `23`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: maintainers now have a deterministic capture for where QA-Z SARIF appears in GitHub code scanning without relying on private UI screenshots.
+- User impact: contributors can explain the path from `.qa-z/runs/ci/deep/results.sarif` to code scanning alerts while keeping SARIF upload optional and permission-scoped.
+- Remaining blocker: actual GitHub code scanning UI details can vary by repository settings and permissions; live `.qa-z/**` runtime artifacts were not generated for this docs slice.
+- Next safe slice: if needed, inspect a real public code scanning alert after CI upload and open a separate deterministic follow-up task for any remaining SARIF presentation gap.
+
+
+## 2026-05-15 PR Comment Dry-Run Capture
+- Repo: JustTyping
+- Lane: optional PR comment -> dry-run capture -> permission boundary
+- User-facing flow: optional PR comment template -> default non-posting dry run -> maintainer permission decision.
+- Slice type: Docs / Contract / Evidence
+- Before: the optional PR comment workflow defaulted to `QA_Z_POST_PR_COMMENT=false`, but no sanitized capture showed the default non-posting behavior.
+- Root cause: issue #26 needed screenshot-or-capture evidence for the dry-run path, and a real PR screenshot could expose private repository data, user emails, or comments.
+- Change made: documented the Default Dry Run, linked a sanitized textual capture, clarified that job summaries and artifacts remain the review surface, documented the `pull-requests: write` tradeoff, and added current-truth tests for the docs, capture, default env value, posting guards, and permission boundary.
+- Validation run: `python -m pytest tests/test_pr_comment_docs_current_truth.py -q`; `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_optional_pr_comment_and_scorecard_surfaces_are_opt_in -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_pr_comment_docs_current_truth.py`; `python -m ruff format --check tests/test_pr_comment_docs_current_truth.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing Default Dry Run section and missing capture file, then passed `3`; GitHub workflow suite passed `23`; launch opt-in surface test passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: optional PR comments are now pinned as disabled-by-default evidence rather than an implied bot-comment behavior.
+- User impact: maintainers can review the dry-run contract before granting `pull-requests: write` or enabling PR comments.
+- Remaining blocker: actual PR comment posting remains opt-in and requires maintainer approval; `QA_Z_POST_PR_COMMENT=true` was not run.
+- Next safe slice: if maintainers later approve comment posting, add a separate explicit opt-in validation packet without changing the default template behavior.
+
+
+## 2026-05-15 Public Roadmap Proposal Template
+- Repo: JustTyping
+- Lane: public roadmap proposal -> evidence-backed contributor workflow
+- User-facing flow: public roadmap proposal -> evidence, validation, user impact, non-goals -> maintainer prioritization.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/public-roadmap.md` listed roadmap bands, but there was no roadmap-specific issue template requiring evidence, validation, user impact, non-goals, or generated-artifact policy.
+- Root cause: public roadmap proposals could arrive as vague requests and accidentally imply package publish, live automation, tag/release/deploy, branch mutation, or bot-comment approval.
+- Change made: added `.github/ISSUE_TEMPLATE/roadmap_proposal.yml` with required proposal, roadmap area, user impact, evidence, validation plan, non-goals, and boundary checks; linked the template from `docs/public-roadmap.md`; added current-truth tests for the template, docs link, overclaim prevention, and blank-issue policy.
+- Validation run: `python -m pytest tests/test_public_roadmap_issue_template.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_public_roadmap_issue_template.py`; `python -m ruff format --check tests/test_public_roadmap_issue_template.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing roadmap proposal template and missing public-roadmap docs link, then passed `4`; public docs current-truth passed `16`; launch docs index check passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: roadmap intake now requires deterministic evidence and validation before a proposal enters maintainer prioritization.
+- User impact: contributors can propose roadmap items without implying live model execution, package publish, tag/release/deploy, branch mutation, bot-comment automation, or source commits of generated runtime artifacts.
+- Remaining blocker: roadmap proposals still require maintainer prioritization before implementation; no assignment or bot comment was made for the external contributor request on #20.
+- Next safe slice: triage remaining public-launch good-first issues by choosing the next evidence-backed docs/test closeout that does not require release approval.
+
+
+## 2026-05-15 Community Examples Evidence Guide
+- Repo: JustTyping
+- Lane: community examples -> deterministic evidence intake
+- User-facing flow: community example proposal -> deterministic evidence -> artifact policy -> maintainer review.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/community-distribution.md` listed launch channels, but did not define how contributors should submit example evidence.
+- Root cause: community examples could arrive without reproducible evidence, validation commands, privacy rules, or generated-output boundaries.
+- Change made: added community example submission guidance, required evidence, acceptable artifacts, forbidden generated outputs, validation commands, and public roadmap linkage.
+- Validation run: `python -m pytest tests/test_community_examples_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_public_roadmap_issue_template.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m ruff check tests/test_community_examples_docs.py`; `python -m ruff format --check tests/test_community_examples_docs.py`.
+- Evidence: the new focused docs guard first failed on the missing community example sections and missing public-roadmap link, then passed `4`; public docs current-truth passed `16`; public roadmap issue-template checks passed `4`; launch docs index check passed `1`; Ruff check and format passed.
+- Gate delta: community example intake now requires deterministic evidence, validation commands, privacy notes, and generated-artifact boundaries before maintainer review.
+- User impact: contributors can submit examples without leaking private data or committing generated runtime output.
+- Remaining blocker: community examples still require maintainer review before acceptance; no assignment or bot comment was made for the external contributor request on #25.
+- Next safe slice: triage the next public-launch docs/test closeout that can be proven without release approval, live automation, or generated runtime artifacts.
+
+
+## 2026-05-15 TypeScript Agent Bug Evidence Walkthrough
+- Repo: JustTyping
+- Lane: TypeScript example -> baseline/candidate verification evidence
+- User-facing flow: TypeScript authorization bug -> baseline failure -> candidate owner-check fix -> QA-Z verification artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: the TypeScript example was runnable and documented basic commands, but lacked a standalone walkthrough and artifact inspection guide.
+- Root cause: contributors could run the TypeScript demo but had to infer the same baseline/candidate evidence tour already documented for the Python and FastAPI auth paths.
+- Change made: added a TypeScript walkthrough, README evidence checklist, tests for commands/artifacts/source/config consistency, and docs index link.
+- Validation run: `python -m pytest tests/test_typescript_agent_bug_walkthrough_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_typescript_agent_bug_walkthrough_docs.py`; `python -m ruff format --check tests/test_typescript_agent_bug_walkthrough_docs.py`; `git diff --check`; `qa-z plan --title "TypeScript agent bug caught by QA-Z" --issue issue.md --spec spec.md --slug typescript-auth-bug --overwrite`; `qa-z fast --path examples/typescript-agent-bug --output-dir .qa-z/runs/qa-z-ts-agent-bug`.
+- Evidence: focused walkthrough tests passed `5`, examples index smoke passed `1`, public current-truth tests passed `16`, public text hygiene passed, Ruff check and format passed, diff whitespace passed; optional smoke first required a generated contract, then produced baseline fast evidence with `ts_lint` and `ts_type` passed and expected `ts_test` failure: `non-owner user_2 was allowed to view inv_1`.
+- Gate delta: #6 can close after merge because the TypeScript agent bug flow now has a deterministic evidence walkthrough.
+- User impact: contributors can replay a TypeScript agent bug without live agents and inspect deterministic QA-Z evidence before merge.
+- Remaining blocker: no local blocker; generated contract and `.qa-z/**` smoke output were removed and must stay uncommitted.
+- Next safe slice: use real TypeScript verify artifacts from a future repair loop to refine troubleshooting guidance if contributors hit environment-specific Semgrep setup failures.
+
+
+## 2026-05-15 GitHub Actions Summary Capture
+- Repo: JustTyping
+- Lane: GitHub Action summary -> reviewer evidence capture
+- User-facing flow: QA-Z GitHub Actions guard -> Job Summary -> `qa-z-runs` artifact pointers -> reviewer decision.
+- Slice type: Docs / Contract / Evidence
+- Before: the GitHub Action docs explained the composite guard action, optional SARIF upload, and artifact preservation, but did not include a sanitized capture of the Job Summary and reviewer artifact pointers.
+- Root cause: issue #16 needed screenshot-or-capture evidence for the GitHub Actions summary surface, while a real private repository screenshot could expose repository data, user emails, branch names, PR comments, or secrets.
+- Change made: added a Job Summary and artifact pointer section to `docs/github-action.md`, added a sanitized textual capture at `docs/assets/github-actions-summary-capture.md`, and added focused tests pinning `GITHUB_STEP_SUMMARY`, `github-summary.md`, `verdict.md`, `qa-z-runs`, and `.qa-z/runs/latest`.
+- Validation run: `python -m pytest tests/test_github_actions_summary_docs.py -q`; `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_github_actions_summary_docs.py`; `python -m ruff format --check tests/test_github_actions_summary_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing Job Summary docs section and missing capture file, then passed `3`; final validation covered the GitHub workflow suite, launch docs index check, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a deterministic capture for the GitHub Actions Job Summary and uploaded artifact pointers without relying on private UI screenshots.
+- User impact: reviewers can start with the QA-Z Job Summary and follow `qa-z-runs` machine-readable evidence without exposing private repository data or secrets.
+- Remaining blocker: actual GitHub UI layout can vary by repository permissions and workflow configuration; no live `.qa-z/**` runtime artifacts were generated for this docs slice.
+- Next safe slice: after PR merge closes #16, continue with the next public-launch docs/test closeout that can be proven without release approval, live model calls, bot comments, package publish, or generated runtime artifacts.
+
+
+## 2026-05-15 Enterprise Case Study Template
+- Repo: JustTyping
+- Lane: case studies -> adoption proof -> evidence boundaries
+- User-facing flow: case study draft -> before/after QA-Z evidence -> redaction and claims review -> publishable proof.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/case-studies.md` had seed ideas but no template that required before/after evidence, commands, non-goals, redaction, or claims boundaries.
+- Root cause: issue #27 needed a case-study template for adoption proof, and the seed page could encourage vague stories, unsupported customer claims, or accidental private-data exposure.
+- Change made: added an enterprise case study template, before/after evidence checklist, command template, artifact pointers, validation guidance, redaction guidance, fake-claim boundary, generated-artifact policy, and focused tests pinning those requirements.
+- Validation run: `python -m pytest tests/test_case_studies_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_case_studies_docs.py`; `python -m ruff format --check tests/test_case_studies_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the seed-only case-study page, then passed `5`; final validation covered launch docs index, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a deterministic template for publishing case studies without inventing adoption or customer claims.
+- User impact: contributors can prepare case studies with explicit before/after evidence, commands, non-goals, redaction, and generated-artifact boundaries.
+- Remaining blocker: real customer, adoption, usage, performance, revenue, or security-impact claims still require explicit approval and source evidence.
+- Next safe slice: after PR merge closes #27, continue with monthly benchmark report or hosted-demo proof surfaces that reuse the same evidence and claims-boundary pattern.
+
+
+## 2026-05-15 Hosted Demo Static Replay Plan
+- Repo: JustTyping
+- Lane: hosted demo -> static replay plan -> local evidence boundary
+- User-facing flow: hosted demo page -> static docs assets -> `examples/agent-auth-bug` local replay -> QA-Z artifacts.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/hosted-demo.md` stated the static/no-cloud direction but lacked the replay command spine and artifact list needed to recreate the demo.
+- Root cause: issue #24 needed a hosted demo plan that stays replayable locally without implying QA-Z Cloud, live-agent execution, or hidden backend state.
+- Change made: added a static page boundary, local replay commands, demo artifact list, checked-in asset list, docs-site integration, and focused tests.
+- Validation run: `python -m pytest tests/test_hosted_demo_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_launch_growth_package_covers_requested_surfaces -q`; `python -m pytest tests/test_launch_growth_package.py::test_demo_asciinema_asset_is_real_cast_shape -q`; `python -m pytest tests/test_launch_growth_package.py::test_readme_demo_visual_is_checked_in_and_public_safe -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_hosted_demo_docs.py`; `python -m ruff format --check tests/test_hosted_demo_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing hosted-demo command spine, artifact list, boundary language, and docs-site source linkage, then passed `4`; final validation covered launch growth asset checks, public text hygiene, Ruff check, Ruff format check, and diff whitespace check.
+- Gate delta: maintainers now have a static hosted-demo plan that points to local replay evidence instead of a hosted service.
+- User impact: users can understand the hosted demo as a static replay page, not QA-Z Cloud or live-agent execution.
+- Remaining blocker: actual public hosted site remains future scope until static-site tooling and domain decisions are made; no generated `.qa-z/**` runtime artifacts were committed.
+- Next safe slice: after PR merge closes #24, continue with monthly benchmark report or comparison/positioning docs that reuse the same evidence and no-fake-claims boundary.
+
+
+## 2026-05-15 Monthly Benchmark Report Evidence Slice
+- Repo: JustTyping
+- Lane: benchmark reporting -> fixture rows -> QA-Z evidence provenance
+- User-facing flow: monthly benchmark report -> fixture contract -> QA-Z run artifacts -> maintainer closeout.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/monthly-benchmark-report-template.md` listed high-level metrics but did not require row-level artifact pointers, fixture provenance, validation commands, claims boundaries, or generated-artifact stop rules.
+- Root cause: #23 needed a monthly report sample that ties benchmark rows to QA-Z run evidence without fabricating adoption, performance, user, security-impact, package, hosted-automation, or leaderboard claims.
+- Change made: added a report boundary, summary fields, fixture row template, artifact evidence list, fixture provenance, validation commands, claims boundary, generated-artifact policy, and benchmark overview linkage.
+- Validation run: `python -m pytest tests/test_monthly_benchmark_report_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_monthly_benchmark_report_docs.py`; `python -m ruff format --check tests/test_monthly_benchmark_report_docs.py`; `git diff --check`; optional `python -m pytest tests/test_public_docs_current_truth.py -q`; optional `python -m pytest tests/test_case_studies_docs.py -q`.
+- Evidence: the new focused docs guard first failed on the missing monthly report evidence sections and benchmark overview linkage, then passed `5`; launch docs index check passed `1`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed; optional public docs current-truth passed `16`; optional case-study docs passed `5`.
+- Gate delta: monthly benchmark reports now require fixture rows to point at `expected.json`, baseline/candidate QA-Z artifacts, verify artifacts, provenance, validation evidence, and generated-results policy.
+- User impact: maintainers can publish benchmark reports that point to deterministic QA-Z evidence without fabricating adoption, performance, user-impact, security-impact, package, hosted-automation, or leaderboard claims.
+- Remaining blocker: actual monthly reports still require real benchmark runs and explicit freeze decisions before committing generated outputs.
+- Next safe slice: after PR merge closes #23, continue with the next public proof surface that can be verified without live model calls, benchmark artifact commits, release approval, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Codex Repair Prompt Snippet Card Slice
+- Repo: JustTyping
+- Lane: Codex handoff -> copyable prompt snippet -> deterministic evidence boundary
+- User-facing flow: QA-Z repair prompt -> human-operated Codex handoff -> validation evidence.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/use-with-codex.md` described the Codex loop, but the compact copy-this prompt did not pin `.qa-z/runs/latest/repair/codex.md` as the default handoff path.
+- Root cause: #21 needed a copyable Codex prompt that preserves QA-Z artifacts as source of truth without implying live Codex API execution or LLM-only judgment.
+- Change made: added a copy-this-prompt-to-Codex snippet, clarified latest-run versus reproducible run paths, linked README to the deeper Codex guide, and pinned the evidence boundary with focused tests.
+- Validation run: `python -m pytest tests/test_codex_prompt_snippet_docs.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_codex_prompt_snippet_docs.py`; `python -m ruff format --check tests/test_codex_prompt_snippet_docs.py`; `git diff --check`; optional `python -m pytest tests/test_verify_workflow_docs.py -q`.
+- Evidence: the new focused docs guard first failed on the missing copy-this prompt, human-operated Codex boundary, and README guide link, then passed `3`; launch docs index check passed `1`; public docs current-truth passed `16`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed; optional verify workflow docs passed `5`.
+- Gate delta: Codex handoff guidance now points at latest QA-Z repair evidence while keeping deterministic artifacts as the source of truth.
+- User impact: users can hand Codex the right QA-Z repair artifact without turning QA-Z into a live Codex executor or LLM judge.
+- Remaining blocker: actual Codex edits and validation remain human-operated and outside QA-Z.
+- Next safe slice: after PR merge closes #21, continue with the next small public proof or handoff clarity issue that can be verified without live model calls, release approval, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Monorepo Quickstart Evidence Slice
+- Repo: JustTyping
+- Lane: quickstart -> monorepo profile -> mixed Python/TypeScript local gate
+- User-facing flow: repository onboarding -> monorepo init -> deterministic fast/deep/review/repair evidence.
+- Slice type: Docs / Contract / Evidence
+- Before: `qa-z init` supported the monorepo profile, but `docs/quickstart.md` did not show a mixed Python/TypeScript install and gate path.
+- Root cause: #15 needed current-truth docs for the existing monorepo profile without implying live-agent execution or cloud automation.
+- Change made: added monorepo quickstart commands, profile semantics, deterministic/local boundary, public roadmap linkage, and focused docs tests.
+- Validation run: `python -m pytest tests/test_monorepo_quickstart_docs.py -q`; `python -m pytest tests/test_init_options.py::test_init_with_profile_monorepo_uses_smart_selection -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_monorepo_quickstart_docs.py`; `python -m ruff format --check tests/test_monorepo_quickstart_docs.py`; `git diff --check`.
+- Evidence: the focused monorepo docs guard first failed on the missing mixed Python/TypeScript path, then passed after the quickstart and roadmap truth updates.
+- Gate delta: the documented onboarding path now matches the existing `monorepo` init profile and its smart fast selection behavior.
+- User impact: users can initialize mixed Python/TypeScript repositories without assuming live-agent execution or cloud automation.
+- Remaining blocker: real monorepo project adoption still depends on users mapping their concrete check commands into `qa-z.yaml`.
+- Next safe slice: continue with #18 positioning or #4 runnable Next.js demo after this PR merges, preserving deterministic/local boundaries and avoiding generated runtime artifacts.
+
+
+## 2026-05-15 Comparison Positioning Evidence Slice
+- Repo: JustTyping
+- Lane: comparison / positioning / model-agnostic merge evidence
+- User-facing flow: comparison page -> agent-tool fit -> deterministic merge evidence boundary.
+- Slice type: Docs / Contract / Evidence
+- Before: `docs/comparison.md` compared Codex, Claude Code, Cursor, Semgrep, test tools, and QA-Z, but it did not mention aider, OpenHands, or Goose, and the root README did not link to the deeper comparison surface.
+- Root cause: #18 needed the comparison page to frame QA-Z around popular coding agents without making QA-Z look like a coding-agent replacement or unsupported superiority claim.
+- Change made: expanded `docs/comparison.md` with role-based positioning for Codex, Claude Code, Cursor, aider, OpenHands, Goose, Semgrep, CI/test tools, human review, and QA-Z; added a concise README comparison link; added focused current-truth tests for agent mentions, model-agnostic merge evidence wording, non-goal boundaries, and README clutter protection.
+- Validation run: `python -m pytest tests/test_comparison_positioning_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_docs_index_and_readme_link_full_growth_package -q`; `python -m pytest tests/test_codex_prompt_snippet_docs.py tests/test_monorepo_quickstart_docs.py -q`; `python -m pytest tests/test_current_truth.py::test_readme_is_public_landing_page_linking_to_internal_anchors -q`; `python -m pytest -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_comparison_positioning_docs.py`; `python -m ruff format --check tests/test_comparison_positioning_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on missing aider/OpenHands/Goose, missing model-agnostic evidence and non-goal boundary text, and missing README comparison link, then passed `3`; the first remote CI run exposed the README line-budget guard at `232 <= 230`, so the link was folded into an existing paragraph without weakening the cap; public docs current-truth passed `16`; launch docs link check passed `1`; adjacent Codex/monorepo docs checks passed `7`; README line-budget guard passed `1`; full local pytest passed `1795`; public text hygiene passed; Ruff check and format passed; diff whitespace check passed.
+- Gate delta: comparison positioning is now pinned by focused tests instead of relying only on narrative docs.
+- User impact: users can understand QA-Z as a model-agnostic QA evidence layer around coding agents, not a competing agent, before they decide whether to use it with their own agent workflow.
+- Remaining blocker: detailed feature-by-feature claims about aider, OpenHands, Goose, or model quality still require official-source verification before expansion.
+- Next safe slice: after PR merge closes #18, continue with #4 runnable Next.js demo only if it can be built from deterministic local artifacts without live model calls, deploy, package publish, or bot comments.
+
+
+## 2026-05-15 Next.js Runnable Demo Slice
+- Repo: JustTyping
+- Lane: Next.js example -> runnable demo -> deterministic fast gate
+- User-facing flow: examples index -> Next.js demo -> local npm checks -> QA-Z plan/fast evidence.
+- Slice type: Docs / Contract / Evidence / Test
+- Before: `examples/nextjs-demo` was placeholder-only and the examples index, docs index, reports, and current-truth tests described it as non-runnable.
+- Root cause: #4 needed a small runnable Next.js project that shows QA-Z around a real TypeScript fast gate without implying hosted services, live agents, package publish, deploy, or executor automation.
+- Change made: added package files, TypeScript and ESLint config, a minimal Next.js `app/` surface, deterministic invoice-access source, Vitest coverage, QA-Z fast-check config, issue/spec inputs, README commands, examples/docs index updates, and focused current-truth tests.
+- Validation run: `npm install`; `npm run lint`; `npm run typecheck`; `npm test`; `python -m qa_z plan --path . --title "Protect Next.js invoice access" --issue issue.md --spec spec.md`; `python -m qa_z fast --path . --selection smart`; `python -m pytest tests/test_nextjs_demo_current_truth.py -q`; `python -m pytest tests/test_launch_growth_package.py::test_launch_growth_package_covers_requested_surfaces -q`; `python -m pytest tests/test_launch_growth_package.py::test_examples_index_links_visual_proof_and_labels_run_status -q`; `python -m pytest tests/test_examples.py::test_nextjs_demo_is_runnable_fast_gate tests/test_current_truth.py::test_readme_repository_map_marks_examples_as_runnable tests/test_current_truth.py::test_reports_record_nextjs_runnable_live_free_boundary_sync -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_nextjs_demo_current_truth.py`; `python -m ruff format --check tests/test_nextjs_demo_current_truth.py`; `git diff --check`.
+- Evidence: the new focused current-truth test first failed on missing package/config/source/test/docs surfaces, then passed `4`; local npm lint, typecheck, and Vitest passed with `3` tests; QA-Z plan generated the invoice-access contract and QA-Z fast passed after the Windows npm shim path was made deterministic through the local wrapper script; public docs and launch-growth guards passed after stale placeholder labels were updated.
+- Gate delta: the Next.js example now exercises `ts_lint`, `ts_type`, and `ts_test` through local npm scripts instead of remaining a placeholder.
+- User impact: users can try QA-Z on a small Next.js/TypeScript project and see deterministic fast evidence without starting a server or using networked services after dependencies are installed.
+- Generated cleanup: `node_modules`, `.qa-z/**`, generated `qa/contracts/**`, `.next`, coverage, and the incidental `package-lock.json` are not intended source artifacts and must be removed before staging.
+- Remaining blocker: broader Next.js app patterns still require project-specific `qa-z.yaml` mapping; `npm install` reported `2` moderate advisories from the resolved dependency tree, which were not auto-fixed to avoid unreviewed dependency churn.
+- Next safe slice: after PR merge closes #4, continue with the next runnable public proof surface that can be validated locally without live model calls, package publish, deploy, release, branch mutation, or bot comments.
+
+
+## 2026-05-15 v0.10.0-beta Readiness Audit Packet
+- Repo: JustTyping
+- Lane: release readiness / current-truth proof / package rehearsal boundary
+- User-facing flow: closed public issue backlog -> beta readiness decision -> release-owner action packet.
+- Slice type: Evidence / Contract / Cleanup
+- Before: open GitHub issue and PR backlog was empty after PR #59 merged #4, but there was no single report that mapped `v0.10.0-beta` goals to current release, package metadata, hosted-demo, docs, local validation, unavailable tools, generated cleanup, and approval blockers.
+- Root cause: release polish, hosted-demo path, and package-publish readiness were distributed across roadmap, launch docs, package-publish plan, release notes, and tests, so a maintainer could confuse local readiness evidence with actual release execution.
+- Change made: added `docs/reports/v0.10.0-beta-readiness.md`, added `tests/test_beta_readiness_docs.py`, and routed the new readiness packet through the worktree commit-plan current-truth batch so strict release staging stays clean.
+- Validation run: GitHub API open issue/PR checks; `gh release view v0.9.9-alpha --repo qazedhq/qa-z --json tagName,isPrerelease,isDraft,publishedAt,targetCommitish,url`; `python -m pytest tests/test_public_docs_current_truth.py tests/test_beta_readiness_docs.py -q`; `python -m pytest tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_beta_readiness_docs.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python -m pytest -q`; `python -m ruff check .`; `python -m ruff format --check .`; `python -m mypy src tests`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m qa_z --help`; `python -m qa_z doctor --help`; `python -m qa_z demo auth-bug --json`; `python -m qa_z benchmark --results-dir benchmarks/results-ci --json`; `python -m build --sdist --wheel`; `python scripts/alpha_release_artifact_smoke.py --json`; `python scripts/alpha_release_artifact_smoke.py --with-deps --json`; Next.js `npm install`, `npm run lint`, `npm run typecheck`, `npm test`, `python -m qa_z plan --path . --title "Protect Next.js invoice access" --issue issue.md --spec spec.md`, and `python -m qa_z fast --path . --selection smart`.
+- Evidence: GitHub API returned `0` open issues and `0` open PRs; issue #4 is closed/completed and PR #59 is merged; GitHub release `v0.9.9-alpha` is a published prerelease; focused docs tests passed `20`; focused commit-plan/readiness tests passed `8`; strict worktree plan passed with `status=ready`, `changed_batch_count=2`, and no generated/cross-cutting/unassigned blockers; full pytest passed `1804`; Ruff check and format passed after formatting the new test; mypy passed for `565` source files; public text hygiene passed; demo JSON returned `status=created`; benchmark passed `54/54`; build produced `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`; artifact smoke passed with and without dependency resolution; Next.js lint/typecheck/Vitest/QA-Z plan/fast passed.
+- Gate delta: `v0.10.0-beta` now has a non-executing readiness report that preserves `v0.9.9-alpha` versus planned beta, package metadata `0.9.8a0`, local-only package rehearsal evidence, unavailable package-smoke tools, generated-artifact cleanup, and human approval blockers.
+- User impact: a release owner can decide the next beta step without mistaking source/tag install docs, static hosted-demo plans, local wheel smoke, or closed issues for an actual beta release or registry publish.
+- Remaining blocker: no PyPI/TestPyPI/npm/GitHub Packages upload, tag, GitHub Release, deploy, push, bot comment, live model call, or GitHub settings mutation was performed; `twine`, `pipx`, and `uvx` were unavailable in this environment; Next.js `npm install` still reports `2` moderate advisories that need a separate dependency decision.
+- Next safe slice: clean generated artifacts, rerun strict worktree status, then ask the release owner whether the next packet should be a proof-branch CI/public-raw packet, a non-executing version-policy PR, or a credentialed registry rehearsal with `registry_upload_executed=false`.
+
+
+## 2026-05-15 v0.10.0-beta Release-owner Decision Packet
+- Repo: JustTyping
+- Lane: v0.10.0-beta readiness -> release-owner decision
+- User-facing flow: readiness report -> release-owner path choice -> release execution remains blocked.
+- Slice type: Evidence / Contract / Cleanup
+- Before: PR #60 merged the readiness report with release execution `NO-GO`, but the release owner still needed a separate decision packet that translated the report into path choices without executing tag, release, package upload, deploy, bot comment, settings mutation, or live model actions.
+- Root cause: readiness evidence, version state, package registry approval, unavailable `twine`/`pipx`/`uvx` smokes, and Next.js advisory risk could be mistaken for a release run unless the owner decision boundary was test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-release-decision.md` and `tests/test_beta_release_decision_docs.py`, preserving `v0.10.0-beta` as unreleased, current public alpha `v0.9.9-alpha`, package metadata `0.9.8a0`, blocked upload/tag/release/deploy commands, required approval fields, path options, rollback/yank policy, and explicit non-actions.
+- Validation run: `python -m pytest tests/test_beta_release_decision_docs.py -q`; `python -m pytest tests/test_beta_readiness_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_release_decision_docs.py scripts/worktree_commit_plan_support.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check tests/test_beta_release_decision_docs.py scripts/worktree_commit_plan_support.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `git diff --check`.
+- Evidence: focused decision-packet guard passed `5`; beta readiness docs passed `4`; public docs current truth passed `16`; commit-plan routing/current-truth pack passed `75`; strict worktree plan returned `status=ready`, `changed_batch_count=2`, `changed_path_count=6`, and zero generated, cross-cutting, unassigned, or report-path blockers; public text hygiene passed; Ruff check/format passed; diff whitespace passed.
+- Gate delta: release execution and release-owner decisioning are now separate tracked surfaces; upload/tag/release/deploy commands are documented only as blocked examples.
+- User impact: the release owner can choose no release, GitHub prerelease only, TestPyPI rehearsal only, TestPyPI publish, PyPI publish, or version metadata bump only without confusing readiness with release execution.
+- Remaining blocker: release-owner approval, registry credentials, `twine`/`pipx`/`uvx` smoke, Next.js moderate advisories, version policy, exact release SHA remote CI proof, public raw proof, and package registry rollback/yank policy remain blocked.
+- Next safe slice: after this decision packet merges, the owner should choose either no release yet, a no-upload package-smoke closeout in a provisioned environment, or a separate version-policy PR before any release execution packet.
+
+
+## 2026-05-16 Package Smoke Rehearsal Harness
+- Repo: JustTyping
+- Lane: package smoke rehearsal -> release blocker closeout
+- User-facing flow: build artifact -> artifact install smoke -> safe package rehearsal -> release-owner evidence.
+- Slice type: Evidence / Contract / Cleanup
+- Before: `twine`, `pipx`, and `uvx` package smokes were tracked as manual/not-run blockers, and package docs used a hardcoded `dist/qa_z-0.9.8a0-py3-none-any.whl` command path.
+- Root cause: release readiness needed a repeatable local-only harness that discovers the exact built artifact, records missing tools as `NOT RUN`, and keeps package upload/tag/release/deploy commands outside executable validation.
+- Change made: added `scripts/package_smoke_rehearsal.py` and support helpers, added fake-runner unit coverage, routed the new release helper through commit-plan validation, updated the package publish plan and v0.10.0-beta decision packet to use the harness, and kept `registry_upload_executed=false`.
+- Validation run: `python -m pytest tests/test_package_smoke_rehearsal.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py -q`; `python -m pytest tests/test_beta_readiness_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py -q`; `python -m pytest tests/test_alpha_release_truth_validator.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check` and `python -m ruff format --check` over the changed Python files; `git diff --check`; `python -m build --sdist --wheel`; `python scripts/alpha_release_artifact_smoke.py --with-deps --json`; `python scripts/package_smoke_rehearsal.py --json --allow-missing-tools`.
+- Evidence: package rehearsal tests passed `7`; release decision docs passed `5`; beta readiness docs passed `4`; public docs current-truth passed `16`; commit-plan routing tests passed `33`; alpha release truth validator passed `24`; strict worktree plan returned `status=ready`, `changed_path_count=13`, and zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, or product-decision blockers; text hygiene passed; Ruff check/format passed; diff whitespace passed; build produced `qa_z-0.9.8a0.tar.gz` and `qa_z-0.9.8a0-py3-none-any.whl`; artifact smoke passed for wheel and sdist with dependency resolution; package smoke rehearsal exited `0` with `twine_check`, `pipx_wheel_help`, and `uvx_wheel_help` recorded as `NOT RUN`; `registry_upload_executed=false`.
+- Gate delta: package smoke status is now machine-readable as `PASS`, `FAIL`, `NOT RUN`, or `BLOCKED`, and missing tool availability can no longer be mistaken for a pass.
+- User impact: release owners get repeatable package readiness evidence without global tool installs, hardcoded wheel drift, registry upload, tag creation, GitHub Release creation, deploy, bot comment, or live model behavior.
+- Generated cleanup: removed `build/`, `dist/`, `src/qa_z.egg-info/`, `.pytest_cache/`, and `.ruff_cache/` before staging.
+- Remaining blocker: `twine`, `pipx`, and `uvx` remain unavailable in this environment, so those smokes are still `NOT RUN`; release-owner approval, package credentials, version policy, exact release SHA proof, public raw proof, Next.js moderate advisories, and registry rollback/yank policy remain blocked.
+- Next safe slice: run the same harness in a provisioned release rehearsal environment where `twine`, `pipx`, and `uvx` are already available, still with `registry_upload_executed=false`, or split a separate version-policy PR if the release owner chooses metadata first.
+
+
+## 2026-05-16 Next.js Advisory Decision Evidence
+- Repo: JustTyping
+- Lane: Next.js demo dependency advisory -> release-owner decision
+- User-facing flow: Next.js demo install -> npm audit -> v0.10.0-beta blocker classification.
+- Slice type: Evidence / Contract / Cleanup
+- Before: the beta readiness and release decision packets recorded `2` moderate Next.js advisories, but did not name the exact advisory, resolved dependency versions, or why an automatic dependency fix would not close the blocker.
+- Root cause: `examples/nextjs-demo/package.json` has no checked-in lockfile; a current temporary install resolves `next@15.5.18`, and that package still declares `postcss@8.4.31` while `GHSA-qx2v-qp2m-jg93` / `CVE-2026-41305` is patched in PostCSS `8.5.10`.
+- Change made: updated the v0.10.0-beta readiness and release-owner decision packets to record the advisory ID, resolved Next.js/PostCSS versions, `postcss@latest`, `next@latest` still declaring `postcss@8.4.31`, and the explicit no-auto-fix/no-downgrade/no-override boundary; added focused docs tests.
+- Validation run: `npm install --package-lock-only --ignore-scripts --audit=false --fund=false` in a temporary directory outside the repo; `npm audit --json --omit=dev`; `npm view next@15.5.18 dependencies --json`; `npm view next@latest version dependencies --json`; `npm view postcss@latest version`; `python -m pytest tests/test_beta_readiness_docs.py tests/test_beta_release_decision_docs.py -q`; `git diff --check`.
+- Evidence: temporary audit reproduced `2` moderate advisories; requested `next@^15.0.0` resolved to `next@15.5.18`; resolved PostCSS was `8.4.31`; GitHub advisory patched version is `8.5.10`; `postcss@latest` was `8.5.14`; `next@latest` was `16.2.6` and still declared `postcss@8.4.31`; focused docs tests passed.
+- Gate delta: the Next.js advisory blocker is now classified as an upstream dependency decision rather than a local package-smoke or blind `npm audit fix` task.
+- User impact: release owners can see why release execution remains `NO-GO` without confusing a passing Next.js demo fast gate with dependency advisory closure.
+- Remaining blocker: the advisory is not locally closed; closing it requires a reviewed Next.js/PostCSS compatibility decision, an upstream Next.js package update, a release policy exception, or replacing/removing the Next.js dependency from the beta release scope.
+- Next safe slice: rerun the advisory audit after Next.js publishes a version that declares `postcss >=8.5.10`, or write a separate dependency decision PR that explicitly chooses defer/exception/remove without touching package publish, tag, release, deploy, or registry state.
+
+
+## 2026-05-16 v0.10.0-beta Version Policy
+- Repo: JustTyping
+- Lane: v0.10.0-beta release decision -> version policy
+- User-facing flow: release-owner decision packet -> version/tag/package metadata choice -> release execution remains blocked.
+- Slice type: Evidence / Contract
+- Before: the release decision packet existed and kept release execution `NO-GO`, but the version policy was still unresolved across `v0.9.9-alpha`, package metadata `0.9.8a0`, and planned `v0.10.0-beta`.
+- Root cause: release owners could confuse a GitHub prerelease tag, Python package metadata, TestPyPI/PyPI package versions, and future `pipx install qa-z` / `uv tool install qa-z` commands unless the choice matrix was separately documented and test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-version-policy.md`, linked it from the release decision packet and package publish plan, clarified future PyPI install commands, added focused current-truth tests, and routed the new report/test through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_version_policy_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_version_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `python -m ruff format --check tests/test_beta_version_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `git diff --check`.
+- Evidence: focused version policy tests cover the policy doc, unreleased beta state, current public alpha, current package metadata, `0.10.0b0` as candidate-only metadata, unchanged `pyproject.toml`, release decision linkage, future PyPI install wording, and approval-gated blocked actions.
+- Gate delta: version policy is now separated from release execution and from package publish mechanics.
+- User impact: release owners can choose no release, GitHub prerelease-only, TestPyPI rehearsal, TestPyPI publish, PyPI publish, or metadata-only PR without mistaking policy documentation for an actual release.
+- Remaining blocker: release-owner version choice, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js advisory decision, exact SHA proof, public raw proof, and rollback/yank policy remain blocked.
+- Next safe slice: run tool-equipped package smoke in a provisioned no-upload environment or open a separate approved metadata PR if the release owner chooses `0.10.0b0`.
+
+
+## 2026-05-16 Next.js/PostCSS Advisory Decision Packet
+- Repo: JustTyping
+- Lane: Next.js advisory blocker -> release-owner decision
+- User-facing flow: release-readiness docs -> advisory option packet -> release execution remains blocked.
+- Slice type: Evidence / Contract / Cleanup
+- Before: the Next.js/PostCSS advisory was documented as a release blocker, but release owners did not have a separate option packet that distinguished upstream fix, compatibility exception, replacement/removal, reviewed pin/change, explicit defer, and continued `NO-GO`.
+- Root cause: the advisory evidence could be confused with a dependency fix or release recommendation unless decision options, required proof, explicit non-actions, and remaining blockers were separately test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-nextjs-advisory-decision.md`, linked readiness/release-decision/version-policy reports, added focused docs tests, and routed the new packet through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_nextjs_advisory_decision_docs.py`; `python -m ruff format --check tests/test_nextjs_advisory_decision_docs.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing packet and links, then passed after the packet and report links were added.
+- Gate delta: the advisory remains unresolved, but the release owner now has proof requirements and release impact for each decision path.
+- User impact: maintainers can choose a safe advisory handling path without mistaking documentation for dependency remediation, package publish, version bump, tag, GitHub Release, deploy, bot comment, or live service action.
+- Remaining blocker: release-owner selected option, upstream/dependency proof, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, exact SHA proof, public raw proof, rollback/yank policy, and version policy remain blocked.
+- Next safe slice: after this packet merges, the release owner should choose explicit defer, compatibility exception, wait-for-upstream, dependency replacement/removal, or a reviewed dependency change PR before any release execution packet.
+
+
+## 2026-05-16 v0.10.0-beta Exact SHA Proof Packet
+- Repo: JustTyping
+- Lane: release readiness -> exact SHA proof
+- User-facing flow: release-owner decision -> exact candidate SHA -> remote CI/public raw evidence -> release execution remains blocked.
+- Slice type: Evidence / Contract
+- Before: readiness, release-decision, version-policy, package-smoke, and advisory packets existed, but the pre-packet PR #65 main baseline exact SHA, remote CI proof, public raw proof, and report linkage were not pinned in one packet.
+- Root cause: release owners could confuse release readiness docs with release execution unless exact SHA proof, workflow run IDs, raw-file accessibility, explicit non-actions, and remaining blockers were separated and test-pinned.
+- Change made: added `docs/reports/v0.10.0-beta-exact-sha-proof.md`, linked readiness/release-decision/version-policy/advisory reports, routed the new packet through commit-plan ownership, and added focused current-truth tests.
+- Validation run: `python -m pytest tests/test_beta_exact_sha_proof_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_exact_sha_proof_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `python -m ruff format --check tests/test_beta_exact_sha_proof_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py scripts/worktree_commit_plan_support.py`; `git diff --check`.
+- Evidence: the new focused docs/routing guard failed first on the missing proof packet, missing links, and missing commit-plan ownership, then passed after the proof report, links, and routing were added. Remote proof for `865efa12fccc1976d6d9bf2cddec89bca6610f67` recorded `CI` run `25959011641` and `Public Raw Hygiene` run `25959011658` as successful main-push runs. Public raw proof recorded HTTP `200` for README, `pyproject.toml`, beta release reports, package publish plan, and package smoke rehearsal script at the exact SHA.
+- Gate delta: exact candidate SHA proof is no longer an unrecorded blocker for the PR #65 main baseline, but it becomes historical after this proof PR merges or if `origin/main` otherwise moves and it does not authorize release execution.
+- User impact: release owners can review one exact-SHA proof packet without mistaking it for a tag, GitHub Release, package publish, deploy, version bump, bot comment, settings mutation, or live model action.
+- Remaining blocker: release-owner approval, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js/PostCSS advisory option and proof, post-merge exact SHA refresh, package registry rollback/yank policy, and package metadata/version policy remain blocked.
+- Next safe slice: after this proof PR merges, refresh exact SHA proof for the merge commit; otherwise run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record a release-owner advisory decision path before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Post-merge Exact SHA Proof Refresh
+- Repo: JustTyping
+- Lane: release readiness -> post-merge exact SHA proof
+- User-facing flow: PR #66 merge commit -> remote CI/public raw proof -> release execution remains blocked.
+- Slice type: Evidence / Contract
+- Before: PR #66's proof packet recorded exact-SHA proof for the PR #65 main baseline, which became historical after PR #66 merged.
+- Root cause: release owners could mistake historical PR #65 proof for current release-owner execution evidence unless the PR #66 merge SHA, remote workflow runs, public raw checks, non-actions, and remaining blockers were refreshed together.
+- Change made: refreshed `docs/reports/v0.10.0-beta-exact-sha-proof.md` to separate historical pre-packet proof from post-merge current proof for `7ec919b8ed255e623c7b684d296d8256d82d16ca`; updated readiness, release-decision, version-policy, and advisory packets to point at the current proof without unlocking release execution; updated focused docs tests.
+- Validation run: `python -m pytest tests/test_beta_exact_sha_proof_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_exact_sha_proof_docs.py`; `python -m ruff format --check tests/test_beta_exact_sha_proof_docs.py`; `git diff --check`.
+- Evidence: `origin/main` and remote `refs/heads/main` both pointed to `7ec919b8ed255e623c7b684d296d8256d82d16ca`; GitHub Actions reported `CI` run `25976157325` and `Public Raw Hygiene` run `25976157333` as successful main-push runs; exact-SHA public raw checks returned HTTP `200` for README, `pyproject.toml`, beta release reports, the exact-SHA proof report, and `scripts/package_smoke_rehearsal.py`; exact-SHA docs tests passed `7`; beta release/readiness/version/advisory docs tests passed `19`; public docs current-truth tests passed `16`; strict worktree plan returned `status=ready`, `changed_path_count=8`, and zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, or product-decision blockers; text hygiene, Ruff, and diff whitespace checks passed.
+- Gate delta: post-merge exact SHA refresh moved from blocker to recorded proof for the current `origin/main` SHA, while release execution remains `NO-GO`.
+- User impact: release owners can distinguish historical PR #65 proof from current PR #66 merge proof without mistaking it for tag creation, GitHub Release creation, package publish, deploy, version bump, bot comment, settings mutation, or live model action.
+- Remaining blocker: release-owner approval, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, Next.js/PostCSS advisory option and proof, package registry rollback/yank policy, and package metadata/version policy remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record a release-owner advisory decision path before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Final SHA Proof Protocol
+- Repo: JustTyping
+- Lane: release readiness -> final SHA proof protocol
+- User-facing flow: historical exact-SHA proof reports -> release-candidate SHA freeze -> final execution proof outside the PR-merge loop.
+- Slice type: Evidence / Contract / Cleanup
+- Before: exact SHA proof PRs recorded useful remote CI and public raw evidence, but each proof became historical after its PR merged and moved `main`.
+- Root cause: committing exact SHA proof to `main` changes the SHA being proven, so repeated proof-refresh PRs cannot produce final release-execution proof.
+- Change made: added `docs/reports/v0.10.0-beta-final-sha-proof-protocol.md`, updated the exact SHA proof report to mark PR-committed proof as historical, linked the protocol from beta release reports, added focused protocol tests, and routed the new protocol report/test through commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_final_sha_proof_protocol_docs.py -q`; `python -m pytest tests/test_beta_exact_sha_proof_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_final_sha_proof_protocol_docs.py`; `python -m ruff format --check tests/test_beta_final_sha_proof_protocol_docs.py`; `git diff --check`.
+- Evidence: focused protocol docs tests require the PR proof loop explanation, release-candidate SHA freeze timing, final proof fields, allowed storage locations, disallowed release actions, preserved blockers, and links from release reports. Existing exact SHA proof docs tests now require historical proof wording and the final protocol link.
+- Gate delta: repeated PR-based SHA refresh is no longer the recommended next action; final release proof stays blocked until release-candidate SHA freeze and release-owner execution review.
+- User impact: release owners can use historical proof reports without mistaking them for final proof, and operators have a protocol for where final SHA proof belongs.
+- Remaining blocker: release-owner approval, final release-execution-time SHA proof, tool-equipped `twine`/`pipx`/`uvx` smoke, Next.js/PostCSS advisory option and proof, registry credentials, package metadata/version execution decision, and package registry rollback/yank policy remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Release Execution Checklist
+- Repo: JustTyping
+- Lane: release readiness -> execution checklist
+- User-facing flow: distributed release-readiness packets -> single release-owner pre-execution checklist -> release execution remains blocked.
+- Slice type: Evidence / Contract / Cleanup
+- Before: readiness, release-decision, version-policy, advisory, exact-SHA, final-SHA protocol, and package-publish documents existed, but the execution gates and approval fields were distributed across reports.
+- Root cause: release owners could confuse historical proof, advisory decisions, version policy, package smoke, credentials, and rollback/yank policy without one checklist that fixes order, status vocabulary, and explicit non-actions.
+- Change made: added `docs/reports/v0.10.0-beta-release-execution-checklist.md`, linked it from existing beta release reports, added focused docs tests, and routed the new report/test through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_release_execution_checklist_docs.py -q`; `python -m pytest tests/test_beta_final_sha_proof_protocol_docs.py tests/test_beta_exact_sha_proof_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_release_execution_checklist_docs.py`; `python -m ruff format --check tests/test_beta_release_execution_checklist_docs.py`; `python -m ruff check scripts/worktree_commit_plan_support.py tests/test_beta_release_execution_checklist_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check scripts/worktree_commit_plan_support.py tests/test_beta_release_execution_checklist_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `git diff --check`.
+- Evidence: the new focused checklist test first failed on the missing checklist and report links, then passed after the checklist and links were added; focused checklist tests passed `6`; beta final-SHA/exact-SHA tests passed `14`; beta release/readiness/version/advisory tests passed `19`; public docs current-truth tests passed `16`; commit-plan routing/current-truth tests passed `75`; strict worktree plan returned `status=ready`, `changed_path_count=11`, zero generated artifacts, zero cross-cutting paths, zero report-path blockers, and zero unassigned source paths; text hygiene passed; Ruff check/format passed; diff whitespace passed.
+- Gate delta: release execution now has one non-executing checklist with `PASS`, `FAIL`, `BLOCKED`, `NOT RUN`, `NO-GO`, `APPROVED`, and `NOT APPROVED` definitions plus current blocker statuses.
+- User impact: the release owner can review approval fields, proof links, final SHA freeze requirements, package publish boundaries, advisory/version/smoke/credential/rollback blockers, and explicit no-release actions from one document.
+- Remaining blocker: release-owner approval, final execution-time proof, tool-equipped twine/pipx/uvx smoke, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, and rollback/yank policy remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Rollback/Yank Policy
+- Repo: JustTyping
+- Lane: release readiness -> rollback/yank policy
+- User-facing flow: release execution checklist -> release-path rollback/yank policy packet -> release execution remains blocked.
+- Slice type: Evidence / Contract / Cleanup
+- Before: rollback/yank policy was a release blocker in the checklist and package publish plan, but it was not a separate policy packet with registry/release-path-specific decision fields.
+- Root cause: release owners could confuse local git rollback or local artifact deletion with registry-owned package yank/delete/deprecate, GitHub Release/tag deletion, or deploy rollback behavior.
+- Change made: added `docs/reports/v0.10.0-beta-rollback-yank-policy.md`, linked it from the release execution checklist, release decision, version policy, and package publish plan, added focused docs tests, and routed the new report/test through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_rollback_yank_policy_docs.py -q`; `python -m pytest tests/test_beta_release_execution_checklist_docs.py -q`; `python -m pytest tests/test_beta_release_decision_docs.py tests/test_beta_readiness_docs.py tests/test_beta_version_policy_docs.py tests/test_nextjs_advisory_decision_docs.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_rollback_yank_policy_docs.py`; `python -m ruff format --check tests/test_beta_rollback_yank_policy_docs.py`; `python -m ruff check scripts/worktree_commit_plan_support.py tests/test_beta_rollback_yank_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check scripts/worktree_commit_plan_support.py tests/test_beta_rollback_yank_policy_docs.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `git diff --check`.
+- Evidence: the new focused docs guard first failed on the missing policy packet and links, then passed after the policy report and links were added. The policy packet records official source pointers for PyPI/TestPyPI yanking, npm unpublish/deprecate, GitHub Release deletion, Git tag reference deletion, GitHub Packages delete/restore, and deploy-platform policy checks while keeping every registry action blocked.
+- Gate delta: rollback/yank policy is now documented as a separate policy-only packet, but it remains `BLOCKED` until release-owner approval, selected registry/release path, official policy verification, and execution-time proof.
+- User impact: release owners can compare GitHub prerelease/tag, TestPyPI, PyPI, npm, GitHub Packages, hosted deploy, no-release, and metadata-only paths without mistaking the packet for a release, package publish, yank, delete, deploy, or version bump.
+- Remaining blocker: release-owner selected registry/release path, official policy verification at execution time, actual rollback/yank proof, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, version execution decision, advisory option/proof, and final release-execution-time SHA proof remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta No-release Decision Packet
+- Repo: JustTyping
+- Lane: release readiness -> no-release decision
+- User-facing flow: release execution checklist -> release-owner no-release decision -> deferred blockers remain visible.
+- Slice type: Evidence / Contract / Cleanup
+- Before: a stale dirty local `main` checkout contained an untrusted draft no-release packet, while `origin/main` already included PR #70 rollback/yank policy at `62224680e7433604f6a150f0c157833ad9ea3173`.
+- Root cause: copying or committing from the stale dirty checkout risked overwriting newer release docs and treating local draft artifacts as PR evidence.
+- Change made: created the no-release decision packet from a clean `origin/main` worktree, linked it from the latest release execution checklist and release decision report, added focused docs tests, and routed the new packet through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_no_release_decision_docs.py -q`; `python -m pytest tests/test_beta_no_release_decision_docs.py tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_beta_release_execution_checklist_docs.py tests/test_beta_release_decision_docs.py -q`; `python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_no_release_decision_docs.py`; `python -m ruff format --check tests/test_beta_no_release_decision_docs.py`; `python -m ruff check tests/test_beta_no_release_decision_docs.py scripts/worktree_commit_plan_support.py`; `python -m ruff format --check tests/test_beta_no_release_decision_docs.py scripts/worktree_commit_plan_support.py`; `python -m qa_z --help`; `git diff --check`.
+- Evidence: the focused no-release docs guard first failed on the missing packet and missing links, then passed after the packet and links were added. Focused no-release tests passed `4`; no-release plus public current-truth tests passed `20`; release checklist and release decision docs tests passed `11`; commit-plan routing/current-truth tests passed `75`; strict worktree plan returned `status=ready`, `changed_path_count=6`, zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, product-decision, attention, or deferred-alpha blockers, and one approved-alpha support path for this ledger append; text hygiene passed; Ruff check/format passed; QA-Z help rendered; diff whitespace passed.
+- Gate delta: `v0.10.0-beta` now has an explicit `No release yet` decision packet, but release execution remains `NO-GO` and blockers are deferred rather than resolved.
+- User impact: release owners can distinguish a deliberate no-release decision from release approval, package publish, tag creation, GitHub Release creation, deploy, version bump, bot comment, settings mutation, or live model action.
+- Remaining blocker: release-owner selected registry/release path, official policy verification at execution time, actual rollback/yank proof, tool-equipped `twine`/`pipx`/`uvx` smoke, registry credentials, version execution decision, advisory option/proof, and final release-execution-time SHA proof remain blocked.
+- Next safe slice: run no-upload package smoke in a provisioned environment with `twine`, `pipx`, and `uvx`, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Tool-smoke Preflight Packet
+- Repo: JustTyping
+- Lane: release readiness -> tool-equipped package-smoke preflight
+- User-facing flow: no-release decision -> clean origin/main worktree -> tool/credential preflight -> release smoke remains honestly blocked.
+- Slice type: Evidence / Contract
+- Before: the no-release decision correctly kept tool-equipped `twine`/`pipx`/`uvx` smoke as `NOT RUN`, but there was no fresh clean-worktree packet showing whether the current environment could run no-upload package smoke.
+- Root cause: release owners could not distinguish a ready no-upload smoke environment from a missing-tool environment without a preflight packet that also checked credential contamination and preserved release non-actions.
+- Change made: created `docs/reports/v0.10.0-beta-tool-smoke-preflight.md`, linked it from the no-release decision, execution checklist, and release decision packet, added focused docs tests, and routed the new report/test through worktree commit-plan ownership.
+- Validation run: `python -m pytest tests/test_beta_tool_smoke_preflight_docs.py -q`; `python -m pytest tests/test_beta_no_release_decision_docs.py tests/test_beta_release_execution_checklist_docs.py tests/test_beta_release_decision_docs.py -q`; `python -m pytest tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_beta_tool_smoke_preflight_docs.py scripts/worktree_commit_plan_support.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `python -m ruff format --check tests/test_beta_tool_smoke_preflight_docs.py scripts/worktree_commit_plan_support.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py`; `git diff --check`.
+- Evidence: clean worktree `F:\JustTyping\.worktrees\v010-beta-tool-smoke-preflight` on branch `codex/v010-beta-tool-smoke-preflight` at `origin/main` SHA `bc1cef8b2a38a1099f92bad52a6db11bf34640f2`; `python -m twine --version` failed with no `twine` module; `pipx --version` and `uvx --version` were not recognized; package-publish credential env indicators returned `NO_PACKAGE_PUBLISH_CREDENTIAL_ENV_FOUND`; `.pypirc` returned `PYPIRC_ABSENT`; focused preflight docs tests passed `7`; linked beta docs tests passed `15`; commit-plan routing tests passed `5`; public docs current-truth tests passed `16`; strict worktree plan returned `status=ready`, `changed_path_count=8`, zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, product-decision, or attention blockers; text hygiene, Ruff, and diff whitespace checks passed; `.pytest_cache` and `.ruff_cache` were removed.
+- Gate delta: current environment is now explicitly `BLOCKED_TOOL_MISSING`; no-upload package smoke remains `NOT RUN`, and `registry_upload_executed=false` remains true.
+- User impact: release owners can see that this clean environment is not eligible for tool-equipped no-upload package smoke until `twine`, `pipx`, and `uvx` are already provisioned, without confusing missing tools with a passing smoke.
+- Remaining blocker: tool-equipped `twine`/`pipx`/`uvx` smoke, release-owner approval, registry credentials, advisory option/proof, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
+- Next safe slice: re-run the same preflight in a clean environment where `twine`, `pipx`, and `uvx` are already available, or record the release-owner advisory decision before any release execution packet.
+
+
+## 2026-05-17 v0.10.0-beta Tool-smoke Execution
+- Repo: JustTyping
+- Lane: release readiness -> no-upload package smoke
+- User-facing flow: package build -> package-smoke rehearsal -> release-owner blocker matrix.
+- Slice type: Evidence
+- Before: PR #72 correctly recorded this workstation's clean base environment as `BLOCKED_TOOL_MISSING`, so `twine`, `pipx`, and `uvx` package smokes remained `NOT RUN`.
+- Root cause: the base environment lacked release smoke tools; actual blocker reduction needed a tool-equipped no-upload environment while preserving the no-upload and no-release boundaries.
+- Change made: created `docs/reports/v0.10.0-beta-tool-smoke-execution.md`, updated release decision/checklist/readiness/version/exact-SHA/advisory/rollback truth surfaces, and kept the earlier preflight packet as historical missing-tool evidence.
+- Validation run: `python -m build --sdist --wheel --outdir <temp-dist>`; `python scripts/package_smoke_rehearsal.py --wheel <temp-wheel> --sdist <temp-sdist> --json`; focused release-truth docs tests.
+- Evidence: temporary artifacts were `qa_z-0.9.8a0-py3-none-any.whl` and `qa_z-0.9.8a0.tar.gz`; `scripts/package_smoke_rehearsal.py` returned `package smoke rehearsal passed`, `exit_code=0`, `twine_check=PASS`, `pipx_wheel_help=PASS`, `uvx_wheel_help=PASS`, and `registry_upload_executed=false`.
+- Gate delta: tool-equipped no-upload package smoke is now `PASS` local evidence. Release execution remains `NO-GO`; no tag, GitHub Release, package upload, deploy, version bump, registry credential use, or bot comment was performed.
+- User impact: release owners can stop treating tool-smoke availability as unresolved and focus on approval, advisory, credentials, version, final SHA proof, and rollback/yank decisions.
+- Remaining blocker: release-owner approval and selected release path, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
+- Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.
+
+
+## 2026-05-17 Historical Alpha Proof Packet Validator Stabilization
+- Repo: JustTyping
+- Lane: release truth -> historical proof validation
+- User-facing flow: proof packet -> `alpha_release_truth_validator --proof-head-from-packet` -> strict worktree plan.
+- Slice type: Contract
+- Before: `--proof-head-from-packet` read the packet proof SHA but still defaulted branch, `origin/main`, and ahead-count facts from the current worktree, so a later merge or branch-specific worktree could make a truthful historical packet fail validation.
+- Root cause: packet mode was only partially historical; it treated proof head as packet-owned but treated the rest of the proof facts as live git state unless every value was manually overridden.
+- Change made: added packet fact extraction for source HEAD, branch, remote `main`, and ahead count; packet mode now uses those historical values by default while preserving explicit CLI overrides and still reporting the current local HEAD separately.
+- Validation run: `python -m pytest tests/test_alpha_release_truth_validator.py -q`; `python scripts/alpha_release_truth_validator.py --proof-head-from-packet --json --output .qa-z/tmp/alpha-release-truth-validator-tool-smoke.json`; `python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting`; `python scripts/alpha_release_gate.py --allow-dirty --json`; `python -m ruff check scripts/alpha_release_truth_validator.py tests/test_alpha_release_truth_validator.py`; `python -m ruff format --check scripts/alpha_release_truth_validator.py tests/test_alpha_release_truth_validator.py`.
+- Evidence: the focused validator pack passed `26`; the live historical packet validator passed `20/20` and reported packet facts `head=1ede65172f770c66159b2cc5e9e7d4f2063bf634`, `branch=main`, `origin_main=b9a2504ad07d15776eb900f07d6ee83f22ef9076`, `ahead_count=1`, and current local HEAD `b63d1f43f6a194e2c9302238a7557760e5cc492b`; strict worktree plan returned `status=ready`, `changed_path_count=27`, and zero generated, cross-cutting, report-path, shared patch-add, multi-batch, unassigned, product-decision, or attention blockers; full alpha release gate passed `33/33`, including `1869` pytest tests, Ruff, mypy, QA-Z fast/deep/benchmark, build, and artifact smoke.
+- Gate delta: historical alpha packet validation is stable across current branch/origin drift again. This does not approve release execution, package upload, tag creation, GitHub Release creation, deploy, version bump, bot comment, or credential use.
+- User impact: operators can run the commit-safe validator after later worktree or main movement without rewriting historical proof packets just to match live git state.
+- Remaining blocker: release-owner approval and selected release path, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
+- Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.

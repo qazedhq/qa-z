@@ -17,7 +17,7 @@ qa-z deep --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
-Expected: `py_test` fails because a non-owner can read another user's invoice. Semgrep flags the risky `return user_id is not None` flow.
+Expected: `py_test` fails because a non-owner can read another user's invoice. Semgrep reports 2 findings: the risky `return user_id is not None` flow and the broader helper shape that rejects anonymous users without returning a `user_id == invoice.owner_id` owner check. QA-Z writes local evidence under `.qa-z/runs/baseline`. Do not commit generated `.qa-z` runtime evidence.
 
 ## Candidate
 
@@ -38,3 +38,17 @@ qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candid
 ```
 
 The demo does not call live agents or mutate branches.
+
+## Evidence checklist
+
+After running the baseline and candidate commands, inspect:
+
+- `.qa-z/runs/baseline/fast/summary.json`
+- `.qa-z/runs/baseline/deep/summary.json`
+- `.qa-z/runs/baseline/repair/codex.md`
+- `.qa-z/runs/candidate/verify/summary.json`
+- `.qa-z/runs/candidate/verify/report.md`
+
+Expected: baseline fails, candidate passes, and verification reports `improved`.
+
+Generated `.qa-z/**` files are local runtime evidence. Do not commit generated `.qa-z` runtime evidence.

@@ -59,3 +59,66 @@ def test_commit_plan_routes_github_community_templates_to_current_truth_batch() 
     assert result["unassigned_source_paths"] == []
     assert result["cross_cutting_paths"] == []
     assert result["status"] == "ready"
+
+
+def test_commit_plan_routes_beta_readiness_packet_to_current_truth_batch() -> None:
+    module = load_plan_module()
+
+    result = module.analyze_status_lines(
+        [
+            "?? docs/reports/v0.10.0-beta-readiness.md",
+            "?? tests/test_beta_readiness_docs.py",
+            "?? docs/reports/v0.10.0-beta-release-decision.md",
+            "?? tests/test_beta_release_decision_docs.py",
+            "?? docs/reports/v0.10.0-beta-version-policy.md",
+            "?? tests/test_beta_version_policy_docs.py",
+            "?? docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
+            "?? tests/test_nextjs_advisory_decision_docs.py",
+            "?? docs/reports/v0.10.0-beta-exact-sha-proof.md",
+            "?? tests/test_beta_exact_sha_proof_docs.py",
+            "?? docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
+            "?? tests/test_beta_final_sha_proof_protocol_docs.py",
+            "?? docs/reports/v0.10.0-beta-release-execution-checklist.md",
+            "?? tests/test_beta_release_execution_checklist_docs.py",
+            "?? docs/reports/v0.10.0-beta-rollback-yank-policy.md",
+            "?? tests/test_beta_rollback_yank_policy_docs.py",
+            "?? docs/reports/v0.10.0-beta-no-release-decision.md",
+            "?? tests/test_beta_no_release_decision_docs.py",
+            "?? docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
+            "?? tests/test_beta_tool_smoke_preflight_docs.py",
+            "?? docs/reports/v0.10.0-beta-tool-smoke-execution.md",
+            "?? tests/test_beta_tool_smoke_execution_docs.py",
+        ],
+        fail_on_cross_cutting=True,
+    )
+    batches = {batch["id"]: batch for batch in result["batches"]}
+
+    assert batches["current_truth_release_surface"]["changed_paths"] == [
+        "docs/reports/v0.10.0-beta-readiness.md",
+        "tests/test_beta_readiness_docs.py",
+        "docs/reports/v0.10.0-beta-release-decision.md",
+        "tests/test_beta_release_decision_docs.py",
+        "docs/reports/v0.10.0-beta-version-policy.md",
+        "tests/test_beta_version_policy_docs.py",
+        "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md",
+        "tests/test_nextjs_advisory_decision_docs.py",
+        "docs/reports/v0.10.0-beta-exact-sha-proof.md",
+        "tests/test_beta_exact_sha_proof_docs.py",
+        "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md",
+        "tests/test_beta_final_sha_proof_protocol_docs.py",
+        "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+        "tests/test_beta_release_execution_checklist_docs.py",
+        "docs/reports/v0.10.0-beta-rollback-yank-policy.md",
+        "tests/test_beta_rollback_yank_policy_docs.py",
+        "docs/reports/v0.10.0-beta-no-release-decision.md",
+        "tests/test_beta_no_release_decision_docs.py",
+        "docs/reports/v0.10.0-beta-tool-smoke-preflight.md",
+        "tests/test_beta_tool_smoke_preflight_docs.py",
+        "docs/reports/v0.10.0-beta-tool-smoke-execution.md",
+        "tests/test_beta_tool_smoke_execution_docs.py",
+    ]
+    assert result["report_paths"] == []
+    assert result["shared_patch_add_paths"] == []
+    assert result["unassigned_source_paths"] == []
+    assert result["cross_cutting_paths"] == []
+    assert result["status"] == "ready"

@@ -1,15 +1,48 @@
 # Next.js Demo
 
-This is a placeholder-only directory for a future Next.js repository example.
+This is a runnable, minimal Next.js and TypeScript fast-gate demo for QA-Z.
 
-This directory is not wired as a runnable demo yet and is not a runnable Next.js project. It does not include `package.json`, does not include `qa-z.yaml`, does not call live agents, and does not run `executor-bridge` or `executor-result`. For the landed TypeScript fast-check flow, use `examples/typescript-demo`.
+The demo keeps the app small: `app/page.tsx` renders static invoice access
+copy, while `src/invoice-access.ts` holds the deterministic logic covered by
+Vitest. Tests do not start a browser, call the network, use hosted services, or
+call external APIs.
 
-Current QA-Z alpha support that a future Next.js demo should reuse:
+## Run The Local Checks
 
-- `qa-z plan` for issue, spec, and diff-backed contracts
-- `qa-z fast` for ESLint, `tsc --noEmit`, and Vitest-style deterministic checks
-- `qa-z deep` for configured Semgrep-backed findings, not TypeScript-specific deep automation
-- `qa-z review`, `qa-z repair-prompt`, `qa-z repair-session`, and `qa-z verify` for artifact-driven repair loops
+```bash
+npm install
+npm run lint
+npm run typecheck
+npm test
+```
 
-Keep this placeholder honest until the example contains its own package files,
-QA-Z config, source, tests, and deterministic expected commands.
+## Run QA-Z
+
+```bash
+python -m qa_z plan --path . --title "Protect Next.js invoice access" --issue issue.md --spec spec.md
+python -m qa_z fast --path . --selection smart
+```
+
+The `qa-z.yaml` file wires the deterministic TypeScript fast gate:
+
+- `ts_lint` with `npm run lint`
+- `ts_type` with `npm run typecheck`
+- `ts_test` with `npm test`
+
+QA-Z invokes those same package scripts through `scripts/npm-run.mjs` so the
+configured subprocess works on Windows and POSIX shells.
+
+Expected QA-Z runtime artifacts are local:
+
+- `.qa-z/runs/latest`
+- `.qa-z/runs/latest/fast/summary.json`
+- review or repair artifacts only when you run the corresponding QA-Z commands
+
+Generated `.qa-z/**` evidence remains local and must not be committed.
+Generated `qa/contracts/**`, `node_modules/**`, `.next/**`, and coverage output
+also stay out of source control unless a future fixture intentionally freezes a
+small artifact with explicit review context.
+
+## Boundaries
+
+This demo has no live agents, no hosted services, no package publish, no executor-bridge/result behavior, no tag/release/deploy path, and no bot-comment automation. It does not claim broad Next.js-specific deep automation; deep checks remain empty unless a future deterministic local rule is added and tested.

@@ -1,0 +1,51 @@
+project:
+  name: qa-z-nextjs-demo
+  languages:
+    - typescript
+  roots:
+    - app
+    - src
+    - tests
+
+contracts:
+  output_dir: qa/contracts
+
+fast:
+  output_dir: .qa-z/runs
+  strict_no_tests: false
+  fail_on_missing_tool: true
+  selection:
+    default_mode: smart
+    full_run_threshold: 20
+    high_risk_paths:
+      - package.json
+      - package-lock.json
+      - pnpm-lock.yaml
+      - yarn.lock
+      - tsconfig.json
+      - vitest.config.ts
+      - vitest.config.js
+      - next.config.ts
+      - next.config.js
+      - next.config.mjs
+      - eslint.config.js
+      - eslint.config.mjs
+  checks:
+    - id: ts_lint
+      enabled: true
+      run: ["node", "scripts/npm-run.mjs", "lint"]
+      kind: lint
+
+    - id: ts_type
+      enabled: true
+      run: ["node", "scripts/npm-run.mjs", "typecheck"]
+      kind: typecheck
+
+    - id: ts_test
+      enabled: true
+      run: ["node", "scripts/npm-run.mjs", "test"]
+      kind: test
+      no_tests: warn
+
+deep:
+  checks: []

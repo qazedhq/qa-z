@@ -6,3 +6,31 @@ rules:
       - python
     pattern: |
       return $USER is not None
+  - id: qa-z.fastapi-auth-bypass-missing-owner-check
+    message: FastAPI authorization accepts an invoice but never checks user_id against invoice.owner_id.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: |
+          def $FUNC($USER, $INVOICE, ...):
+              ...
+              if $USER is None:
+                  return False
+              ...
+      - metavariable-regex:
+          metavariable: $USER
+          regex: ^user_id$
+      - metavariable-regex:
+          metavariable: $INVOICE
+          regex: ^invoice$
+      - pattern-not: |
+          def $FUNC($USER, $INVOICE, ...):
+              ...
+              return $USER == $INVOICE.owner_id
+              ...
+      - pattern-not: |
+          def $FUNC($USER, $INVOICE, ...):
+              ...
+              return $INVOICE.owner_id == $USER
+              ...

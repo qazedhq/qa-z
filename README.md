@@ -64,7 +64,7 @@ python -m pip install semgrep
 
 ## Why QA-Z?
 
-AI-generated code often arrives with a confident summary and scattered evidence. QA-Z answers the merge question directly:
+AI-generated code often arrives with a confident summary and scattered evidence. QA-Z answers the merge question directly; see [Comparison](docs/comparison.md) for where it fits around Codex, Claude Code, Cursor, aider, OpenHands, Goose, Semgrep, CI tools, and human review.
 
 > Is this AI-generated change safe to merge? If not, what should the agent fix next? After repair, did it actually improve?
 
@@ -165,12 +165,12 @@ jobs:
 ```
 
 See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
-
 ## Agent QA Playbook
 
 - [Agent QA Playbook](docs/agent-qa-playbook.md)
 - [AI Code Merge Checklist](docs/ai-code-merge-checklist.md)
 - [Bad AI Code Examples](docs/bad-ai-code-examples.md)
+- [Use with Codex](docs/use-with-codex.md)
 - [Codex Repair Recipes](docs/codex-repair-recipes.md)
 - [Claude Code Repair Recipes](docs/claude-code-repair-recipes.md)
 - [Cursor Safety Rules](docs/cursor-safety-rules.md)

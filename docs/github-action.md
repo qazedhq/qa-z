@@ -31,6 +31,43 @@ The `profile` input records the intended starter profile for examples and valida
 
 The composite action validates `qa-z doctor --json`, runs the guard verdict step, then preserves the summary, optional SARIF, and QA-Z run artifacts with `always()` cleanup steps.
 
+## Job Summary And Artifact Pointers
+
+The composite action writes QA-Z reviewer output to the GitHub Actions Job Summary.
+
+The summary source is:
+
+```text
+.qa-z/runs/latest/guard/github-summary.md
+```
+
+If that file is not available, the action falls back to:
+
+```text
+.qa-z/runs/latest/guard/verdict.md
+```
+
+The uploaded artifact is:
+
+```text
+qa-z-runs
+```
+
+and it contains the local run evidence under:
+
+```text
+.qa-z/runs/latest
+```
+
+Reviewers should follow the Job Summary first, then inspect uploaded artifacts
+when they need the machine-readable evidence behind the verdict.
+
+The job summary is a deterministic review surface. It is produced from QA-Z run
+artifacts and does not rely on live model execution, bot comments, package
+publishing, commits, pushes, tags, releases, or deployments.
+
+See `docs/assets/github-actions-summary-capture.md` for a sanitized capture.
+
 SARIF upload is disabled by default because code scanning permissions can be repository-specific.
 
 To upload SARIF, add `security-events: write` and set `upload-sarif: "true"`:
@@ -47,5 +84,7 @@ steps:
     with:
       upload-sarif: "true"
 ```
+
+For a walkthrough of where uploaded SARIF appears in GitHub code scanning, see `docs/walkthroughs/sarif-code-scanning.md`.
 
 The action does not comment on pull requests, commit, push, or require write permissions by default.

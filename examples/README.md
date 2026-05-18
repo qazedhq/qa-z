@@ -9,7 +9,7 @@ Start here:
 | [typescript-agent-bug](typescript-agent-bug/) | Runnable | TypeScript agent bug caught by local checks and a Semgrep rule |
 | [typescript-demo](typescript-demo/) | Runnable | ESLint, `tsc --noEmit`, and Vitest fast gate |
 | [fastapi-demo](fastapi-demo/) | Runnable | Passing fast/review flow and intentional failing repair-prompt flow |
-| [nextjs-demo](nextjs-demo/) | Placeholder-only | Planned future Next.js workflow boundary |
+| [nextjs-demo](nextjs-demo/) | Runnable | Next.js and TypeScript fast gate with ESLint, `tsc --noEmit`, and Vitest |
 
 ## Visual proof
 
@@ -18,7 +18,7 @@ Start here:
 - README launch proof: [qa-z-demo.cast](../docs/assets/qa-z-demo.cast)
 - Agent auth bug proof: [qa-z-agent-auth-bug.cast](../docs/assets/qa-z-agent-auth-bug.cast)
 - The agent-auth-bug cast shows `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`.
-- Runnable examples are labeled `Runnable`; placeholder examples stay labeled `Placeholder-only` until they include their own config, source, tests, and deterministic commands.
+- Runnable examples are labeled `Runnable` once they include their own config, source, tests, and deterministic commands.
 
 ## Agent Auth Bug
 
@@ -71,6 +71,24 @@ python -m qa_z fast --path . --selection smart
 
 This demo wires ESLint, TypeScript type checking, and Vitest through `qa-z.yaml`.
 
+## Next.js Fast Gate
+
+From `examples/nextjs-demo/`:
+
+```bash
+npm install
+npm run lint
+npm run typecheck
+npm test
+python -m qa_z plan --path . --title "Protect Next.js invoice access" --issue issue.md --spec spec.md
+python -m qa_z fast --path . --selection smart
+```
+
+This demo wires a minimal Next.js app, TypeScript invoice-access logic, ESLint,
+`tsc --noEmit`, and Vitest through `qa-z.yaml`. Generated `.qa-z/**`,
+`qa/contracts/**`, `node_modules/**`, `.next/**`, and coverage output stay
+local.
+
 ## FastAPI Repair Flow
 
 From `examples/fastapi-demo/`:
@@ -92,7 +110,3 @@ python -m qa_z repair-prompt --path . --from-run .qa-z/runs/fail
 ```
 
 The failing run is expected. It exists to show deterministic repair evidence, not a broken demo.
-
-## Next.js Placeholder
-
-`examples/nextjs-demo/` is intentionally not runnable yet. It stays labeled as a placeholder until it contains its own package files, QA-Z config, source, tests, and deterministic expected commands.
