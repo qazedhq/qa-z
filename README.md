@@ -8,9 +8,9 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 [![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha)
 
-AI agents write code fast. QA-Z turns their changes into deterministic merge evidence: contracts, checks, repair prompts, and verification reports.
+AI agents write code fast. QA-Z tells you whether their changes are safe to merge by turning agent diffs into deterministic merge evidence: contracts, fast/deep checks, repair prompts, and verification reports.
 
-See QA-Z catch a risky agent auth change before merge.
+Run the auth-bug demo from the GitHub source install to watch QA-Z catch a risky agent auth change before merge:
 
 ![QA-Z terminal demo](docs/assets/qa-z-demo.svg)
 
@@ -18,12 +18,12 @@ This is a deterministic terminal cast proof, not a GIF. The checked-in sources a
 
 ```bash
 pipx install git+https://github.com/qazedhq/qa-z.git
-qa-z init --profile python --with-agent-templates
-qa-z doctor
 qa-z demo auth-bug
-cd .qa-z/demo/auth-bug
-qa-z guard --from-run latest --adapter codex
-qa-z repair-prompt --from-run latest --adapter codex
+```
+```text
+Verdict: do_not_merge
+Reason: auth/owner-check risk detected
+Next: use the generated repair prompt, then run qa-z verify
 ```
 
 ## Quickstart
