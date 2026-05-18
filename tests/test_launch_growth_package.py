@@ -104,7 +104,8 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
     assert "Planned demo asset" not in readme
     assert "docs/assets/qa-z-demo.svg" in readme
     assert "docs/assets/qa-z-demo.cast" in readme
-    assert "See QA-Z catch a risky agent auth change before merge." in readme
+    assert "Run the auth-bug demo from the GitHub source install" in readme
+    assert "Verdict: do_not_merge" in readme
 
     header = json.loads(demo_cast_lines[0])
     body = "\n".join(demo_cast_lines[1:])
