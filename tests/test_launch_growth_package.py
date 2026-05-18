@@ -90,8 +90,11 @@ def test_demo_asciinema_asset_is_real_cast_shape() -> None:
     assert header["width"] == 100
     assert header["height"] == 28
     assert "AI wrote a bad auth change. QA-Z caught it." in header["title"]
+    assert "verdict: do_not_merge" in body
+    assert "auth/owner-check risk detected" in body
     assert "qa-z fast" in body
     assert "qa-z deep" in body
+    assert "qa-z repair-prompt" in body
     assert "qa-z verify" in body
     assert "verdict: improved" in body
 
@@ -116,19 +119,38 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
     assert "timestamp" not in header
     for text in (
         "pipx install git+https://github.com/qazedhq/qa-z.git",
-        "qa-z init --profile python --with-agent-templates",
-        "qa-z doctor",
         "qa-z demo auth-bug",
         "cd .qa-z/demo/auth-bug",
         "qa-z guard --from-run latest --adapter codex",
-        "Verdict: DO NOT MERGE YET",
+        "Verdict: do_not_merge",
+        "Reason: auth/owner-check risk detected",
         "qa-z repair-prompt --from-run latest --adapter codex",
+        "qa-z verify",
+        "verify verdict: improved",
     ):
         assert text in body
         assert text in demo_svg
 
+    for stale_first_screen_step in (
+        "qa-z init --profile python --with-agent-templates",
+        "qa-z doctor",
+        "Verdict: DO NOT MERGE YET",
+    ):
+        assert stale_first_screen_step not in body
+        assert stale_first_screen_step not in demo_svg
+
     public_surfaces = "\n".join([readme, body, demo_svg])
-    for forbidden in ("F:\\", "C:\\Users", "SECRET", "TOKEN", "BEGIN PRIVATE"):
+    for forbidden in (
+        "F:\\",
+        "C:\\Users",
+        "SECRET",
+        "TOKEN",
+        "BEGIN PRIVATE",
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
         assert forbidden not in public_surfaces
 
 

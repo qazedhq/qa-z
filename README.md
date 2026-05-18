@@ -14,7 +14,7 @@ Run the auth-bug demo from the GitHub source install to watch QA-Z catch a risky
 
 ![QA-Z terminal demo](docs/assets/qa-z-demo.svg)
 
-This is a deterministic terminal cast proof, not a GIF. The checked-in sources are [docs/assets/qa-z-demo.cast](docs/assets/qa-z-demo.cast), [docs/assets/qa-z-demo.svg](docs/assets/qa-z-demo.svg), and the fuller [agent-auth-bug asciinema cast](docs/assets/qa-z-agent-auth-bug.cast).
+This is a deterministic terminal cast proof, not a GIF. The short visual follows the same `do_not_merge` -> repair prompt -> `qa-z verify` -> `improved` story as the first-screen excerpt. The checked-in sources are [docs/assets/qa-z-demo.cast](docs/assets/qa-z-demo.cast), [docs/assets/qa-z-demo.svg](docs/assets/qa-z-demo.svg), and the fuller [agent-auth-bug asciinema cast](docs/assets/qa-z-agent-auth-bug.cast).
 
 ```bash
 pipx install git+https://github.com/qazedhq/qa-z.git

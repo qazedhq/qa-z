@@ -12,11 +12,19 @@ README scenario:
 
 ```bash
 pipx install git+https://github.com/qazedhq/qa-z.git
-qa-z init --profile python --with-agent-templates
-qa-z doctor
 qa-z demo auth-bug
+cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
+qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+```
+
+README proof excerpt:
+
+```text
+Verdict: do_not_merge
+Reason: auth/owner-check risk detected
+Next: generated repair prompt, then qa-z verify reports improved
 ```
 
 Full agent-auth-bug cast scenario:
@@ -33,6 +41,7 @@ Acceptance status:
 
 - README links to the short SVG visual and terminal cast without replacing text commands.
 - The asset is deterministic and public-safe.
+- The short README visual shows `do_not_merge`, generated repair prompt, and `qa-z verify` reporting `improved`.
 - The full agent-auth-bug cast shows deterministic QA-Z evidence, not live-agent execution.
 - Examples documentation links the cast proof and keeps runnable versus placeholder labels explicit.
 - Local machine paths, secrets, and private artifacts are not visible.

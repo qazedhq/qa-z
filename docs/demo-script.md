@@ -11,7 +11,7 @@ This script uses real CLI commands and local artifacts. It does not depend on sc
 Recorded terminal proof:
 
 - [assets/qa-z-agent-auth-bug.cast](assets/qa-z-agent-auth-bug.cast) records `qa-z plan`, `qa-z fast`, `qa-z deep`, `qa-z repair-prompt`, and `qa-z verify`.
-- [assets/qa-z-demo.cast](assets/qa-z-demo.cast) is the shorter README launch cast for install, init, doctor, demo, guard, and repair-prompt.
+- [assets/qa-z-demo.cast](assets/qa-z-demo.cast) is the shorter README launch cast for GitHub source install, `qa-z demo auth-bug`, `do_not_merge`, generated repair prompt, and `qa-z verify` returning `improved`.
 
 ## Setup
 
