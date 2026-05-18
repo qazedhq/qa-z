@@ -67,7 +67,7 @@ def test_commit_plan_compact_payload_omits_full_batch_path_lists() -> None:
             },
             "validation_commands": [
                 "python -m pytest tests/test_benchmark.py -q",
-                "python -m qa_z benchmark --json",
+                "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json",
             ],
         }
     ]
@@ -292,7 +292,7 @@ def test_commit_plan_cli_summary_only_json_writes_compact_payload(
             },
             "validation_commands": [
                 "python -m pytest tests/test_benchmark.py -q",
-                "python -m qa_z benchmark --json",
+                "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json",
             ],
         }
     ]

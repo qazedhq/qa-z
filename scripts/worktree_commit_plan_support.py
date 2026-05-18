@@ -30,6 +30,10 @@ class BatchRule(NamedTuple):
 
 Runner = Callable[[Sequence[str], Path], tuple[int, str, str]]
 
+BENCHMARK_TMP_RESULTS_COMMAND = (
+    "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json"
+)
+
 OWNER_OVERRIDES = (
     (
         "planning_runtime_foundation",
@@ -385,7 +389,7 @@ BATCH_RULES = (
         ),
         validation_commands=(
             "python -m pytest tests/test_benchmark.py -q",
-            "python -m qa_z benchmark --json",
+            BENCHMARK_TMP_RESULTS_COMMAND,
         ),
     ),
     BatchRule(

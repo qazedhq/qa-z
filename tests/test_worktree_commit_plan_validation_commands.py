@@ -35,7 +35,7 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
         "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
     ]
     assert (
-        "python -m qa_z benchmark --json"
+        "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json"
         in batches["benchmark_coverage"]["validation_commands"]
     )
     assert batches["autonomy_loop_planner"]["validation_commands"] == [
@@ -122,7 +122,7 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
         "git_add_patch_command": [],
         "validation_commands": [
             "python -m pytest tests/test_benchmark.py -q",
-            "python -m qa_z benchmark --json",
+            "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json",
         ],
     }
 

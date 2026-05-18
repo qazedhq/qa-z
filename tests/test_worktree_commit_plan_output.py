@@ -248,7 +248,11 @@ def test_commit_plan_human_output_prints_changed_batch_validation_commands() -> 
     assert "  include: src/qa_z/benchmark.py" in output
     assert "  stage command: git add -- src/qa_z/benchmark.py" in output
     assert "  validation: python -m pytest tests/test_benchmark.py -q" in output
-    assert "  validation: python -m qa_z benchmark --json" in output
+    assert (
+        "  validation: "
+        "python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json"
+        in output
+    )
     assert "- self_inspection_backlog: 1 paths" in output
     assert (
         "  validation: python -m pytest tests/test_self_improvement.py "
