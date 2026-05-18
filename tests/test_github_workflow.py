@@ -190,16 +190,28 @@ def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
 def test_github_action_docs_explain_composite_action_operational_contract() -> None:
     """Docs should describe the action evidence and permission behavior."""
     docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+    normalized_docs = " ".join(docs.split())
 
+    assert docs.index("## 1. Minimal PR Gate") < docs.index(
+        "## 2. PR Summary / Artifacts"
+    )
+    assert docs.index("## 2. PR Summary / Artifacts") < docs.index(
+        "## 3. SARIF Upload Opt-In"
+    )
+    assert "This is the 5-minute copy-paste path for pull requests." in docs
+    assert "Start with `contents: read` and `actions: read`." in docs
     assert (
         "The composite action validates `qa-z doctor --json`, runs the guard verdict "
         "step, then preserves the summary, optional SARIF, and QA-Z run artifacts with "
         "`always()` cleanup steps."
-    ) in docs
+    ) in normalized_docs
+    assert "PR comments and bot comments are opt-in." in docs
+    assert "Do not enable bot comments by default." in docs
     assert (
         "SARIF upload is disabled by default because code scanning permissions can be "
         "repository-specific."
-    ) in docs
+    ) in normalized_docs
+    assert "Add `security-events: write` only when SARIF upload is enabled." in docs
     assert 'upload-sarif: "true"' in docs
 
 

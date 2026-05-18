@@ -130,16 +130,13 @@ Install copy-paste safety instructions:
 qa-z skill install all
 ```
 
-Targets:
-
-- `qa-z skill install codex` -> `AGENTS.md`
-- `qa-z skill install claude` -> `CLAUDE.md`
-- `qa-z skill install cursor` -> `.cursor/rules/qa-z.mdc`
-- `qa-z skill install copilot` -> `.github/copilot-instructions.md`
+Targets: Codex `AGENTS.md`, Claude `CLAUDE.md`, Cursor `.cursor/rules/qa-z.mdc`, and GitHub Copilot `.github/copilot-instructions.md`.
 
 The reusable skill lives at [skills/qa-z-merge-safety/SKILL.md](skills/qa-z-merge-safety/SKILL.md).
 
 ## GitHub Action
+
+After the CLI demo, the next step is a copy-paste PR gate with read-only permissions and Job Summary/artifact evidence.
 
 ```yaml
 name: QA-Z
@@ -164,7 +161,9 @@ jobs:
           adapter: codex
 ```
 
-See [docs/github-action.md](docs/github-action.md). Add `security-events: write` only when SARIF upload is explicitly enabled.
+See [docs/github-action.md](docs/github-action.md) for the 5-minute path: minimal PR gate, PR summary/artifacts, then SARIF upload opt-in.
+Add `security-events: write` only when SARIF upload is explicitly enabled; PR/bot comments stay opt-in.
+
 ## Agent QA Playbook
 
 - [Agent QA Playbook](docs/agent-qa-playbook.md)

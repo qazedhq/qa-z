@@ -2236,3 +2236,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can run the commit-safe validator after later worktree or main movement without rewriting historical proof packets just to match live git state.
 - Remaining blocker: release-owner approval and selected release path, Next.js/PostCSS advisory option/proof, registry credentials, version execution decision, final release-execution-time SHA proof, and rollback/yank proof remain blocked.
 - Next safe slice: record the release-owner advisory decision path, or generate final proof only after a release-candidate SHA freeze.
+
+
+## 2026-05-18 GitHub Action Adoption Docs
+- Repo: JustTyping
+- Lane: growth -> GitHub Action adoption
+- User-facing flow: README demo -> copy-paste PR gate -> Job Summary/artifacts -> optional SARIF.
+- Slice type: Flow / Evidence
+- Before: README showed a minimal workflow and the action doc described the contract, but the adoption path was not organized around a fast three-step PR-gate setup.
+- Root cause: visitors could understand the demo proof without immediately seeing the smallest safe GitHub Actions path for their own pull requests.
+- Change made: tightened the README GitHub Action section, reorganized `docs/github-action.md` into minimal PR gate, PR summary/artifacts, and SARIF opt-in steps, and added tests for minimal permissions, bot-comment opt-in, SARIF opt-in, and no PyPI live install claim.
+- Validation run: `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_current_truth.py tests/test_github_actions_summary_docs.py -q`; `python -m pytest -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_github_workflow.py tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py`; `python -m ruff format --check tests/test_github_workflow.py tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py`; `git diff --check`; `python -m qa_z --help`.
+- Evidence: GitHub workflow docs tests passed `23`; launch-growth and public current-truth tests passed `34`; current-truth and GitHub Actions summary docs tests passed `45`; full pytest passed `1877`; text hygiene, Ruff check, Ruff format check, diff whitespace, and QA-Z help all passed. Generated `.pytest_cache` and `.ruff_cache` were removed.
+- Gate delta: adoption docs now tell visitors to start with `contents: read` and `actions: read`, add `security-events: write` only for SARIF upload, and keep PR/bot comments opt-in. No PyPI availability, live `pipx install qa-z`, package publish, tag, GitHub Release, deploy, version bump, or generated `.qa-z/**` source artifact was added.
+- User impact: visitors can move from the README demo to a minimal QA-Z PR gate in about five minutes without broad default permissions.
+- Remaining blocker: official PyPI/TestPyPI install path still requires release-owner approval and separate release execution.
+- Next safe slice: TestPyPI rehearsal path selection, or a small GitHub Actions troubleshooting FAQ once adoption docs receive review feedback.
