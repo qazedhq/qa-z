@@ -48,7 +48,7 @@ def integration_gap_evidence(
 def worktree_commit_plan_json_evidence(
     root: Path, *, current_head: str | None = None
 ) -> list[dict[str, Any]]:
-    """Return compact evidence from the latest strict commit-plan JSON artifact."""
+    """Return compact evidence from the latest commit-plan JSON artifact."""
     path = root / ".qa-z" / "tmp" / "worktree-commit-plan.json"
     if not path.is_file():
         return []
@@ -76,7 +76,7 @@ def worktree_commit_plan_json_evidence(
         "source": "worktree_commit_plan_json",
         "path": format_path(path, root),
         "summary": (
-            f"strict commit-plan status={payload.get('status', 'unknown')}; "
+            f"{commit_plan_mode_label(payload)} status={payload.get('status', 'unknown')}; "
             f"attention={attention}; "
             f"unassigned={int_value(summary.get('unassigned_source_path_count'))}; "
             f"cross_cutting={int_value(summary.get('cross_cutting_count'))}; "
@@ -89,6 +89,19 @@ def worktree_commit_plan_json_evidence(
     if patch_command_texts:
         evidence["patch_command_texts"] = patch_command_texts
     return [evidence]
+
+
+def commit_plan_mode_label(payload: dict[str, Any]) -> str:
+    """Return an honest label for the strictness of commit-plan evidence."""
+    strict_mode = payload.get("strict_mode")
+    if not isinstance(strict_mode, dict):
+        return "commit-plan"
+    if any(
+        strict_mode.get(key) is True
+        for key in ("fail_on_generated", "fail_on_cross_cutting")
+    ):
+        return "strict commit-plan"
+    return "non-strict commit-plan"
 
 
 def cross_cutting_patch_command_texts(payload: dict[str, Any]) -> list[str]:

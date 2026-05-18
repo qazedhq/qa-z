@@ -97,6 +97,10 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
             {
                 "kind": "qa_z.worktree_commit_plan",
                 "status": "attention_required",
+                "strict_mode": {
+                    "fail_on_generated": True,
+                    "fail_on_cross_cutting": True,
+                },
                 "attention_reasons": ["cross_cutting_paths_present"],
                 "summary": {
                     "unassigned_source_path_count": 0,
@@ -145,6 +149,52 @@ def test_worktree_risk_candidates_attach_latest_commit_plan_json_evidence(
         ],
     }
     assert expected_evidence in candidates[0].evidence
+
+
+def test_worktree_risk_candidates_label_non_strict_commit_plan_json_evidence(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / ".qa-z" / "tmp" / "worktree-commit-plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(
+        json.dumps(
+            {
+                "kind": "qa_z.worktree_commit_plan",
+                "status": "ready",
+                "strict_mode": {
+                    "fail_on_generated": False,
+                    "fail_on_cross_cutting": False,
+                },
+                "attention_reasons": [],
+                "summary": {
+                    "unassigned_source_path_count": 0,
+                    "cross_cutting_count": 3,
+                    "cross_cutting_group_count": 2,
+                    "shared_patch_add_count": 2,
+                    "generated_artifact_count": 0,
+                },
+                "repository": {
+                    "branch": "codex/qa-z-bootstrap",
+                    "head": HEAD,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = discover_worktree_risk_candidates(
+        tmp_path, live_signals(), generated_at=UTC_LATE
+    )
+
+    assert {
+        "source": "worktree_commit_plan_json",
+        "path": ".qa-z/tmp/worktree-commit-plan.json",
+        "summary": (
+            "non-strict commit-plan status=ready; "
+            "attention=none; unassigned=0; cross_cutting=3; "
+            "patch_add_groups=2; shared_patch_add=2; generated=0"
+        ),
+    } in candidates[0].evidence
 
 
 def test_worktree_risk_candidates_skip_stale_commit_plan_json_evidence(
