@@ -2268,3 +2268,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can debug a failed minimal QA-Z PR gate without broad default permissions, bot comments by default, or PyPI live install claims.
 - Remaining blocker: TestPyPI/PyPI release-owner path selection remains blocked until separately approved.
 - Next safe slice: TestPyPI rehearsal path selection after this FAQ PR is reviewed and merged.
+
+
+## 2026-05-20 v0.10.0-beta TestPyPI Rehearsal Approval
+- Repo: JustTyping
+- Lane: package publish readiness -> TestPyPI rehearsal approval
+- User-facing flow: no-release decision -> no-upload smoke proof -> selected TestPyPI rehearsal path.
+- Slice type: Evidence / Contract
+- Before: package publish paths were documented, no-upload tool smoke had passed, and the package publish path matrix listed TestPyPI rehearsal as an option, but there was no selected next path after GitHub Action onboarding closed.
+- Root cause: release owners could confuse choosing a next review path with approval to upload unless the decision packet separated rehearsal selection from execution approval.
+- Change made: selected TestPyPI rehearsal as the next review path in `docs/reports/v0.10.0-beta-testpypi-rehearsal-approval.md`, linked the packet from package publish, no-release, and release checklist docs, and kept actual upload blocked.
+- Validation run: `python -m pytest tests/test_beta_testpypi_rehearsal_approval_docs.py -q`; linked package-publish/no-release/release-checklist docs tests; public current-truth docs tests; worktree commit-plan routing tests; strict worktree plan; text hygiene; Ruff check/format; diff whitespace check.
+- Evidence: the focused approval docs guard passed `5`; linked beta release docs passed `16`; public current-truth docs passed `16`; worktree commit-plan routing tests passed `75`; strict worktree plan returned `status=ready`, `generated_artifact_count=0`, `cross_cutting_count=0`, `report_path_count=0`, and `unassigned_source_path_count=0`; text hygiene, Ruff, and diff whitespace checks passed.
+- Gate delta: no upload executed; release execution remains `NO-GO`; package metadata remains `0.9.8a0`; `registry_upload_executed=false` remains the boundary.
+- User impact: release owners now have one clear next path without mistaking it for TestPyPI/PyPI publish approval.
+- Remaining blocker: execution approval, registry credentials, version execution decision, final SHA proof, rollback/yank policy, advisory option/proof, and final execution packet remain blocked.
+- Next safe slice: prepare actual TestPyPI execution packet only after approval/credentials/final proof exist, or continue README/launch content improvements while upload remains blocked.
