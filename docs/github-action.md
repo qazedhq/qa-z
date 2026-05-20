@@ -2,7 +2,9 @@
 
 Use the composite guard action when you want QA-Z's demo story to become a real
 pull-request gate: `qa-z guard` runs in CI, reviewers read deterministic merge
-evidence, and optional outputs stay explicit.
+evidence, and optional outputs stay explicit. If a new workflow fails, start
+with the troubleshooting FAQ below before adding permissions or changing the
+gate contract.
 
 ## 1. Minimal PR Gate
 
@@ -115,3 +117,91 @@ For a walkthrough of where uploaded SARIF appears in GitHub code scanning, see
 
 The action does not comment on pull requests, commit, push, or require write
 permissions by default.
+
+## 4. Troubleshooting FAQ
+
+### Minimal workflow fails because permissions are too small or wrong
+
+Keep the minimal job at:
+
+```yaml
+permissions:
+  contents: read
+  actions: read
+```
+
+Use job-level permissions on the `qa-z` job and keep
+`actions/checkout@v6` configured with `persist-credentials: false`. Do not add
+`contents: write`, `pull-requests: write`, or broad default write scopes to make
+the minimal gate pass. If the failing step is SARIF upload, use the SARIF
+answer below instead of changing the minimal workflow.
+
+### SARIF upload fails
+
+SARIF upload is optional. The minimal PR gate should leave `upload-sarif` unset
+or `"false"`.
+
+When you intentionally enable SARIF upload, add `security-events: write` to the
+same job and set `upload-sarif: "true"`. If GitHub code scanning is disabled,
+unavailable for the repository, or restricted by organization policy, the guard
+evidence still lives in the Job Summary and `qa-z-runs` artifact.
+
+### PR comments or bot comments are missing
+
+That is expected for the minimal action. QA-Z does not post pull request
+comments by default, and the minimal workflow should not request
+`pull-requests: write`.
+
+Use the Job Summary and `qa-z-runs` artifact first. If a repository later needs
+a comment workflow, enable that path intentionally from a separate template and
+review the extra write permission as its own change.
+
+### Where do I find the verdict, repair prompt, Job Summary, and artifacts?
+
+Start in the GitHub Actions Job Summary for the `qa-z` job. The uploaded
+artifact is named `qa-z-runs`, and it contains `.qa-z/runs/latest`.
+
+Useful paths inside the artifact:
+
+```text
+.qa-z/runs/latest/guard/verdict.md
+.qa-z/runs/latest/guard/verdict.json
+.qa-z/runs/latest/guard/github-summary.md
+.qa-z/runs/latest/review/review.md
+.qa-z/runs/latest/repair/<adapter>.md
+.qa-z/runs/latest/deep/results.sarif
+```
+
+If `repair/<adapter>.md` is absent, inspect `guard/verdict.md` and the fast/deep
+summaries first; the guard may not have produced a repair prompt for that run.
+
+### Semgrep or deep checks differ between local and CI
+
+`deep: auto` can skip or downgrade deep evidence when Semgrep is unavailable or
+when the repository profile does not select a deep check. CI can also differ
+from a local shell if Semgrep is not installed locally, if file paths differ, or
+if repository checkout filters hide files.
+
+Compare the Job Summary with the artifact files under
+`.qa-z/runs/latest/deep/`, then run the same local profile with `qa-z doctor`
+and `qa-z guard --deep auto --adapter <adapter>` before changing CI permissions.
+
+### The profile or adapter does not match my repository
+
+The action validates `profile` values of `default`, `python`, `typescript`, and
+`monorepo`, but an existing `qa-z.yaml` remains the source of truth for actual
+guard execution. If CI says the profile is unsupported, fix the workflow input.
+If the wrong checks run, inspect `qa-z.yaml` and run `qa-z doctor --json`
+locally.
+
+Use `adapter: codex` or another supported adapter only for repair-prompt
+formatting. Changing the adapter should not add write permissions or make QA-Z
+edit code.
+
+### Why is the PyPI-style pipx install command not shown as live?
+
+QA-Z is still installed from GitHub source in the alpha action and README
+examples. TestPyPI/PyPI publishing has not happened yet, so public docs must not
+claim that package-registry `pipx` or `uv tool` install commands are live. Keep
+GitHub source installs until a separate release-owner publish path is approved
+and executed.
