@@ -289,6 +289,7 @@ def test_github_action_adoption_docs_are_copy_paste_safe() -> None:
         "minimal PR gate",
         "PR summary/artifacts",
         "SARIF upload opt-in",
+        "troubleshooting FAQ",
         "qazedhq/qa-z/.github/actions/guard@main",
     ):
         assert text in combined
@@ -297,6 +298,12 @@ def test_github_action_adoption_docs_are_copy_paste_safe() -> None:
     assert "permissions:\n      contents: read\n      actions: read" in minimal
     assert "security-events: write" not in minimal
     assert "pull-requests: write" not in minimal
+    assert "## 4. Troubleshooting FAQ" in docs
+    assert (
+        "Where do I find the verdict, repair prompt, Job Summary, and artifacts?"
+        in (docs)
+    )
+    assert "Why is the PyPI-style pipx install command not shown as live?" in docs
     assert "Do not enable bot comments by default." in docs
     assert "Add `security-events: write` only when SARIF upload is enabled." in docs
     assert 'upload-sarif: "true"' in sarif

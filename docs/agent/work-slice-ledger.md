@@ -2252,3 +2252,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: visitors can move from the README demo to a minimal QA-Z PR gate in about five minutes without broad default permissions.
 - Remaining blocker: official PyPI/TestPyPI install path still requires release-owner approval and separate release execution.
 - Next safe slice: TestPyPI rehearsal path selection, or a small GitHub Actions troubleshooting FAQ once adoption docs receive review feedback.
+
+
+## 2026-05-20 GitHub Action Troubleshooting FAQ
+- Repo: JustTyping
+- Lane: growth -> GitHub Action adoption troubleshooting
+- User-facing flow: README demo -> minimal PR gate -> failed workflow diagnosis -> Job Summary/artifacts.
+- Slice type: Flow / Evidence
+- Before: the GitHub Action docs explained the 5-minute setup, minimal permissions, Job Summary/artifacts, and SARIF opt-in, but did not give a focused FAQ for first-run failures.
+- Root cause: new adopters could respond to ordinary setup failures by adding broad permissions, expecting bot comments, or looking for PyPI install commands that are not live yet.
+- Change made: added a troubleshooting FAQ covering minimal workflow permissions, SARIF permission failures, opt-in PR comments, verdict/repair/artifact locations, Semgrep/deep CI drift, profile/adapter mismatches, and the GitHub-source install boundary; linked it from the README and pinned the wording with public-doc tests.
+- Validation run: `python -m pytest tests/test_github_workflow.py -q`; `python -m pytest tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_github_workflow.py tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py`; `python -m ruff format --check tests/test_github_workflow.py tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py`; `git diff --check`; `python -m qa_z --help`.
+- Evidence: GitHub workflow docs tests passed `24`; launch-growth and public current-truth tests passed `34`; text hygiene passed; Ruff check passed; Ruff format check passed after formatting touched tests; diff whitespace check passed; QA-Z help rendered.
+- Gate delta: GitHub Action troubleshooting is now documented and regression-tested without changing the minimal workflow permissions, enabling bot comments by default, claiming PyPI availability, or running release actions.
+- User impact: users can debug a failed minimal QA-Z PR gate without broad default permissions, bot comments by default, or PyPI live install claims.
+- Remaining blocker: TestPyPI/PyPI release-owner path selection remains blocked until separately approved.
+- Next safe slice: TestPyPI rehearsal path selection after this FAQ PR is reviewed and merged.

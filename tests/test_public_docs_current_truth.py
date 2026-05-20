@@ -55,7 +55,10 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "Reason: auth/owner-check risk detected" in readme
     assert "Next: use the generated repair prompt, then run qa-z verify" in readme
     assert "After the CLI demo, the next step is a copy-paste PR gate" in readme
-    assert "minimal PR gate, PR summary/artifacts, then SARIF upload opt-in" in readme
+    assert (
+        "minimal PR gate, PR summary/artifacts, SARIF upload opt-in, and "
+        "troubleshooting FAQ"
+    ) in readme
     assert "`security-events: write` only when SARIF upload is explicitly enabled" in (
         readme
     )

@@ -198,6 +198,9 @@ def test_github_action_docs_explain_composite_action_operational_contract() -> N
     assert docs.index("## 2. PR Summary / Artifacts") < docs.index(
         "## 3. SARIF Upload Opt-In"
     )
+    assert docs.index("## 3. SARIF Upload Opt-In") < docs.index(
+        "## 4. Troubleshooting FAQ"
+    )
     assert "This is the 5-minute copy-paste path for pull requests." in docs
     assert "Start with `contents: read` and `actions: read`." in docs
     assert (
@@ -213,6 +216,44 @@ def test_github_action_docs_explain_composite_action_operational_contract() -> N
     ) in normalized_docs
     assert "Add `security-events: write` only when SARIF upload is enabled." in docs
     assert 'upload-sarif: "true"' in docs
+
+
+def test_github_action_docs_troubleshooting_faq_preserves_safe_defaults() -> None:
+    """Troubleshooting should not expand the default workflow boundary."""
+    docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+    faq = docs.split("## 4. Troubleshooting FAQ", 1)[1]
+
+    for heading in (
+        "### Minimal workflow fails because permissions are too small or wrong",
+        "### SARIF upload fails",
+        "### PR comments or bot comments are missing",
+        "### Where do I find the verdict, repair prompt, Job Summary, and artifacts?",
+        "### Semgrep or deep checks differ between local and CI",
+        "### The profile or adapter does not match my repository",
+        "### Why is the PyPI-style pipx install command not shown as live?",
+    ):
+        assert heading in faq
+
+    for text in (
+        "permissions:\n  contents: read\n  actions: read",
+        "Do not add\n`contents: write`, `pull-requests: write`, or broad default write scopes",
+        "SARIF upload is optional.",
+        'add `security-events: write` to the\nsame job and set `upload-sarif: "true"`',
+        "QA-Z does not post pull request\ncomments by default",
+        "the minimal workflow should not request\n`pull-requests: write`",
+        "The uploaded\nartifact is named `qa-z-runs`",
+        ".qa-z/runs/latest/guard/verdict.json",
+        ".qa-z/runs/latest/repair/<adapter>.md",
+        "Compare the Job Summary with the artifact files under\n`.qa-z/runs/latest/deep/`",
+        "an existing `qa-z.yaml` remains the source of truth",
+        "TestPyPI/PyPI publishing has not happened yet",
+        "package-registry `pipx` or `uv tool` install commands are live",
+        "Keep\nGitHub source installs until a separate release-owner publish path is approved\nand executed.",
+    ):
+        assert text in faq
+
+    assert "pipx install qa-z is live" not in faq
+    assert "PyPI package available" not in faq
 
 
 @pytest.mark.parametrize(
