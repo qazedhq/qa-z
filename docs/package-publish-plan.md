@@ -135,6 +135,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-approval.md`.
 - TestPyPI rehearsal execution packet:
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-execution-packet.md`.
+- TestPyPI rehearsal GO/NO-GO packet:
+  `docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md`.
 - Version policy must be decided before package publish.
 - The package publish path decision is decision-only, keeps the current
   `No release yet` state, and release execution remains `NO-GO`.
@@ -142,6 +144,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   path, but it does not authorize upload and release execution remains `NO-GO`.
 - The TestPyPI rehearsal execution packet prepares pre-upload proof and stop
   rules. It does not upload and release execution remains `NO-GO`.
+- The TestPyPI rehearsal GO/NO-GO packet records `NO_GO_MISSING_APPROVAL`;
+  it does not upload and release execution remains `NO-GO`.
 - Current package metadata remains `0.9.8a0` until a separate approved version
   PR changes `pyproject.toml`.
 - No package registry publish is claimed complete.
