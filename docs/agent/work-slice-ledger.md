@@ -2284,3 +2284,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners now have one clear next path without mistaking it for TestPyPI/PyPI publish approval.
 - Remaining blocker: execution approval, registry credentials, version execution decision, final SHA proof, rollback/yank policy, advisory option/proof, and final execution packet remain blocked.
 - Next safe slice: prepare actual TestPyPI execution packet only after approval/credentials/final proof exist, or continue README/launch content improvements while upload remains blocked.
+
+
+## 2026-05-21 v0.10.0-beta TestPyPI Rehearsal Execution Packet
+- Repo: JustTyping
+- Lane: package publish readiness -> TestPyPI rehearsal execution packet
+- User-facing flow: selected TestPyPI rehearsal path -> upload stop rule -> final approval blockers.
+- Slice type: Evidence / Contract
+- Before: PR #81 selected TestPyPI rehearsal as the next review path, but the pre-upload execution packet and stop rule were not yet recorded.
+- Root cause: release owners need one packet that separates local proof preparation from actual registry upload before any TestPyPI credentials or `twine upload` command can be considered.
+- Change made: added `docs/reports/v0.10.0-beta-testpypi-rehearsal-execution-packet.md`, linked it from approval/path/checklist/package-publish docs, and pinned the no-upload contract with focused tests.
+- Validation run: focused execution-packet docs test; linked approval/path docs tests; public current-truth docs test; strict worktree commit-plan; public text hygiene; Ruff check/format; diff whitespace check.
+- Evidence: current `origin/main` was `0c4288d98f8826e891ab8cd46fd5157000cadff0`; main CI and Public Raw Hygiene were success; package metadata stayed `0.9.8a0`; PyPI/TestPyPI JSON endpoints returned HTTP 404; no `v0.10.0-beta*` tag or release existed.
+- Gate delta: no upload executed; `registry_upload_executed=false`; `twine upload` remains blocked; release execution remains `NO-GO`; package publish proof still does not exist.
+- User impact: release owners now have an upload stop-rule packet before TestPyPI rehearsal can move to execution approval.
+- Remaining blocker: release-owner execution approval, `PACKAGE_PUBLISH_ALLOWED=true`, TestPyPI credentials, final SHA proof, rollback/yank execution-time check, advisory proof, generated-artifact cleanup proof, and a final execution packet.
+- Next safe slice: only after approval fields and credential boundary are present, regenerate final SHA proof and rerun no-upload package smoke for the frozen candidate SHA.
