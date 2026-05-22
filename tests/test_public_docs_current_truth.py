@@ -142,6 +142,7 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",
+        "[Launch kit](launch/launch-kit.md)",
         "[Launch package](launch-package.md)",
         "[Launch posts](launch-posts.md)",
         "[Product direction](product/PRODUCT_DIRECTION.md)",

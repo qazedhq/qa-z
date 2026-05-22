@@ -12,6 +12,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [Use with Codex](use-with-codex.md) | Codex handoff loop using QA-Z repair prompts |
 | [Use with Claude Code](use-with-claude-code.md) | Claude Code handoff loop using the same deterministic artifacts |
 | [Use with Cursor](use-with-cursor.md) | Cursor workflow using QA-Z before merge |
+| [Launch kit](launch/launch-kit.md) | Draft-only launch copy, demo story, and no-PyPI boundary |
 | [Launch package](launch-package.md) | Repository topics, social preview, release checklist, and good-first-issue seeds |
 | [Launch checklist](../docs/launch-checklist.md) | Phase 0 to Phase 4 execution plan, top 10 actions, blockers, and no-go boundaries |
 | [Public roadmap](../docs/public-roadmap.md) | Public roadmap from alpha polish through category leadership |

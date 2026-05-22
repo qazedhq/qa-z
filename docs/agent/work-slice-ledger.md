@@ -2300,3 +2300,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners now have an upload stop-rule packet before TestPyPI rehearsal can move to execution approval.
 - Remaining blocker: release-owner execution approval, `PACKAGE_PUBLISH_ALLOWED=true`, TestPyPI credentials, final SHA proof, rollback/yank execution-time check, advisory proof, generated-artifact cleanup proof, and a final execution packet.
 - Next safe slice: only after approval fields and credential boundary are present, regenerate final SHA proof and rerun no-upload package smoke for the frozen candidate SHA.
+
+
+## 2026-05-22 Launch Kit Growth Slice
+- Repo: JustTyping
+- Lane: launch growth / repo-local launch kit
+- User-facing flow: GitHub visitor or maintainer -> launch kit -> source install, auth-bug demo, 5-minute PR gate, draft outreach copy.
+- Slice type: Cleanup / Evidence
+- Before: launch post, social preview, action docs, demo plan, and package publish docs existed separately, but there was no single draft-only launch kit that tied the current demo story to the no-PyPI/no-release boundary.
+- Root cause: launch-growth copy had been improved incrementally while TestPyPI rehearsal stayed blocked, leaving maintainers without one safe shareable packet for repo-local launch preparation.
+- Change made: added `docs/launch/launch-kit.md`, linked it from README and the docs index, and pinned the launch-kit boundary with public current-truth tests.
+- Validation run: `python -m pytest tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_current_truth.py -q`; `python -m pytest tests/test_github_workflow.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py tests/test_current_truth.py`; `python -m ruff format --check tests/test_launch_growth_package.py tests/test_public_docs_current_truth.py tests/test_current_truth.py`; `git diff --check`; `python -m qa_z --help`.
+- Evidence: launch/public current-truth tests passed `35`; current-truth tests passed `42`; GitHub workflow tests passed `24`; public text hygiene passed; Ruff check passed; Ruff format reported `3 files already formatted`; diff whitespace check passed; QA-Z help rendered.
+- Gate delta: no release action; no PyPI/TestPyPI publish; no tag; no GitHub Release; no deploy; no `pyproject.toml` bump; no registry credentials; no external posts; no bot comments; no generated `.qa-z/**` source artifacts.
+- User impact: maintainers get one draft-only launch kit with product description, target users, auth-bug demo story, GitHub source install, minimal GitHub Action path, social drafts, launch order, FAQ, and explicit no-PyPI live claim.
+- Remaining blocker: release-owner approval, TestPyPI/PyPI credentials, final execution proof, and external posting remain blocked.
+- Next safe slice: turn repeated launch feedback into README/FAQ edits, or continue only with repo-local adoption docs while release execution stays `NO-GO`.
