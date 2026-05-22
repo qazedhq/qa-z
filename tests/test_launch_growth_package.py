@@ -35,6 +35,7 @@ def test_launch_growth_package_covers_requested_surfaces() -> None:
         "docs/issues/good-first-issues.md",
         "docs/launch/actions-runtime-maintenance.md",
         "docs/launch/demo-gif-plan.md",
+        "docs/launch/launch-kit.md",
         "docs/launch/launch-post.md",
         "docs/launch/social-preview.md",
         "docs/walkthroughs/auth-bug.md",
@@ -270,8 +271,68 @@ def test_docs_index_and_readme_link_full_growth_package() -> None:
         "docs/agent-merge-safety-benchmark.md",
         "docs/scorecard.md",
         "docs/community-distribution.md",
+        "docs/launch/launch-kit.md",
     ):
         assert link in combined
+
+
+def test_launch_kit_keeps_public_growth_copy_release_safe() -> None:
+    launch_kit = read("docs/launch/launch-kit.md")
+    readme = read("README.md")
+    docs_index = read("docs/README.md")
+
+    assert "[Launch kit](docs/launch/launch-kit.md)" in readme
+    assert "[Launch kit](launch/launch-kit.md)" in docs_index
+
+    for text in (
+        "Make AI coding safe to merge.",
+        "QA-Z is a deterministic merge-safety layer for AI-generated code.",
+        "Codex users",
+        "Cursor users",
+        "Claude Code users",
+        "aider/OpenHands users",
+        "teams reviewing AI-generated PRs",
+        "do_not_merge",
+        "auth/owner-check risk",
+        "repair prompt",
+        "verify improved",
+        "pipx install git+https://github.com/qazedhq/qa-z.git",
+        "5-minute PR gate",
+        "contents: read",
+        "actions: read",
+        "SARIF upload is opt-in",
+        "PR comments and bot comments are opt-in",
+        "Draft only. Do not post from this document.",
+        "soft launch on X/LinkedIn",
+        "collect feedback",
+        "Show HN",
+        "Reddit cautiously",
+        "update README/FAQ from questions",
+        "revisit TestPyPI/PyPI decision",
+        "not another coding agent",
+        "not an LLM judge",
+        "not a PyPI package yet",
+        "not a replacement for tests/Semgrep/human review",
+        "No PyPI live claim",
+    ):
+        assert text in launch_kit
+
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+        "PyPI is live",
+        "TestPyPI package is live",
+        "published to PyPI",
+        "tag created",
+        "GitHub Release created",
+        "deployed",
+        "post this",
+        "pull-requests: write\n",
+        "contents: write",
+    ):
+        assert forbidden not in launch_kit
 
 
 def test_github_action_adoption_docs_are_copy_paste_safe() -> None:

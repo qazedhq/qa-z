@@ -175,6 +175,7 @@ Add `security-events: write` only when SARIF upload is explicitly enabled; PR/bo
 - [Cursor Safety Rules](docs/cursor-safety-rules.md)
 - [Semgrep For AI-Generated Code](docs/semgrep-for-ai-generated-code.md)
 - [Use with GitHub Copilot](docs/use-with-github-copilot.md)
+- [Launch kit](docs/launch/launch-kit.md)
 - [Product direction](docs/product/PRODUCT_DIRECTION.md)
 - [V8 handoff](docs/product/V8_HANDOFF.md)
 - [Product decisions](docs/product/PRODUCT_DECISIONS.md)
