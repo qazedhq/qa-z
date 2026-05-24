@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TESTPYPI_UPLOAD_PROOF_PATH = (
+    "docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md"
+)
 
 
 def read_readme() -> str:
@@ -38,10 +42,25 @@ def read_semgrep_docs() -> str:
     return (ROOT / "docs" / "use-with-semgrep.md").read_text(encoding="utf-8")
 
 
+def read_testpypi_upload_proof() -> str:
+    return (ROOT / TESTPYPI_UPLOAD_PROOF_PATH).read_text(encoding="utf-8")
+
+
 def read_current_state() -> str:
     return (ROOT / "docs" / "reports" / "current-state-analysis.md").read_text(
         encoding="utf-8"
     )
+
+
+def git_tracked_paths(*paths: str) -> set[str]:
+    completed = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "--", *paths],
+        check=True,
+        encoding="utf-8",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return set(completed.stdout.splitlines())
 
 
 def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
@@ -217,7 +236,60 @@ def test_public_docs_point_to_latest_github_prerelease_without_package_publish()
     )
 
 
-def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
+def test_testpypi_upload_proof_documents_registry_and_security_boundary() -> None:
+    proof_path = ROOT / TESTPYPI_UPLOAD_PROOF_PATH
+    assert proof_path.exists()
+
+    proof = read_testpypi_upload_proof()
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    for section in (
+        "## Purpose",
+        "## Upload Result",
+        "## TestPyPI URL",
+        "## Uploaded Artifacts",
+        "## Install Smoke Result",
+        "## Registry Boundary",
+        "## Explicit Non-actions",
+        "## Security Boundary",
+        "## Remaining Blockers Before PyPI",
+        "## Recommended Next Step",
+    ):
+        assert section in proof
+
+    for required in (
+        "TestPyPI upload completed.",
+        "https://test.pypi.org/project/qa-z/0.9.8a0/",
+        "`registry_upload_executed=true` for TestPyPI only.",
+        "PyPI upload did not occur.",
+        "Production PyPI remains out of scope.",
+        "No tag, GitHub Release, deploy, or version bump occurred.",
+        "Credential values are not included.",
+        "QAZ_TOKEN.txt must not be committed.",
+        "dist artifacts are generated evidence only and must not be committed.",
+        "`pipx install qa-z` is still not a live PyPI install claim.",
+        "TestPyPI install uses TestPyPI index, not production PyPI.",
+    ):
+        assert required in proof
+
+    for artifact in (
+        "dist/qa_z-0.9.8a0.tar.gz",
+        "dist/qa_z-0.9.8a0-py3-none-any.whl",
+    ):
+        assert artifact in proof
+
+    assert "QAZ_TOKEN.txt" in gitignore
+    assert (
+        git_tracked_paths(
+            "QAZ_TOKEN.txt",
+            "dist/qa_z-0.9.8a0.tar.gz",
+            "dist/qa_z-0.9.8a0-py3-none-any.whl",
+        )
+        == set()
+    )
+
+
+def test_package_publish_plan_documents_testpypi_upload_proof() -> None:
     package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
         encoding="utf-8"
     )
@@ -247,8 +319,14 @@ def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
     assert "`FAIL` means an available local command failed" in rehearsal
     assert "`NOT RUN` means the tool" in rehearsal
     assert "It does not install global tools." in rehearsal
-    assert "No TestPyPI package URL exists yet." in package_plan
-    assert "No package registry publish has happened yet." in package_plan
+    assert TESTPYPI_UPLOAD_PROOF_PATH in package_plan
+    assert "TestPyPI package URL: https://test.pypi.org/project/qa-z/0.9.8a0/" in (
+        package_plan
+    )
+    assert "`registry_upload_executed=true` for TestPyPI only." in package_plan
+    assert "PyPI upload did not occur." in package_plan
+    assert "No TestPyPI package URL exists yet." not in package_plan
+    assert "No package registry publish has happened yet." not in package_plan
     assert (
         "GitHub prerelease credentials do not authorize TestPyPI or PyPI upload."
         in package_plan
@@ -263,6 +341,23 @@ def test_package_publish_plan_documents_no_upload_testpypi_rehearsal() -> None:
         "TestPyPI rehearsal stays local-only; registry upload remains blocked."
         in release_handoff
     )
+
+
+def test_related_release_docs_link_testpypi_upload_proof() -> None:
+    for doc_path in (
+        "docs/releases/v0.9.8-alpha-publish-handoff.md",
+        "docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md",
+        "docs/reports/v0.10.0-beta-testpypi-rehearsal-execution-packet.md",
+        "docs/reports/v0.10.0-beta-testpypi-rehearsal-approval.md",
+        "docs/reports/v0.10.0-beta-release-execution-checklist.md",
+    ):
+        doc = (ROOT / doc_path).read_text(encoding="utf-8")
+        text = " ".join(doc.split())
+
+        assert TESTPYPI_UPLOAD_PROOF_PATH in doc
+        assert "TestPyPI" in doc
+        assert "PyPI upload did not occur" in text
+        assert "v0.10.0-beta" in doc
 
 
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:

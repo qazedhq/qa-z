@@ -54,8 +54,13 @@ confirmation that no registry upload command ran.
 
 ## TestPyPI Publish Rehearsal Checklist - Local Only
 
-This checklist rehearses package publish readiness without publishing a package.
-No package registry publish has happened yet. No TestPyPI package URL exists yet.
+This checklist is the historical local-only rehearsal surface that preceded the
+TestPyPI upload proof. The completed TestPyPI-only upload proof is recorded in
+`docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md`.
+
+TestPyPI package URL: https://test.pypi.org/project/qa-z/0.9.8a0/
+`registry_upload_executed=true` for TestPyPI only. PyPI upload did not occur.
+Production PyPI remains out of scope.
 
 Credential boundary:
 
@@ -106,7 +111,7 @@ Current no-upload tool-smoke evidence:
   `scripts/package_smoke_rehearsal.py` passing `twine_check`,
   `pipx_wheel_help`, and `uvx_wheel_help`.
 - `registry_upload_executed=false` remains the required package-registry
-  boundary.
+  boundary for the historical no-upload smoke packet.
 - This local proof does not authorize any registry upload, tag, GitHub Release,
   deploy, version bump, or registry credential use.
 
@@ -137,6 +142,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-execution-packet.md`.
 - TestPyPI rehearsal GO/NO-GO packet:
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md`.
+- TestPyPI rehearsal upload proof:
+  `docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md`.
 - Version policy must be decided before package publish.
 - The package publish path decision is decision-only, keeps the current
   `No release yet` state, and release execution remains `NO-GO`.
@@ -146,18 +153,25 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   rules. It does not upload and release execution remains `NO-GO`.
 - The TestPyPI rehearsal GO/NO-GO packet records `NO_GO_MISSING_APPROVAL`;
   it does not upload and release execution remains `NO-GO`.
+- TestPyPI rehearsal upload is complete. The upload proof records the later
+  TestPyPI-only upload result and package URL.
+- registry_upload_executed=true applies to TestPyPI only.
+- PyPI upload did not occur, and production PyPI remains out of scope.
 - Current package metadata remains `0.9.8a0` until a separate approved version
   PR changes `pyproject.toml`.
-- No package registry publish is claimed complete.
+- No production PyPI package registry publish is claimed complete.
 - The current active install path remains the GitHub source/tag install path
-  unless and until package publish happens.
-- Future PyPI-published target commands, not current live install claims:
+  unless and until production PyPI package publish happens.
+- Future PyPI-published target commands remain future targets and not current
+  live install claims:
 
 ```bash
 pipx install qa-z
 uv tool install qa-z
 ```
 
+`pipx install qa-z` and `uv tool install qa-z` are still not live PyPI install
+commands.
 Do not present these commands as live until PyPI publish is approved, executed,
 and proven with the selected package metadata version and package URL.
 
