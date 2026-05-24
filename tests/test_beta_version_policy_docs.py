@@ -66,14 +66,19 @@ def test_package_publish_plan_marks_pipx_and_uv_as_future_pypi_targets() -> None
 
     assert "docs/reports/v0.10.0-beta-version-policy.md" in beta_section
     assert "Future PyPI-published target commands" in normalized
-    assert "not current live install claims" in beta_section
+    assert "not current live install claims" in normalized
     assert "pipx install qa-z" in beta_section
     assert "uv tool install qa-z" in beta_section
     assert (
         "current active install path remains the GitHub source/tag install path"
         in normalized
     )
-    assert "No package registry publish is claimed complete" in beta_section
+    assert "TestPyPI rehearsal upload is complete" in beta_section
+    assert "registry_upload_executed=true applies to TestPyPI only" in beta_section
+    assert (
+        "No production PyPI package registry publish is claimed complete"
+        in beta_section
+    )
 
 
 def test_beta_version_policy_blocks_release_execution_without_approval() -> None:

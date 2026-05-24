@@ -153,21 +153,25 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   rules. It does not upload and release execution remains `NO-GO`.
 - The TestPyPI rehearsal GO/NO-GO packet records `NO_GO_MISSING_APPROVAL`;
   it does not upload and release execution remains `NO-GO`.
-- The TestPyPI rehearsal upload proof records the later TestPyPI-only upload
-  result and package URL. PyPI upload did not occur, and production PyPI
-  remains out of scope.
+- TestPyPI rehearsal upload is complete. The upload proof records the later
+  TestPyPI-only upload result and package URL.
+- registry_upload_executed=true applies to TestPyPI only.
+- PyPI upload did not occur, and production PyPI remains out of scope.
 - Current package metadata remains `0.9.8a0` until a separate approved version
   PR changes `pyproject.toml`.
-- No production PyPI package publish is claimed complete.
+- No production PyPI package registry publish is claimed complete.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.
-- Future PyPI-published target commands, not current live install claims:
+- Future PyPI-published target commands remain future targets and not current
+  live install claims:
 
 ```bash
 pipx install qa-z
 uv tool install qa-z
 ```
 
+`pipx install qa-z` and `uv tool install qa-z` are still not live PyPI install
+commands.
 Do not present these commands as live until PyPI publish is approved, executed,
 and proven with the selected package metadata version and package URL.
 
