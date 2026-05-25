@@ -3,8 +3,12 @@
 Status: repo-local launch/growth kit only. Draft copy below is not published,
 posted, submitted, or scheduled from this document.
 
-Boundary: No PyPI live claim. TestPyPI/PyPI publish has not happened yet, so the
-current install path is GitHub source install only.
+Boundary: No PyPI live claim. TestPyPI rehearsal completed. Production PyPI is
+not live. PyPI install remains future. GitHub source install remains the
+current public install path.
+
+Production PyPI is not live.
+GitHub source install remains the current public install path.
 
 ## Product Description
 
@@ -50,6 +54,8 @@ pipx install git+https://github.com/qazedhq/qa-z.git
 
 Do not replace this with the package-registry shortcut or a PyPI/TestPyPI
 command until a separate release-owner publish path is approved and executed.
+Production PyPI is not live, so GitHub source install remains the current
+public install path.
 
 ## Core Demo Story
 
@@ -149,8 +155,8 @@ happened yet.
 4. Reddit cautiously in relevant communities, with the no-agent/no-LLM-judge
    boundary up front.
 5. update README/FAQ from questions that repeat.
-6. revisit TestPyPI/PyPI decision after release-owner approval, credential
-   boundary review, final SHA proof, and no-upload smoke evidence are current.
+6. revisit production PyPI decision after release-owner approval, credential
+   boundary review, final SHA proof, and package smoke evidence are current.
 
 ## FAQ / Expected Questions
 
@@ -168,6 +174,9 @@ verdicts, repair prompts, and verification evidence.
 
 No. No PyPI live claim is valid right now. Use GitHub source install until a
 separate publish approval and execution path exists.
+
+TestPyPI rehearsal completed, but that proof does not make production PyPI
+install live.
 
 ### Does the GitHub Action need write permissions?
 
