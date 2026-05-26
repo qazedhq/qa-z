@@ -2316,3 +2316,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get one draft-only launch kit with product description, target users, auth-bug demo story, GitHub source install, minimal GitHub Action path, social drafts, launch order, FAQ, and explicit no-PyPI live claim.
 - Remaining blocker: release-owner approval, TestPyPI/PyPI credentials, final execution proof, and external posting remain blocked.
 - Next safe slice: turn repeated launch feedback into README/FAQ edits, or continue only with repo-local adoption docs while release execution stays `NO-GO`.
+
+
+## 2026-05-26 v0.10.0-beta Installed-Package Runtime Smoke
+- Repo: JustTyping
+- Lane: package publish readiness -> installed-package runtime reliability
+- User-facing flow: install artifact -> demo auth-bug -> guard -> repair-prompt -> verify.
+- Slice type: Evidence / Contract
+- Before: metadata-only `0.10.0b0` readiness documented local build and twine metadata checks, but did not prove the built wheel and sdist worked after installation into fresh virtual environments.
+- Root cause: PyPI readiness needs installed-package runtime evidence, not only source-tree or editable-checkout behavior.
+- Change made: added `scripts/installed_package_smoke.py`, covered it with `tests/test_installed_package_smoke.py`, recorded local PASS evidence in `docs/reports/v0.10.0-beta-installed-package-smoke.md`, and linked the proof from PyPI readiness and package publish docs.
+- Validation run: `python scripts/installed_package_smoke.py --json`; focused installed-package smoke tests; PyPI readiness docs tests; text hygiene, Ruff, format, and diff checks.
+- Evidence: local installed-package smoke passed for both `qa_z-0.10.0b0-py3-none-any.whl` and `qa_z-0.10.0b0.tar.gz`; both fresh venvs passed CLI help, module help, auth-bug demo resource loading, doctor, guard, repair-prompt, and deterministic verify comparison.
+- Gate delta: no PyPI/TestPyPI upload, `twine upload`, tag, GitHub Release, deploy, version bump, live PyPI install claim, registry credential use, or generated source artifact commit occurred.
+- User impact: release owners can now distinguish package metadata readiness from installed-package runtime readiness before any production PyPI publish decision.
+- Remaining blocker: production PyPI publish remains blocked until separate owner approval, selected registry method, frozen SHA proof, remote CI/public raw proof, and release execution packet exist.
+- Next safe slice: improve `qa-z doctor` installed-environment diagnostics so failed installs explain location, package version, config, Semgrep, demo-resource, and writable-runtime-directory state.

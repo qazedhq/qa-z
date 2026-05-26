@@ -152,6 +152,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.10.0-beta-readme-install-transition.md`.
 - Future PyPI install smoke plan:
   `docs/reports/v0.10.0-beta-pypi-install-smoke-plan.md`.
+- Installed-package runtime smoke:
+  `docs/reports/v0.10.0-beta-installed-package-smoke.md`.
 - Release notes draft:
   `docs/releases/v0.10.0-beta-release-notes-draft.md`.
 - Version policy must be decided before package publish.
@@ -170,6 +172,10 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
 - Current source package metadata is `0.10.0b0` after the owner-approved
   metadata-only PR.
 - Historical TestPyPI proof remains `qa-z==0.9.8a0`.
+- Local installed-package smoke passed for both the `0.10.0b0` wheel and sdist.
+- The installed-package smoke ran from fresh virtual environments and confirmed
+  CLI entrypoint, module entrypoint, bundled auth-bug demo resource loading,
+  doctor, guard, repair-prompt, and deterministic verify behavior.
 - No production PyPI package registry publish is claimed complete.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.
