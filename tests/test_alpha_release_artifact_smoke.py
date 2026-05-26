@@ -87,7 +87,7 @@ def test_artifact_smoke_cli_can_emit_json(monkeypatch, capsys):
     module = load_smoke_module()
 
     def fake_run_artifact_smoke(_repo_root, **kwargs):
-        assert kwargs["expected_version"] == "0.9.8a0"
+        assert kwargs["expected_version"] == "0.10.0b0"
         assert kwargs["artifacts"] == [
             Path("dist/custom.whl"),
             Path("dist/custom.tar.gz"),

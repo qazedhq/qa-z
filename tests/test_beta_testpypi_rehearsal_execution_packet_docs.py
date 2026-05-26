@@ -79,17 +79,19 @@ def test_testpypi_rehearsal_execution_packet_records_current_proof_inputs() -> N
         assert required in packet
 
 
-def test_testpypi_rehearsal_execution_packet_keeps_pyproject_metadata_unchanged() -> (
+def test_testpypi_rehearsal_execution_packet_keeps_historical_metadata_separate() -> (
     None
 ):
     pyproject = read("pyproject.toml")
+    packet = read(EXECUTION_PACKET)
     name_match = re.search(r'^name = "([^"]+)"$', pyproject, flags=re.MULTILINE)
     version_match = re.search(r'^version = "([^"]+)"$', pyproject, flags=re.MULTILINE)
 
     assert name_match is not None
     assert version_match is not None
     assert name_match.group(1) == "qa-z"
-    assert version_match.group(1) == "0.9.8a0"
+    assert version_match.group(1) == "0.10.0b0"
+    assert "| `pyproject.toml` package version | `PASS` | `0.9.8a0` |" in packet
 
 
 def test_testpypi_rehearsal_execution_packet_forbids_false_publish_claims() -> None:

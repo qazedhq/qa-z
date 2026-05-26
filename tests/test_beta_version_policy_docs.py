@@ -19,13 +19,14 @@ def test_beta_version_policy_doc_exists_and_keeps_beta_unreleased() -> None:
     assert "This policy does not release `v0.10.0-beta`." in policy
     assert "`v0.10.0-beta` remains planned, not released." in policy
     assert "`v0.9.9-alpha` GitHub prerelease" in policy
-    assert "`0.9.8a0` in `pyproject.toml`" in policy
+    assert "`0.10.0b0` in `pyproject.toml`" in policy
     assert "Current package metadata" in policy
     assert "`0.9.8a0` was used for the TestPyPI rehearsal." in policy
-    assert "`0.10.0b0` is the recommended production PyPI beta candidate." in policy
-    assert "`pyproject.toml` is not changed in this PR." in policy
-    assert "The version bump requires separate owner approval and a separate PR." in (
-        policy
+    assert "`0.10.0b0` is the current source metadata after this PR." in policy
+    assert "Production PyPI publish remains blocked." in policy
+    assert (
+        "Future version bumps require separate owner approval and a separate PR."
+        in (policy)
     )
 
     for false_claim in (
@@ -42,15 +43,12 @@ def test_beta_version_policy_keeps_pyproject_metadata_current() -> None:
     match = re.search(r'^version = "([^"]+)"$', pyproject, flags=re.MULTILINE)
 
     assert match is not None
-    assert match.group(1) == "0.9.8a0"
+    assert match.group(1) == "0.10.0b0"
 
     policy = read(VERSION_POLICY)
-    assert '`pyproject.toml` remains at `version = "0.9.8a0"`.' in policy
-    assert (
-        "`0.10.0b0` is a candidate package metadata version, not current metadata."
-        in policy
-    )
-    assert "Candidate only, not current metadata" in policy
+    assert '`version = "0.10.0b0"`' in policy
+    assert "`0.10.0b0` is the current source metadata after this PR." in policy
+    assert "Historical TestPyPI proof metadata" in policy
     assert "docs/reports/v0.10.0-beta-nextjs-advisory-decision.md" in policy
     assert "docs/reports/v0.10.0-beta-final-sha-proof-protocol.md" in policy
     assert "release execution `NO-GO` remains unchanged" in policy

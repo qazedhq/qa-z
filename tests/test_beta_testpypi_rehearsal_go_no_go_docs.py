@@ -79,7 +79,7 @@ def test_testpypi_rehearsal_go_no_go_records_sha_checks_and_metadata() -> None:
     assert name_match is not None
     assert version_match is not None
     assert name_match.group(1) == "qa-z"
-    assert version_match.group(1) == "0.9.8a0"
+    assert version_match.group(1) == "0.10.0b0"
     assert "| package name | `PASS` | `qa-z` |" in packet
     assert "| package version | `PASS` | `0.9.8a0` |" in packet
 

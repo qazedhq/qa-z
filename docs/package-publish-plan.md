@@ -167,10 +167,9 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   TestPyPI-only upload result and package URL.
 - registry_upload_executed=true applies to TestPyPI only.
 - PyPI upload did not occur, and production PyPI remains out of scope.
-- Current package metadata remains `0.9.8a0` until a separate approved version
-  PR changes `pyproject.toml`.
-- The recommended production PyPI beta candidate is `0.10.0b0`, pending owner
-  decision and a separate version PR.
+- Current source package metadata is `0.10.0b0` after the owner-approved
+  metadata-only PR.
+- Historical TestPyPI proof remains `qa-z==0.9.8a0`.
 - No production PyPI package registry publish is claimed complete.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.

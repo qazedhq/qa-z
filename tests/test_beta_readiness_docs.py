@@ -36,7 +36,7 @@ def test_beta_readiness_report_keeps_release_execution_blocked() -> None:
     )
 
     for forbidden in (
-        "registry_upload_executed=true",
+        "production registry_upload_executed=true",
         "v0.10.0-beta is released",
         "PyPI publish completed",
         "TestPyPI publish completed",

@@ -10,7 +10,8 @@
 - Install docs and packaged templates.
 
 Current public alpha: `v0.9.9-alpha`. The package metadata remains
-`0.9.8a0` until the package-publish lane receives explicit approval.
+`0.10.0b0` after the owner-approved metadata-only PR; production PyPI publish
+still requires a separate execution approval.
 
 ## v0.10.0-beta
 
