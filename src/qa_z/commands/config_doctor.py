@@ -7,41 +7,19 @@ import json
 from pathlib import Path
 
 from qa_z.commands.common import resolve_cli_path
-from qa_z.config import ConfigError, load_config
-from qa_z.config_validation import validate_config
+from qa_z.doctor import build_doctor_report, render_doctor_human
 
 
 def handle_doctor(args: argparse.Namespace) -> int:
     """Validate local QA-Z configuration."""
     root = Path(args.path).expanduser().resolve()
     config_path = resolve_cli_path(root, args.config) if args.config else None
-    try:
-        config = load_config(root, config_path=config_path)
-        report = validate_config(root, config)
-    except ConfigError as exc:
-        report = {
-            "status": "failed",
-            "errors": [
-                {
-                    "code": "config_error",
-                    "path": str(config_path or root / "qa-z.yaml"),
-                    "message": str(exc),
-                }
-            ],
-            "warnings": [],
-            "suggestions": [],
-        }
+    report = build_doctor_report(root, config_path=config_path)
 
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
-        print(f"qa-z doctor: {report['status']}")
-        for item in report["errors"]:
-            print(f"error {item['code']} at {item['path']}: {item['message']}")
-        for item in report["warnings"]:
-            print(f"warning {item['code']} at {item['path']}: {item['message']}")
-        for suggestion in report["suggestions"]:
-            print(f"suggestion: {suggestion}")
+        print(render_doctor_human(report))
 
     if report["errors"]:
         return 1

@@ -2334,6 +2334,22 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Next safe slice: improve `qa-z doctor` installed-environment diagnostics so failed installs explain location, package version, config, Semgrep, demo-resource, and writable-runtime-directory state.
 
 
+## 2026-05-26 v0.11 Doctor & Environment Diagnostics
+- Repo: JustTyping
+- Lane: product reliability -> doctor/environment diagnostics
+- User-facing flow: installed package or source checkout -> `qa-z doctor` -> first repairable setup action.
+- Slice type: Flow / Contract / Evidence
+- Before: `qa-z doctor` was primarily config validation; installed-package smoke proved the command ran, but failures did not explain package version, import location, install mode, resource loading, Semgrep, runtime writeability, or GitHub Actions environment state.
+- Root cause: the doctor report model had no stable check list for environment diagnostics, so operators had to infer install/source/CI problems from later guard or demo failures.
+- Change made: added a stable doctor check model, richer JSON, concise PASS/WARN/FAIL human output, environment/install/project/tool/resource/runtime/GitHub Actions checks, focused tests, docs, and a v0.11 report while preserving legacy config warning/error fields.
+- Validation run: `python -m pytest tests/test_doctor.py tests/test_doctor_docs.py -q`; `python -m pytest tests/test_installed_package_smoke.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check src tests scripts`; `python -m ruff format --check src tests scripts`; `git diff --check`; `python -m qa_z doctor --json`; `python -m qa_z --help`; `python scripts/installed_package_smoke.py --json`.
+- Evidence: doctor tests passed `9`; installed-package smoke tests passed `3`; public docs truth passed `19`; full pytest passed `1920`; hygiene, Ruff, format, and diff checks passed; source doctor JSON returned `status=passed`, `version=0.10.0b0`, install modes `source checkout` and `editable`, auth-bug resources found, and `.qa-z` writable; installed-package smoke passed for both local wheel and sdist with `registry_upload_executed=false`.
+- Gate delta: no PyPI/TestPyPI upload, `twine upload`, version bump, tag, GitHub Release, deploy, live PyPI install claim, generated artifact commit, external post, or bot comment occurred.
+- User impact: maintainers and action users can run one local diagnostic to identify missing config, missing Semgrep, package/resource problems, runtime write failures, or GitHub Actions permission opt-in expectations before debugging guard output.
+- Remaining blocker: production PyPI publish remains blocked until separate owner approval, selected registry method, frozen SHA proof, remote CI/public raw proof, and release execution packet exist.
+- Next safe slice: v0.12 can surface failed doctor checks in GitHub Action job summaries as an environment-first troubleshooting section without enabling bot comments or broader permissions by default.
+
+
 ## 2026-05-27 v0.13 Evidence Summary UX
 - Repo: JustTyping
 - Lane: local run evidence -> first-read evidence navigator
