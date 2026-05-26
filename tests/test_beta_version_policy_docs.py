@@ -21,6 +21,12 @@ def test_beta_version_policy_doc_exists_and_keeps_beta_unreleased() -> None:
     assert "`v0.9.9-alpha` GitHub prerelease" in policy
     assert "`0.9.8a0` in `pyproject.toml`" in policy
     assert "Current package metadata" in policy
+    assert "`0.9.8a0` was used for the TestPyPI rehearsal." in policy
+    assert "`0.10.0b0` is the recommended production PyPI beta candidate." in policy
+    assert "`pyproject.toml` is not changed in this PR." in policy
+    assert "The version bump requires separate owner approval and a separate PR." in (
+        policy
+    )
 
     for false_claim in (
         "v0.10.0-beta is released",

@@ -144,6 +144,16 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md`.
 - TestPyPI rehearsal upload proof:
   `docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md`.
+- PyPI install conversion readiness:
+  `docs/reports/v0.10.0-beta-pypi-readiness.md`.
+- PyPI publishing method decision:
+  `docs/reports/v0.10.0-beta-pypi-publishing-method.md`.
+- README install transition plan:
+  `docs/reports/v0.10.0-beta-readme-install-transition.md`.
+- Future PyPI install smoke plan:
+  `docs/reports/v0.10.0-beta-pypi-install-smoke-plan.md`.
+- Release notes draft:
+  `docs/releases/v0.10.0-beta-release-notes-draft.md`.
 - Version policy must be decided before package publish.
 - The package publish path decision is decision-only, keeps the current
   `No release yet` state, and release execution remains `NO-GO`.
@@ -159,6 +169,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
 - PyPI upload did not occur, and production PyPI remains out of scope.
 - Current package metadata remains `0.9.8a0` until a separate approved version
   PR changes `pyproject.toml`.
+- The recommended production PyPI beta candidate is `0.10.0b0`, pending owner
+  decision and a separate version PR.
 - No production PyPI package registry publish is claimed complete.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.

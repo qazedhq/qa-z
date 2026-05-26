@@ -308,12 +308,16 @@ def test_launch_kit_keeps_public_growth_copy_release_safe() -> None:
         "Show HN",
         "Reddit cautiously",
         "update README/FAQ from questions",
-        "revisit TestPyPI/PyPI decision",
+        "revisit production PyPI decision",
         "not another coding agent",
         "not an LLM judge",
         "not a PyPI package yet",
         "not a replacement for tests/Semgrep/human review",
         "No PyPI live claim",
+        "TestPyPI rehearsal completed.",
+        "Production PyPI is not live.",
+        "PyPI install remains future.",
+        "GitHub source install remains the current public install path.",
     ):
         assert text in launch_kit
 

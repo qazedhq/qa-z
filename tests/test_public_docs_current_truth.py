@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TESTPYPI_UPLOAD_PROOF_PATH = (
     "docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md"
 )
+PYPI_READINESS_PATH = "docs/reports/v0.10.0-beta-pypi-readiness.md"
+PYPI_RELEASE_NOTES_DRAFT_PATH = "docs/releases/v0.10.0-beta-release-notes-draft.md"
 
 
 def read_readme() -> str:
@@ -44,6 +46,10 @@ def read_semgrep_docs() -> str:
 
 def read_testpypi_upload_proof() -> str:
     return (ROOT / TESTPYPI_UPLOAD_PROOF_PATH).read_text(encoding="utf-8")
+
+
+def read_pypi_readiness() -> str:
+    return (ROOT / PYPI_READINESS_PATH).read_text(encoding="utf-8")
 
 
 def read_current_state() -> str:
@@ -358,6 +364,42 @@ def test_related_release_docs_link_testpypi_upload_proof() -> None:
         assert "TestPyPI" in doc
         assert "PyPI upload did not occur" in text
         assert "v0.10.0-beta" in doc
+
+
+def test_pypi_conversion_readiness_pack_keeps_public_truth_blocked() -> None:
+    readme = read_readme()
+    package_plan = (ROOT / "docs/package-publish-plan.md").read_text(encoding="utf-8")
+    readiness = read_pypi_readiness()
+    release_notes = (ROOT / PYPI_RELEASE_NOTES_DRAFT_PATH).read_text(encoding="utf-8")
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    combined = "\n".join([package_plan, readiness, release_notes])
+    combined_text = " ".join(combined.split())
+
+    assert (ROOT / PYPI_READINESS_PATH).exists()
+    assert (ROOT / PYPI_RELEASE_NOTES_DRAFT_PATH).exists()
+    assert 'version = "0.9.8a0"' in pyproject
+    assert "pipx install qa-z" not in readme
+    assert "uv tool install qa-z" not in readme
+    assert "https://test.pypi.org/project/qa-z/0.9.8a0/" in readiness
+    assert "`registry_upload_executed=true` applies to TestPyPI only." in readiness
+    assert "Current metadata: `qa-z` / `0.9.8a0`." in readiness
+    assert (
+        "Recommended candidate version: `0.10.0b0`, pending owner decision."
+        in readiness
+    )
+    assert "Production PyPI has not been published." in readiness
+    assert "Production PyPI is not published." in release_notes
+    assert "Draft only - not a GitHub Release." in release_notes
+
+    for false_claim in (
+        "Production PyPI publish completed",
+        "PyPI upload completed",
+        "PyPI install is live",
+        "live PyPI install is available",
+        "v0.10.0-beta is released",
+        "version bumped",
+    ):
+        assert false_claim not in combined_text
 
 
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:
