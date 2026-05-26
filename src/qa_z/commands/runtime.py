@@ -23,6 +23,12 @@ from qa_z.commands.runtime_executor_result import (
     register_executor_result_command,
     render_executor_result_dry_run_stdout,
 )
+from qa_z.commands.runtime_scorecard import (
+    handle_scorecard,
+    register_scorecard_command,
+    render_scorecard_markdown,
+    render_scorecard_text,
+)
 
 __all__ = [
     "dry_run_action_summaries",
@@ -33,9 +39,13 @@ __all__ = [
     "handle_executor_bridge",
     "handle_executor_result_dry_run",
     "handle_executor_result_ingest",
+    "handle_scorecard",
     "register_autonomy_command",
     "register_benchmark_command",
     "register_executor_bridge_command",
     "register_executor_result_command",
+    "register_scorecard_command",
     "render_executor_result_dry_run_stdout",
+    "render_scorecard_markdown",
+    "render_scorecard_text",
 ]

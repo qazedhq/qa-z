@@ -10,6 +10,7 @@ QA-Z is a local, model-agnostic QA control plane. Its core job is to turn code-r
 - Fast and deep runners: `src/qa_z/runners/` executes deterministic fast checks and Semgrep-backed deep checks, then normalizes tool output into run summaries and SARIF.
 - Artifact model: `src/qa_z/artifacts.py` plus verification artifact modules define the local `.qa-z/**` evidence model and shared loading/writing behavior.
 - Reporters and GitHub summary: `src/qa_z/reporters/` renders review packets, run summaries, SARIF, and GitHub Actions summary markdown from existing artifacts.
+- Scorecard: `src/qa_z/scorecard.py` assembles read-only readiness dimensions from config, tool availability, benchmark/source-checkout signals, workflows, and existing run artifacts.
 - Repair prompts and adapters: `src/qa_z/repair_handoff.py`, `src/qa_z/adapters/`, and repair command modules render Codex, Claude, and human handoff material without calling live model APIs.
 - Repair sessions and verification: `src/qa_z/repair_session*.py` and `src/qa_z/verification*.py` package local repair sessions and compare baseline/candidate run artifacts after a human or external tool makes changes.
 - Executor bridge and result ingest: `src/qa_z/executor_bridge*.py`, `src/qa_z/executor_result*.py`, and `src/qa_z/executor_ingest*.py` package external-executor context and ingest returned results for deterministic verification.

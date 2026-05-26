@@ -90,6 +90,7 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "bot comments stay opt-in" in readme
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
+    assert "qa-z scorecard" in readme
     assert "verdict `improved`" in readme
     assert "no regressions" in readme
     for forbidden in (
@@ -166,6 +167,7 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[GitHub Action](github-action.md)",
         "[Evidence summary](evidence-summary.md)",
         "[Repair -> verify workflow](repair-verify-workflow.md)",
+        "[Scorecards](../docs/scorecard.md)",
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",

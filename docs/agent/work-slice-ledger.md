@@ -2380,3 +2380,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can fix bad `profile`, `deep`, `adapter`, `run-dir`, SARIF, and comment settings from the job log or summary without guessing which artifact to open first.
 - Remaining blocker: live hosted action release and production PyPI install remain separate release-owner decisions.
 - Next safe slice: add a deterministic action-summary fixture or dry-run harness that exercises the fallback summary text without requiring live GitHub Actions.
+
+
+## 2026-05-27 v0.16 Scorecard Productization
+- Repo: JustTyping
+- Lane: local readiness evidence -> user-facing scorecard.
+- User-facing flow: repository maintainer -> `qa-z scorecard` -> readiness dimensions, evidence pointers, warnings, and next commands.
+- Slice type: Evidence / Contract
+- Before: config validation, benchmark corpus state, Semgrep availability, installed-package smoke evidence, GitHub Action wiring, and latest run evidence were inspectable only through separate docs, commands, and files.
+- Root cause: QA-Z had useful readiness signals, but no read-only local command that assembled them into a single coarse readiness view without running expensive workflows.
+- Change made: added `qa-z scorecard` with human, JSON, Markdown, and optional output modes; added stable dimension schema; documented the local scorecard separately from the OpenSSF Scorecard workflow.
+- Validation run: targeted scorecard tests and runtime command seam tests are passing; full slice validation is recorded in the PR closeout.
+- Evidence: `tests/test_scorecard.py` covers healthy, missing-config, missing-Semgrep, stable JSON schema, human next actions, and no generated `.qa-z` artifact creation.
+- Gate delta: no release, PyPI/TestPyPI upload, `twine upload`, version bump, tag, deploy, live PyPI install claim, benchmark result artifact, or generated runtime artifact was added.
+- User impact: maintainers can see which QA-Z coverage surfaces are ready, warning, blocked, not configured, or unknown from one local command.
+- Remaining blocker: production PyPI publish and hosted release surfaces remain separate owner-approved release decisions.
+- Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.

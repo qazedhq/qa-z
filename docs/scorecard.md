@@ -1,4 +1,116 @@
-# OpenSSF Scorecard
+# Scorecards
+
+QA-Z exposes two different scorecard surfaces:
+
+- `qa-z scorecard` is a local, read-only QA-Z readiness report for a repository.
+- OpenSSF Scorecard is the repository security-practice workflow that uploads SARIF
+  from GitHub Actions.
+
+Do not treat either surface as a package release, PyPI publish, deploy, or live
+PyPI install claim. Production PyPI is not published.
+
+## QA-Z Scorecard
+
+Run the local scorecard when you want a first-read answer to:
+
+- is this repository configured for QA-Z;
+- do the configured profile and repository signals line up;
+- are fast checks and deep Semgrep checks ready;
+- is there repair-prompt and verify evidence for the latest run;
+- is the GitHub Action wired;
+- is installed-package smoke evidence present when this is a QA-Z source checkout;
+- is the latest evidence bundle fresh enough to navigate.
+
+```powershell
+qa-z scorecard
+qa-z scorecard --json
+qa-z scorecard --markdown
+```
+
+The command is read-only unless `--output` is supplied. It does not run the
+benchmark, create `.qa-z/**`, install Semgrep, publish packages, post comments,
+open pull requests, deploy, tag, or call live coding agents.
+
+### Statuses
+
+Scorecard dimensions use coarse readiness states instead of fake precision:
+
+- `ready`: enough local evidence or configuration exists for that dimension.
+- `warning`: the dimension can be inspected, but something limits confidence.
+- `blocked`: a required local prerequisite is missing or invalid.
+- `not_configured`: the dimension is optional or waits for another workflow step.
+- `unknown`: the dimension does not apply or cannot be inferred locally.
+
+The top-level status is derived from the dimensions. A blocked config makes the
+whole scorecard `blocked`; missing Semgrep normally produces `warning`; optional
+surfaces that do not apply stay `unknown`.
+
+### Dimensions
+
+`qa-z scorecard --json` returns a stable payload with:
+
+- `status`
+- `version`
+- `dimensions`
+- `summary`
+- `next_actions`
+- `warnings`
+
+Each dimension contains:
+
+- `id`
+- `status`
+- `message`
+- `evidence`
+- `suggestion`
+- `next_actions`
+
+Current dimension ids are:
+
+- `project_config`
+- `profile`
+- `fast_checks`
+- `deep_semgrep`
+- `benchmark_corpus`
+- `repair_prompt`
+- `verify`
+- `github_action`
+- `installed_package_smoke`
+- `evidence_freshness`
+
+### Common Fixes
+
+- Missing `qa-z.yaml`: run `qa-z init`.
+- Profile mismatch: review `project.languages`, run `qa-z doctor --json`, and
+  use `qa-z init --help` to see the starter profiles available in this build.
+- Missing Semgrep: install Semgrep if you want deep static-analysis coverage.
+- No latest evidence: run `qa-z guard --adapter codex --deep auto`.
+- Repair prompt missing for a blocked run: run
+  `qa-z repair-prompt --from-run latest --adapter codex`.
+- Verify missing after repair: run `qa-z verify --from-run latest`.
+- GitHub Action missing: run `qa-z init --with-github-workflow` or copy the
+  documented workflow from [GitHub Action](github-action.md).
+- Benchmark corpus present but no local summary: run `qa-z benchmark --json`.
+
+### Example
+
+```text
+QA-Z Scorecard: warning
+
+READY project config: qa-z.yaml loaded and validated.
+READY profile: profile signals match configured languages: python.
+READY fast checks: 4 enabled fast check(s) configured.
+WARN deep/Semgrep: Semgrep not found; deep checks may be limited.
+READY benchmark corpus: 52 benchmark fixture(s) available for local readiness proof.
+MISS repair prompt: no latest run is available for repair prompt readiness.
+
+Next actions:
+1. Install Semgrep
+2. Run `qa-z guard --adapter codex --deep auto`
+3. Run `qa-z benchmark --json`
+```
+
+## OpenSSF Scorecard
 
 QA-Z claims to improve trust in AI-generated code, so the repository should expose its own trust surface.
 

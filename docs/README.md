@@ -22,7 +22,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [Use with Semgrep](../docs/use-with-semgrep.md) | Semgrep-backed deep gate setup and SARIF expectations |
 | [PR summary comment](../docs/pr-summary-comment.md) | Optional pull request comment template and permission boundary |
 | [Agent Merge Safety Benchmark](../docs/agent-merge-safety-benchmark.md) | Public benchmark shape for agent change, QA-Z detection, repair, and verification |
-| [OpenSSF Scorecard](../docs/scorecard.md) | Security trust surface and scorecard workflow notes |
+| [Scorecards](../docs/scorecard.md) | Local QA-Z readiness scorecard plus OpenSSF security workflow notes |
 | [Community distribution](../docs/community-distribution.md) | HN, X, LinkedIn, Reddit, Dev.to, Hashnode, and awesome-list launch plan |
 | [Hosted demo](hosted-demo.md) | Hosted-demo scope that stays local-first and honest |
 | [Docs site](docs-site.md) | Docs-site IA for the public category surface |

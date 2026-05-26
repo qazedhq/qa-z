@@ -40,7 +40,7 @@ Automation can use `qa-z demo auth-bug --json` for demo root, verdict, repair pr
 For your own repository:
 ```bash
 qa-z init --profile python --with-agent-templates
-qa-z doctor
+qa-z doctor && qa-z scorecard
 qa-z guard --adapter codex --deep auto --fail-on-risk
 qa-z repair-prompt --from-run latest --adapter codex
 qa-z verify --from-run latest
