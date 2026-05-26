@@ -60,16 +60,19 @@ def create_verify_candidate_run(
     run_dir = artifact_dir.parent
     write_latest_run_manifest(root, config, run_dir)
 
-    deep_run = run_deep(
-        root=root,
-        config=config,
-        from_run=str(run_dir),
-        selection_mode=resolve_deep_selection_mode(config),
-    )
-    write_run_summary_artifacts(deep_run.summary, deep_run.resolution.deep_dir)
-    write_sarif_artifact(
-        deep_run.summary, deep_run.resolution.deep_dir / "results.sarif"
-    )
+    deep_summary: RunSummary | None = None
+    if baseline.deep_summary is not None:
+        deep_run = run_deep(
+            root=root,
+            config=config,
+            from_run=str(run_dir),
+            selection_mode=resolve_deep_selection_mode(config),
+        )
+        write_run_summary_artifacts(deep_run.summary, deep_run.resolution.deep_dir)
+        write_sarif_artifact(
+            deep_run.summary, deep_run.resolution.deep_dir / "results.sarif"
+        )
+        deep_summary = deep_run.summary
     candidate_source = RunSource(
         run_dir=run_dir,
         fast_dir=summary_path.parent,
@@ -80,7 +83,7 @@ def create_verify_candidate_run(
         config=config,
         run_source=candidate_source,
         summary=load_run_summary(summary_path),
-        deep_summary=load_sibling_deep_summary(candidate_source) or deep_run.summary,
+        deep_summary=load_sibling_deep_summary(candidate_source) or deep_summary,
     )
     return format_relative_path(run_dir, root)
 
@@ -91,7 +94,7 @@ def write_verify_rerun_review_artifacts(
     config: dict[str, Any],
     run_source: RunSource,
     summary: RunSummary,
-    deep_summary: RunSummary,
+    deep_summary: RunSummary | None,
 ) -> None:
     """Write run-aware review artifacts for a freshly rerun candidate."""
     contract_path = resolve_contract_source(root, config, summary=summary)

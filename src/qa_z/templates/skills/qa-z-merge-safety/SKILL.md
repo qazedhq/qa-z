@@ -38,7 +38,7 @@ Report the command run, exit status, changed risk area, merge verdict, and artif
 ```bash
 qa-z guard --adapter codex --deep auto
 qa-z repair-prompt --from-run latest --adapter codex
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run latest
 ```
 
 ## Repair Prompt Rules

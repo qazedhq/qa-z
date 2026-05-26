@@ -10,7 +10,7 @@ Use it after any of these flows:
 - `qa-z guard --adapter codex --deep auto`
 - `qa-z fast` followed by `qa-z deep --from-run latest`
 - `qa-z repair-prompt --from-run latest --adapter codex`
-- `qa-z verify --baseline-run latest --candidate-run <candidate-run>`
+- `qa-z verify --from-run latest`
 
 ## Human Output
 
@@ -94,9 +94,9 @@ explicitly frozen that evidence as a reviewed fixture or proof packet.
 - Deep summary is missing: run `qa-z deep --from-run latest`.
 - Repair prompt is missing after a blocking verdict: run
   `qa-z repair-prompt --from-run latest --adapter codex`.
-- Verify report is missing after a repair prompt: run
-  `qa-z verify --baseline-run latest --rerun`, or compare a named candidate
-  run with `--candidate-run`.
+- Verify report is missing after a repair prompt: apply the fix, then run
+  `qa-z verify --from-run latest`. If a candidate run already exists, compare it
+  with `--baseline-run` and `--candidate-run`.
 
 ## Installed Package And Source Checkouts
 

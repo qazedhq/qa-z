@@ -7,6 +7,7 @@ from qa_z.repair_handoff import RepairHandoffPacket, RepairTarget, ValidationCom
 
 def render_codex_handoff(handoff: RepairHandoffPacket) -> str:
     """Render a concise Codex execution prompt from a handoff packet."""
+    verify_command = f"qa-z verify --from-run {handoff.provenance['source_run_dir']}"
     lines = [
         "# QA-Z Codex Repair Handoff",
         "",
@@ -30,11 +31,24 @@ def render_codex_handoff(handoff: RepairHandoffPacket) -> str:
 
     lines.extend(render_list("## Affected Files", handoff.affected_files, code=True))
     lines.extend(render_list("## Constraints", handoff.constraints))
+    lines.extend(
+        render_list(
+            "## Forbidden Shortcuts",
+            [
+                "Do not weaken, delete, or skip tests to make QA-Z pass.",
+                "Do not disable QA-Z checks, Semgrep rules, lint, or type checks unless the contract explicitly permits it.",
+                "Do not claim the repair improved until `qa-z verify` writes verification artifacts.",
+            ],
+        )
+    )
     lines.extend(render_list("## Non-Goals", handoff.non_goals))
     lines.extend(["## Validation Commands", ""])
     lines.extend(
         render_validation_command(command) for command in handoff.validation_commands
     )
+    lines.extend(["", "## Repair -> Verify Loop", ""])
+    lines.extend(f"- {step}" for step in handoff.workflow_steps)
+    lines.append(f"- After applying the fix, run `{verify_command}`.")
     lines.extend(["", "## Success Criteria", ""])
     lines.extend(f"- {item}" for item in handoff.success_criteria)
     return "\n".join(lines).strip() + "\n"

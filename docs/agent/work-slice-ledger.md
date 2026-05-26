@@ -2348,3 +2348,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers get one local command for the first post-run read and can jump directly to the next deterministic command.
 - Remaining blocker: GitHub Actions job summary UX still depends on the separate `github-summary` command and workflow wiring.
 - Next safe slice: surface the same local evidence navigator in GitHub Actions job summaries/artifacts while keeping comments and SARIF upload opt-in.
+
+
+## 2026-05-27 v0.14 Repair Verify Workflow Productization
+- Repo: JustTyping
+- Lane: local repair evidence -> deterministic post-repair verification.
+- User-facing flow: guard verdict -> repair prompt -> external repair -> `qa-z verify --from-run latest` -> improved/unchanged/worse evidence.
+- Slice type: Flow / Evidence
+- Before: verify supported explicit baseline/candidate comparison and rerun mode, but the common local repair loop still required users to know candidate-run mechanics.
+- Root cause: the repair prompt and verify command were individually useful, but the product path between them was not encoded as the shortest safe command sequence.
+- Change made: added `--from-run` as the first-class verify baseline alias, defaulted it to rerun candidate evidence when used alone, improved verify stdout/JSON with deltas and next actions, added forbidden shortcuts plus verify follow-up to Codex handoffs, aligned the auth-bug demo and installed-package smoke with a deterministic fixed-file verify path, and documented the loop.
+- Validation run: focused repair/verify workflow tests, repair prompt and verification suites, demo guard action package tests, public docs current-truth tests, text hygiene, Ruff, format, diff whitespace, CLI help, and an auth-bug demo repair/verify smoke.
+- Evidence: `tests/test_repair_verify_workflow.py` covers `verify --from-run latest`, worse/regressed human output, Codex handoff guidance, and the deterministic auth-bug fixed-file verify path.
+- Gate delta: repair verification is easier to run locally without changing QA-Z's boundary; QA-Z still does not apply target-repository repairs, call live model APIs, publish packages, deploy, create tags, or post externally.
+- User impact: users can go from a blocked guard verdict to a repair prompt and then to a clear verify result with one follow-up command after applying the fix.
+- Remaining blocker: GitHub Action workflows still need separate wiring to expose the same repair/verify loop as job-summary guidance.
+- Next safe slice: productize GitHub Actions repair/verify summary artifacts while keeping SARIF upload, PR comments, and external posting opt-in.

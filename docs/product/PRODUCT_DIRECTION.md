@@ -237,8 +237,8 @@ The production goal is to deliver a reliable local QA control plane for develope
 ### Post-Repair Verification
 
 - User goal: prove whether a candidate repair improved, regressed, mixed, or stayed unchanged versus baseline evidence.
-- Entry point: `python -m qa_z verify --baseline-run <run> --candidate-run <run>` or repair-session verification.
-- Main steps: load baseline/candidate summaries, compare fast checks and deep findings, write verify artifacts and report.
+- Entry point: `python -m qa_z verify --from-run <run>`, explicit `--baseline-run <run> --candidate-run <run>`, or repair-session verification.
+- Main steps: load baseline evidence, create candidate evidence when requested, compare fast checks and deep findings, write verify artifacts and report.
 - Expected result: deterministic verdict with resolved, remaining, new, and regressed issue counts.
 - Current repository evidence: README, artifact schema docs, verification modules, verification tests.
 - Production criticality: very high, because it protects against false repair claims.

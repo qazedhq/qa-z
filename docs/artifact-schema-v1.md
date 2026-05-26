@@ -383,7 +383,13 @@ The current rule ids are:
 
 ## Repair Verification
 
-`qa-z verify --baseline-run <run> --candidate-run <run>` compares an existing pre-repair baseline run with an existing post-repair candidate run. `qa-z verify --baseline-run <run> --rerun` first creates a candidate run with the existing deterministic `fast` and `deep` runners, then compares it. Verification does not edit files, call Codex or Claude, run a scheduler, or make LLM-only judgments.
+`qa-z verify --from-run <run>` treats the selected run as the pre-repair baseline,
+creates a candidate run with the existing deterministic `fast` and comparable
+`deep` runners, then compares it. `qa-z verify --baseline-run <run>
+--candidate-run <run>` remains supported for an existing post-repair candidate
+run. `qa-z verify --baseline-run <run> --rerun` is the compatibility spelling
+for explicit rerun mode. Verification does not edit files, call Codex or Claude,
+run a scheduler, or make LLM-only judgments.
 
 By default, verification writes artifacts under the candidate run:
 

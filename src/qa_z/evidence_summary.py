@@ -357,7 +357,7 @@ def build_next_actions(
     ):
         actions.append("qa-z repair-prompt --from-run latest --adapter codex")
     if repair_prompt_exists and not verify_report_exists:
-        actions.append("qa-z verify --baseline-run latest --rerun")
+        actions.append("qa-z verify --from-run latest")
     if verify_report_exists:
         actions.append("qa-z review --from-run latest")
     if not actions:

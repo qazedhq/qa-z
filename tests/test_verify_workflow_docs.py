@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WALKTHROUGH_PATH = ROOT / "docs" / "walkthroughs" / "verify-baseline-candidate.md"
+REPAIR_VERIFY_PATH = ROOT / "docs" / "repair-verify-workflow.md"
 
 
 def read(path: str) -> str:
@@ -13,6 +14,7 @@ def read(path: str) -> str:
 
 def test_verify_baseline_candidate_walkthrough_exists() -> None:
     assert WALKTHROUGH_PATH.is_file()
+    assert REPAIR_VERIFY_PATH.is_file()
 
 
 def test_verify_baseline_candidate_walkthrough_pins_commands_and_artifacts() -> None:
@@ -22,6 +24,7 @@ def test_verify_baseline_candidate_walkthrough_pins_commands_and_artifacts() -> 
         "qa-z fast --output-dir .qa-z/runs/baseline",
         "qa-z deep --from-run .qa-z/runs/baseline",
         "qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex",
+        "qa-z verify --from-run .qa-z/runs/baseline",
         "qa-z fast --output-dir .qa-z/runs/candidate",
         "qa-z deep --from-run .qa-z/runs/candidate",
         "qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate",
@@ -73,3 +76,23 @@ def test_docs_index_links_verify_baseline_candidate_walkthrough() -> None:
         "[Verify baseline/candidate](walkthroughs/verify-baseline-candidate.md) | "
         "Compare repaired candidates against baseline QA-Z evidence"
     ) in docs_index
+    assert (
+        "[Repair -> verify workflow](repair-verify-workflow.md) | "
+        "First-class loop from guard verdict to repair prompt to deterministic verification"
+    ) in docs_index
+
+
+def test_repair_verify_workflow_pins_short_loop_and_boundaries() -> None:
+    workflow = REPAIR_VERIFY_PATH.read_text(encoding="utf-8")
+
+    for expected in (
+        "qa-z guard --from-run latest --adapter codex",
+        "qa-z repair-prompt --from-run latest --adapter codex",
+        "qa-z verify --from-run latest",
+        "qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate",
+        "worse (regressed)",
+        "does not call live model APIs",
+        "does not call live model APIs, run an external agent",
+        "publish packages",
+    ):
+        assert expected in workflow

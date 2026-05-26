@@ -32,6 +32,7 @@ DEFAULT_WORKFLOW_STEPS = [
     "Fix blocking repair targets before non-blocking cleanup.",
     "Keep edits focused to affected files unless the evidence clearly points elsewhere.",
     "Run the validation commands after repair.",
+    "Run `qa-z verify --from-run <source-run>` after applying the repair.",
     "Regenerate QA-Z review or repair artifacts if validation still fails.",
 ]
 

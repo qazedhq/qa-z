@@ -62,22 +62,18 @@ Expected result: the local Semgrep rule flags the risky signed-in-user shortcut 
 
 ## Candidate Repair
 
-Apply the included fixed implementation:
+Apply the included fixed implementation and let verify create candidate evidence:
 
 ```bash
 cp app/auth.fixed.py app/auth.py
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 PowerShell:
 
 ```powershell
 Copy-Item app\auth.fixed.py app\auth.py -Force
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 ## Expected Artifact Surfaces

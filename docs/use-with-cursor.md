@@ -20,12 +20,10 @@ Fix the deterministic failures first.
 Keep the validation commands unchanged unless the QA-Z config is intentionally updated.
 ```
 
-Then run the candidate evidence:
+Then verify the candidate evidence:
 
 ```bash
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 Cursor remains the editor. QA-Z remains the local QA evidence layer.

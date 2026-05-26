@@ -20,12 +20,10 @@ Fix only the evidence-backed failures and rerun the listed validation commands.
 Do not add hidden network dependencies to local QA.
 ```
 
-After Claude Code applies a repair, run a candidate gate and compare:
+After Claude Code applies a repair, verify the candidate evidence:
 
 ```bash
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 QA-Z keeps Claude-specific instructions in adapter output. The planner and runners remain model-agnostic.

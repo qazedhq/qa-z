@@ -165,6 +165,7 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Comparison](comparison.md)",
         "[GitHub Action](github-action.md)",
         "[Evidence summary](evidence-summary.md)",
+        "[Repair -> verify workflow](repair-verify-workflow.md)",
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",
@@ -182,7 +183,8 @@ def test_docs_index_links_production_readiness_docs() -> None:
 def test_quickstart_states_repair_verification_success_signal() -> None:
     quickstart = read_quickstart()
 
-    assert "qa-z verify --baseline-run .qa-z/runs/baseline" in quickstart
+    assert "qa-z verify --from-run .qa-z/runs/baseline" in quickstart
+    assert "qa-z verify --from-run latest --config qa-z.demo.yaml" in quickstart
     assert "qa-z summary --from-run latest" in quickstart
     assert "verdict `improved`" in quickstart
     assert "no regressions" in quickstart
@@ -195,6 +197,7 @@ def test_evidence_summary_docs_pin_local_first_read_boundary() -> None:
         "qa-z summary --from-run latest",
         "qa-z summary --from-run latest --json",
         "qa-z summary --from-run latest --markdown",
+        "qa-z verify --from-run latest",
         "status",
         "verdict",
         "top_findings",

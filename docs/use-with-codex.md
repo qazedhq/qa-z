@@ -50,9 +50,7 @@ human-operated Codex workflow.
 After Codex applies a fix:
 
 ```bash
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 QA-Z does not call Codex APIs. It writes local, model-agnostic evidence and Codex-friendly handoff text.

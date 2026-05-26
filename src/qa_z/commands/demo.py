@@ -14,6 +14,11 @@ from textwrap import dedent
 
 
 IGNORED_DEMO_NAMES = {".qa-z", "qa", "__pycache__"}
+AUTH_BUG_APPLY_FIX_COMMAND = (
+    'python -c "from pathlib import Path; import shutil; '
+    "shutil.copyfile(Path('app') / 'auth.fixed.py', Path('app') / 'auth.py')\""
+)
+AUTH_BUG_VERIFY_COMMAND = "qa-z verify --from-run latest --config qa-z.demo.yaml"
 AUTH_BUG_DEMO_CONFIG = dedent(
     """
     project:
@@ -127,6 +132,8 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
                         f"cd {demo_root}",
                         "qa-z guard --from-run latest --adapter codex",
                         "qa-z repair-prompt --from-run latest --adapter codex",
+                        AUTH_BUG_APPLY_FIX_COMMAND,
+                        AUTH_BUG_VERIFY_COMMAND,
                     ],
                 },
                 indent=2,
@@ -143,6 +150,8 @@ def handle_demo_auth_bug(args: argparse.Namespace) -> int:
     print(f"  cd {demo_root}")
     print("  qa-z guard --from-run latest --adapter codex")
     print("  qa-z repair-prompt --from-run latest --adapter codex")
+    print(f"  {AUTH_BUG_APPLY_FIX_COMMAND}")
+    print(f"  {AUTH_BUG_VERIFY_COMMAND}")
     return 0
 
 

@@ -203,6 +203,7 @@ Goal: make QA-Z evaluate whether a claimed repair improved the repository state 
 Included:
 
 - `qa-z verify --baseline-run <run> --candidate-run <run>` comparison command
+- first-class `qa-z verify --from-run <run>` repair loop command
 - optional `qa-z verify --baseline-run <run> --rerun` candidate creation through existing deterministic fast and deep runners
 - fast check delta classification for resolved, still failing, regressed, newly introduced, and skipped or non-comparable checks
 - conservative deep finding identity with strict and relaxed matching

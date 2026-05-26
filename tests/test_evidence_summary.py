@@ -160,7 +160,7 @@ def test_summary_points_to_repair_prompt_and_then_verify(
     assert exit_code == 0
     assert has_repair["repair_prompt"]["exists"] is True
     assert any(
-        "qa-z verify --baseline-run latest --rerun" in action
+        "qa-z verify --from-run latest" in action
         for action in has_repair["next_actions"]
     )
 
