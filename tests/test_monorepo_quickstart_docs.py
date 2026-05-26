@@ -59,9 +59,10 @@ def test_monorepo_docs_match_init_profile_behavior() -> None:
     bootstrap = read("src/qa_z/commands/bootstrap_init.py")
     quickstart = read("docs/quickstart.md")
 
-    assert (
-        'INIT_PROFILES = ("default", "python", "typescript", "monorepo")' in bootstrap
-    )
+    assert '"auto"' in bootstrap
+    assert '"nextjs"' in bootstrap
+    assert '"mixed"' in bootstrap
+    assert '"unknown"' in bootstrap
     assert 'project["languages"] = ["python", "typescript"]' in bootstrap
     assert 'selection["default_mode"] = "smart"' in bootstrap
     assert "qa-z init --profile monorepo" in quickstart

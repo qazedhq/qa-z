@@ -89,7 +89,10 @@ def test_init_without_agent_templates_strict_fails_for_missing_instruction_files
     assert "warning missing_instruction_file" in output
 
 
-@pytest.mark.parametrize("profile", ("default", "python", "typescript", "monorepo"))
+@pytest.mark.parametrize(
+    "profile",
+    ("default", "python", "typescript", "nextjs", "monorepo", "mixed", "unknown"),
+)
 def test_init_profile_with_agent_templates_passes_doctor(
     profile: str,
     tmp_path: Path,
@@ -187,6 +190,77 @@ def test_init_with_profile_monorepo_uses_smart_selection(
     assert exit_code == 0
     assert config["project"]["languages"] == ["python", "typescript"]  # type: ignore[index]
     assert config["fast"]["selection"]["default_mode"] == "smart"  # type: ignore[index]
+
+
+def test_init_with_profile_nextjs_marks_nextjs_assumptions(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["init", "--path", str(tmp_path), "--profile", "nextjs"])
+    capsys.readouterr()
+    config = load_initialized_config(tmp_path)
+
+    assert exit_code == 0
+    assert config["project"]["profile"] == "nextjs"  # type: ignore[index]
+    assert config["project"]["languages"] == ["typescript"]  # type: ignore[index]
+    assert [
+        check["id"]
+        for check in config["fast"]["checks"]  # type: ignore[index]
+    ] == ["ts_lint", "ts_type", "ts_test"]
+
+
+def test_init_with_profile_mixed_uses_smart_selection(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    exit_code = main(["init", "--path", str(tmp_path), "--profile", "mixed"])
+    capsys.readouterr()
+    config = load_initialized_config(tmp_path)
+
+    assert exit_code == 0
+    assert config["project"]["profile"] == "mixed"  # type: ignore[index]
+    assert config["project"]["languages"] == ["python", "typescript"]  # type: ignore[index]
+    assert config["fast"]["selection"]["default_mode"] == "smart"  # type: ignore[index]
+
+
+def test_init_auto_writes_detected_python_profile(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
+
+    exit_code = main(["init", "--path", str(tmp_path), "--profile", "auto"])
+    output = capsys.readouterr().out
+    config = load_initialized_config(tmp_path)
+
+    assert exit_code == 0
+    assert "QA-Z init profile detection: python" in output
+    assert "created: qa-z.yaml" in output
+    assert config["project"]["profile"] == "python"  # type: ignore[index]
+    assert config["project"]["languages"] == ["python"]  # type: ignore[index]
+
+
+def test_init_auto_explain_prints_evidence_when_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "package.json").write_text(
+        '{"dependencies":{"next":"15.0.0"}}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "next.config.js").write_text("module.exports = {}\n", encoding="utf-8")
+
+    exit_code = main(
+        ["init", "--path", str(tmp_path), "--profile", "auto", "--explain"]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "QA-Z init profile detection: nextjs" in output
+    assert "evidence: package.json, next.config.js" in output
+    assert "activated checks: Next.js TypeScript surface" in output
 
 
 def test_init_with_github_workflow_creates_workflow(

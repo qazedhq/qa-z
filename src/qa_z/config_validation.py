@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any, Literal
 
+from qa_z.profile_detection import SUPPORTED_DETECTED_PROFILES, detect_profile
 from qa_z.runners.checks import default_spec_for_name as default_fast_spec_for_name
 from qa_z.runners.semgrep import default_semgrep_spec_for_name
 
@@ -26,6 +27,7 @@ KNOWN_TOP_LEVEL_KEYS = {
 MAPPING_SECTIONS = tuple(sorted(KNOWN_TOP_LEVEL_KEYS))
 VALID_SELECTION_MODES = {"full", "smart"}
 VALID_NO_TESTS_POLICIES = {"warn", "fail"}
+VALID_PROJECT_PROFILES = set(SUPPORTED_DETECTED_PROFILES)
 KNOWN_SEMGREP_POLICY_KEYS = {
     "config",
     "fail_on_severity",
@@ -48,6 +50,7 @@ def validate_config(root: Path, config: dict[str, Any]) -> dict[str, Any]:
     validate_runner_options(config, errors)
     validate_checks_shape(config, errors, warnings)
     validate_adapters(root, config, errors, warnings, suggestions)
+    validate_project_profile_match(root, config, warnings, suggestions)
 
     status = "passed"
     if errors:
@@ -103,9 +106,77 @@ def validate_project_section(
                 "project.name must be a non-empty string when present.",
             )
         )
+    if "profile" in project and not is_valid_project_profile(project.get("profile")):
+        errors.append(
+            issue(
+                "invalid_project_profile",
+                "project.profile",
+                (
+                    "project.profile must be one of: "
+                    + ", ".join(sorted(VALID_PROJECT_PROFILES))
+                ),
+            )
+        )
     validate_string_list_option(config, ("project", "languages"), errors)
     validate_string_list_option(config, ("project", "roots"), errors)
     validate_string_list_option(config, ("project", "critical_paths"), errors)
+
+
+def validate_project_profile_match(
+    root: Path,
+    config: dict[str, Any],
+    warnings: list[dict[str, str]],
+    suggestions: list[str],
+) -> None:
+    """Warn when an explicit project profile conflicts with repository signals."""
+    configured = configured_project_profile(config)
+    if configured is None or configured == "unknown":
+        return
+    detected = detect_profile(root)
+    if detected.profile == "unknown" or profiles_are_compatible(
+        configured, detected.profile
+    ):
+        return
+    evidence = ", ".join(detected.evidence_files) or "none"
+    warnings.append(
+        issue(
+            "project_profile_mismatch",
+            "project.profile",
+            (
+                f"configured profile {configured} but repo signals look like "
+                f"{detected.profile}; evidence: {evidence}"
+            ),
+        )
+    )
+    suggestions.append("qa-z init --profile auto --dry-run")
+
+
+def configured_project_profile(config: dict[str, Any]) -> str | None:
+    """Return the explicit project profile when it is valid."""
+    project = config.get("project")
+    if not isinstance(project, dict):
+        return None
+    profile = project.get("profile")
+    if is_valid_project_profile(profile):
+        return str(profile)
+    return None
+
+
+def profiles_are_compatible(configured: str, detected: str) -> bool:
+    """Return whether a configured profile is compatible with detected signals."""
+    if configured == detected:
+        return True
+    if configured == "typescript" and detected == "nextjs":
+        return True
+    if configured in {"monorepo", "mixed"} and detected in {
+        "python",
+        "typescript",
+        "nextjs",
+        "mixed",
+        "monorepo",
+    }:
+        return True
+    return False
 
 
 def validate_contracts_section(
@@ -673,6 +744,11 @@ def is_valid_run_command(run: Any) -> bool:
 def is_valid_no_tests_policy(value: Any) -> bool:
     """Return whether a no-tests policy is supported by fast check normalization."""
     return isinstance(value, str) and value.lower() in VALID_NO_TESTS_POLICIES
+
+
+def is_valid_project_profile(value: Any) -> bool:
+    """Return whether project.profile names a supported init profile."""
+    return isinstance(value, str) and value in VALID_PROJECT_PROFILES
 
 
 def is_string_list(value: Any) -> bool:

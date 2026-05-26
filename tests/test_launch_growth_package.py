@@ -171,7 +171,8 @@ def test_readme_short_quickstart_uses_runnable_demo_flow() -> None:
     ):
         assert command in quickstart
     assert "For your own repository" in quickstart
-    assert "qa-z init --profile python --with-agent-templates" in quickstart
+    assert "qa-z init --profile auto --dry-run" in quickstart
+    assert "qa-z init --profile auto --with-agent-templates" in quickstart
 
 
 def test_docs_quickstart_leads_with_packaged_demo_before_example_repo_flow() -> None:

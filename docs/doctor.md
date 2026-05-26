@@ -8,6 +8,12 @@ Doctor is a local diagnostic command. It does not upload to PyPI or TestPyPI,
 create tags, create GitHub Releases, deploy, post comments, or mutate target
 repositories.
 
+```bash
+qa-z doctor
+qa-z doctor --json
+qa-z doctor --strict
+```
+
 ## Statuses
 
 `qa-z doctor` reports one overall status:
@@ -40,6 +46,10 @@ JSON fields are `status`, `version`, `checks`, `warnings`, `errors`,
 `suggestions`, and `next_actions`. Each check includes `id`, `status`,
 `message`, `evidence`, and `suggestion`.
 
+`qa-z doctor --strict` exits non-zero for warnings when an operator wants
+missing instruction files, profile mismatch, or other setup warnings to fail a
+handoff gate.
+
 ## What doctor checks
 
 Runtime diagnostics include Python version, executable path, platform, package
@@ -54,6 +64,14 @@ virtual environment.
 Project diagnostics check the selected project root, git availability, whether
 the root is inside a git repository, `qa-z.yaml` presence, profile shape, and
 configured fast/deep check counts. If `qa-z.yaml` is missing, run `qa-z init`.
+
+When `qa-z.yaml` records `project.profile`, doctor compares that explicit
+profile with the same repository signals used by
+`qa-z init --profile auto --dry-run`. A profile mismatch is a warning, not an
+automatic rewrite. The auto dry run explains the selected profile, confidence,
+evidence files, activated check assumptions, warnings, and next command without
+changing files. Supported detected profiles are `python`, `typescript`,
+`nextjs`, `monorepo`, `mixed`, or `unknown`.
 
 Tool diagnostics check `git` and Semgrep. Missing Semgrep is a warning because
 fast checks and config validation can still run, but deep checks may be
@@ -75,7 +93,12 @@ uploads/comments.
 
 ## Common fixes
 
-- Missing `qa-z.yaml`: run `qa-z init` or pass `--config` to an existing config.
+- Missing `qa-z.yaml`: run `qa-z init --profile auto --dry-run`, then run
+  `qa-z init --profile auto --with-agent-templates` when the detected profile
+  looks right.
+- Missing agent instruction files: run `qa-z init --with-agent-templates`.
+- Wrong profile: rerun the auto dry run, then edit `qa-z.yaml` or reinitialize
+  in a clean directory.
 - Missing Semgrep: install Semgrep when you want deep checks.
 - Missing auth-bug resources: reinstall QA-Z from the source checkout or
   package artifact.

@@ -164,6 +164,8 @@ def test_docs_index_links_production_readiness_docs() -> None:
 
     for link in (
         "[Quickstart](quickstart.md)",
+        "[Init](init.md)",
+        "[Doctor diagnostics](doctor.md)",
         "[Comparison](comparison.md)",
         "[Agent adapters](agent-adapters.md)",
         "[GitHub Action](github-action.md)",
@@ -182,6 +184,33 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Benchmarking](benchmarking.md)",
     ):
         assert link in docs_index
+
+
+def test_init_and_doctor_docs_describe_auto_profile_detection() -> None:
+    init_docs = (ROOT / "docs" / "init.md").read_text(encoding="utf-8")
+    doctor_docs = (ROOT / "docs" / "doctor.md").read_text(encoding="utf-8")
+    combined = init_docs + "\n" + doctor_docs
+    normalized = combined.lower()
+
+    for text in (
+        "qa-z init --profile auto --dry-run",
+        "selected profile",
+        "confidence",
+        "evidence files",
+        "activated check assumptions",
+        "`python`, `typescript`, `nextjs`, `monorepo`, `mixed`, or `unknown`",
+        "existing config",
+    ):
+        assert text in combined
+    assert "profile mismatch" in normalized
+
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
+        assert forbidden not in combined
 
 
 def test_quickstart_states_repair_verification_success_signal() -> None:
