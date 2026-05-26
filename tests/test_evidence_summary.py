@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ from tests.github_summary_test_support import (
 )
 
 
-def read_json_stdout(capsys: pytest.CaptureFixture[str]) -> dict[str, object]:
+def read_json_stdout(capsys: pytest.CaptureFixture[str]) -> dict[str, Any]:
     return json.loads(capsys.readouterr().out)
 
 
