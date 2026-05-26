@@ -43,9 +43,10 @@ def test_pypi_readiness_summary_records_testpypi_only_truth() -> None:
         "TestPyPI rehearsal completed.",
         "https://test.pypi.org/project/qa-z/0.9.8a0/",
         "Production PyPI has not been published.",
-        "Current metadata: `qa-z` / `0.9.8a0`.",
-        "Recommended candidate version: `0.10.0b0`, pending owner decision.",
-        "`registry_upload_executed=true` applies to TestPyPI only.",
+        "Current source metadata: `qa-z` / `0.10.0b0`.",
+        "Historical TestPyPI proof remains `qa-z==0.9.8a0`.",
+        "Owner-approved package metadata version: `0.10.0b0`.",
+        "`registry_upload_executed=true` applies to TestPyPI `0.9.8a0` only.",
         "Required gates before PyPI publish",
         "Explicit non-actions",
     ):
@@ -56,7 +57,7 @@ def test_pypi_readiness_summary_records_testpypi_only_truth() -> None:
         "No `twine upload` command ran in this PR.",
         "No tag or GitHub Release was created.",
         "No deploy occurred.",
-        "No `pyproject.toml` version bump occurred.",
+        "No package publish occurred; the `pyproject.toml` change is metadata-only.",
         "No live PyPI install is claimed.",
     ):
         assert blocked_action in readiness
@@ -64,7 +65,7 @@ def test_pypi_readiness_summary_records_testpypi_only_truth() -> None:
     assert "PyPI upload completed" not in readiness_text
     assert "live `pipx install qa-z`" not in readiness_text
     assert "live `uv tool install qa-z`" not in readiness_text
-    assert pyproject_version() == "0.9.8a0"
+    assert pyproject_version() == "0.10.0b0"
 
 
 def test_version_policy_records_testpypi_rehearsal_and_candidate_only() -> None:
@@ -72,14 +73,14 @@ def test_version_policy_records_testpypi_rehearsal_and_candidate_only() -> None:
 
     for required in (
         "`0.9.8a0` was used for the TestPyPI rehearsal.",
-        "`0.10.0b0` is the recommended production PyPI beta candidate.",
-        "`pyproject.toml` is not changed in this PR.",
-        "The version bump requires separate owner approval and a separate PR.",
+        "`0.10.0b0` is the current source metadata after this PR.",
+        "Production PyPI publish remains blocked.",
+        "Future version bumps require separate owner approval and a separate PR.",
     ):
         assert required in policy
 
-    assert "Candidate only, not current metadata" in policy
-    assert pyproject_version() == "0.9.8a0"
+    assert "Current source metadata after this metadata-only PR" in policy
+    assert pyproject_version() == "0.10.0b0"
 
 
 def test_pypi_publishing_method_decision_keeps_upload_blocked() -> None:

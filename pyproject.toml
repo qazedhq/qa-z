@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qa-z"
-version = "0.9.8a0"
+version = "0.10.0b0"
 description = "Deterministic QA gates for AI coding agents."
 readme = "README.md"
 requires-python = ">=3.10"

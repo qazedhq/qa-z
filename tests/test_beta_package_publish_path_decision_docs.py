@@ -38,8 +38,11 @@ def test_package_publish_path_decision_packet_exists_and_freezes_state() -> None
 
     assert "`v0.10.0-beta` is not released." in packet
     assert "Current public alpha remains `v0.9.9-alpha`." in packet
-    assert "Current package metadata remains `0.9.8a0`." in packet
-    assert "`registry_upload_executed=false`" in packet
+    assert "Current package metadata is `0.10.0b0`." in packet
+    assert (
+        "`registry_upload_executed=true` applies only to the historical TestPyPI"
+        in packet
+    )
     assert "Release execution remains `NO-GO`." in packet
     assert "Current decision: `No release yet`." in packet
     assert "no-upload tool smoke passed" in text
@@ -77,7 +80,7 @@ def test_package_publish_path_decision_keeps_install_commands_future_only() -> N
         "PyPI install is available",
         "PyPI publish completed",
         "TestPyPI publish completed",
-        "registry_upload_executed=true",
+        "production registry_upload_executed=true",
     ):
         assert false_claim not in packet
 
@@ -91,8 +94,7 @@ def test_package_publish_path_decision_blocks_execution_actions() -> None:
         "git tag ...",
         "gh release create ...",
         "deploy commands",
-        "change `pyproject.toml`",
-        "bump version metadata",
+        "changing package metadata beyond the\nowner-approved `0.10.0b0` scope",
     ):
         assert blocked in packet
 
@@ -102,20 +104,19 @@ def test_package_publish_path_decision_blocks_execution_actions() -> None:
         "create a tag",
         "create a GitHub Release",
         "deploy",
-        "change `pyproject.toml`",
-        "bump version metadata",
+        "change package metadata beyond the approved `0.10.0b0` scope",
         "load registry credentials",
         "claim `pipx install qa-z` is live",
     ):
         assert non_action in packet
 
 
-def test_package_publish_path_decision_preserves_pyproject_metadata() -> None:
+def test_package_publish_path_decision_uses_owner_approved_metadata() -> None:
     pyproject = read(ROOT / "pyproject.toml")
     match = re.search(r'^version = "([^"]+)"$', pyproject, flags=re.MULTILINE)
 
     assert match is not None
-    assert match.group(1) == "0.9.8a0"
+    assert match.group(1) == "0.10.0b0"
 
 
 def test_related_release_docs_link_package_publish_path_decision() -> None:

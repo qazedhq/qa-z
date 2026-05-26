@@ -33,7 +33,7 @@ def test_release_target_is_frozen_across_public_surfaces() -> None:
     release_notes = (ROOT / "docs" / "releases" / "v0.9.8-alpha.md").read_text(
         encoding="utf-8"
     )
-    assert 'version = "0.9.8a0"' in pyproject
+    assert 'version = "0.10.0b0"' in pyproject
     assert "v0.9.8-alpha" in readme
     assert "v0.9.x-alpha" not in readme
     assert "v0.9.8-alpha" in commit_plan
@@ -51,8 +51,8 @@ def test_runtime_package_version_matches_release_metadata() -> None:
     package_init = (ROOT / "src" / "qa_z" / "__init__.py").read_text(encoding="utf-8")
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
-    assert 'version = "0.9.8a0"' in pyproject
-    assert '__version__ = "0.9.8a0"' in package_init
+    assert 'version = "0.10.0b0"' in pyproject
+    assert '__version__ = "0.10.0b0"' in package_init
     assert '__version__ = "0.1.0"' not in package_init
 
 

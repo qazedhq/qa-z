@@ -95,12 +95,14 @@ def test_testpypi_rehearsal_approval_blocks_publish_actions() -> None:
         assert false_claim not in packet
 
 
-def test_testpypi_rehearsal_approval_keeps_pyproject_metadata_unchanged() -> None:
+def test_testpypi_rehearsal_approval_keeps_historical_packet_separate() -> None:
     pyproject = read("pyproject.toml")
     match = re.search(r'^version = "([^"]+)"$', pyproject, flags=re.MULTILINE)
+    packet = read(APPROVAL_PACKET)
 
     assert match is not None
-    assert match.group(1) == "0.9.8a0"
+    assert match.group(1) == "0.10.0b0"
+    assert "Current package metadata remains `0.9.8a0`." in packet
 
 
 def test_testpypi_rehearsal_approval_is_linked_from_related_docs() -> None:

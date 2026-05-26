@@ -14,9 +14,9 @@ from typing import Sequence
 from qa_z.subprocess_env import build_tool_subprocess_env
 
 
-DEFAULT_VERSION = "0.9.8a0"
-DEFAULT_WHEEL = Path("dist/qa_z-0.9.8a0-py3-none-any.whl")
-DEFAULT_SDIST = Path("dist/qa_z-0.9.8a0.tar.gz")
+DEFAULT_VERSION = "0.10.0b0"
+DEFAULT_WHEEL = Path("dist/qa_z-0.10.0b0-py3-none-any.whl")
+DEFAULT_SDIST = Path("dist/qa_z-0.10.0b0.tar.gz")
 
 
 class CheckResult(NamedTuple):

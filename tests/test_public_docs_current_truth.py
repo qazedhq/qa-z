@@ -233,9 +233,11 @@ def test_public_docs_point_to_latest_github_prerelease_without_package_publish()
     assert "GitHub prerelease: present for `v0.9.9-alpha`" in launch_checklist
     assert "v0.9.9-alpha post-release maintenance." in launch_checklist
     assert "GitHub prerelease exists for `v0.9.9-alpha`" in launch_package
-    assert "package metadata remains `0.9.8a0`" in product_direction
+    assert "source package metadata is `0.10.0b0`" in product_direction
+    assert "Historical TestPyPI proof remains `qa-z==0.9.8a0`" in product_direction
     assert "Latest GitHub prerelease: `v0.9.9-alpha`" in product_direction
-    assert "package metadata `0.9.8a0`" in v8_handoff
+    assert "source package metadata `0.10.0b0`" in v8_handoff
+    assert "historical TestPyPI proof at `qa-z==0.9.8a0`" in v8_handoff
     assert "latest GitHub prerelease `v0.9.9-alpha`" in v8_handoff
     assert action["inputs"]["qa-z-install"]["default"] == (
         "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
@@ -377,16 +379,17 @@ def test_pypi_conversion_readiness_pack_keeps_public_truth_blocked() -> None:
 
     assert (ROOT / PYPI_READINESS_PATH).exists()
     assert (ROOT / PYPI_RELEASE_NOTES_DRAFT_PATH).exists()
-    assert 'version = "0.9.8a0"' in pyproject
+    assert 'version = "0.10.0b0"' in pyproject
     assert "pipx install qa-z" not in readme
     assert "uv tool install qa-z" not in readme
     assert "https://test.pypi.org/project/qa-z/0.9.8a0/" in readiness
-    assert "`registry_upload_executed=true` applies to TestPyPI only." in readiness
-    assert "Current metadata: `qa-z` / `0.9.8a0`." in readiness
     assert (
-        "Recommended candidate version: `0.10.0b0`, pending owner decision."
+        "`registry_upload_executed=true` applies to TestPyPI `0.9.8a0` only."
         in readiness
     )
+    assert "Current source metadata: `qa-z` / `0.10.0b0`." in readiness
+    assert "Historical TestPyPI proof remains `qa-z==0.9.8a0`." in readiness
+    assert "Owner-approved package metadata version: `0.10.0b0`." in readiness
     assert "Production PyPI has not been published." in readiness
     assert "Production PyPI is not published." in release_notes
     assert "Draft only - not a GitHub Release." in release_notes
@@ -397,7 +400,7 @@ def test_pypi_conversion_readiness_pack_keeps_public_truth_blocked() -> None:
         "PyPI install is live",
         "live PyPI install is available",
         "v0.10.0-beta is released",
-        "version bumped",
+        "published to PyPI",
     ):
         assert false_claim not in combined_text
 
