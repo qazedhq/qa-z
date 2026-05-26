@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -106,11 +107,12 @@ def test_wheel_and_sdist_matrix_runs_installed_runtime_commands(
         "wheel",
         "sdist",
     }
+    python_label = "python.exe" if os.name == "nt" else "python"
     commands = "\n".join(payload_commands(payload))
     for expected in (
         "pip install",
         "qa-z --help",
-        "python.exe -m qa_z --help",
+        f"{python_label} -m qa_z --help",
         "qa-z doctor --json",
         "qa-z demo auth-bug --json",
         "qa-z guard --from-run latest --adapter codex",
