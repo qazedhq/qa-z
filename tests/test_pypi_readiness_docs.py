@@ -10,6 +10,7 @@ PUBLISHING_METHOD = ROOT / "docs/reports/v0.10.0-beta-pypi-publishing-method.md"
 README_TRANSITION = ROOT / "docs/reports/v0.10.0-beta-readme-install-transition.md"
 SMOKE_PLAN = ROOT / "docs/reports/v0.10.0-beta-pypi-install-smoke-plan.md"
 INSTALLED_PACKAGE_SMOKE = ROOT / "docs/reports/v0.10.0-beta-installed-package-smoke.md"
+PRODUCTION_GO_NO_GO = ROOT / "docs/reports/v0.18-production-pypi-go-no-go.md"
 RELEASE_NOTES_DRAFT = ROOT / "docs/releases/v0.10.0-beta-release-notes-draft.md"
 VERSION_POLICY = ROOT / "docs/reports/v0.10.0-beta-version-policy.md"
 LAUNCH_KIT = ROOT / "docs/launch/launch-kit.md"
@@ -106,6 +107,64 @@ def test_installed_package_smoke_report_records_local_runtime_proof_only() -> No
     assert "registry_upload_executed=true" not in report_text
     assert "v0.10.0-beta-installed-package-smoke.md" in package_plan
     assert "Local installed-package smoke passed" in package_plan
+
+
+def test_v018_production_pypi_go_no_go_packet_records_blocked_upload() -> None:
+    assert PRODUCTION_GO_NO_GO.exists()
+    packet = read(PRODUCTION_GO_NO_GO)
+    packet_text = normalized(PRODUCTION_GO_NO_GO)
+    package_plan = read(PACKAGE_PUBLISH_PLAN)
+    readiness = read(READINESS)
+    release_notes = read(RELEASE_NOTES_DRAFT)
+    readme = read(README)
+
+    for required in (
+        "Decision: `NO_GO_MISSING_APPROVAL`",
+        "Secondary decision: `NO_GO_MISSING_CREDENTIALS`",
+        "Release version: `0.10.0b0`",
+        "Final release SHA frozen: no.",
+        "Local readiness source SHA checked:",
+        "`202e4b0c84439578694997db63492546ccb5e27e`",
+        "`PRODUCTION_PYPI_RELEASE_APPROVED` | `true` | missing",
+        "`PYPI_UPLOAD_ALLOWED` | `true` | missing",
+        "`PACKAGE_PUBLISH_ALLOWED` | `true` | missing",
+        "`TARGET_REGISTRY` | `PyPI` | missing",
+        "`RELEASE_VERSION` | `0.10.0b0` | missing",
+        "`python -m pip index versions qa-z`: `ERROR: No matching distribution found for qa-z`.",
+        "`https://pypi.org/simple/qa-z/`: HTTP 404.",
+        "Production PyPI package proof for `qa-z==0.10.0b0` does not exist",
+        "`python -m build --sdist --wheel` | passed",
+        "`python scripts/installed_package_smoke.py --json` | passed",
+        "`dist/qa_z-0.10.0b0-py3-none-any.whl` | 389786",
+        "`303148adc5287c74afb53c33c708531b79da3635a9667a14b039ad6f98e054a0`",
+        "`dist/qa_z-0.10.0b0.tar.gz` | 582485",
+        "`47d76fbc193e60e0d6539832ac552a3dfd430d0f4bc98b75ad6c4d7cb0791e94`",
+        '`"summary": "installed package smoke passed"`',
+        '`"registry_upload_executed": false`',
+        "README transition status: unchanged.",
+        "`production_pypi_upload_executed=false`",
+        "`registry_upload_executed=false` for production PyPI",
+    ):
+        assert required in packet
+
+    for linked_surface in (package_plan, readiness, release_notes):
+        assert "v0.18-production-pypi-go-no-go.md" in linked_surface
+        assert "NO_GO_MISSING_APPROVAL" in linked_surface
+
+    assert "NO_GO_MISSING_CREDENTIALS" in package_plan
+    assert "Production PyPI upload remains blocked." in package_plan
+    assert "pipx install qa-z" not in readme
+    assert "uv tool install qa-z" not in readme
+
+    for false_claim in (
+        "GO_FOR_PRODUCTION_PYPI_UPLOAD` | selected",
+        "production_pypi_upload_executed=true",
+        "registry_upload_executed=true for production",
+        "PyPI upload completed",
+        "PyPI install is live",
+        "live PyPI install is available",
+    ):
+        assert false_claim not in packet_text
 
 
 def test_version_policy_records_testpypi_rehearsal_and_candidate_only() -> None:
