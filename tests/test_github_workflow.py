@@ -161,7 +161,10 @@ def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
 
     for name in expected_order[2:]:
         step = steps[step_names.index(name)]
-        assert step.get("if") == "${{ always() }}"
+        if name == "Upload QA-Z SARIF to code scanning":
+            assert step.get("if") == "${{ always() && inputs.upload-sarif == 'true' }}"
+        else:
+            assert step.get("if") == "${{ always() }}"
 
     combined_runs = "\n".join(step.get("run", "") for step in steps)
     assert "qa-z doctor --json" in combined_runs
@@ -185,6 +188,86 @@ def test_composite_action_preserves_artifacts_before_final_verdict() -> None:
     verdict_step = steps[step_names.index("Fail if QA-Z fast or deep failed")]
     assert "QA-Z checks failed: fast=$fast_exit deep=$deep_exit" in verdict_step["run"]
     assert "exit 1" in verdict_step["run"]
+
+
+def test_guard_action_validates_inputs_before_running_guard() -> None:
+    """The guard action should fail bad inputs with actionable diagnostics."""
+    action = yaml.safe_load(
+        (ROOT / ".github" / "actions" / "guard" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps: list[dict[str, Any]] = action["runs"]["steps"]
+    step_names = [step.get("name", "") for step in steps]
+
+    validation_position = step_names.index("Validate QA-Z action inputs")
+    install_position = step_names.index("Install QA-Z")
+    guard_position = step_names.index("Run QA-Z guard")
+    assert validation_position < install_position < guard_position
+
+    assert action["inputs"]["from-run"]["default"] == ""
+    combined_runs = "\n".join(step.get("run", "") for step in steps)
+    assert 'echo "run_dir=${run_dir}" >> "$GITHUB_OUTPUT"' in combined_runs
+    assert "steps.runtime.outputs.run_dir" in str(action)
+    assert "Invalid QA-Z action input: ${input_name}" in combined_runs
+    assert 'fail_input "profile"' in combined_runs
+    assert '"default, python, typescript, monorepo"' in combined_runs
+    assert 'fail_input "deep"' in combined_runs
+    assert '"auto, always, never"' in combined_runs
+    assert 'fail_input "adapter"' in combined_runs
+    assert '"codex, claude, human"' in combined_runs
+    assert 'fail_input "fail-on-risk"' in combined_runs
+    assert 'fail_input "upload-sarif"' in combined_runs
+    assert 'fail_input "from-run"' in combined_runs
+    assert "docs/github-action.md#troubleshooting-faq" in combined_runs
+    assert "--from-run" in combined_runs
+
+
+def test_qa_z_action_validates_inputs_and_keeps_sarif_opt_in() -> None:
+    """The reusable action should not attempt SARIF upload by default."""
+    action = yaml.safe_load(
+        (ROOT / ".github" / "actions" / "qa-z" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps: list[dict[str, Any]] = action["runs"]["steps"]
+    step_names = [step.get("name", "") for step in steps]
+
+    assert action["inputs"]["upload-sarif"]["default"] == "false"
+    assert step_names.index("Validate QA-Z action inputs") < step_names.index(
+        "Install QA-Z and Semgrep"
+    )
+
+    combined_runs = "\n".join(step.get("run", "") for step in steps)
+    assert "Invalid QA-Z action input: ${input_name}" in combined_runs
+    assert 'fail_input "adapter"' in combined_runs
+    assert '"legacy, codex, claude"' in combined_runs
+    assert 'fail_input "run-dir"' in combined_runs
+    assert 'fail_input "upload-sarif"' in combined_runs
+    assert "docs/github-action.md#troubleshooting-faq" in combined_runs
+
+    sarif_step = steps[step_names.index("Upload QA-Z SARIF to code scanning")]
+    assert sarif_step.get("if") == "${{ always() && inputs.upload-sarif == 'true' }}"
+
+
+def test_optional_pr_comment_template_validates_comment_flag() -> None:
+    """The optional comment template should reject ambiguous comment flags."""
+    workflow = yaml.safe_load(
+        (
+            ROOT / "templates" / ".github" / "workflows" / "qa-z-pr-comment.yml"
+        ).read_text(encoding="utf-8")
+    )
+    steps: list[dict[str, Any]] = workflow["jobs"]["qa-z-comment"]["steps"]
+    step_names = [step.get("name", "") for step in steps]
+
+    assert "Validate optional PR comment flag" in step_names
+    validation_step = steps[step_names.index("Validate optional PR comment flag")]
+    assert "Invalid QA-Z comment flag: QA_Z_POST_PR_COMMENT" in validation_step["run"]
+    assert "supported values: true, false" in validation_step["run"]
+    assert (
+        "docs/github-action.md#pr-comments-or-bot-comments-are-missing"
+        in (validation_step["run"])
+    )
 
 
 def test_github_action_docs_explain_composite_action_operational_contract() -> None:

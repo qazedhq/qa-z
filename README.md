@@ -161,7 +161,7 @@ jobs:
           adapter: codex
 ```
 
-See [docs/github-action.md](docs/github-action.md) for the 5-minute path: minimal PR gate, PR summary/artifacts, SARIF upload opt-in, and troubleshooting FAQ.
+See [docs/github-action.md](docs/github-action.md) for the 5-minute path: minimal PR gate, PR summary/artifacts, SARIF upload opt-in, and troubleshooting FAQ, including input validation diagnostics.
 Add `security-events: write` only when SARIF upload is explicitly enabled; PR/bot comments stay opt-in.
 
 ## Agent QA Playbook

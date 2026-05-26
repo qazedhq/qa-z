@@ -68,11 +68,12 @@ def test_guard_action_publishes_summary_and_artifact_contract() -> None:
 
     assert summary_step["if"] == "${{ always() }}"
     assert "$GITHUB_STEP_SUMMARY" in summary_step["run"]
-    assert ".qa-z/runs/latest/guard/github-summary.md" in summary_step["run"]
-    assert ".qa-z/runs/latest/guard/verdict.md" in summary_step["run"]
+    assert 'run_dir="${{ steps.runtime.outputs.run_dir }}"' in summary_step["run"]
+    assert "${run_dir}/guard/github-summary.md" in summary_step["run"]
+    assert "${run_dir}/guard/verdict.md" in summary_step["run"]
 
     assert artifact_step["if"] == "${{ always() }}"
     assert artifact_step["uses"] == "actions/upload-artifact@v6"
     assert artifact_step["with"]["name"] == "qa-z-runs"
-    assert artifact_step["with"]["path"] == ".qa-z/runs/latest"
+    assert artifact_step["with"]["path"] == "${{ steps.runtime.outputs.run_dir }}"
     assert artifact_step["with"]["retention-days"] == 7

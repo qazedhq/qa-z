@@ -14,10 +14,55 @@ inputs:
     description: Repair prompt adapter.
     required: false
     default: codex
+  upload-sarif:
+    description: Upload deep/results.sarif to code scanning. Requires security-events write permission.
+    required: false
+    default: "false"
 
 runs:
   using: composite
   steps:
+    - name: Validate QA-Z action inputs
+      shell: bash
+      run: |
+        docs_url="https://github.com/qazedhq/qa-z/blob/main/docs/github-action.md#troubleshooting-faq"
+        fail_input() {
+          local input_name="$1"
+          local input_value="$2"
+          local supported_values="$3"
+          local suggested_fix="$4"
+          echo "::error title=Invalid QA-Z action input::Invalid QA-Z action input: ${input_name}. Received '${input_value}'. supported values: ${supported_values}. Suggested fix: ${suggested_fix}. Docs: ${docs_url}"
+          echo "Invalid QA-Z action input: ${input_name}" >&2
+          echo "Received: ${input_value}" >&2
+          echo "supported values: ${supported_values}" >&2
+          echo "Suggested fix: ${suggested_fix}" >&2
+          echo "Docs: ${docs_url}" >&2
+          exit 2
+        }
+
+        case "${{ inputs.adapter }}" in
+          legacy|codex|claude) ;;
+          *)
+            fail_input "adapter" "${{ inputs.adapter }}" "legacy, codex, claude" "set adapter to codex for the default repair handoff"
+            ;;
+        esac
+
+        case "${{ inputs.upload-sarif }}" in
+          true|false) ;;
+          *)
+            fail_input "upload-sarif" "${{ inputs.upload-sarif }}" "true, false" "quote the boolean, for example upload-sarif: \"false\""
+            ;;
+        esac
+
+        run_dir="${{ inputs.run-dir }}"
+        if [[ "$run_dir" =~ ^[[:space:]]*$ || "$run_dir" = /* || "$run_dir" = *".."* ]]; then
+          fail_input "run-dir" "$run_dir" "a repository-relative path such as .qa-z/runs/pr" "set run-dir to a repository-relative .qa-z path"
+        fi
+
+        if [ "${{ inputs.upload-sarif }}" = "true" ]; then
+          echo "::notice title=QA-Z SARIF upload enabled::Ensure this job has permissions: security-events: write. Docs: ${docs_url}"
+        fi
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
@@ -68,13 +113,32 @@ runs:
         if [ -f "${{ inputs.run-dir }}/github-summary.md" ]; then
           cat "${{ inputs.run-dir }}/github-summary.md" >> "$GITHUB_STEP_SUMMARY"
         else
-          echo "# QA-Z Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "QA-Z did not produce a summary artifact." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "# QA-Z Summary"
+            echo ""
+            echo "QA-Z did not produce a summary artifact."
+            echo ""
+            echo "## Missing Evidence"
+            echo ""
+            echo "- Expected run directory: \`${{ inputs.run-dir }}\`"
+            echo "- Expected fast summary: \`${{ inputs.run-dir }}/fast/summary.json\`"
+            echo "- Expected deep summary: \`${{ inputs.run-dir }}/deep/summary.json\`"
+            echo "- Repair prompt artifact path: \`${{ inputs.run-dir }}/repair/prompt.md\`"
+            echo "- Review packet artifact path: \`${{ inputs.run-dir }}/review/review.md\`"
+            echo "- SARIF artifact path: \`${{ inputs.run-dir }}/deep/results.sarif\`"
+            echo ""
+            echo "## Next Actions"
+            echo ""
+            echo "1. Check the fast and deep log steps for the first failure."
+            echo "2. Run \`qa-z doctor --json\` locally."
+            echo "3. Run \`qa-z summary --from-run ${{ inputs.run-dir }}\` locally if artifacts exist."
+            echo ""
+            echo "SARIF upload is skipped unless \`upload-sarif: \"true\"\` is set; when enabled, the job needs \`security-events: write\`."
+          } >> "$GITHUB_STEP_SUMMARY"
         fi
 
     - name: Upload QA-Z SARIF to code scanning
-      if: ${{ always() }}
+      if: ${{ always() && inputs.upload-sarif == 'true' }}
       uses: github/codeql-action/upload-sarif@v4
       continue-on-error: true
       with:

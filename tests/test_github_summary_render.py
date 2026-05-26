@@ -77,6 +77,8 @@ def test_github_summary_renders_compact_failed_run() -> None:
     markdown = render_github_summary(summary=summary, run_source=run_source, root=root)
 
     assert "# QA-Z Summary" in markdown
+    assert "**Verdict:** do_not_merge" in markdown
+    assert "**Top blocked reason:** py_type: mypy exited with code 1." in markdown
     assert "**Fast:** failed" in markdown
     assert "**Deep:** not run" in markdown
     assert "**Selection:** smart" in markdown
@@ -87,6 +89,11 @@ def test_github_summary_renders_compact_failed_run() -> None:
     assert "- `src/qa_z/cli.py`" in markdown
     assert "- Review packet: `.qa-z/runs/ci/review/review.md`" in markdown
     assert "- Repair prompt: `.qa-z/runs/ci/repair/prompt.md`" in markdown
+    assert "- SARIF: `.qa-z/runs/ci/deep/results.sarif`" in markdown
+    assert "SARIF upload requires `security-events: write`" in markdown
+    assert "qa-z summary --from-run .qa-z/runs/ci" in markdown
+    assert "qa-z repair-prompt --from-run .qa-z/runs/ci --adapter codex" in markdown
+    assert "qa-z verify --from-run .qa-z/runs/ci" in markdown
     assert "Repair Session Outcome" not in markdown
 
 
@@ -166,3 +173,12 @@ def test_github_summary_cli_reports_missing_run(
 
     assert exit_code == 4
     assert "source not found" in output
+    assert "Next actions:" in output
+    assert "Check the QA-Z fast/deep steps for the first failure." in output
+    assert "Ensure --from-run points at a run directory with fast/summary.json." in (
+        output
+    )
+    assert (
+        "Docs: https://github.com/qazedhq/qa-z/blob/main/docs/github-action.md#troubleshooting-faq"
+        in (output)
+    )

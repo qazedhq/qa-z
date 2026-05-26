@@ -25,17 +25,19 @@ before editing.
   `python -m pytest -q` if blast radius warrants.
 - Stop rule: Do not commit generated runtime evidence as source truth.
 
-## Slice 2 - GitHub Actions repair/verify summary UX
+## Slice 2 - GitHub Actions summary dry-run fixture
 
 - Priority: P1
-- Flow: guard -> repair prompt -> verify -> GitHub Actions Job Summary/artifacts.
-- User-visible outcome: CI users see the same repair/verify next command and
-  artifact pointers that local users get from `qa-z verify --from-run`.
+- Flow: action input validation -> missing artifact fallback -> GitHub Actions
+  Job Summary/artifacts.
+- User-visible outcome: maintainers can validate the action summary fallback
+  and permission guidance locally without waiting for a live workflow failure.
 - Discovery commands:
-  - `rg -n "github-summary|GITHUB_STEP_SUMMARY|verify|repair-prompt|next_actions|artifacts" src tests docs .github`
+  - `rg -n "github-summary|GITHUB_STEP_SUMMARY|upload-sarif|from-run|QA_Z_POST_PR_COMMENT|artifacts" src tests docs .github templates`
 - Likely change type: Flow Slice + Evidence Slice.
-- Validation candidates: targeted GitHub summary/render tests plus verify
-  workflow tests.
+- Validation candidates: action YAML tests, GitHub summary render tests, and a
+  small local script or fixture that renders fallback summary text from missing
+  artifacts.
 - Stop rule: Keep PR comments, SARIF upload, branch mutation, release, and
   deploy behavior opt-in or out of scope.
 

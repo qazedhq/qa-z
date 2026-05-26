@@ -2364,3 +2364,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: users can go from a blocked guard verdict to a repair prompt and then to a clear verify result with one follow-up command after applying the fix.
 - Remaining blocker: GitHub Action workflows still need separate wiring to expose the same repair/verify loop as job-summary guidance.
 - Next safe slice: productize GitHub Actions repair/verify summary artifacts while keeping SARIF upload, PR comments, and external posting opt-in.
+
+
+## 2026-05-27 v0.15 GitHub Action Runtime Hardening
+- Repo: JustTyping
+- Lane: GitHub Actions gate -> runtime diagnostics and safe configuration.
+- User-facing flow: pull request workflow -> input validation -> guard evidence -> Job Summary/artifacts -> repair/verify next commands.
+- Slice type: Flow / Evidence / Contract
+- Before: action input validation was thin, the older full fast/deep action always attempted SARIF upload, and missing summary artifacts produced sparse fallback text.
+- Root cause: CI users needed actionable failure messages and permission guidance directly in logs and Job Summary output, not only in docs.
+- Change made: added action input validation with supported values and docs links; kept SARIF upload opt-in in the reusable action; validated the optional PR comment flag; expanded GitHub summary rendering with verdict, top blocked reason, artifact existence, SARIF permission guidance, and repair/verify next commands; documented the runtime boundary.
+- Validation run: focused GitHub workflow and summary tests, public current-truth docs, public text hygiene, Ruff, format, diff whitespace, and QA-Z help.
+- Evidence: `tests/test_github_workflow.py` and `tests/test_github_summary*.py` cover invalid action inputs, SARIF opt-in, comment opt-in validation, missing-run guidance, and Job Summary next commands.
+- Gate delta: GitHub Action failures are easier to diagnose without adding broad permissions, enabling bot comments by default, publishing packages, bumping versions, creating tags/releases, or deploying.
+- User impact: maintainers can fix bad `profile`, `deep`, `adapter`, `run-dir`, SARIF, and comment settings from the job log or summary without guessing which artifact to open first.
+- Remaining blocker: live hosted action release and production PyPI install remain separate release-owner decisions.
+- Next safe slice: add a deterministic action-summary fixture or dry-run harness that exercises the fallback summary text without requiring live GitHub Actions.

@@ -468,7 +468,7 @@ Verdict derivation is deterministic:
 .qa-z/runs/<run-id>/github-summary.md
 ```
 
-The GitHub summary is intentionally not a raw failure dump. It includes the overall fast and deep statuses, selection mode, fast totals, failed checks, changed files, selection groups, optional Deep QA findings, and pointers to the fast summary, review packet, and repair prompt artifacts.
+The GitHub summary is intentionally not a raw failure dump. It includes a conservative verdict, top blocked reason, overall fast and deep statuses, selection mode, fast totals, failed checks, changed files, selection groups, optional Deep QA findings, artifact existence markers, and next commands that point to the fast summary, deep summary, review packet, repair prompt, SARIF artifact, local evidence summary, repair prompt generation, and repair verification.
 
 When verification or repair-session outcome artifacts are available, `github-summary` also appends a concise repair outcome section. The section can come from:
 
@@ -531,7 +531,7 @@ newest available `*/fast/summary.json` and records a warning. When no fast
 summary exists, it returns `status: missing`, `verdict: no_run`, and next
 commands for creating evidence.
 
-The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
+The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4` only in workflows or actions that explicitly enable SARIF upload. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
 
 TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeScript lint or test entry records `execution_mode: targeted`, the resolved `eslint` or `vitest run` command, and the selected `target_paths`.
 
