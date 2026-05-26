@@ -9,6 +9,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [Quickstart](quickstart.md) | Five-minute local path from install to QA evidence |
 | [Comparison](comparison.md) | How QA-Z fits around coding agents, Semgrep, and test tools |
 | [GitHub Action](github-action.md) | Pull request gate setup using the shipped workflow and composite action |
+| [Evidence summary](evidence-summary.md) | Local first-read summary for verdicts, risks, artifact paths, and next commands |
 | [Use with Codex](use-with-codex.md) | Codex handoff loop using QA-Z repair prompts |
 | [Use with Claude Code](use-with-claude-code.md) | Claude Code handoff loop using the same deterministic artifacts |
 | [Use with Cursor](use-with-cursor.md) | Cursor workflow using QA-Z before merge |

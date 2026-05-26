@@ -54,6 +54,7 @@ cd examples/agent-auth-bug
 qa-z plan --title "AI auth bug caught by QA-Z" --issue issue.md --spec spec.md --slug ai-auth-bug --overwrite
 qa-z fast --output-dir .qa-z/runs/baseline
 qa-z deep --from-run .qa-z/runs/baseline
+qa-z summary --from-run .qa-z/runs/baseline
 qa-z review --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
@@ -90,6 +91,7 @@ qa-z doctor
 qa-z plan --title "Review recent agent change" --slug agent-change --overwrite
 qa-z fast
 qa-z deep --from-run latest
+qa-z summary --from-run latest
 qa-z review --from-run latest
 qa-z repair-prompt --from-run latest --adapter codex
 ```
@@ -114,6 +116,7 @@ qa-z doctor --json
 qa-z plan --title "Review mixed Python/TypeScript change" --slug monorepo-change --overwrite
 qa-z fast
 qa-z deep --from-run latest
+qa-z summary --from-run latest
 qa-z review --from-run latest
 qa-z repair-prompt --from-run latest --adapter codex
 ```

@@ -9,6 +9,7 @@ from typing import Callable
 from qa_z.commands.bootstrap import register_init_command, register_plan_command
 from qa_z.commands.config_doctor import register_doctor_command
 from qa_z.commands.demo import register_demo_command
+from qa_z.commands.evidence_summary import register_summary_command
 from qa_z.commands.execution import (
     register_deep_command,
     register_fast_command,
@@ -51,6 +52,7 @@ COMMAND_REGISTRY_GROUPS = {
         CommandRegistrar(name="doctor", register=register_doctor_command),
         CommandRegistrar(name="plan", register=register_plan_command),
         CommandRegistrar(name="review", register=register_review_command),
+        CommandRegistrar(name="summary", register=register_summary_command),
         CommandRegistrar(
             name="github-summary",
             register=register_github_summary_command,

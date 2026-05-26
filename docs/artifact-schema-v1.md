@@ -490,6 +490,41 @@ Recommendation mapping is deterministic and uses only recorded verdicts:
 - `verification_failed`: `rerun_required`
 - `unchanged`: `continue_repair`
 
+## Evidence Summary
+
+`qa-z summary --from-run <run>` reads existing run artifacts and prints a local
+first-read navigator. It does not run checks or mutate the target repository.
+Use `--json` for the stable machine-readable shape and `--markdown --output
+<path>` when a local review artifact is useful.
+
+The JSON payload has:
+
+- `kind`: stable artifact kind, currently `qa_z.evidence_summary`
+- `schema_version`: integer schema marker, currently `1`
+- `status`: one of `passed`, `warning`, `failed`, or `missing`
+- `verdict`: guard verdict when `guard/verdict.json` exists, otherwise a
+  conservative summary-derived verdict
+- `run_dir`: selected run directory, or `null` when no run is available
+- `evidence`: fast summary, deep summary, review packet, GitHub summary, and
+  guard verdict path entries
+- `top_findings`: compact first-read fast failures and deep findings
+- `repair_prompt`: repair prompt path entry
+- `verify_report`: verification report path entry
+- `next_actions`: ordered commands to continue the local workflow
+- `warnings`: stale or missing evidence guidance
+
+Each evidence path entry has:
+
+- `path`: repository-relative path, or `null` when no run could be selected
+- `exists`: boolean
+- `status`: optional recorded status when available
+
+Missing or stale runs are not fatal for this command. When `latest-run.json`
+points to missing evidence, `qa-z summary --from-run latest` falls back to the
+newest available `*/fast/summary.json` and records a warning. When no fast
+summary exists, it returns `status: missing`, `verdict: no_run`, and next
+commands for creating evidence.
+
 The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
 
 TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeScript lint or test entry records `execution_mode: targeted`, the resolved `eslint` or `vitest run` command, and the selected `target_paths`.

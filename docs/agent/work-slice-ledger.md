@@ -2332,3 +2332,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can now distinguish package metadata readiness from installed-package runtime readiness before any production PyPI publish decision.
 - Remaining blocker: production PyPI publish remains blocked until separate owner approval, selected registry method, frozen SHA proof, remote CI/public raw proof, and release execution packet exist.
 - Next safe slice: improve `qa-z doctor` installed-environment diagnostics so failed installs explain location, package version, config, Semgrep, demo-resource, and writable-runtime-directory state.
+
+
+## 2026-05-27 v0.13 Evidence Summary UX
+- Repo: JustTyping
+- Lane: local run evidence -> first-read evidence navigator
+- User-facing flow: run QA-Z -> read verdict, top risks, artifact paths, repair prompt path, verify path, and next command.
+- Slice type: Flow / Evidence
+- Before: users had to know whether to open `review/review.md`, `guard/verdict.json`, `github-summary.md`, `repair/prompt.md`, or `verify/report.md` first after a run.
+- Root cause: QA-Z already wrote many deterministic artifacts, but there was no local first-read command that summarized verdict, risks, paths, and missing-evidence guidance.
+- Change made: added `qa-z summary --from-run latest` with human, JSON, Markdown, and optional output modes; added stale/missing run handling; documented the evidence summary workflow and schema.
+- Validation run: targeted evidence summary tests, adjacent review/GitHub summary/verification tests, public docs current-truth tests, text hygiene, Ruff, format, diff whitespace, and CLI help.
+- Evidence: `tests/test_evidence_summary.py` covers full evidence, no run, missing deep evidence, repair prompt guidance, verify guidance, stale latest manifest fallback, human output, and GitHub summary consistency.
+- Gate delta: local evidence readability improved without changing artifact producers, publishing packages, bumping versions, deploying, tagging, creating releases, or claiming live PyPI install.
+- User impact: maintainers get one local command for the first post-run read and can jump directly to the next deterministic command.
+- Remaining blocker: GitHub Actions job summary UX still depends on the separate `github-summary` command and workflow wiring.
+- Next safe slice: surface the same local evidence navigator in GitHub Actions job summaries/artifacts while keeping comments and SARIF upload opt-in.

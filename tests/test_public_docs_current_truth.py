@@ -164,6 +164,7 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Quickstart](quickstart.md)",
         "[Comparison](comparison.md)",
         "[GitHub Action](github-action.md)",
+        "[Evidence summary](evidence-summary.md)",
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",
@@ -182,8 +183,35 @@ def test_quickstart_states_repair_verification_success_signal() -> None:
     quickstart = read_quickstart()
 
     assert "qa-z verify --baseline-run .qa-z/runs/baseline" in quickstart
+    assert "qa-z summary --from-run latest" in quickstart
     assert "verdict `improved`" in quickstart
     assert "no regressions" in quickstart
+
+
+def test_evidence_summary_docs_pin_local_first_read_boundary() -> None:
+    docs = (ROOT / "docs" / "evidence-summary.md").read_text(encoding="utf-8")
+
+    for phrase in (
+        "qa-z summary --from-run latest",
+        "qa-z summary --from-run latest --json",
+        "qa-z summary --from-run latest --markdown",
+        "status",
+        "verdict",
+        "top_findings",
+        "repair_prompt",
+        "verify_report",
+        "next_actions",
+        "warnings",
+        "live PyPI package",
+    ):
+        assert phrase in docs
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
+        assert forbidden not in docs
 
 
 def test_public_docs_point_to_latest_github_prerelease_without_package_publish() -> (
