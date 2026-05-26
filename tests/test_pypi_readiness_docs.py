@@ -9,9 +9,11 @@ READINESS = ROOT / "docs/reports/v0.10.0-beta-pypi-readiness.md"
 PUBLISHING_METHOD = ROOT / "docs/reports/v0.10.0-beta-pypi-publishing-method.md"
 README_TRANSITION = ROOT / "docs/reports/v0.10.0-beta-readme-install-transition.md"
 SMOKE_PLAN = ROOT / "docs/reports/v0.10.0-beta-pypi-install-smoke-plan.md"
+INSTALLED_PACKAGE_SMOKE = ROOT / "docs/reports/v0.10.0-beta-installed-package-smoke.md"
 RELEASE_NOTES_DRAFT = ROOT / "docs/releases/v0.10.0-beta-release-notes-draft.md"
 VERSION_POLICY = ROOT / "docs/reports/v0.10.0-beta-version-policy.md"
 LAUNCH_KIT = ROOT / "docs/launch/launch-kit.md"
+PACKAGE_PUBLISH_PLAN = ROOT / "docs/package-publish-plan.md"
 README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
 
@@ -47,6 +49,10 @@ def test_pypi_readiness_summary_records_testpypi_only_truth() -> None:
         "Historical TestPyPI proof remains `qa-z==0.9.8a0`.",
         "Owner-approved package metadata version: `0.10.0b0`.",
         "`registry_upload_executed=true` applies to TestPyPI `0.9.8a0` only.",
+        "Report: `docs/reports/v0.10.0-beta-installed-package-smoke.md`.",
+        "`python scripts/installed_package_smoke.py --json`: passed locally.",
+        "Both artifact forms installed into fresh virtual environments.",
+        "`registry_upload_executed=false`; no PyPI/TestPyPI upload",
         "Required gates before PyPI publish",
         "Explicit non-actions",
     ):
@@ -66,6 +72,39 @@ def test_pypi_readiness_summary_records_testpypi_only_truth() -> None:
     assert "live `pipx install qa-z`" not in readiness_text
     assert "live `uv tool install qa-z`" not in readiness_text
     assert pyproject_version() == "0.10.0b0"
+
+
+def test_installed_package_smoke_report_records_local_runtime_proof_only() -> None:
+    assert INSTALLED_PACKAGE_SMOKE.exists()
+    report = read(INSTALLED_PACKAGE_SMOKE)
+    report_text = normalized(INSTALLED_PACKAGE_SMOKE)
+    package_plan = read(PACKAGE_PUBLISH_PLAN)
+
+    for required in (
+        "Status: local installed-package runtime smoke passed.",
+        "Source metadata under test: `qa-z` / `0.10.0b0`.",
+        "Summary: `installed package smoke passed`.",
+        "`registry_upload_executed=false`.",
+        "Wheel artifact smoke: `PASS`.",
+        "Sdist artifact smoke: `PASS`.",
+        "Run `qa-z --help`.",
+        "Run `python -m qa_z --help`.",
+        "Run `qa-z demo auth-bug --json`.",
+        "Run `qa-z doctor --json --path <demo-root> --config qa-z.demo.yaml`.",
+        "Run `qa-z guard --from-run latest --adapter codex`.",
+        "Run `qa-z repair-prompt --from-run latest --adapter codex`.",
+        "Run `qa-z verify --baseline-run latest --candidate-run latest --json`.",
+        "Demo resource loading passed from both installed artifact forms.",
+        "No production PyPI upload occurred.",
+        "No TestPyPI upload occurred.",
+        "No live `pipx install qa-z` or `uv tool install qa-z` claim is made.",
+    ):
+        assert required in report
+
+    assert "PyPI publish completed" not in report_text
+    assert "registry_upload_executed=true" not in report_text
+    assert "v0.10.0-beta-installed-package-smoke.md" in package_plan
+    assert "Local installed-package smoke passed" in package_plan
 
 
 def test_version_policy_records_testpypi_rehearsal_and_candidate_only() -> None:
