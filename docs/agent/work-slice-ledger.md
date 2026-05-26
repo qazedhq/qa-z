@@ -2396,3 +2396,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can see which QA-Z coverage surfaces are ready, warning, blocked, not configured, or unknown from one local command.
 - Remaining blocker: production PyPI publish and hosted release surfaces remain separate owner-approved release decisions.
 - Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.
+
+
+## 2026-05-27 v0.17 Multi-Agent Adapter Quality Pack
+- Repo: JustTyping
+- Lane: repair handoff -> multi-agent executor prompts.
+- User-facing flow: failed QA-Z run -> `qa-z repair-prompt --adapter <tool>` -> evidence-backed external repair -> `qa-z verify`.
+- Slice type: Flow / Evidence
+- Before: normalized repair handoff data existed, but only Codex and Claude Markdown were first-class adapter artifacts and the common merge-safety sections were not enforced across other tools.
+- Root cause: QA-Z's core boundary is model-agnostic, but adapter presentation had not caught up with the broader Codex, Claude Code, Cursor, aider, OpenHands, and human-review workflows.
+- Change made: added a shared adapter renderer registry, expanded `repair-prompt`, guard, and repair-session artifacts to write `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`, and documented the shared adapter contract.
+- Validation run: focused repair-handoff and repair-prompt tests are passing; full slice validation is recorded in the PR closeout.
+- Evidence: `tests/test_repair_handoff.py` covers supported adapter outputs, required merge-safety sections, unknown adapter failure, selected adapter stdout, and artifact writes.
+- Gate delta: no external agent API call, live model call, release, deploy, package upload, version bump, live PyPI install claim, or generated runtime artifact was added.
+- User impact: operators can hand QA-Z repair evidence to the coding tool they actually use while keeping QA-Z as the deterministic merge-safety judge.
+- Remaining blocker: live executor orchestration remains out of scope; adapter files are local handoff prompts only.
+- Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.

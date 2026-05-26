@@ -8,6 +8,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | --- | --- |
 | [Quickstart](quickstart.md) | Five-minute local path from install to QA evidence |
 | [Comparison](comparison.md) | How QA-Z fits around coding agents, Semgrep, and test tools |
+| [Agent adapters](agent-adapters.md) | Repair-prompt adapters for Codex, Claude Code, Cursor, aider, OpenHands, and generic human review |
 | [GitHub Action](github-action.md) | Pull request gate setup using the shipped workflow and composite action |
 | [Evidence summary](evidence-summary.md) | Local first-read summary for verdicts, risks, artifact paths, and next commands |
 | [Repair -> verify workflow](repair-verify-workflow.md) | First-class loop from guard verdict to repair prompt to deterministic verification |

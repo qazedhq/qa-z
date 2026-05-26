@@ -194,6 +194,10 @@ If an artifact only contains `grouped_findings` and no active `findings`, QA-Z e
 .qa-z/runs/<run-id>/repair/handoff.json
 .qa-z/runs/<run-id>/repair/codex.md
 .qa-z/runs/<run-id>/repair/claude.md
+.qa-z/runs/<run-id>/repair/cursor.md
+.qa-z/runs/<run-id>/repair/aider.md
+.qa-z/runs/<run-id>/repair/openhands.md
+.qa-z/runs/<run-id>/repair/generic.md
 ```
 
 Required `packet.json` fields:
@@ -258,7 +262,11 @@ Deep repair targets are selected from blocking findings only. When grouped findi
 
 The `validation.commands` list includes failed fast check commands when available, then `python -m qa_z fast`. If blocking deep findings are selected, it also includes `python -m qa_z deep --from-run latest`. The handoff does not run these commands and does not decide success through an LLM.
 
-`codex.md` and `claude.md` render the same normalized handoff data. `codex.md` is action-oriented for Codex-style execution. `claude.md` is more explanatory and emphasizes constraints, non-goals, and workflow. Both are deterministic Markdown artifacts; neither invokes a live vendor API.
+Adapter Markdown files render the same normalized handoff data for Codex,
+Claude Code, Cursor, aider, OpenHands, and generic human review. Each adapter
+prompt includes objective, relevant evidence, files and risks, forbidden
+actions, required validation, final report format, and merge-safety boundaries.
+They are deterministic Markdown artifacts; none invokes a live vendor API.
 
 ## Repair Session
 
@@ -276,6 +284,10 @@ The `validation.commands` list includes failed fast check commands when availabl
     handoff.json
     codex.md
     claude.md
+    cursor.md
+    aider.md
+    openhands.md
+    generic.md
   executor_results/
     history.json
     attempts/
@@ -298,7 +310,7 @@ The handoff files use the same repair packet and handoff schemas documented abov
 - `baseline_fast_summary_path`: baseline fast summary artifact
 - `baseline_deep_summary_path`: baseline deep summary artifact, or `null`
 - `handoff_dir`: session-local handoff directory
-- `handoff_artifacts`: paths for `packet.json`, `prompt.md`, `handoff.json`, `codex.md`, and `claude.md`
+- `handoff_artifacts`: paths for `packet.json`, `prompt.md`, `handoff.json`, and adapter Markdown such as `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`
 - `executor_guide_path`: session-local executor guide
 - `safety_artifacts`: paths for `executor_safety.json` and `executor_safety.md`
 - `candidate_run_dir`: post-repair candidate run directory, or `null` before verification

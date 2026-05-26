@@ -2,7 +2,7 @@
 
 Repair sessions are a light local workflow wrapper around existing QA-Z repair handoff and verification artifacts.
 
-They are not live executor integration. They do not call Codex or Claude APIs, create queues, schedule jobs, commit code, push branches, or run remote workers. A session only records where the baseline evidence lives, prepares deterministic handoff material, waits for an external repair executor, and then verifies a candidate run.
+They are not live executor integration. They do not call Codex, Claude Code, Cursor, aider, OpenHands, or other agent APIs, create queues, schedule jobs, commit code, push branches, or run remote workers. A session only records where the baseline evidence lives, prepares deterministic handoff material, waits for an external repair executor, and then verifies a candidate run.
 
 ## Workflow
 
@@ -26,6 +26,10 @@ This creates:
     handoff.json
     codex.md
     claude.md
+    cursor.md
+    aider.md
+    openhands.md
+    generic.md
   executor_results/
     history.json
     attempts/

@@ -9,15 +9,15 @@ qa-z plan --diff changes.diff --title "Review Cursor change" --slug cursor-chang
 qa-z fast --output-dir .qa-z/runs/baseline
 qa-z deep --from-run .qa-z/runs/baseline
 qa-z review --from-run .qa-z/runs/baseline
-qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
+qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter cursor
 ```
 
 Paste the repair target back into Cursor:
 
 ```text
-Use .qa-z/runs/baseline/repair/prompt.md as the repair brief.
-Fix the deterministic failures first.
-Keep the validation commands unchanged unless the QA-Z config is intentionally updated.
+Use .qa-z/runs/baseline/repair/cursor.md as the repair brief.
+Fix only the evidence-backed files and risks.
+Run the required validation commands and do not claim success without validation.
 ```
 
 Then verify the candidate evidence:

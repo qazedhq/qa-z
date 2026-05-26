@@ -6,8 +6,10 @@ import argparse
 import json
 from pathlib import Path
 
-from qa_z.adapters.claude import render_claude_handoff
-from qa_z.adapters.codex import render_codex_handoff
+from qa_z.adapters import (
+    SUPPORTED_REPAIR_ADAPTERS,
+    render_all_repair_handoffs,
+)
 from qa_z.artifacts import (
     ArtifactLoadError,
     ArtifactSourceNotFound,
@@ -75,8 +77,7 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
             root=root,
             deep_summary=deep_summary,
         )
-        codex_markdown = render_codex_handoff(handoff)
-        claude_markdown = render_claude_handoff(handoff)
+        adapter_markdown = render_all_repair_handoffs(handoff)
         output_dir = (
             resolve_cli_path(root, args.output_dir)
             if args.output_dir
@@ -84,17 +85,15 @@ def handle_repair_prompt(args: argparse.Namespace) -> int:
         )
         write_repair_artifacts(packet, output_dir)
         write_repair_handoff_artifact(handoff, output_dir)
-        write_handoff_markdown(output_dir / "codex.md", codex_markdown, "codex")
-        write_handoff_markdown(output_dir / "claude.md", claude_markdown, "claude")
+        for adapter, markdown in adapter_markdown.items():
+            write_handoff_markdown(output_dir / f"{adapter}.md", markdown, adapter)
         if args.handoff_json:
             print(repair_handoff_json(handoff), end="")
             return 0
         if args.json:
             print(repair_packet_json(packet), end="")
-        elif args.adapter == "codex":
-            print(codex_markdown, end="")
-        elif args.adapter == "claude":
-            print(claude_markdown, end="")
+        elif args.adapter in adapter_markdown:
+            print(adapter_markdown[args.adapter], end="")
         else:
             print(packet.agent_prompt, end="")
         return 0
@@ -171,9 +170,9 @@ def register_repair_prompt_command(subparsers: argparse._SubParsersAction) -> No
     )
     repair_parser.add_argument(
         "--adapter",
-        choices=("legacy", "codex", "claude"),
+        choices=("legacy", *SUPPORTED_REPAIR_ADAPTERS),
         default="legacy",
-        help="render the legacy prompt, Codex handoff, or Claude handoff",
+        help="render the legacy prompt or a supported adapter handoff",
     )
     repair_parser.add_argument(
         "--json",

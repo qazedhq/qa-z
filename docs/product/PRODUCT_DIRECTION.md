@@ -20,7 +20,7 @@ Input reconciliation note: no separate file literally named "A1 Product Definiti
 
 ### Confirmed Decisions
 
-- Confirmed: QA-Z is Codex-first but model-agnostic. Codex and Claude are adapters or handoff targets, not the core engine.
+- Confirmed: QA-Z is Codex-first but model-agnostic. Codex, Claude Code, Cursor, aider, OpenHands, and generic human-review prompts are adapters or handoff targets, not the core engine.
 - Confirmed: QA-Z should bias toward executable quality gates, explicit contracts, deterministic evidence, and repairable feedback.
 - Confirmed: The core command names `init`, `plan`, `fast`, `deep`, `review`, and `repair-prompt` must be preserved.
 - Confirmed: Deep QA automation must not be claimed unless runners and tests prove it.
@@ -329,7 +329,7 @@ The production goal is to deliver a reliable local QA control plane for develope
   - Deterministic checks are authoritative over LLM-only judgment.
   - Root `.qa-z/**` is local by default.
   - Fixture-local `.qa-z/**` can be tracked only as benchmark input.
-  - Codex and Claude behavior belongs in adapters/templates/handoff docs.
+  - Coding-tool-specific behavior belongs in adapters/templates/handoff docs.
   - Deep automation claims must match proven runner/test behavior.
 - Business rules inferred:
   - The merge decision should be blocked by failed fast/deep gates until repair evidence improves.

@@ -215,7 +215,7 @@ def test_guard_action_validates_inputs_before_running_guard() -> None:
     assert 'fail_input "deep"' in combined_runs
     assert '"auto, always, never"' in combined_runs
     assert 'fail_input "adapter"' in combined_runs
-    assert '"codex, claude, human"' in combined_runs
+    assert '"codex, claude, cursor, aider, openhands, generic, human"' in combined_runs
     assert 'fail_input "fail-on-risk"' in combined_runs
     assert 'fail_input "upload-sarif"' in combined_runs
     assert 'fail_input "from-run"' in combined_runs
@@ -241,7 +241,7 @@ def test_qa_z_action_validates_inputs_and_keeps_sarif_opt_in() -> None:
     combined_runs = "\n".join(step.get("run", "") for step in steps)
     assert "Invalid QA-Z action input: ${input_name}" in combined_runs
     assert 'fail_input "adapter"' in combined_runs
-    assert '"legacy, codex, claude"' in combined_runs
+    assert '"legacy, codex, claude, cursor, aider, openhands, generic"' in combined_runs
     assert 'fail_input "run-dir"' in combined_runs
     assert 'fail_input "upload-sarif"' in combined_runs
     assert "docs/github-action.md#troubleshooting-faq" in combined_runs

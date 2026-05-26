@@ -19,6 +19,10 @@ from qa_z.repair_handoff import (
     write_repair_handoff_artifact,
 )
 from qa_z.runners.models import RunSummary
+from qa_z.adapters import (
+    SUPPORTED_REPAIR_ADAPTERS,
+    render_repair_handoff_for_adapter,
+)
 from qa_z.adapters.claude import render_claude_handoff
 from qa_z.adapters.codex import render_codex_handoff
 
@@ -331,10 +335,47 @@ def test_adapter_renderers_use_same_handoff_data(tmp_path: Path) -> None:
     assert "Implement the repair now." in codex
     assert "## Validation Commands" in codex
     assert "`python -m qa_z fast`" in codex
-    assert claude.startswith("# QA-Z Claude Repair Handoff\n")
+    assert claude.startswith("# QA-Z Claude Code Repair Handoff\n")
     assert "Analyze the QA-Z evidence, then make the smallest safe repair." in claude
     assert "## Non-Goals" in claude
     assert "`python -m qa_z fast`" in claude
+
+
+@pytest.mark.parametrize("adapter", SUPPORTED_REPAIR_ADAPTERS)
+def test_adapter_renderer_outputs_required_merge_safety_sections(
+    tmp_path: Path, adapter: str
+) -> None:
+    handoff = build_handoff(tmp_path)
+
+    prompt = render_repair_handoff_for_adapter(adapter, handoff)
+
+    assert prompt.startswith(f"# QA-Z {adapter_label(adapter)} Repair Handoff\n")
+    for heading in (
+        "## Objective",
+        "## Relevant Evidence",
+        "## Files and Risks",
+        "## Forbidden Actions",
+        "## Required Validation",
+        "## Final Report Format",
+        "## Merge-Safety Boundaries",
+    ):
+        assert heading in prompt
+    assert "Do not claim success without validation." in prompt
+    assert "qa-z verify --from-run" in prompt
+    assert "`src/qa_z/runners/fast.py`" in prompt
+    assert "bypass validation" not in prompt.lower()
+
+
+def adapter_label(adapter: str) -> str:
+    """Return the expected user-facing adapter label."""
+    return {
+        "codex": "Codex",
+        "claude": "Claude Code",
+        "cursor": "Cursor",
+        "aider": "aider",
+        "openhands": "OpenHands",
+        "generic": "Generic",
+    }[adapter]
 
 
 def test_handoff_json_is_stable_and_machine_readable(tmp_path: Path) -> None:
@@ -407,10 +448,47 @@ def test_repair_prompt_cli_writes_handoff_and_adapter_artifacts(
     assert (repair_dir / "packet.json").exists()
     assert (repair_dir / "prompt.md").exists()
     assert (repair_dir / "handoff.json").exists()
-    assert (repair_dir / "codex.md").exists()
-    assert (repair_dir / "claude.md").exists()
+    for adapter in SUPPORTED_REPAIR_ADAPTERS:
+        assert (repair_dir / f"{adapter}.md").exists()
     handoff = json.loads((repair_dir / "handoff.json").read_text(encoding="utf-8"))
     assert handoff["kind"] == "qa_z.repair_handoff"
+
+
+def test_repair_prompt_cli_prints_selected_adapter(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_config(tmp_path)
+    write_contract(tmp_path)
+    write_fast_summary(tmp_path)
+
+    exit_code = main(
+        [
+            "repair-prompt",
+            "--path",
+            str(tmp_path),
+            "--adapter",
+            "cursor",
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert output.startswith("# QA-Z Cursor Repair Handoff\n")
+    assert "## Final Report Format" in output
+
+
+def test_repair_prompt_unknown_adapter_fails_clearly(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        main(["repair-prompt", "--adapter", "unknown"])
+
+    stderr = capsys.readouterr().err
+
+    assert excinfo.value.code == 2
+    assert "invalid choice: 'unknown'" in stderr
+    for adapter in SUPPORTED_REPAIR_ADAPTERS:
+        assert adapter in stderr
 
 
 def test_repair_prompt_cli_can_print_handoff_json(

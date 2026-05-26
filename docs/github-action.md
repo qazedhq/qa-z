@@ -217,7 +217,8 @@ and `qa-z guard --deep auto --adapter <adapter>` before changing CI permissions.
 
 The guard action validates `profile` values of `default`, `python`,
 `typescript`, and `monorepo`; `deep` values of `auto`, `always`, and `never`;
-`adapter` values of `codex`, `claude`, and `human`; and quoted boolean values
+`adapter` values of `codex`, `claude`, `cursor`, `aider`, `openhands`,
+`generic`, and legacy `human`; and quoted boolean values
 for `fail-on-risk` and `upload-sarif`. For guard execution, an existing `qa-z.yaml` remains the source of truth for actual guard execution. If CI says an input is unsupported,
 fix the workflow input. If the wrong checks run, inspect `qa-z.yaml` and run
 `qa-z doctor --json` locally.

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
+from qa_z.adapters import SUPPORTED_REPAIR_ADAPTERS
 from qa_z.artifacts import format_path, resolve_path
 from qa_z.executor_safety import write_executor_safety_artifacts
 
@@ -59,13 +60,14 @@ def ensure_session_safety_artifacts(session: object, root: Path):
 
 def handoff_artifact_paths(handoff_dir: Path, root: Path) -> dict[str, str]:
     """Return stable handoff artifact paths for the manifest."""
-    return {
+    paths = {
         "packet_json": format_path(handoff_dir / "packet.json", root),
         "prompt_markdown": format_path(handoff_dir / "prompt.md", root),
         "handoff_json": format_path(handoff_dir / "handoff.json", root),
-        "codex_markdown": format_path(handoff_dir / "codex.md", root),
-        "claude_markdown": format_path(handoff_dir / "claude.md", root),
     }
+    for adapter in SUPPORTED_REPAIR_ADAPTERS:
+        paths[f"{adapter}_markdown"] = format_path(handoff_dir / f"{adapter}.md", root)
+    return paths
 
 
 def resolve_session_dir(root: Path, session: str) -> Path:

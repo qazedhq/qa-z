@@ -7,8 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from qa_z.adapters.claude import render_claude_handoff
-from qa_z.adapters.codex import render_codex_handoff
+from qa_z.adapters import render_all_repair_handoffs
 from qa_z.artifacts import (
     ArtifactLoadError,
     format_path,
@@ -77,16 +76,12 @@ def create_repair_session(
         handoff_dir = session_dir / "handoff"
         write_repair_artifacts(repair_packet, handoff_dir)
         write_repair_handoff_artifact(handoff, handoff_dir)
-        write_repair_session_artifact(
-            handoff_dir / "codex.md",
-            render_codex_handoff(handoff),
-            "codex handoff",
-        )
-        write_repair_session_artifact(
-            handoff_dir / "claude.md",
-            render_claude_handoff(handoff),
-            "claude handoff",
-        )
+        for adapter, markdown in render_all_repair_handoffs(handoff).items():
+            write_repair_session_artifact(
+                handoff_dir / f"{adapter}.md",
+                markdown,
+                f"{adapter} handoff",
+            )
         safety_artifacts = write_executor_safety_artifacts(
             root=root, output_dir=session_dir
         )

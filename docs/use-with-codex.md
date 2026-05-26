@@ -24,6 +24,11 @@ Use `.qa-z/runs/latest/repair/codex.md` when you are following the latest QA-Z
 run. Use a specific run path such as `.qa-z/runs/baseline/repair/codex.md` when
 documenting a reproducible walkthrough.
 
+The Codex handoff includes the same merge-safety contract as the other
+[agent adapters](agent-adapters.md): objective, evidence paths, files and risks,
+forbidden actions, required validation, final report format, and merge-safety
+boundaries.
+
 ## Copy This Prompt To Codex
 
 Use this after QA-Z has generated a repair prompt.

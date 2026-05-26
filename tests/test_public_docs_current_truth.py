@@ -164,6 +164,7 @@ def test_docs_index_links_production_readiness_docs() -> None:
     for link in (
         "[Quickstart](quickstart.md)",
         "[Comparison](comparison.md)",
+        "[Agent adapters](agent-adapters.md)",
         "[GitHub Action](github-action.md)",
         "[Evidence summary](evidence-summary.md)",
         "[Repair -> verify workflow](repair-verify-workflow.md)",

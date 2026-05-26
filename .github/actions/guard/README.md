@@ -33,7 +33,9 @@ The action installs QA-Z from GitHub during alpha after validating inputs, runs
 
 - `profile`: documented project profile, default `python`.
 - `deep`: guard deep-check policy, default `auto`.
-- `adapter`: repair prompt adapter, default `codex`.
+- `adapter`: repair prompt adapter, default `codex`. Supported values are
+  `codex`, `claude`, `cursor`, `aider`, `openhands`, `generic`, and legacy
+  `human` metadata.
 - `fail-on-risk`: exits nonzero on blocking verdicts, default `"true"`.
 - `upload-sarif`: uploads `.qa-z/runs/latest/deep/results.sarif`, default `"false"`.
 - `from-run`: optional existing run to guard, default empty for a fresh guard run.
