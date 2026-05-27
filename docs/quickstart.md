@@ -85,7 +85,8 @@ Expected result: `qa-z verify` reports verdict `improved` with resolved blockers
 ## Use It In Your Repository
 
 ```bash
-qa-z init --profile python --with-agent-templates --with-github-workflow
+qa-z init --profile auto --dry-run
+qa-z init --profile auto --with-agent-templates --with-github-workflow
 qa-z doctor
 qa-z plan --title "Review recent agent change" --slug agent-change --overwrite
 qa-z fast
@@ -98,9 +99,16 @@ qa-z verify --from-run latest
 
 If `qa-z` is not on PATH, use `python -m qa_z` for the same commands.
 
+`qa-z init --profile auto --dry-run` explains the selected profile, confidence,
+evidence files, activated check assumptions, warnings, and next command without
+writing files. Supported detected profiles are `python`, `typescript`, `nextjs`,
+`monorepo`, `mixed`, and `unknown`.
+
 Use `qa-z doctor --json` when automation needs structured config or onboarding errors, and use `qa-z doctor --strict` when warnings such as missing agent instruction templates should fail a handoff gate.
 `doctor` also fails before execution on malformed check definitions, including
 empty check kinds and malformed Semgrep policy fields.
+When `qa-z.yaml` records `project.profile`, `doctor` warns if repository signals
+look mismatched and suggests `qa-z init --profile auto --dry-run`.
 
 The starter GitHub workflow installs the public alpha, then runs `qa-z doctor --json` before `qa-z fast --json` with read-only repository contents permission.
 

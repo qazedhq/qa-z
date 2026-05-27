@@ -39,13 +39,13 @@ Automation can use `qa-z demo auth-bug --json` for demo root, verdict, repair pr
 
 For your own repository:
 ```bash
-qa-z init --profile python --with-agent-templates
+qa-z init --profile auto --dry-run
+qa-z init --profile auto --with-agent-templates
 qa-z doctor && qa-z scorecard
 qa-z guard --adapter codex --deep auto --fail-on-risk
 qa-z repair-prompt --from-run latest --adapter codex
 qa-z verify --from-run latest
 ```
-
 If the console script is not on PATH, use `python -m qa_z`; see [Doctor diagnostics](docs/doctor.md) for install, config, CI, Semgrep, and `.qa-z` writeability issues.
 
 ## GitHub Alpha Install

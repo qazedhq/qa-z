@@ -699,6 +699,60 @@ def test_doctor_fails_for_invalid_project_name(
     assert payload["errors"][0]["path"] == "project.name"
 
 
+@pytest.mark.parametrize("profile", ["rails", "", ["python"], True])
+def test_doctor_fails_for_invalid_project_profile(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    profile: object,
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo", "profile": profile},
+            "contracts": {"output_dir": "qa/contracts"},
+        },
+    )
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 1
+    assert payload["status"] == "failed"
+    assert payload["errors"][0]["code"] == "invalid_project_profile"
+    assert payload["errors"][0]["path"] == "project.profile"
+
+
+def test_doctor_warns_when_project_profile_mismatches_repo_signals(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_yaml(
+        tmp_path,
+        {
+            "project": {"name": "demo", "profile": "python", "languages": ["python"]},
+            "contracts": {"output_dir": "qa/contracts"},
+            "fast": {"checks": ["py_test"]},
+        },
+    )
+    (tmp_path / "package.json").write_text(
+        '{"dependencies":{"next":"15.0.0"}}\n', encoding="utf-8"
+    )
+    (tmp_path / "next.config.mjs").write_text("export default {}\n", encoding="utf-8")
+
+    exit_code = main(["doctor", "--path", str(tmp_path), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "warning"
+    assert payload["warnings"][0]["code"] == "project_profile_mismatch"
+    assert payload["warnings"][0]["path"] == "project.profile"
+    assert (
+        "configured profile python but repo signals look like nextjs"
+        in (payload["warnings"][0]["message"])
+    )
+    assert "qa-z init --profile auto --dry-run" in payload["suggestions"]
+
+
 @pytest.mark.parametrize("output_dir", ["", "   ", ["qa/contracts"], True])
 def test_doctor_fails_for_invalid_contracts_output_dir(
     tmp_path: Path,

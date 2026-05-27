@@ -16,8 +16,21 @@ from qa_z.commands.common import (
     write_text_if_missing,
 )
 from qa_z.config import CONTRACTS_README, EXAMPLE_CONFIG
+from qa_z.profile_detection import (
+    ProfileDetectionResult,
+    detect_profile,
+)
 
-INIT_PROFILES = ("default", "python", "typescript", "monorepo")
+INIT_PROFILES = (
+    "default",
+    "python",
+    "typescript",
+    "nextjs",
+    "monorepo",
+    "mixed",
+    "unknown",
+    "auto",
+)
 
 GITHUB_WORKFLOW = """name: QA-Z
 
@@ -55,7 +68,11 @@ jobs:
 def handle_init(args: argparse.Namespace) -> int:
     """Bootstrap a repository with starter QA-Z files."""
     root = Path(args.path).expanduser().resolve()
-    root.mkdir(parents=True, exist_ok=True)
+    selected_profile = args.profile
+    detection: ProfileDetectionResult | None = None
+    if args.profile == "auto":
+        detection = detect_profile(root)
+        selected_profile = detection.profile
 
     config_path = root / "qa-z.yaml"
     contracts_readme = root / "qa" / "contracts" / "README.md"
@@ -65,31 +82,38 @@ def handle_init(args: argparse.Namespace) -> int:
     )
     github_workflow = root / ".github" / "workflows" / "qa-z.yml"
 
+    planned: list[tuple[Path, str]] = [
+        (config_path, profile_config(selected_profile)),
+        (contracts_readme, CONTRACTS_README),
+    ]
+    if args.with_agent_templates:
+        planned.extend(agent_templates)
+    if args.with_github_workflow:
+        planned.append((github_workflow, GITHUB_WORKFLOW))
+
+    if detection is not None or args.explain:
+        if detection is None:
+            detection = detect_profile(root)
+        render_profile_detection(detection)
+
+    if args.dry_run:
+        print(f"QA-Z init dry run in {root}")
+        for path, _content in planned:
+            action = "would skip" if path.exists() else "would write"
+            print(f"{action}: {format_relative_path(path, root)}")
+        return 0
+
+    root.mkdir(parents=True, exist_ok=True)
+
     created: list[Path] = []
     skipped: list[Path] = []
 
     try:
-        for path, content in (
-            (config_path, profile_config(args.profile)),
-            (contracts_readme, CONTRACTS_README),
-        ):
+        for path, content in planned:
             if write_text_if_missing(path, content):
                 created.append(path)
             else:
                 skipped.append(path)
-
-        if args.with_agent_templates:
-            for path, content in agent_templates:
-                if write_text_if_missing(path, content):
-                    created.append(path)
-                else:
-                    skipped.append(path)
-
-        if args.with_github_workflow:
-            if write_text_if_missing(github_workflow, GITHUB_WORKFLOW):
-                created.append(github_workflow)
-            else:
-                skipped.append(github_workflow)
     except OSError as exc:
         print(
             f"qa-z init: artifact write error: could not write bootstrap files: {exc}"
@@ -106,6 +130,19 @@ def handle_init(args: argparse.Namespace) -> int:
         print("Nothing new was written because the starter files already exist.")
 
     return 0
+
+
+def render_profile_detection(detection: ProfileDetectionResult) -> None:
+    """Print the human explanation for auto profile detection."""
+    evidence = ", ".join(detection.evidence_files) or "none"
+    assumptions = ", ".join(detection.activated_check_assumptions)
+    print(f"QA-Z init profile detection: {detection.profile}")
+    print(f"confidence: {detection.confidence}")
+    print(f"evidence: {evidence}")
+    print(f"activated checks: {assumptions}")
+    for warning in detection.warnings:
+        print(f"warning: {warning}")
+    print(f"next command: qa-z init --profile {detection.profile}")
 
 
 def template_text(name: str) -> str:
@@ -125,11 +162,12 @@ def profile_config(profile: str) -> str:
 
     project = config.setdefault("project", {})
     if isinstance(project, dict):
+        project["profile"] = profile
         if profile == "python":
             project["languages"] = ["python"]
-        elif profile == "typescript":
+        elif profile in {"typescript", "nextjs"}:
             project["languages"] = ["typescript"]
-        elif profile == "monorepo":
+        elif profile in {"monorepo", "mixed"}:
             project["languages"] = ["python", "typescript"]
 
     fast = config.setdefault("fast", {})
@@ -137,9 +175,9 @@ def profile_config(profile: str) -> str:
         checks = fast.get("checks")
         if profile == "python":
             fast["checks"] = filter_check_items(checks, "py_")
-        elif profile == "typescript":
+        elif profile in {"typescript", "nextjs"}:
             fast["checks"] = filter_check_items(checks, "ts_")
-        elif profile == "monorepo":
+        elif profile in {"monorepo", "mixed"}:
             selection = fast.setdefault("selection", {})
             if isinstance(selection, dict):
                 selection["default_mode"] = "smart"
@@ -187,5 +225,15 @@ def register_init_command(subparsers: argparse._SubParsersAction) -> None:
         "--with-github-workflow",
         action="store_true",
         help="write a starter GitHub Actions workflow for QA-Z",
+    )
+    init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="show the files init would write without changing the repository",
+    )
+    init_parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="print profile detection evidence and starter check assumptions",
     )
     init_parser.set_defaults(handler=handle_init)

@@ -7,7 +7,8 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | Document | Purpose |
 | --- | --- |
 | [Quickstart](quickstart.md) | Five-minute local path from install to QA evidence |
-| [Doctor diagnostics](doctor.md) | First-line checks for install mode, config, tools, resources, runtime writes, and GitHub Actions |
+| [Init](init.md) | First-time repository setup, auto profile detection, and dry-run explanation |
+| [Doctor diagnostics](doctor.md) | First-line checks for install mode, config, profile mismatch, tools, resources, runtime writes, and GitHub Actions |
 | [Comparison](comparison.md) | How QA-Z fits around coding agents, Semgrep, and test tools |
 | [Agent adapters](agent-adapters.md) | Repair-prompt adapters for Codex, Claude Code, Cursor, aider, OpenHands, and generic human review |
 | [GitHub Action](github-action.md) | Pull request gate setup using the shipped workflow and composite action |

@@ -2350,6 +2350,22 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Next safe slice: v0.12 can surface failed doctor checks in GitHub Action job summaries as an environment-first troubleshooting section without enabling bot comments or broader permissions by default.
 
 
+## 2026-05-27 v0.12 Init Profile Auto Detection
+- Repo: JustTyping
+- Lane: init/doctor onboarding -> first repository setup
+- User-facing flow: `qa-z init --profile auto --dry-run` -> `qa-z init --profile auto`
+- Slice type: Flow / Contract
+- Before: first-time setup required users to pick a manual profile without local evidence explaining why that profile matched the repository.
+- Root cause: init profiles were static CLI choices and doctor did not compare explicit profile metadata with repository setup signals.
+- Change made: added automatic profile detection for Python, TypeScript, Next.js, monorepo, mixed, and unknown repositories; added dry-run/explain output; wrote `project.profile` for generated starter configs; and added a doctor mismatch warning with the auto dry-run suggestion.
+- Validation run: `python -m pytest tests/test_init_options.py tests/test_config_validation.py -q`; `python -m pytest tests/test_profile_detection.py -q`; `python -m pytest tests/test_public_docs_current_truth.py -q`; `python -m pytest tests/test_doctor.py tests/test_doctor_docs.py -q`; `python scripts/check_text_file_hygiene.py --source working-tree --critical-profile public`; `python -m ruff check src tests scripts`; `python -m ruff format --check src tests scripts`; `git diff --check`; `python -m qa_z init --help`; `python -m qa_z doctor --json`; `python -m qa_z --help`.
+- Evidence: tests cover profile signal detection, dry-run no-write behavior, explanation output, generated profile configs, config validation, doctor mismatch warnings, and preservation of v0.11 doctor diagnostics.
+- Gate delta: onboarding now exposes profile confidence and evidence before starter files are written.
+- User impact: new users can diagnose why QA-Z chose a starter profile before committing to a config.
+- Remaining blocker: none for the v0.12 product slice; production PyPI publish remains a separate release-owner gate.
+- Next safe slice: v0.13 can add an init-to-guard readiness preview that maps the detected profile to runnable local commands and missing tools.
+
+
 ## 2026-05-27 v0.13 Evidence Summary UX
 - Repo: JustTyping
 - Lane: local run evidence -> first-read evidence navigator
