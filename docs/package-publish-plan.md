@@ -164,6 +164,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.19-pypi-release-workflow-draft.md`.
 - v0.19 rollback/yank playbook:
   `docs/reports/v0.19-pypi-rollback-yank-playbook.md`.
+- v0.20 production PyPI publish-execution gate:
+  `docs/reports/v0.20-production-pypi-publish-gate.md`.
 - Release notes draft:
   `docs/releases/v0.10.0-beta-release-notes-draft.md`.
 - Version policy must be decided before package publish.
@@ -196,6 +198,11 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
 - v0.19 selects release governance only: Trusted Publishing is the recommended
   production path, and manual token is explicit fallback only.
 - No upload occurred in v0.19.
+- v0.20 adds a deterministic production PyPI publish-execution gate script,
+  `scripts/production_pypi_publish_gate.py`.
+- No upload occurred in v0.20.
+- The v0.20 gate currently returns `NO_GO_MISSING_APPROVAL` with
+  `NO_GO_MISSING_CREDENTIALS` as the secondary blocker.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.
 - Future PyPI-published target commands remain future targets and not current

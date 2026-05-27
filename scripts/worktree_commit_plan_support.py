@@ -172,6 +172,7 @@ BATCH_RULES = (
             "scripts/package_smoke_rehearsal_*.py",
             "scripts/installed_package_smoke.py",
             "scripts/installed_package_smoke_*.py",
+            "scripts/production_pypi_publish_gate.py",
             "scripts/check_public_raw_urls.py",
             "scripts/check_text_file_hygiene.py",
             ".github/workflows/*.yml",
@@ -189,6 +190,7 @@ BATCH_RULES = (
             "tests/test_alpha_release_truth_validator.py",
             "tests/test_package_smoke_rehearsal*.py",
             "tests/test_installed_package_smoke*.py",
+            "tests/test_production_pypi_publish_gate.py",
             "tests/test_public_raw_urls.py",
             "tests/test_text_file_hygiene.py",
             "docs/package-publish-plan.md",
@@ -232,6 +234,7 @@ BATCH_RULES = (
             "tests/test_beta_testpypi_rehearsal_execution_packet_docs.py",
             "tests/test_beta_testpypi_rehearsal_go_no_go_docs.py",
             "tests/test_pypi_readiness_docs.py",
+            "tests/test_pypi_governance_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
             "docs/reports/v0.10.0-beta-readiness.md",
@@ -250,6 +253,7 @@ BATCH_RULES = (
             "docs/reports/v0.10.0-beta-testpypi-rehearsal-execution-packet.md",
             "docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md",
             "docs/reports/v0.10.0-beta-installed-package-smoke.md",
+            "docs/reports/v0.20-production-pypi-publish-gate.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -595,6 +599,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md",
     "docs/reports/v0.10.0-beta-pypi-readiness.md",
     "docs/reports/v0.10.0-beta-installed-package-smoke.md",
+    "docs/reports/v0.20-production-pypi-publish-gate.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (

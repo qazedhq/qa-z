@@ -8,11 +8,13 @@ GOVERNANCE = ROOT / "docs/reports/v0.19-production-pypi-governance.md"
 TRUSTED_PUBLISHING = ROOT / "docs/reports/v0.19-pypi-trusted-publishing-design.md"
 WORKFLOW_DRAFT = ROOT / "docs/reports/v0.19-pypi-release-workflow-draft.md"
 ROLLBACK_PLAYBOOK = ROOT / "docs/reports/v0.19-pypi-rollback-yank-playbook.md"
+V020_GATE = ROOT / "docs/reports/v0.20-production-pypi-publish-gate.md"
 PACKAGE_PLAN = ROOT / "docs/package-publish-plan.md"
 GO_NO_GO = ROOT / "docs/reports/v0.18-production-pypi-go-no-go.md"
 READINESS = ROOT / "docs/reports/v0.10.0-beta-pypi-readiness.md"
 RELEASE_NOTES = ROOT / "docs/releases/v0.10.0-beta-release-notes-draft.md"
 README = ROOT / "README.md"
+GATE_SCRIPT = ROOT / "scripts/production_pypi_publish_gate.py"
 
 
 def read(path: Path) -> str:
@@ -199,3 +201,38 @@ def test_pr89_pr90_superseded_cleanup_is_not_documented_without_closure() -> Non
     assert "#89" not in combined
     assert "#90" not in combined
     assert "Closing as superseded" not in combined
+
+
+def test_v020_publish_gate_records_no_go_without_upload() -> None:
+    assert GATE_SCRIPT.exists()
+    assert V020_GATE.exists()
+    packet = read(V020_GATE)
+
+    for required in (
+        "v0.20 - Production PyPI Publish-Execution Gate",
+        "Decision: `NO_GO_MISSING_APPROVAL`",
+        "Secondary blocker: `NO_GO_MISSING_CREDENTIALS`",
+        "Gate script: `scripts/production_pypi_publish_gate.py`",
+        "`kind`: `qa_z.production_pypi_publish_gate`",
+        "`current_sha`: `425476382830baf35678b7daf876f285c590ad46`",
+        "`production_pypi_upload_executed`: `false`",
+        "`registry_upload_executed`: `false`",
+        "No `twine upload` command ran.",
+        "No README live PyPI install claim was added.",
+    ):
+        assert required in packet
+
+    for linked_surface in (PACKAGE_PLAN, READINESS, RELEASE_NOTES):
+        text = read(linked_surface)
+        assert "docs/reports/v0.20-production-pypi-publish-gate.md" in text
+        assert "No upload occurred in v0.20." in text
+
+    packet_text = normalized(V020_GATE)
+    for false_claim in (
+        "GO_FOR_PRODUCTION_PYPI_UPLOAD` | selected",
+        "production_pypi_upload_executed=true",
+        "registry_upload_executed=true",
+        "PyPI upload completed",
+        "pipx install qa-z is live",
+    ):
+        assert false_claim not in packet_text
