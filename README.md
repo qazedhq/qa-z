@@ -46,7 +46,7 @@ qa-z repair-prompt --from-run latest --adapter codex
 qa-z verify --from-run latest
 ```
 
-If the console script is not on PATH, use `python -m qa_z` as a fallback.
+If the console script is not on PATH, use `python -m qa_z`; see [Doctor diagnostics](docs/doctor.md) for install, config, CI, Semgrep, and `.qa-z` writeability issues.
 
 ## GitHub Alpha Install
 

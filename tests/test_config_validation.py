@@ -13,6 +13,12 @@ from qa_z.cli import main
 from qa_z.config import EXAMPLE_CONFIG
 
 
+@pytest.fixture(autouse=True)
+def stable_doctor_tool_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep config-validation tests focused on config issues, not host tools."""
+    monkeypatch.setattr("qa_z.doctor.find_executable", lambda name: name)
+
+
 def write_yaml(root: Path, data: object) -> None:
     root.joinpath("qa-z.yaml").write_text(
         yaml.safe_dump(data, sort_keys=False), encoding="utf-8"

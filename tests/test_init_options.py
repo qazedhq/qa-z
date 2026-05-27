@@ -11,6 +11,12 @@ import yaml
 from qa_z.cli import main
 
 
+@pytest.fixture(autouse=True)
+def stable_doctor_tool_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep init tests focused on generated files, not host tool availability."""
+    monkeypatch.setattr("qa_z.doctor.find_executable", lambda name: name)
+
+
 def load_initialized_config(root: Path) -> dict[str, object]:
     return yaml.safe_load((root / "qa-z.yaml").read_text(encoding="utf-8"))
 
