@@ -90,6 +90,7 @@ def test_readme_local_setup_and_command_surface_match_current_cli() -> None:
     assert "bot comments stay opt-in" in readme
     assert "python -m pip install semgrep" in readme
     assert "qa-z deep --from-run .qa-z/runs/baseline" in readme
+    assert "qa-z scorecard" in readme
     assert "verdict `improved`" in readme
     assert "no regressions" in readme
     for forbidden in (
@@ -163,7 +164,11 @@ def test_docs_index_links_production_readiness_docs() -> None:
     for link in (
         "[Quickstart](quickstart.md)",
         "[Comparison](comparison.md)",
+        "[Agent adapters](agent-adapters.md)",
         "[GitHub Action](github-action.md)",
+        "[Evidence summary](evidence-summary.md)",
+        "[Repair -> verify workflow](repair-verify-workflow.md)",
+        "[Scorecards](../docs/scorecard.md)",
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",
@@ -181,9 +186,38 @@ def test_docs_index_links_production_readiness_docs() -> None:
 def test_quickstart_states_repair_verification_success_signal() -> None:
     quickstart = read_quickstart()
 
-    assert "qa-z verify --baseline-run .qa-z/runs/baseline" in quickstart
+    assert "qa-z verify --from-run .qa-z/runs/baseline" in quickstart
+    assert "qa-z verify --from-run latest --config qa-z.demo.yaml" in quickstart
+    assert "qa-z summary --from-run latest" in quickstart
     assert "verdict `improved`" in quickstart
     assert "no regressions" in quickstart
+
+
+def test_evidence_summary_docs_pin_local_first_read_boundary() -> None:
+    docs = (ROOT / "docs" / "evidence-summary.md").read_text(encoding="utf-8")
+
+    for phrase in (
+        "qa-z summary --from-run latest",
+        "qa-z summary --from-run latest --json",
+        "qa-z summary --from-run latest --markdown",
+        "qa-z verify --from-run latest",
+        "status",
+        "verdict",
+        "top_findings",
+        "repair_prompt",
+        "verify_report",
+        "next_actions",
+        "warnings",
+        "live PyPI package",
+    ):
+        assert phrase in docs
+    for forbidden in (
+        "pipx install qa-z",
+        "uv tool install qa-z",
+        "PyPI package available",
+        "Install from PyPI",
+    ):
+        assert forbidden not in docs
 
 
 def test_public_docs_point_to_latest_github_prerelease_without_package_publish() -> (

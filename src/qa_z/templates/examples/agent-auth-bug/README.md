@@ -34,22 +34,18 @@ The local rules in `semgrep-rules/auth-bypass.yml` report 2 findings on the vuln
 
 ## Candidate repair and verification
 
-Apply the included fixed implementation, rerun the gate, and compare:
+Apply the included fixed implementation and let verify create candidate evidence:
 
 ```bash
 cp app/auth.fixed.py app/auth.py
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 PowerShell:
 
 ```powershell
 Copy-Item app\auth.fixed.py app\auth.py -Force
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 Expected result: `qa-z verify` reports verdict `improved` with resolved blockers and no regressions.

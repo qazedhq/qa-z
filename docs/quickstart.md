@@ -37,13 +37,15 @@ qa-z demo auth-bug
 cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
+cp app/auth.fixed.py app/auth.py
+qa-z verify --from-run latest --config qa-z.demo.yaml
 ```
 
 The guard is expected to block the change. That is the point: QA-Z turns the risky agent edit into deterministic evidence and a repair handoff.
 
 Use `qa-z demo auth-bug --json` when scripts or docs validators need the demo
-root, guard verdict path, repair prompt path, and follow-up commands as one
-machine-readable payload.
+root, guard verdict path, repair prompt path, fixed-file copy command, and
+follow-up commands as one machine-readable payload.
 
 ## Run The Example Repository Demo
 
@@ -54,6 +56,7 @@ cd examples/agent-auth-bug
 qa-z plan --title "AI auth bug caught by QA-Z" --issue issue.md --spec spec.md --slug ai-auth-bug --overwrite
 qa-z fast --output-dir .qa-z/runs/baseline
 qa-z deep --from-run .qa-z/runs/baseline
+qa-z summary --from-run .qa-z/runs/baseline
 qa-z review --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
@@ -62,22 +65,19 @@ The baseline run is expected to fail. That is the point: QA-Z catches an unsafe 
 
 ## Verify A Repair
 
-From the demo directory, replace the bad implementation with the fixed one and compare the run artifacts:
+From the demo directory, replace the bad implementation with the fixed one and
+let `qa-z verify` create the candidate run:
 
 ```bash
 cp app/auth.fixed.py app/auth.py
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 On Windows PowerShell, use:
 
 ```powershell
 Copy-Item app\auth.fixed.py app\auth.py -Force
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 Expected result: `qa-z verify` reports verdict `improved` with resolved blockers and no regressions.
@@ -90,8 +90,10 @@ qa-z doctor
 qa-z plan --title "Review recent agent change" --slug agent-change --overwrite
 qa-z fast
 qa-z deep --from-run latest
+qa-z summary --from-run latest
 qa-z review --from-run latest
 qa-z repair-prompt --from-run latest --adapter codex
+qa-z verify --from-run latest
 ```
 
 If `qa-z` is not on PATH, use `python -m qa_z` for the same commands.
@@ -114,6 +116,7 @@ qa-z doctor --json
 qa-z plan --title "Review mixed Python/TypeScript change" --slug monorepo-change --overwrite
 qa-z fast
 qa-z deep --from-run latest
+qa-z summary --from-run latest
 qa-z review --from-run latest
 qa-z repair-prompt --from-run latest --adapter codex
 ```

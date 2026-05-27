@@ -8,7 +8,10 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | --- | --- |
 | [Quickstart](quickstart.md) | Five-minute local path from install to QA evidence |
 | [Comparison](comparison.md) | How QA-Z fits around coding agents, Semgrep, and test tools |
+| [Agent adapters](agent-adapters.md) | Repair-prompt adapters for Codex, Claude Code, Cursor, aider, OpenHands, and generic human review |
 | [GitHub Action](github-action.md) | Pull request gate setup using the shipped workflow and composite action |
+| [Evidence summary](evidence-summary.md) | Local first-read summary for verdicts, risks, artifact paths, and next commands |
+| [Repair -> verify workflow](repair-verify-workflow.md) | First-class loop from guard verdict to repair prompt to deterministic verification |
 | [Use with Codex](use-with-codex.md) | Codex handoff loop using QA-Z repair prompts |
 | [Use with Claude Code](use-with-claude-code.md) | Claude Code handoff loop using the same deterministic artifacts |
 | [Use with Cursor](use-with-cursor.md) | Cursor workflow using QA-Z before merge |
@@ -20,7 +23,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [Use with Semgrep](../docs/use-with-semgrep.md) | Semgrep-backed deep gate setup and SARIF expectations |
 | [PR summary comment](../docs/pr-summary-comment.md) | Optional pull request comment template and permission boundary |
 | [Agent Merge Safety Benchmark](../docs/agent-merge-safety-benchmark.md) | Public benchmark shape for agent change, QA-Z detection, repair, and verification |
-| [OpenSSF Scorecard](../docs/scorecard.md) | Security trust surface and scorecard workflow notes |
+| [Scorecards](../docs/scorecard.md) | Local QA-Z readiness scorecard plus OpenSSF security workflow notes |
 | [Community distribution](../docs/community-distribution.md) | HN, X, LinkedIn, Reddit, Dev.to, Hashnode, and awesome-list launch plan |
 | [Hosted demo](hosted-demo.md) | Hosted-demo scope that stays local-first and honest |
 | [Docs site](docs-site.md) | Docs-site IA for the public category surface |

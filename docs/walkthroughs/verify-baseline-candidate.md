@@ -1,7 +1,8 @@
 # Verify Baseline/Candidate Workflow
 
-This walkthrough shows the standalone `qa-z verify` loop for an existing baseline
-run and an existing repaired candidate run:
+This walkthrough shows two `qa-z verify` modes: the short repair loop that reruns
+candidate evidence from a baseline, and the explicit comparison loop for an
+existing baseline run and an existing repaired candidate run:
 
 ```text
 baseline run
@@ -76,6 +77,13 @@ does not, verification records that evidence as not comparable and returns
 `verification_failed`.
 
 ## 4. Run qa-z verify
+
+For the first-class repair loop, apply the repair and let verify create
+candidate evidence:
+
+```bash
+qa-z verify --from-run .qa-z/runs/baseline
+```
 
 Compare the recorded baseline and candidate runs:
 

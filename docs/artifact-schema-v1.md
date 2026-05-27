@@ -194,6 +194,10 @@ If an artifact only contains `grouped_findings` and no active `findings`, QA-Z e
 .qa-z/runs/<run-id>/repair/handoff.json
 .qa-z/runs/<run-id>/repair/codex.md
 .qa-z/runs/<run-id>/repair/claude.md
+.qa-z/runs/<run-id>/repair/cursor.md
+.qa-z/runs/<run-id>/repair/aider.md
+.qa-z/runs/<run-id>/repair/openhands.md
+.qa-z/runs/<run-id>/repair/generic.md
 ```
 
 Required `packet.json` fields:
@@ -258,7 +262,11 @@ Deep repair targets are selected from blocking findings only. When grouped findi
 
 The `validation.commands` list includes failed fast check commands when available, then `python -m qa_z fast`. If blocking deep findings are selected, it also includes `python -m qa_z deep --from-run latest`. The handoff does not run these commands and does not decide success through an LLM.
 
-`codex.md` and `claude.md` render the same normalized handoff data. `codex.md` is action-oriented for Codex-style execution. `claude.md` is more explanatory and emphasizes constraints, non-goals, and workflow. Both are deterministic Markdown artifacts; neither invokes a live vendor API.
+Adapter Markdown files render the same normalized handoff data for Codex,
+Claude Code, Cursor, aider, OpenHands, and generic human review. Each adapter
+prompt includes objective, relevant evidence, files and risks, forbidden
+actions, required validation, final report format, and merge-safety boundaries.
+They are deterministic Markdown artifacts; none invokes a live vendor API.
 
 ## Repair Session
 
@@ -276,6 +284,10 @@ The `validation.commands` list includes failed fast check commands when availabl
     handoff.json
     codex.md
     claude.md
+    cursor.md
+    aider.md
+    openhands.md
+    generic.md
   executor_results/
     history.json
     attempts/
@@ -298,7 +310,7 @@ The handoff files use the same repair packet and handoff schemas documented abov
 - `baseline_fast_summary_path`: baseline fast summary artifact
 - `baseline_deep_summary_path`: baseline deep summary artifact, or `null`
 - `handoff_dir`: session-local handoff directory
-- `handoff_artifacts`: paths for `packet.json`, `prompt.md`, `handoff.json`, `codex.md`, and `claude.md`
+- `handoff_artifacts`: paths for `packet.json`, `prompt.md`, `handoff.json`, and adapter Markdown such as `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`
 - `executor_guide_path`: session-local executor guide
 - `safety_artifacts`: paths for `executor_safety.json` and `executor_safety.md`
 - `candidate_run_dir`: post-repair candidate run directory, or `null` before verification
@@ -383,7 +395,13 @@ The current rule ids are:
 
 ## Repair Verification
 
-`qa-z verify --baseline-run <run> --candidate-run <run>` compares an existing pre-repair baseline run with an existing post-repair candidate run. `qa-z verify --baseline-run <run> --rerun` first creates a candidate run with the existing deterministic `fast` and `deep` runners, then compares it. Verification does not edit files, call Codex or Claude, run a scheduler, or make LLM-only judgments.
+`qa-z verify --from-run <run>` treats the selected run as the pre-repair baseline,
+creates a candidate run with the existing deterministic `fast` and comparable
+`deep` runners, then compares it. `qa-z verify --baseline-run <run>
+--candidate-run <run>` remains supported for an existing post-repair candidate
+run. `qa-z verify --baseline-run <run> --rerun` is the compatibility spelling
+for explicit rerun mode. Verification does not edit files, call Codex or Claude,
+run a scheduler, or make LLM-only judgments.
 
 By default, verification writes artifacts under the candidate run:
 
@@ -462,7 +480,7 @@ Verdict derivation is deterministic:
 .qa-z/runs/<run-id>/github-summary.md
 ```
 
-The GitHub summary is intentionally not a raw failure dump. It includes the overall fast and deep statuses, selection mode, fast totals, failed checks, changed files, selection groups, optional Deep QA findings, and pointers to the fast summary, review packet, and repair prompt artifacts.
+The GitHub summary is intentionally not a raw failure dump. It includes a conservative verdict, top blocked reason, overall fast and deep statuses, selection mode, fast totals, failed checks, changed files, selection groups, optional Deep QA findings, artifact existence markers, and next commands that point to the fast summary, deep summary, review packet, repair prompt, SARIF artifact, local evidence summary, repair prompt generation, and repair verification.
 
 When verification or repair-session outcome artifacts are available, `github-summary` also appends a concise repair outcome section. The section can come from:
 
@@ -490,7 +508,42 @@ Recommendation mapping is deterministic and uses only recorded verdicts:
 - `verification_failed`: `rerun_required`
 - `unchanged`: `continue_repair`
 
-The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4`. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
+## Evidence Summary
+
+`qa-z summary --from-run <run>` reads existing run artifacts and prints a local
+first-read navigator. It does not run checks or mutate the target repository.
+Use `--json` for the stable machine-readable shape and `--markdown --output
+<path>` when a local review artifact is useful.
+
+The JSON payload has:
+
+- `kind`: stable artifact kind, currently `qa_z.evidence_summary`
+- `schema_version`: integer schema marker, currently `1`
+- `status`: one of `passed`, `warning`, `failed`, or `missing`
+- `verdict`: guard verdict when `guard/verdict.json` exists, otherwise a
+  conservative summary-derived verdict
+- `run_dir`: selected run directory, or `null` when no run is available
+- `evidence`: fast summary, deep summary, review packet, GitHub summary, and
+  guard verdict path entries
+- `top_findings`: compact first-read fast failures and deep findings
+- `repair_prompt`: repair prompt path entry
+- `verify_report`: verification report path entry
+- `next_actions`: ordered commands to continue the local workflow
+- `warnings`: stale or missing evidence guidance
+
+Each evidence path entry has:
+
+- `path`: repository-relative path, or `null` when no run could be selected
+- `exists`: boolean
+- `status`: optional recorded status when available
+
+Missing or stale runs are not fatal for this command. When `latest-run.json`
+points to missing evidence, `qa-z summary --from-run latest` falls back to the
+newest available `*/fast/summary.json` and records a warning. When no fast
+summary exists, it returns `status: missing`, `verdict: no_run`, and next
+commands for creating evidence.
+
+The shipped GitHub workflows upload `deep/results.sarif` with `github/codeql-action/upload-sarif@v4` only in workflows or actions that explicitly enable SARIF upload. GitHub turns uploaded SARIF results into code scanning alerts and pull request annotations when the repository permits `security-events: write`. QA-Z does not yet emit standalone `::warning` workflow commands or Checks API annotations.
 
 TypeScript fast checks use the same v2 shape as Python checks. A targeted TypeScript lint or test entry records `execution_mode: targeted`, the resolved `eslint` or `vitest run` command, and the selected `target_paths`.
 

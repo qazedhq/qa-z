@@ -9,6 +9,7 @@ from pathlib import Path
 from qa_z.commands.common import resolve_cli_path
 from qa_z.config import ConfigError, load_config
 from qa_z.guard.renderer import render_guard_stdout
+from qa_z.adapters import SUPPORTED_REPAIR_ADAPTERS
 from qa_z.guard.workflow import run_guard
 
 
@@ -96,7 +97,7 @@ def register_guard_command(subparsers: argparse._SubParsersAction) -> None:
     guard_parser.add_argument("--slug", help="optional contract slug")
     guard_parser.add_argument(
         "--adapter",
-        choices=("codex", "claude", "human"),
+        choices=(*SUPPORTED_REPAIR_ADAPTERS, "human"),
         default="codex",
         help="repair-prompt audience metadata",
     )

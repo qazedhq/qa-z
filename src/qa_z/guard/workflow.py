@@ -5,8 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from qa_z.adapters.claude import render_claude_handoff
-from qa_z.adapters.codex import render_codex_handoff
+from qa_z.adapters import render_all_repair_handoffs
 from qa_z.artifacts import (
     RunSource,
     find_latest_contract,
@@ -320,12 +319,10 @@ def write_guard_repair(
         (output_dir / "packet.json").read_text(encoding="utf-8"),
         label="json",
     )
-    write_guard_repair_text_artifact(
-        output_dir / "codex.md", render_codex_handoff(handoff), label="codex"
-    )
-    write_guard_repair_text_artifact(
-        output_dir / "claude.md", render_claude_handoff(handoff), label="claude"
-    )
+    for adapter, markdown in render_all_repair_handoffs(handoff).items():
+        write_guard_repair_text_artifact(
+            output_dir / f"{adapter}.md", markdown, label=adapter
+        )
     return True
 
 

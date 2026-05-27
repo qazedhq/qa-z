@@ -15,11 +15,11 @@ results, or current feature depth for any coding agent.
 
 | Tool or workflow | Primary role | What it produces | Where QA-Z fits | QA-Z boundary |
 | --- | --- | --- | --- | --- |
-| Codex | Human-operated coding agent workflow | Code changes and repair attempts | Uses the resulting diff and local check output to build merge evidence and Codex-friendly repair prompts | Does not call Codex APIs or judge model quality |
-| Claude Code | Human-operated coding agent workflow | Code changes and repair attempts | Uses the resulting diff and local check output to build merge evidence and Claude-friendly handoff text | Keeps Claude-specific behavior in adapter output |
-| Cursor | AI-assisted editor workflow | Code changes and editor-side repair attempts | Adds deterministic pre-merge evidence around Cursor-produced changes | Cursor remains the editor |
-| aider | Coding-agent workflow | Code changes from its own workflow | Fits after an aider change to record checks, review packets, and repair evidence | Does not replace or rank aider |
-| OpenHands | Coding-agent workflow | Code changes or execution attempts from its own workflow | Fits after an OpenHands change to preserve deterministic merge evidence | Does not replace or rank OpenHands |
+| Codex | Human-operated coding agent workflow | Code changes and repair attempts | Uses the resulting diff and local check output to build merge evidence and `codex` repair prompts | Does not call Codex APIs or judge model quality |
+| Claude Code | Human-operated coding agent workflow | Code changes and repair attempts | Uses the resulting diff and local check output to build merge evidence and `claude` handoff text | Keeps Claude-specific behavior in adapter output |
+| Cursor | AI-assisted editor workflow | Code changes and editor-side repair attempts | Adds deterministic pre-merge evidence and `cursor` repair prompts around Cursor-produced changes | Cursor remains the editor |
+| aider | Coding-agent workflow | Code changes from its own workflow | Fits after an aider change to record checks, review packets, and `aider` repair prompts | Does not replace or rank aider |
+| OpenHands | Coding-agent workflow | Code changes or execution attempts from its own workflow | Fits after an OpenHands change to preserve deterministic merge evidence and `openhands` repair prompts | Does not replace or rank OpenHands |
 | Goose | Coding-agent workflow | Code changes or execution attempts from its own workflow | Fits after a Goose change to preserve deterministic merge evidence | Does not replace or rank Goose |
 | Semgrep | Static-analysis engine | Findings and SARIF-ready security evidence | QA-Z runs, records, normalizes, and reports Semgrep-backed deep evidence | Does not replace Semgrep rules or analysis |
 | CI/test tools | Deterministic gate execution | Exit codes, logs, and artifacts | QA-Z assembles those checks into reviewable fast/deep evidence | Does not weaken configured gates |
@@ -47,6 +47,8 @@ AI-generated code -> QA-Z -> deterministic merge evidence
 ```
 
 Use the agent to write the change. Use QA-Z before you merge it.
+
+For repair handoff details, see [Agent adapters](agent-adapters.md).
 
 ## When To Use QA-Z With These Tools
 

@@ -10,6 +10,59 @@ from qa_z.runners.models import CheckResult, RunSummary
 MAX_CHANGED_FILES = 12
 
 
+def infer_github_verdict(summary: RunSummary, deep: DeepContext | None) -> str:
+    """Return a guard-style verdict from available fast/deep summary evidence."""
+    if summary.status == "error" or (
+        deep is not None and deep.summary.status == "error"
+    ):
+        return "error"
+    if summary.status == "failed":
+        return "do_not_merge"
+    if deep is not None and (
+        deep.summary.status == "failed" or deep.blocking_findings_count > 0
+    ):
+        return "do_not_merge"
+    if summary.status in {"warning", "unsupported"}:
+        return "needs_review"
+    if deep is not None and deep.scan_quality_status == "warning":
+        return "needs_review"
+    return "merge_ok"
+
+
+def summarize_top_blocked_reason(summary: RunSummary, deep: DeepContext | None) -> str:
+    """Return the first scan-friendly blocking reason for a job summary."""
+    failed_checks = [
+        check for check in summary.checks if check.status in {"failed", "error"}
+    ]
+    if failed_checks:
+        check = failed_checks[0]
+        reason = check.message or check.selection_reason or default_check_summary(check)
+        return f"{check.id}: {reason}"
+    if deep is not None:
+        if deep.grouped_findings:
+            finding = deep.grouped_findings[0]
+            return (
+                f"{finding.get('rule_id', 'unknown')}: "
+                f"{finding.get('path', 'unknown')} "
+                f"({coerce_count(finding.get('count'))} hits)"
+            )
+        if deep.findings:
+            finding = deep.findings[0]
+            return (
+                f"{finding.get('rule_id', 'unknown')}: "
+                f"{format_finding_location(finding)} - "
+                f"{finding.get('message', 'deep finding')}"
+            )
+        if deep.scan_quality_status == "warning":
+            return "deep scan quality warning"
+    return "none"
+
+
+def artifact_status_suffix(exists: bool) -> str:
+    """Render a concise artifact existence suffix for Job Summary paths."""
+    return "found" if exists else "missing"
+
+
 def render_failed_check(check: CheckResult) -> str:
     """Render one failed check in one scan-friendly line."""
     mode = check.execution_mode or "full"

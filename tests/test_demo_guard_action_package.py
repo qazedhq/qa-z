@@ -33,6 +33,8 @@ def test_demo_auth_bug_command_writes_repair_and_guard_artifacts(
     assert str(demo) in output
     assert "qa-z guard --from-run latest --adapter codex" in output
     assert "qa-z repair-prompt --from-run latest --adapter codex" in output
+    assert "auth.fixed.py" in output
+    assert "qa-z verify --from-run latest --config qa-z.demo.yaml" in output
     failed_checks = {
         check["id"]: check
         for check in json.loads(summary_path.read_text(encoding="utf-8"))["checks"]
@@ -69,6 +71,12 @@ def test_demo_auth_bug_json_prints_single_machine_payload(
             f"cd {demo}",
             "qa-z guard --from-run latest --adapter codex",
             "qa-z repair-prompt --from-run latest --adapter codex",
+            (
+                'python -c "from pathlib import Path; import shutil; '
+                "shutil.copyfile(Path('app') / 'auth.fixed.py', "
+                "Path('app') / 'auth.py')\""
+            ),
+            "qa-z verify --from-run latest --config qa-z.demo.yaml",
         ],
     }
     assert (demo / ".qa-z" / "runs" / "latest" / "guard" / "verdict.json").exists()

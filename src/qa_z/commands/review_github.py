@@ -14,6 +14,11 @@ from qa_z.commands.common import load_cli_config, resolve_cli_path
 from qa_z.commands.review_github_context import load_github_summary_context
 from qa_z.reporters.github_summary import render_github_summary
 
+GITHUB_ACTION_DOCS_URL = (
+    "https://github.com/qazedhq/qa-z/blob/main/docs/github-action.md"
+    "#troubleshooting-faq"
+)
+
 
 def write_github_summary_output(output_path: Path, markdown: str) -> str | None:
     try:
@@ -60,6 +65,12 @@ def handle_github_summary(args: argparse.Namespace) -> int:
         return 2
     except (ArtifactSourceNotFound, FileNotFoundError) as exc:
         print(f"qa-z github-summary: source not found: {exc}")
+        print()
+        print("Next actions:")
+        print("1. Check the QA-Z fast/deep steps for the first failure.")
+        print("2. Ensure --from-run points at a run directory with fast/summary.json.")
+        print("3. Run `qa-z doctor --json` locally.")
+        print(f"Docs: {GITHUB_ACTION_DOCS_URL}")
         return 4
 
 

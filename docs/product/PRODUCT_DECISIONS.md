@@ -29,9 +29,9 @@
 - Impact on V8: Treat these commands as public product API. Do not rename, remove, or radically change them without explicit approval.
 - Date if available: not recorded.
 
-### Codex And Claude Are Adapters
+### Coding Agents Are Adapters
 
-- Decision: Codex and Claude integrations are adapter/handoff surfaces, not the core engine.
+- Decision: Codex, Claude Code, Cursor, aider, OpenHands, and generic human-review integrations are adapter/handoff surfaces, not the core engine.
 - Status: confirmed.
 - Source: human and repository evidence.
 - Rationale: `AGENTS.md`, architecture docs, and repair handoff docs all keep agent-specific behavior outside the core planner.

@@ -19,7 +19,7 @@ The production goal is to deliver a reliable local QA control plane for develope
 - Prefer explicit contracts over implied requirements.
 - Prefer deterministic evidence over stylistic guesswork.
 - Prefer repairable feedback over raw failure dumps.
-- Treat Codex and Claude integrations as adapters, not the core engine.
+- Treat coding-tool integrations as adapters, not the core engine.
 - Do not claim deep QA automation beyond what runners and tests prove.
 - Do not replace deterministic pass/fail checks with LLM-only judgment.
 - Do not add hidden network dependencies to local QA flows.

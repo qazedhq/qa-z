@@ -11,6 +11,7 @@ import qa_z.commands.runtime_autonomy as runtime_autonomy_module
 import qa_z.commands.runtime_benchmark as runtime_benchmark_module
 import qa_z.commands.runtime_bridge as runtime_bridge_module
 import qa_z.commands.runtime_executor_result as runtime_executor_result_module
+import qa_z.commands.runtime_scorecard as runtime_scorecard_module
 
 
 def test_runtime_autonomy_module_exports_match_runtime_surface() -> None:
@@ -118,3 +119,27 @@ def test_runtime_module_keeps_benchmark_defs_out_of_runtime_monolith() -> None:
 
     assert "handle_benchmark" not in function_names
     assert "register_benchmark_command" not in function_names
+
+
+def test_runtime_scorecard_module_exports_match_runtime_surface() -> None:
+    assert runtime_scorecard_module.handle_scorecard is runtime_module.handle_scorecard
+    assert (
+        runtime_scorecard_module.register_scorecard_command
+        is runtime_module.register_scorecard_command
+    )
+
+
+def test_runtime_module_keeps_scorecard_defs_out_of_runtime_monolith() -> None:
+    source = Path(runtime_module.__file__).read_text(encoding="utf-8")
+    tree = compile(
+        source,
+        str(runtime_module.__file__),
+        "exec",
+        flags=ast.PyCF_ONLY_AST,
+    )
+    function_names = {
+        node.name for node in module_body(tree) if isinstance(node, ast.FunctionDef)
+    }
+
+    assert "handle_scorecard" not in function_names
+    assert "register_scorecard_command" not in function_names

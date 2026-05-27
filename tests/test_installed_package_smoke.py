@@ -50,7 +50,7 @@ class FakeRunner:
         if check_id in self.failing_ids:
             return 9, "", f"{check_id} failed"
         if check_id.endswith("verify"):
-            return 1, '{"kind": "qa_z.verify_compare", "verdict": "unchanged"}', ""
+            return 0, '{"kind": "qa_z.verify_compare", "verdict": "improved"}', ""
         return 0, "ok", ""
 
 
@@ -117,12 +117,13 @@ def test_wheel_and_sdist_matrix_runs_installed_runtime_commands(
         "qa-z demo auth-bug --json",
         "qa-z guard --from-run latest --adapter codex",
         "qa-z repair-prompt --from-run latest --adapter codex",
-        "qa-z verify --baseline-run latest --candidate-run latest --json",
+        "auth.fixed.py",
+        "qa-z verify --from-run latest --json",
     ):
         assert expected in commands
 
 
-def test_verify_exit_one_is_expected_for_unchanged_demo_comparison(
+def test_verify_exit_zero_is_expected_for_repaired_demo_comparison(
     tmp_path: Path,
 ) -> None:
     module = load_smoke_module()
@@ -140,8 +141,10 @@ def test_verify_exit_one_is_expected_for_unchanged_demo_comparison(
     verify_checks = [check for check in result.checks if check.id.endswith("verify")]
     assert verify_checks
     assert {check.status for check in verify_checks} == {"PASS"}
-    assert {check.exit_code for check in verify_checks} == {1}
-    assert all("expected exit code" in check.reason for check in verify_checks)
+    assert {check.exit_code for check in verify_checks} == {0}
+    assert all(
+        "improved repair verification" in check.reason for check in verify_checks
+    )
 
 
 def test_failures_are_reported_without_upload_or_release_commands(

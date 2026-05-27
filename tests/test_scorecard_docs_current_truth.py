@@ -16,6 +16,19 @@ def test_scorecard_docs_explain_first_run_and_follow_up_tasks() -> None:
     docs = read("docs/scorecard.md")
 
     for text in (
+        "QA-Z Scorecard",
+        "qa-z scorecard",
+        "qa-z scorecard --json",
+        "read-only unless `--output` is supplied",
+        "benchmark, create `.qa-z/**`",
+        "Production PyPI is not published.",
+        "PyPI install claim.",
+        "`project_config`",
+        "`deep_semgrep`",
+        "`benchmark_corpus`",
+        "`evidence_freshness`",
+        "Missing `qa-z.yaml`: run `qa-z init`.",
+        "OpenSSF Scorecard",
         "Inspect The First Run",
         "scorecard-results.sarif",
         "openssf-scorecard",

@@ -2332,3 +2332,83 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can now distinguish package metadata readiness from installed-package runtime readiness before any production PyPI publish decision.
 - Remaining blocker: production PyPI publish remains blocked until separate owner approval, selected registry method, frozen SHA proof, remote CI/public raw proof, and release execution packet exist.
 - Next safe slice: improve `qa-z doctor` installed-environment diagnostics so failed installs explain location, package version, config, Semgrep, demo-resource, and writable-runtime-directory state.
+
+
+## 2026-05-27 v0.13 Evidence Summary UX
+- Repo: JustTyping
+- Lane: local run evidence -> first-read evidence navigator
+- User-facing flow: run QA-Z -> read verdict, top risks, artifact paths, repair prompt path, verify path, and next command.
+- Slice type: Flow / Evidence
+- Before: users had to know whether to open `review/review.md`, `guard/verdict.json`, `github-summary.md`, `repair/prompt.md`, or `verify/report.md` first after a run.
+- Root cause: QA-Z already wrote many deterministic artifacts, but there was no local first-read command that summarized verdict, risks, paths, and missing-evidence guidance.
+- Change made: added `qa-z summary --from-run latest` with human, JSON, Markdown, and optional output modes; added stale/missing run handling; documented the evidence summary workflow and schema.
+- Validation run: targeted evidence summary tests, adjacent review/GitHub summary/verification tests, public docs current-truth tests, text hygiene, Ruff, format, diff whitespace, and CLI help.
+- Evidence: `tests/test_evidence_summary.py` covers full evidence, no run, missing deep evidence, repair prompt guidance, verify guidance, stale latest manifest fallback, human output, and GitHub summary consistency.
+- Gate delta: local evidence readability improved without changing artifact producers, publishing packages, bumping versions, deploying, tagging, creating releases, or claiming live PyPI install.
+- User impact: maintainers get one local command for the first post-run read and can jump directly to the next deterministic command.
+- Remaining blocker: GitHub Actions job summary UX still depends on the separate `github-summary` command and workflow wiring.
+- Next safe slice: surface the same local evidence navigator in GitHub Actions job summaries/artifacts while keeping comments and SARIF upload opt-in.
+
+
+## 2026-05-27 v0.14 Repair Verify Workflow Productization
+- Repo: JustTyping
+- Lane: local repair evidence -> deterministic post-repair verification.
+- User-facing flow: guard verdict -> repair prompt -> external repair -> `qa-z verify --from-run latest` -> improved/unchanged/worse evidence.
+- Slice type: Flow / Evidence
+- Before: verify supported explicit baseline/candidate comparison and rerun mode, but the common local repair loop still required users to know candidate-run mechanics.
+- Root cause: the repair prompt and verify command were individually useful, but the product path between them was not encoded as the shortest safe command sequence.
+- Change made: added `--from-run` as the first-class verify baseline alias, defaulted it to rerun candidate evidence when used alone, improved verify stdout/JSON with deltas and next actions, added forbidden shortcuts plus verify follow-up to Codex handoffs, aligned the auth-bug demo and installed-package smoke with a deterministic fixed-file verify path, and documented the loop.
+- Validation run: focused repair/verify workflow tests, repair prompt and verification suites, demo guard action package tests, public docs current-truth tests, text hygiene, Ruff, format, diff whitespace, CLI help, and an auth-bug demo repair/verify smoke.
+- Evidence: `tests/test_repair_verify_workflow.py` covers `verify --from-run latest`, worse/regressed human output, Codex handoff guidance, and the deterministic auth-bug fixed-file verify path.
+- Gate delta: repair verification is easier to run locally without changing QA-Z's boundary; QA-Z still does not apply target-repository repairs, call live model APIs, publish packages, deploy, create tags, or post externally.
+- User impact: users can go from a blocked guard verdict to a repair prompt and then to a clear verify result with one follow-up command after applying the fix.
+- Remaining blocker: GitHub Action workflows still need separate wiring to expose the same repair/verify loop as job-summary guidance.
+- Next safe slice: productize GitHub Actions repair/verify summary artifacts while keeping SARIF upload, PR comments, and external posting opt-in.
+
+
+## 2026-05-27 v0.15 GitHub Action Runtime Hardening
+- Repo: JustTyping
+- Lane: GitHub Actions gate -> runtime diagnostics and safe configuration.
+- User-facing flow: pull request workflow -> input validation -> guard evidence -> Job Summary/artifacts -> repair/verify next commands.
+- Slice type: Flow / Evidence / Contract
+- Before: action input validation was thin, the older full fast/deep action always attempted SARIF upload, and missing summary artifacts produced sparse fallback text.
+- Root cause: CI users needed actionable failure messages and permission guidance directly in logs and Job Summary output, not only in docs.
+- Change made: added action input validation with supported values and docs links; kept SARIF upload opt-in in the reusable action; validated the optional PR comment flag; expanded GitHub summary rendering with verdict, top blocked reason, artifact existence, SARIF permission guidance, and repair/verify next commands; documented the runtime boundary.
+- Validation run: focused GitHub workflow and summary tests, public current-truth docs, public text hygiene, Ruff, format, diff whitespace, and QA-Z help.
+- Evidence: `tests/test_github_workflow.py` and `tests/test_github_summary*.py` cover invalid action inputs, SARIF opt-in, comment opt-in validation, missing-run guidance, and Job Summary next commands.
+- Gate delta: GitHub Action failures are easier to diagnose without adding broad permissions, enabling bot comments by default, publishing packages, bumping versions, creating tags/releases, or deploying.
+- User impact: maintainers can fix bad `profile`, `deep`, `adapter`, `run-dir`, SARIF, and comment settings from the job log or summary without guessing which artifact to open first.
+- Remaining blocker: live hosted action release and production PyPI install remain separate release-owner decisions.
+- Next safe slice: add a deterministic action-summary fixture or dry-run harness that exercises the fallback summary text without requiring live GitHub Actions.
+
+
+## 2026-05-27 v0.16 Scorecard Productization
+- Repo: JustTyping
+- Lane: local readiness evidence -> user-facing scorecard.
+- User-facing flow: repository maintainer -> `qa-z scorecard` -> readiness dimensions, evidence pointers, warnings, and next commands.
+- Slice type: Evidence / Contract
+- Before: config validation, benchmark corpus state, Semgrep availability, installed-package smoke evidence, GitHub Action wiring, and latest run evidence were inspectable only through separate docs, commands, and files.
+- Root cause: QA-Z had useful readiness signals, but no read-only local command that assembled them into a single coarse readiness view without running expensive workflows.
+- Change made: added `qa-z scorecard` with human, JSON, Markdown, and optional output modes; added stable dimension schema; documented the local scorecard separately from the OpenSSF Scorecard workflow.
+- Validation run: targeted scorecard tests and runtime command seam tests are passing; full slice validation is recorded in the PR closeout.
+- Evidence: `tests/test_scorecard.py` covers healthy, missing-config, missing-Semgrep, stable JSON schema, human next actions, and no generated `.qa-z` artifact creation.
+- Gate delta: no release, PyPI/TestPyPI upload, `twine upload`, version bump, tag, deploy, live PyPI install claim, benchmark result artifact, or generated runtime artifact was added.
+- User impact: maintainers can see which QA-Z coverage surfaces are ready, warning, blocked, not configured, or unknown from one local command.
+- Remaining blocker: production PyPI publish and hosted release surfaces remain separate owner-approved release decisions.
+- Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.
+
+
+## 2026-05-27 v0.17 Multi-Agent Adapter Quality Pack
+- Repo: JustTyping
+- Lane: repair handoff -> multi-agent executor prompts.
+- User-facing flow: failed QA-Z run -> `qa-z repair-prompt --adapter <tool>` -> evidence-backed external repair -> `qa-z verify`.
+- Slice type: Flow / Evidence
+- Before: normalized repair handoff data existed, but only Codex and Claude Markdown were first-class adapter artifacts and the common merge-safety sections were not enforced across other tools.
+- Root cause: QA-Z's core boundary is model-agnostic, but adapter presentation had not caught up with the broader Codex, Claude Code, Cursor, aider, OpenHands, and human-review workflows.
+- Change made: added a shared adapter renderer registry, expanded `repair-prompt`, guard, and repair-session artifacts to write `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`, and documented the shared adapter contract.
+- Validation run: focused repair-handoff and repair-prompt tests are passing; full slice validation is recorded in the PR closeout.
+- Evidence: `tests/test_repair_handoff.py` covers supported adapter outputs, required merge-safety sections, unknown adapter failure, selected adapter stdout, and artifact writes.
+- Gate delta: no external agent API call, live model call, release, deploy, package upload, version bump, live PyPI install claim, or generated runtime artifact was added.
+- User impact: operators can hand QA-Z repair evidence to the coding tool they actually use while keeping QA-Z as the deterministic merge-safety judge.
+- Remaining blocker: live executor orchestration remains out of scope; adapter files are local handoff prompts only.
+- Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.

@@ -11,7 +11,6 @@ from qa_z.commands.common import format_relative_path, load_cli_config, resolve_
 from qa_z.executor_ingest import create_verify_candidate_run
 from qa_z.verification import (
     VerificationArtifactPaths,
-    comparison_json,
     compare_verification_runs,
     load_verification_run,
     verify_exit_code,
@@ -28,13 +27,22 @@ def handle_verify(args: argparse.Namespace) -> int:
     if config is None:
         return 2
 
-    if bool(args.candidate_run) == bool(args.rerun):
+    baseline_run_or_error = _resolve_baseline_run(args)
+    if isinstance(baseline_run_or_error, int):
+        return baseline_run_or_error
+    baseline_run = baseline_run_or_error
+    rerun = bool(args.rerun)
+    if args.from_run and not args.candidate_run and not rerun:
+        rerun = True
+
+    if bool(args.candidate_run) == rerun:
         return _verify_error(
             args,
             error="configuration_error",
             message=(
                 "qa-z verify: configuration error: provide exactly one of "
-                "--candidate-run or --rerun."
+                "--candidate-run or --rerun. `--from-run` may be used by "
+                "itself to rerun the candidate automatically."
             ),
             exit_code=2,
         )
@@ -43,9 +51,9 @@ def handle_verify(args: argparse.Namespace) -> int:
         baseline, _baseline_source = load_verification_run(
             root=root,
             config=config,
-            from_run=args.baseline_run,
+            from_run=baseline_run,
         )
-        if args.rerun:
+        if rerun:
             rerun_output_dir = (
                 resolve_cli_path(root, args.rerun_output_dir)
                 if args.rerun_output_dir
@@ -80,9 +88,13 @@ def handle_verify(args: argparse.Namespace) -> int:
         paths = paths_or_error
 
         if args.json:
-            print(comparison_json(comparison), end="")
+            print(verify_cli_json(comparison, paths, root), end="")
         else:
-            print(render_verify_stdout(comparison.verdict, paths, root))
+            print(
+                render_verify_stdout(
+                    comparison.verdict, paths, root, comparison=comparison
+                )
+            )
         return verify_exit_code(comparison.verdict)
     except ArtifactLoadError as exc:
         return _verify_error(
@@ -123,6 +135,31 @@ def _write_verification_artifacts_or_error(
         )
 
 
+def _resolve_baseline_run(args: argparse.Namespace) -> str | int:
+    if args.from_run and args.baseline_run:
+        return _verify_error(
+            args,
+            error="configuration_error",
+            message=(
+                "qa-z verify: configuration error: provide only one of "
+                "--from-run or --baseline-run."
+            ),
+            exit_code=2,
+        )
+    baseline_run = args.from_run or args.baseline_run
+    if not baseline_run:
+        return _verify_error(
+            args,
+            error="configuration_error",
+            message=(
+                "qa-z verify: configuration error: provide --from-run or "
+                "--baseline-run."
+            ),
+            exit_code=2,
+        )
+    return str(baseline_run)
+
+
 def _verify_error(
     args: argparse.Namespace, *, error: str, message: str, exit_code: int
 ) -> int:
@@ -159,9 +196,15 @@ def register_verify_command(subparsers: argparse._SubParsersAction) -> None:
         help="optional explicit path to a qa-z config file",
     )
     verify_parser.add_argument(
+        "--from-run",
+        help=(
+            "baseline run root, fast directory, summary.json, or latest; when "
+            "used without --candidate-run or --rerun, qa-z reruns candidate evidence"
+        ),
+    )
+    verify_parser.add_argument(
         "--baseline-run",
-        required=True,
-        help="baseline run root, fast directory, summary.json, or latest",
+        help="compatibility alias for --from-run",
     )
     candidate_group = verify_parser.add_mutually_exclusive_group()
     candidate_group.add_argument(
@@ -195,14 +238,105 @@ def register_verify_command(subparsers: argparse._SubParsersAction) -> None:
 
 
 def render_verify_stdout(
-    verdict: str, paths: VerificationArtifactPaths, root: Path
+    verdict: str,
+    paths: VerificationArtifactPaths,
+    root: Path,
+    *,
+    comparison: VerificationComparison | None = None,
 ) -> str:
     """Render the default human CLI output for qa-z verify."""
-    return "\n".join(
+    lines = [
+        f"QA-Z Verify: {display_verdict(verdict)}",
+        f"qa-z verify: {verdict}",
+    ]
+    if comparison is not None:
+        lines.extend(
+            [
+                verification_delta_line(comparison),
+                f"Resolved: {comparison.summary['resolved_count']}",
+                f"Remaining: {comparison.summary['still_failing_count']}",
+                f"New/regressed: {comparison.summary['new_issue_count']}",
+            ]
+        )
+    lines.extend(
         [
-            f"qa-z verify: {verdict}",
+            "Artifacts:",
             f"Summary: {format_relative_path(paths.summary_path, root)}",
             f"Compare: {format_relative_path(paths.compare_path, root)}",
             f"Report: {format_relative_path(paths.report_path, root)}",
         ]
     )
+    if comparison is not None:
+        lines.extend(["Next actions:"])
+        lines.extend(
+            f"{index}. {action}"
+            for index, action in enumerate(
+                verify_next_actions(comparison, paths, root), start=1
+            )
+        )
+    return "\n".join(lines)
+
+
+def verify_cli_json(
+    comparison: VerificationComparison,
+    paths: VerificationArtifactPaths,
+    root: Path,
+) -> str:
+    """Render machine-readable CLI JSON with artifact and next-action pointers."""
+    payload = comparison.to_dict()
+    payload["artifacts"] = {
+        "summary": format_relative_path(paths.summary_path, root),
+        "compare": format_relative_path(paths.compare_path, root),
+        "report": format_relative_path(paths.report_path, root),
+    }
+    payload["next_actions"] = verify_next_actions(comparison, paths, root)
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def display_verdict(verdict: str) -> str:
+    """Return the human label for a verification verdict."""
+    if verdict == "regressed":
+        return "worse (regressed)"
+    return verdict
+
+
+def verification_delta_line(comparison: VerificationComparison) -> str:
+    """Render the before/after blocker delta."""
+    summary = comparison.summary
+    return (
+        "Delta: "
+        f"{summary['blocking_before']} blocking before -> "
+        f"{summary['blocking_after']} after; "
+        f"resolved {summary['resolved_count']}; "
+        f"new/regressed {summary['new_issue_count']}"
+    )
+
+
+def verify_next_actions(
+    comparison: VerificationComparison,
+    paths: VerificationArtifactPaths,
+    root: Path,
+) -> list[str]:
+    """Return deterministic next actions for a verification result."""
+    report_path = format_relative_path(paths.report_path, root)
+    compare_path = format_relative_path(paths.compare_path, root)
+    baseline_command = f"qa-z verify --from-run {comparison.baseline.run_dir}"
+    if comparison.verdict == "improved":
+        return [
+            f"Review verify report: {report_path}",
+            f"Run `qa-z summary --from-run {comparison.candidate.run_dir}`.",
+        ]
+    if comparison.verdict == "unchanged":
+        return [
+            f"Inspect remaining blockers in {compare_path}.",
+            f"Continue the repair, then rerun `{baseline_command}`.",
+        ]
+    if comparison.verdict in {"mixed", "regressed"}:
+        return [
+            f"Inspect new or regressed evidence in {compare_path}.",
+            f"Repair new or regressed issues, then rerun `{baseline_command}`.",
+        ]
+    return [
+        f"Inspect not-comparable evidence in {compare_path}.",
+        "Rerun missing fast/deep evidence, then rerun verification.",
+    ]

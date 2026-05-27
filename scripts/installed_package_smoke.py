@@ -258,6 +258,24 @@ def artifact_command_specs(
     config_args = ("--path", str(demo_root), "--config", "qa-z.demo.yaml")
     python_label = "python.exe" if os.name == "nt" else "python"
     qa_z_label = "qa-z"
+    apply_fix_command = (
+        str(venv_python),
+        "-c",
+        (
+            "from pathlib import Path; import shutil; "
+            "shutil.copyfile(Path('app') / 'auth.fixed.py', "
+            "Path('app') / 'auth.py')"
+        ),
+    )
+    apply_fix_display = (
+        python_label,
+        "-c",
+        (
+            "from pathlib import Path; import shutil; "
+            "shutil.copyfile(Path('app') / 'auth.fixed.py', "
+            "Path('app') / 'auth.py')"
+        ),
+    )
     return [
         CommandSpec(
             id=f"{artifact_kind}_install",
@@ -361,14 +379,19 @@ def artifact_command_specs(
             cwd=demo_root,
         ),
         CommandSpec(
+            id=f"{artifact_kind}_apply_auth_fix",
+            artifact_kind=artifact_kind,
+            command=apply_fix_command,
+            display_command=apply_fix_display,
+            cwd=demo_root,
+        ),
+        CommandSpec(
             id=f"{artifact_kind}_verify",
             artifact_kind=artifact_kind,
             command=(
                 str(qa_z),
                 "verify",
-                "--baseline-run",
-                "latest",
-                "--candidate-run",
+                "--from-run",
                 "latest",
                 "--json",
                 *config_args,
@@ -376,16 +399,13 @@ def artifact_command_specs(
             display_command=(
                 qa_z_label,
                 "verify",
-                "--baseline-run",
-                "latest",
-                "--candidate-run",
+                "--from-run",
                 "latest",
                 "--json",
                 *config_args,
             ),
             cwd=demo_root,
-            allowed_exit_codes=frozenset({0, 1}),
-            pass_reason="command returned an expected exit code for verify",
+            pass_reason="command reported improved repair verification",
         ),
     ]
 

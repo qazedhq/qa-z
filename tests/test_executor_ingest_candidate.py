@@ -152,7 +152,7 @@ def test_create_verify_candidate_run_uses_selection_modes_and_review_bundle(
         run_id="baseline",
         run_dir=".qa-z/runs/baseline",
         fast_summary=run_summary(tmp_path, "baseline", "fast"),
-        deep_summary=None,
+        deep_summary=run_summary(tmp_path, "baseline", "deep"),
     )
     config = {
         "contracts": {"output_dir": "qa/contracts"},

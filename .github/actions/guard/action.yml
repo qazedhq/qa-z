@@ -22,10 +22,86 @@ inputs:
     default: "false"
     required: false
     description: Upload SARIF when deep checks produce it. Requires security-events write permission.
+  from-run:
+    default: ""
+    required: false
+    description: Optional existing QA-Z run directory to guard; empty runs a fresh guard.
 
 runs:
   using: composite
   steps:
+    - name: Validate QA-Z action inputs
+      shell: bash
+      run: |
+        docs_url="https://github.com/qazedhq/qa-z/blob/main/docs/github-action.md#troubleshooting-faq"
+        fail_input() {
+          local input_name="$1"
+          local input_value="$2"
+          local supported_values="$3"
+          local suggested_fix="$4"
+          echo "::error title=Invalid QA-Z action input::Invalid QA-Z action input: ${input_name}. Received '${input_value}'. supported values: ${supported_values}. Suggested fix: ${suggested_fix}. Docs: ${docs_url}"
+          echo "Invalid QA-Z action input: ${input_name}" >&2
+          echo "Received: ${input_value}" >&2
+          echo "supported values: ${supported_values}" >&2
+          echo "Suggested fix: ${suggested_fix}" >&2
+          echo "Docs: ${docs_url}" >&2
+          exit 2
+        }
+
+        case "${{ inputs.profile }}" in
+          default|python|typescript|monorepo) ;;
+          *)
+            fail_input "profile" "${{ inputs.profile }}" "default, python, typescript, monorepo" "set profile to python, typescript, or monorepo"
+            ;;
+        esac
+
+        case "${{ inputs.deep }}" in
+          auto|always|never) ;;
+          *)
+            fail_input "deep" "${{ inputs.deep }}" "auto, always, never" "set deep to auto unless you intentionally need always or never"
+            ;;
+        esac
+
+        case "${{ inputs.adapter }}" in
+          codex|claude|cursor|aider|openhands|generic|human) ;;
+          *)
+            fail_input "adapter" "${{ inputs.adapter }}" "codex, claude, cursor, aider, openhands, generic, human" "set adapter to codex for the default repair handoff"
+            ;;
+        esac
+
+        case "${{ inputs.fail-on-risk }}" in
+          true|false) ;;
+          *)
+            fail_input "fail-on-risk" "${{ inputs.fail-on-risk }}" "true, false" "quote the boolean, for example fail-on-risk: \"true\""
+            ;;
+        esac
+
+        case "${{ inputs.upload-sarif }}" in
+          true|false) ;;
+          *)
+            fail_input "upload-sarif" "${{ inputs.upload-sarif }}" "true, false" "quote the boolean, for example upload-sarif: \"false\""
+            ;;
+        esac
+
+        from_run="${{ inputs.from-run }}"
+        if [[ "$from_run" =~ ^[[:space:]]+$ || "$from_run" = /* || "$from_run" = *".."* ]]; then
+          fail_input "from-run" "$from_run" "empty, latest, or a repository-relative .qa-z/runs/<id> path" "use from-run: latest or leave it empty for a fresh guard run"
+        fi
+
+        if [ "${{ inputs.upload-sarif }}" = "true" ]; then
+          echo "::notice title=QA-Z SARIF upload enabled::Ensure this job has permissions: security-events: write. Docs: ${docs_url}"
+        fi
+
+    - name: Resolve QA-Z run directory
+      id: runtime
+      shell: bash
+      run: |
+        run_dir=".qa-z/runs/latest"
+        if [ -n "${{ inputs.from-run }}" ] && [ "${{ inputs.from-run }}" != "latest" ]; then
+          run_dir="${{ inputs.from-run }}"
+        fi
+        echo "run_dir=${run_dir}" >> "$GITHUB_OUTPUT"
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
@@ -34,17 +110,6 @@ runs:
     - name: Install QA-Z
       shell: bash
       run: python -m pip install git+https://github.com/qazedhq/qa-z.git
-
-    - name: Validate QA-Z profile input
-      shell: bash
-      run: |
-        case "${{ inputs.profile }}" in
-          default|python|typescript|monorepo) ;;
-          *)
-            echo "Unsupported QA-Z profile: ${{ inputs.profile }}" >&2
-            exit 2
-            ;;
-        esac
 
     - name: Validate QA-Z config
       shell: bash
@@ -57,16 +122,43 @@ runs:
         if [ "${{ inputs.fail-on-risk }}" = "true" ]; then
           args+=(--fail-on-risk)
         fi
+        if [ -n "${{ inputs.from-run }}" ]; then
+          args+=(--from-run "${{ inputs.from-run }}")
+        fi
         "${args[@]}"
 
     - name: Publish QA-Z summary
       if: ${{ always() }}
       shell: bash
       run: |
-        if [ -f .qa-z/runs/latest/guard/github-summary.md ]; then
-          cat .qa-z/runs/latest/guard/github-summary.md >> "$GITHUB_STEP_SUMMARY"
-        elif [ -f .qa-z/runs/latest/guard/verdict.md ]; then
-          cat .qa-z/runs/latest/guard/verdict.md >> "$GITHUB_STEP_SUMMARY"
+        run_dir="${{ steps.runtime.outputs.run_dir }}"
+        if [ -f "${run_dir}/guard/github-summary.md" ]; then
+          cat "${run_dir}/guard/github-summary.md" >> "$GITHUB_STEP_SUMMARY"
+        elif [ -f "${run_dir}/guard/verdict.md" ]; then
+          cat "${run_dir}/guard/verdict.md" >> "$GITHUB_STEP_SUMMARY"
+        else
+          {
+            echo "# QA-Z Summary"
+            echo ""
+            echo "QA-Z did not produce a guard summary artifact."
+            echo ""
+            echo "## Missing Evidence"
+            echo ""
+            echo "- Expected run directory: \`${run_dir}\`"
+            echo "- Expected guard summary: \`${run_dir}/guard/github-summary.md\`"
+            echo "- Expected verdict: \`${run_dir}/guard/verdict.md\`"
+            echo "- Repair prompt artifact path: \`${run_dir}/repair/prompt.md\`"
+            echo "- Review packet artifact path: \`${run_dir}/review/review.md\`"
+            echo "- SARIF artifact path: \`${run_dir}/deep/results.sarif\`"
+            echo ""
+            echo "## Next Actions"
+            echo ""
+            echo "1. Check the install, doctor, and guard log steps for the first failure."
+            echo "2. Run \`qa-z doctor --json\` locally."
+            echo "3. Run \`qa-z guard --deep ${{ inputs.deep }} --adapter ${{ inputs.adapter }}\` locally."
+            echo ""
+            echo "SARIF upload is skipped unless \`upload-sarif: \"true\"\` is set; when enabled, the job needs \`security-events: write\`."
+          } >> "$GITHUB_STEP_SUMMARY"
         fi
 
     - name: Upload QA-Z SARIF
@@ -74,7 +166,7 @@ runs:
       uses: github/codeql-action/upload-sarif@v4
       continue-on-error: true
       with:
-        sarif_file: .qa-z/runs/latest/deep/results.sarif
+        sarif_file: ${{ steps.runtime.outputs.run_dir }}/deep/results.sarif
         category: qa-z-semgrep
 
     - name: Upload QA-Z artifacts
@@ -82,6 +174,6 @@ runs:
       uses: actions/upload-artifact@v6
       with:
         name: qa-z-runs
-        path: .qa-z/runs/latest
+        path: ${{ steps.runtime.outputs.run_dir }}
         retention-days: 7
         if-no-files-found: warn

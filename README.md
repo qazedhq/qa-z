@@ -27,23 +27,23 @@ Next: use the generated repair prompt, then run qa-z verify
 ```
 
 ## Quickstart
-
 ```bash
 qa-z demo auth-bug
 cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
+cp app/auth.fixed.py app/auth.py && qa-z verify --from-run latest --config qa-z.demo.yaml
 ```
 
-Automation can use `qa-z demo auth-bug --json` for demo root, verdict, repair prompt, and follow-up commands.
+Automation can use `qa-z demo auth-bug --json` for demo root, verdict, repair prompt, fixed-file copy, and follow-up commands. The full local loop is documented in [Repair -> verify workflow](docs/repair-verify-workflow.md).
 
 For your own repository:
-
 ```bash
 qa-z init --profile python --with-agent-templates
-qa-z doctor
+qa-z doctor && qa-z scorecard
 qa-z guard --adapter codex --deep auto --fail-on-risk
 qa-z repair-prompt --from-run latest --adapter codex
+qa-z verify --from-run latest
 ```
 
 If the console script is not on PATH, use `python -m qa_z` as a fallback.
@@ -120,7 +120,7 @@ qa-z deep --from-run .qa-z/runs/baseline
 qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex
 ```
 
-After applying the included repair, `qa-z verify` should report verdict `improved` with no regressions.
+After applying the included repair, `qa-z verify --from-run .qa-z/runs/baseline` should report verdict `improved` with no regressions.
 
 ## Agent Skill Pack
 
@@ -161,7 +161,7 @@ jobs:
           adapter: codex
 ```
 
-See [docs/github-action.md](docs/github-action.md) for the 5-minute path: minimal PR gate, PR summary/artifacts, SARIF upload opt-in, and troubleshooting FAQ.
+See [docs/github-action.md](docs/github-action.md) for the 5-minute path: minimal PR gate, PR summary/artifacts, SARIF upload opt-in, and troubleshooting FAQ, including input validation diagnostics.
 Add `security-events: write` only when SARIF upload is explicitly enabled; PR/bot comments stay opt-in.
 
 ## Agent QA Playbook

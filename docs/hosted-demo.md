@@ -49,9 +49,7 @@ python -m pip install semgrep
 qa-z deep --from-run .qa-z/runs/baseline
 
 cp app/auth.fixed.py app/auth.py
-qa-z fast --output-dir .qa-z/runs/candidate
-qa-z deep --from-run .qa-z/runs/candidate
-qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate
+qa-z verify --from-run .qa-z/runs/baseline
 ```
 
 PowerShell copy equivalent:

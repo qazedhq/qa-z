@@ -22,7 +22,7 @@ def test_hosted_demo_docs_pin_local_replay_commands() -> None:
         "qa-z repair-prompt --from-run .qa-z/runs/baseline --adapter codex",
         "qa-z deep --from-run .qa-z/runs/baseline",
         "cp app/auth.fixed.py app/auth.py",
-        "qa-z verify --baseline-run .qa-z/runs/baseline --candidate-run .qa-z/runs/candidate",
+        "qa-z verify --from-run .qa-z/runs/baseline",
     ):
         assert text in docs
 
