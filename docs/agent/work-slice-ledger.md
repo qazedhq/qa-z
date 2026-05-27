@@ -2428,3 +2428,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners now have a concrete no-go packet that says exactly which external gate remains while preserving local package readiness evidence.
 - Remaining blocker: production PyPI release-owner approval flags, PyPI credential or Trusted Publishing proof, final frozen release SHA, upload execution, post-upload install smoke, and README install transition remain blocked.
 - Next safe slice: prepare a trusted-publishing CI proof packet or rerun v0.18 as an upload execution only after all required approval flags and credential proof are present.
+
+
+## 2026-05-27 v0.19 Production PyPI Trusted Publishing & Release Governance
+- Repo: JustTyping
+- Lane: production PyPI governance -> approval and credential boundary.
+- User-facing flow: release owner -> method decision -> protected publish workflow design -> rollback/yank playbook -> production publish remains blocked.
+- Slice type: Contract / Evidence
+- Before: v0.18 recorded production PyPI as blocked on approval and credential/trusted-publishing proof, but the future production path still needed one governance packet covering method choice, protected workflow shape, approval flags, and rollback/yank execution stance.
+- Root cause: release execution should not start from an upload command; it needs a reviewed governance packet that separates approval, trust configuration, workflow permissions, install transition, and incident response.
+- Change made: added v0.19 governance, Trusted Publishing design, non-active workflow draft, rollback/yank playbook, current-truth links, and docs tests while preserving the no-upload boundary.
+- Validation run: focused v0.19 governance docs test first failed on missing files, then passed after adding the packet. Full requested validation is recorded in the PR closeout.
+- Evidence: v0.19 docs record production PyPI status as not published, package metadata `0.10.0b0`, GitHub source tag `v0.9.9-alpha` as the current public install, required approval flags, required proof, Trusted Publishing as the recommended default, manual token fallback only, and explicit no-upload non-actions.
+- Gate delta: no PyPI/TestPyPI upload, `twine upload`, tag, GitHub Release, deploy, credential print/commit, README live PyPI install claim, or generated artifact commit occurred.
+- User impact: release owners can review the future production PyPI path without exposing credentials or accidentally turning readiness proof into release execution.
+- Remaining blocker: production PyPI remains blocked until required approval flags, Trusted Publishing or credential proof, final SHA proof, refreshed build/hash/`twine check`, upload proof, install smoke, README transition proof, and rollback/yank stance are present in a separate execution packet.
+- Next safe slice: v0.20 production PyPI publish-execution gate, only after the release owner explicitly supplies the required approval flags and trust/credential proof.
