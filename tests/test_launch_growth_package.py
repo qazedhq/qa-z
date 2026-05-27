@@ -339,6 +339,37 @@ def test_launch_kit_keeps_public_growth_copy_release_safe() -> None:
         assert forbidden not in launch_kit
 
 
+def test_package_publish_plan_links_v018_production_no_go_packet() -> None:
+    package_plan = read("docs/package-publish-plan.md")
+    go_no_go = read("docs/reports/v0.18-production-pypi-go-no-go.md")
+
+    for required in (
+        "docs/reports/v0.18-production-pypi-go-no-go.md",
+        "NO_GO_MISSING_APPROVAL",
+        "NO_GO_MISSING_CREDENTIALS",
+        "Production PyPI upload remains blocked.",
+    ):
+        assert required in package_plan
+
+    for required in (
+        "Decision: `NO_GO_MISSING_APPROVAL`",
+        "Release version: `0.10.0b0`",
+        "`production_pypi_upload_executed=false`",
+        "`registry_upload_executed=false` for production PyPI",
+        "README transition status: unchanged.",
+    ):
+        assert required in go_no_go
+
+    for forbidden in (
+        "production_pypi_upload_executed=true",
+        "registry_upload_executed=true for production",
+        "PyPI install is live",
+        "live PyPI install is available",
+    ):
+        assert forbidden not in package_plan
+        assert forbidden not in go_no_go
+
+
 def test_github_action_adoption_docs_are_copy_paste_safe() -> None:
     readme = read("README.md")
     docs = read("docs/github-action.md")

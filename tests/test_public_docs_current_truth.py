@@ -11,6 +11,7 @@ TESTPYPI_UPLOAD_PROOF_PATH = (
     "docs/reports/v0.10.0-beta-testpypi-rehearsal-upload-proof.md"
 )
 PYPI_READINESS_PATH = "docs/reports/v0.10.0-beta-pypi-readiness.md"
+PRODUCTION_GO_NO_GO_PATH = "docs/reports/v0.18-production-pypi-go-no-go.md"
 PYPI_RELEASE_NOTES_DRAFT_PATH = "docs/releases/v0.10.0-beta-release-notes-draft.md"
 
 
@@ -406,16 +407,23 @@ def test_pypi_conversion_readiness_pack_keeps_public_truth_blocked() -> None:
     readme = read_readme()
     package_plan = (ROOT / "docs/package-publish-plan.md").read_text(encoding="utf-8")
     readiness = read_pypi_readiness()
+    go_no_go = (ROOT / PRODUCTION_GO_NO_GO_PATH).read_text(encoding="utf-8")
     release_notes = (ROOT / PYPI_RELEASE_NOTES_DRAFT_PATH).read_text(encoding="utf-8")
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    combined = "\n".join([package_plan, readiness, release_notes])
+    combined = "\n".join([package_plan, readiness, release_notes, go_no_go])
     combined_text = " ".join(combined.split())
 
     assert (ROOT / PYPI_READINESS_PATH).exists()
+    assert (ROOT / PRODUCTION_GO_NO_GO_PATH).exists()
     assert (ROOT / PYPI_RELEASE_NOTES_DRAFT_PATH).exists()
     assert 'version = "0.10.0b0"' in pyproject
     assert "pipx install qa-z" not in readme
     assert "uv tool install qa-z" not in readme
+    assert PRODUCTION_GO_NO_GO_PATH in package_plan
+    assert "Decision: `NO_GO_MISSING_APPROVAL`" in go_no_go
+    assert "Secondary decision: `NO_GO_MISSING_CREDENTIALS`" in go_no_go
+    assert "`production_pypi_upload_executed=false`" in go_no_go
+    assert "README transition status: unchanged." in go_no_go
     assert "https://test.pypi.org/project/qa-z/0.9.8a0/" in readiness
     assert (
         "`registry_upload_executed=true` applies to TestPyPI `0.9.8a0` only."
@@ -435,6 +443,7 @@ def test_pypi_conversion_readiness_pack_keeps_public_truth_blocked() -> None:
         "live PyPI install is available",
         "v0.10.0-beta is released",
         "published to PyPI",
+        "production_pypi_upload_executed=true",
     ):
         assert false_claim not in combined_text
 

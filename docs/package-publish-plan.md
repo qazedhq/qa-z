@@ -154,6 +154,8 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
   `docs/reports/v0.10.0-beta-pypi-install-smoke-plan.md`.
 - Installed-package runtime smoke:
   `docs/reports/v0.10.0-beta-installed-package-smoke.md`.
+- v0.18 production PyPI GO/NO-GO packet:
+  `docs/reports/v0.18-production-pypi-go-no-go.md`.
 - Release notes draft:
   `docs/releases/v0.10.0-beta-release-notes-draft.md`.
 - Version policy must be decided before package publish.
@@ -176,7 +178,13 @@ execute rollback/yank actions, and release execution remains `NO-GO`.
 - The installed-package smoke ran from fresh virtual environments and confirmed
   CLI entrypoint, module entrypoint, bundled auth-bug demo resource loading,
   doctor, guard, repair-prompt, and deterministic verify behavior.
+- The v0.18 production PyPI GO/NO-GO packet records
+  `NO_GO_MISSING_APPROVAL` with `NO_GO_MISSING_CREDENTIALS` as a secondary
+  blocker.
+- v0.18 local readiness proof built the exact `0.10.0b0` wheel and sdist,
+  passed `twine check`, and reran installed-package smoke without any upload.
 - No production PyPI package registry publish is claimed complete.
+- Production PyPI upload remains blocked.
 - The current active install path remains the GitHub source/tag install path
   unless and until production PyPI package publish happens.
 - Future PyPI-published target commands remain future targets and not current

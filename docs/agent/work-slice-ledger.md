@@ -2412,3 +2412,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: operators can hand QA-Z repair evidence to the coding tool they actually use while keeping QA-Z as the deterministic merge-safety judge.
 - Remaining blocker: live executor orchestration remains out of scope; adapter files are local handoff prompts only.
 - Next safe slice: add a deterministic action-summary dry-run harness that exercises GitHub Action fallback summary text without live GitHub Actions.
+
+
+## 2026-05-27 v0.18 Production PyPI GO-NO-GO Packet
+- Repo: JustTyping
+- Lane: package publish readiness -> production PyPI release gate.
+- User-facing flow: release owner -> approval flags and credential boundary -> build/twine/install smoke -> README install transition only after proof.
+- Slice type: Evidence / Contract
+- Before: production PyPI install conversion had local readiness docs and installed-package smoke, but no v0.18 packet tying the required approval flags, credential boundary, current PyPI absence, exact artifact proof, and README transition status together.
+- Root cause: production PyPI publish is an external release execution gate; missing approval must still leave useful repo-local proof instead of stopping at a blocker sentence.
+- Change made: added `docs/reports/v0.18-production-pypi-go-no-go.md`, linked it from package publish/readiness/release-note truth surfaces, recorded `NO_GO_MISSING_APPROVAL` with `NO_GO_MISSING_CREDENTIALS` as secondary, and pinned the no-upload contract with docs tests.
+- Validation run: production PyPI state checks, `python -m build --sdist --wheel`, `python -m twine check` on exact artifacts, `python scripts/installed_package_smoke.py --json`, focused release docs tests, public current-truth docs tests, launch package docs tests, text hygiene, Ruff, format, diff whitespace, and CLI help.
+- Evidence: production PyPI simple index returned 404 and `python -m pip index versions qa-z` found no distribution; local build produced `qa_z-0.10.0b0-py3-none-any.whl` and `qa_z-0.10.0b0.tar.gz`; `twine check` passed after updating the local checker dependency; installed-package smoke passed for wheel and sdist with `registry_upload_executed=false`.
+- Gate delta: no production PyPI upload, TestPyPI upload, `twine upload`, tag, GitHub Release, deploy, version bump, credential print/commit, README live PyPI install claim, or generated artifact commit occurred.
+- User impact: release owners now have a concrete no-go packet that says exactly which external gate remains while preserving local package readiness evidence.
+- Remaining blocker: production PyPI release-owner approval flags, PyPI credential or Trusted Publishing proof, final frozen release SHA, upload execution, post-upload install smoke, and README install transition remain blocked.
+- Next safe slice: prepare a trusted-publishing CI proof packet or rerun v0.18 as an upload execution only after all required approval flags and credential proof are present.
