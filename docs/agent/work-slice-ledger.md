@@ -2476,3 +2476,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can review the future production PyPI path without exposing credentials or accidentally turning readiness proof into release execution.
 - Remaining blocker: production PyPI remains blocked until required approval flags, Trusted Publishing or credential proof, final SHA proof, refreshed build/hash/`twine check`, upload proof, install smoke, README transition proof, and rollback/yank stance are present in a separate execution packet.
 - Next safe slice: v0.20 production PyPI publish-execution gate, only after the release owner explicitly supplies the required approval flags and trust/credential proof.
+
+
+## 2026-05-27 v0.20 Production PyPI Publish-Execution Gate
+- Repo: JustTyping
+- Lane: package publish readiness -> production PyPI execution gate.
+- User-facing flow: release owner -> deterministic gate -> upload allowed or blocked decision.
+- Slice type: Contract / Evidence
+- Before: v0.19 defined the governance path and future workflow shape, but there was no executable local gate that classified the production PyPI publish decision before an operator reached for upload commands.
+- Root cause: the production PyPI boundary needed machine-readable no-go/go evidence that separates approval flags, trust/credential proof, final SHA proof, and local package proof without printing secrets or executing uploads.
+- Change made: added `scripts/production_pypi_publish_gate.py`, covered blocked approval, missing trust/credential proof, SHA mismatch, and GO-without-upload decisions, linked the v0.20 packet from package publish/current-truth release surfaces, and routed the new release script through commit-plan ownership.
+- Validation run: focused gate tests, focused v0.20 docs guard, PyPI readiness docs pack, public docs/launch truth pack, worktree commit-plan/current-truth pack, targeted Ruff, targeted mypy, `git diff --check`, direct gate JSON run, and non-strict worktree commit-plan.
+- Evidence: `tests/test_production_pypi_publish_gate.py` and the focused v0.20 docs test first failed on the missing gate/report, then passed; package/readiness governance tests passed; public docs/launch truth passed; worktree/current-truth pack passed; targeted Ruff and mypy passed; direct gate JSON returned `decision=NO_GO_MISSING_APPROVAL`, `credential_or_trust_proof=missing`, `production_pypi_upload_executed=false`, and `registry_upload_executed=false`; non-strict worktree plan returned `status=ready` with `unassigned_source_path_count=0`.
+- Gate delta: production PyPI now has an executable local publish gate, but no PyPI/TestPyPI upload, `twine upload`, tag, GitHub Release, deploy, version bump, credential print/commit, README live PyPI install claim, or generated artifact commit occurred.
+- User impact: release owners can run one deterministic gate to see why production PyPI is blocked before any secret-handling or upload step.
+- Remaining blocker: production PyPI remains blocked until required approval flags, Trusted Publishing or credential proof, final SHA proof, refreshed local proof, production upload proof, install smoke, and README transition proof exist in a separate owner-approved execution packet.
+- Next safe slice: v0.21 first-run onboarding, because it is local product work and does not require registry approval.
