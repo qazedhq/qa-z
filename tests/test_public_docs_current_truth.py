@@ -195,9 +195,11 @@ def test_init_and_doctor_docs_describe_auto_profile_detection() -> None:
     for text in (
         "qa-z init --profile auto --dry-run",
         "selected profile",
+        "Recommended profile",
         "confidence",
         "evidence files",
         "activated check assumptions",
+        "Next:",
         "`python`, `typescript`, `nextjs`, `monorepo`, `mixed`, or `unknown`",
         "existing config",
     ):

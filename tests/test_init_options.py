@@ -263,6 +263,35 @@ def test_init_auto_explain_prints_evidence_when_writing(
     assert "activated checks: Next.js TypeScript surface" in output
 
 
+def test_init_auto_dry_run_prints_readable_profile_recommendation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    (tmp_path / "package.json").write_text(
+        '{"dependencies":{"next":"15.0.0"}}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "next.config.js").write_text("module.exports = {}\n", encoding="utf-8")
+
+    exit_code = main(
+        ["init", "--path", str(tmp_path), "--profile", "auto", "--dry-run"]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "QA-Z init profile detection: nextjs" in output
+    assert "Recommended profile: nextjs" in output
+    assert "Confidence: high" in output
+    assert "Evidence:" in output
+    assert "- package.json" in output
+    assert "- next.config.js" in output
+    assert "Activated checks:" in output
+    assert "- Next.js TypeScript surface" in output
+    assert "Next:" in output
+    assert "- qa-z init --profile nextjs" in output
+    assert "would write: qa-z.yaml" in output
+
+
 def test_init_with_github_workflow_creates_workflow(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

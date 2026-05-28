@@ -336,7 +336,9 @@ BATCH_RULES = (
             "tests/test_surface_discovery*.py",
             "tests/test_task_selection*.py",
             "docs/doctor.md",
+            "docs/init.md",
             "docs/reports/v0.21-first-run-onboarding.md",
+            "docs/reports/v0.22-profile-monorepo-intelligence.md",
             "src/qa_z/planner/contracts.py",
             "src/qa_z/templates/**",
             "qa/contracts/**",
@@ -606,6 +608,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.10.0-beta-installed-package-smoke.md",
     "docs/reports/v0.20-production-pypi-publish-gate.md",
     "docs/reports/v0.21-first-run-onboarding.md",
+    "docs/reports/v0.22-profile-monorepo-intelligence.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (
