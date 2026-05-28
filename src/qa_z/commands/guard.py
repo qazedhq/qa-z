@@ -11,6 +11,7 @@ from qa_z.config import ConfigError, load_config
 from qa_z.guard.renderer import render_guard_stdout
 from qa_z.adapters import SUPPORTED_REPAIR_ADAPTERS
 from qa_z.guard.workflow import run_guard
+from qa_z.policy import resolve_policy_pack, validate_policy_pack
 
 
 def handle_guard(args: argparse.Namespace) -> int:
@@ -26,6 +27,16 @@ def handle_guard(args: argparse.Namespace) -> int:
             error="configuration_error",
             message=f"qa-z guard: configuration error: {exc}",
         )
+    policy = None
+    if args.policy:
+        policy = resolve_policy_pack(config, args.policy)
+        policy_errors = validate_policy_pack(policy)
+        if policy_errors:
+            return _guard_error(
+                args,
+                error="policy_error",
+                message="qa-z guard: policy error: " + "; ".join(policy_errors),
+            )
     try:
         verdict = run_guard(
             root=root,
@@ -36,6 +47,7 @@ def handle_guard(args: argparse.Namespace) -> int:
             deep_mode=args.deep,
             github_summary=args.github_summary,
             from_run=args.from_run,
+            policy=policy,
         )
     except (FileNotFoundError, ValueError) as exc:
         return _guard_error(
@@ -125,5 +137,9 @@ def register_guard_command(subparsers: argparse._SubParsersAction) -> None:
     guard_parser.add_argument(
         "--from-run",
         help="optional run root, fast directory, summary.json, or latest fast run artifact",
+    )
+    guard_parser.add_argument(
+        "--policy",
+        help="optional builtin or configured merge policy, such as strict",
     )
     guard_parser.set_defaults(handler=handle_guard)

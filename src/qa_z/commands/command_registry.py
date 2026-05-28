@@ -30,6 +30,7 @@ from qa_z.commands.runtime import (
     register_benchmark_command,
     register_executor_bridge_command,
     register_executor_result_command,
+    register_policy_command,
     register_scorecard_command,
 )
 from qa_z.commands.sessioning import (
@@ -94,6 +95,7 @@ COMMAND_REGISTRY_GROUPS = {
         ),
         CommandRegistrar(name="benchmark", register=register_benchmark_command),
         CommandRegistrar(name="scorecard", register=register_scorecard_command),
+        CommandRegistrar(name="policy", register=register_policy_command),
     ),
 }
 

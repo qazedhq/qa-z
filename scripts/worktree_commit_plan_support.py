@@ -237,6 +237,7 @@ BATCH_RULES = (
             "tests/test_pypi_governance_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
+            "docs/policy.md",
             "docs/reports/v0.10.0-beta-readiness.md",
             "docs/reports/v0.10.0-beta-release-decision.md",
             "docs/reports/v0.10.0-beta-version-policy.md",
@@ -254,6 +255,7 @@ BATCH_RULES = (
             "docs/reports/v0.10.0-beta-testpypi-rehearsal-go-no-go.md",
             "docs/reports/v0.10.0-beta-installed-package-smoke.md",
             "docs/reports/v0.20-production-pypi-publish-gate.md",
+            "docs/reports/v0.28-policy-packs.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -294,6 +296,7 @@ BATCH_RULES = (
             "src/qa_z/artifacts.py",
             "src/qa_z/config.py",
             "src/qa_z/config_validation.py",
+            "src/qa_z/policy.py",
             "src/qa_z/commands",
             "src/qa_z/commands/**",
             "src/qa_z/doctor.py",
@@ -326,6 +329,7 @@ BATCH_RULES = (
             "tests/test_live_repository*.py",
             "tests/test_loop_health*.py",
             "tests/test_operator_commands.py",
+            "tests/test_policy_command.py",
             "tests/test_planning_commands.py",
             "tests/test_report*.py",
             "tests/test_runtime_commands.py",
@@ -614,6 +618,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.21-first-run-onboarding.md",
     "docs/reports/v0.22-profile-monorepo-intelligence.md",
     "docs/reports/v0.17-multi-agent-adapter-quality.md",
+    "docs/reports/v0.28-policy-packs.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (
