@@ -2540,3 +2540,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: maintainers can hand QA-Z evidence to a person for final review without repurposing a tool-oriented adapter prompt.
 - Remaining blocker: human review still happens outside QA-Z; QA-Z only prepares deterministic local handoff evidence and validation expectations.
 - Next safe slice: split v0.28 policy pack core after the human adapter PR lands and main checks stay green.
+
+
+## 2026-05-28 v0.28 Rules And Policy Packs
+- Repo: JustTyping
+- Lane: guard policy -> local merge policy validation.
+- User-facing flow: `qa-z policy validate --policy strict` -> `qa-z guard --policy strict`.
+- Slice type: Contract / Evidence
+- Before: QA-Z had guard decisions but no named policy-pack CLI surface.
+- Root cause: team merge policies needed a deterministic local contract before broader governance or hosted integrations.
+- Change made: added builtin `default` and `strict` policy packs, configured `merge_policy` validation, `qa-z policy validate`, `qa-z guard --policy`, docs, and v0.28 report.
+- Validation run: focused policy command RED/GREEN tests, policy docs RED/GREEN test, related guard/runtime/current-truth tests, targeted Ruff, format, mypy, hygiene, and diff whitespace.
+- Evidence: policy tests first failed on missing command registration and missing `--policy`; after implementation they passed and guard verdicts record the selected policy.
+- Gate delta: policy packs stay local and deterministic; they do not publish, deploy, comment, contact GitHub, or execute target-repository repairs.
+- User impact: teams can validate a strict merge policy and attach it to guard evidence before using QA-Z as a merge gate.
+- Remaining blocker: richer policy-to-finding enforcement remains future work; production PyPI remains blocked pending separate release-owner proof.
+- Next safe slice: v0.29 team governance baseline and waiver artifacts.

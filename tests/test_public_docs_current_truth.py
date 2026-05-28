@@ -225,6 +225,29 @@ def test_quickstart_states_repair_verification_success_signal() -> None:
     assert "no regressions" in quickstart
 
 
+def test_policy_docs_pin_local_only_boundaries() -> None:
+    docs_readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    policy_docs = (ROOT / "docs" / "policy.md").read_text(encoding="utf-8")
+
+    assert "[Policy packs](policy.md)" in docs_readme
+    for text in (
+        "qa-z policy validate",
+        "qa-z guard --policy strict",
+        "local deterministic",
+        "merge_policy",
+        "Policy packs are local deterministic inputs only.",
+    ):
+        assert text in policy_docs
+
+    for forbidden in (
+        "posts a comment",
+        "uploads to PyPI",
+        "opens a pull request",
+        "contacts GitHub",
+    ):
+        assert forbidden not in policy_docs
+
+
 def test_evidence_summary_docs_pin_local_first_read_boundary() -> None:
     docs = (ROOT / "docs" / "evidence-summary.md").read_text(encoding="utf-8")
 

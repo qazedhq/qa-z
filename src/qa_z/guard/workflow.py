@@ -19,6 +19,7 @@ from qa_z.artifacts import (
 from qa_z.guard.risk_classifier import classify_change_risk, detect_changed_files
 from qa_z.guard.verdict import GuardVerdict, write_verdict_artifacts
 from qa_z.improvement_state import load_backlog
+from qa_z.policy import public_policy
 from qa_z.planner.contracts import plan_contract
 from qa_z.reporters.deep_context import load_sibling_deep_summary
 from qa_z.reporters.github_summary import render_github_summary
@@ -50,6 +51,7 @@ def run_guard(
     deep_mode: str,
     github_summary: bool,
     from_run: str | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> GuardVerdict:
     """Run a deterministic one-command QA guard workflow."""
     run_dir = root / ".qa-z" / "runs" / "latest"
@@ -160,6 +162,12 @@ def run_guard(
             run_source.run_dir / "repair" / "prompt.md", root
         )
 
+    extra: dict[str, Any] = {}
+    if current_truth:
+        extra["current_truth"] = current_truth
+    if policy is not None:
+        extra["policy"] = public_policy(policy)
+
     verdict = GuardVerdict(
         status=status,
         title=title,
@@ -181,7 +189,7 @@ def run_guard(
         },
         repair={"written": repair_written},
         artifacts=artifacts,
-        extra={"current_truth": current_truth} if current_truth else {},
+        extra=extra,
     )
     write_verdict_artifacts(verdict, guard_dir)
     return verdict

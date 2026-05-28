@@ -14,6 +14,7 @@ Use the root [README](../README.md) for public onboarding and the shortest tryou
 | [GitHub Action](github-action.md) | Pull request gate setup using the shipped workflow and composite action |
 | [Evidence summary](evidence-summary.md) | Local first-read summary for verdicts, risks, artifact paths, and next commands |
 | [Repair -> verify workflow](repair-verify-workflow.md) | First-class loop from guard verdict to repair prompt to deterministic verification |
+| [Policy packs](policy.md) | Local merge policy validation and `qa-z guard --policy strict` |
 | [Use with Codex](use-with-codex.md) | Codex handoff loop using QA-Z repair prompts |
 | [Use with Claude Code](use-with-claude-code.md) | Claude Code handoff loop using the same deterministic artifacts |
 | [Use with Cursor](use-with-cursor.md) | Cursor workflow using QA-Z before merge |

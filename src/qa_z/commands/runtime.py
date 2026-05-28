@@ -10,6 +10,11 @@ from qa_z.commands.runtime_benchmark import (
     handle_benchmark,
     register_benchmark_command,
 )
+from qa_z.commands.runtime_policy import (
+    handle_policy_validate,
+    register_policy_command,
+    render_policy_validation_text,
+)
 from qa_z.commands.runtime_bridge import (
     handle_executor_bridge,
     register_executor_bridge_command,
@@ -39,13 +44,16 @@ __all__ = [
     "handle_executor_bridge",
     "handle_executor_result_dry_run",
     "handle_executor_result_ingest",
+    "handle_policy_validate",
     "handle_scorecard",
     "register_autonomy_command",
     "register_benchmark_command",
     "register_executor_bridge_command",
     "register_executor_result_command",
+    "register_policy_command",
     "register_scorecard_command",
     "render_executor_result_dry_run_stdout",
+    "render_policy_validation_text",
     "render_scorecard_markdown",
     "render_scorecard_text",
 ]
