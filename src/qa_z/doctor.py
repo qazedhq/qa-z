@@ -115,10 +115,11 @@ def build_doctor_report(root: Path, config_path: Path | None = None) -> dict[str
         if check.suggestion:
             suggestions.append(suggestion_command(check.suggestion))
 
+    status = status_from_parts(errors=errors, warnings=warnings, checks=checks)
     suggestions = unique_strings(suggestions)
     next_actions = next_actions_from_checks(checks, suggestions)
-
-    status = status_from_parts(errors=errors, warnings=warnings, checks=checks)
+    if status == "passed" and not next_actions:
+        next_actions = first_run_next_actions()
     return {
         "status": status,
         "version": qa_z.__version__,
@@ -639,6 +640,15 @@ def next_actions_from_checks(
         else:
             actions.append(suggestion)
     return unique_strings(actions)
+
+
+def first_run_next_actions() -> list[str]:
+    """Return the happy-path commands shown after a clean doctor run."""
+    return [
+        "Run `qa-z demo auth-bug`.",
+        "Run `qa-z scorecard`.",
+        "Run `qa-z guard --adapter codex --deep auto --fail-on-risk`.",
+    ]
 
 
 def unique_strings(values: list[str]) -> list[str]:

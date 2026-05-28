@@ -2492,3 +2492,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: release owners can run one deterministic gate to see why production PyPI is blocked before any secret-handling or upload step.
 - Remaining blocker: production PyPI remains blocked until required approval flags, Trusted Publishing or credential proof, final SHA proof, refreshed local proof, production upload proof, install smoke, and README transition proof exist in a separate owner-approved execution packet.
 - Next safe slice: v0.21 first-run onboarding, because it is local product work and does not require registry approval.
+
+
+## 2026-05-28 v0.21 First-Run Onboarding
+- Repo: JustTyping
+- Lane: first-run onboarding -> clean doctor next action.
+- User-facing flow: `qa-z doctor` -> demo -> scorecard -> guard.
+- Slice type: Flow / Evidence
+- Before: a clean doctor run could return `status=passed` with an empty `next_actions` list, leaving new users to infer the next local command from docs.
+- Root cause: doctor only assembled next actions from warnings, errors, or suggestions; the happy path had no explicit onboarding continuation.
+- Change made: added clean doctor next actions for `qa-z demo auth-bug`, `qa-z scorecard`, and `qa-z guard --adapter codex --deep auto --fail-on-risk`; documented the clean path in doctor docs and a v0.21 report.
+- Validation run: focused doctor RED/GREEN test, focused doctor docs RED/GREEN test, full doctor/docs pack, targeted Ruff, format, diff whitespace, text hygiene, and worktree commit-plan.
+- Evidence: `tests/test_doctor.py::test_passed_doctor_suggests_first_run_next_actions` failed first on an empty `next_actions` array, then passed after the doctor change; `tests/test_doctor_docs.py::test_v021_doctor_docs_pin_clean_next_actions` failed first on the missing v0.21 report, then passed after docs were added.
+- Gate delta: first-run doctor output now has a deterministic next local action sequence without changing package publish, release, GitHub, external-service, target-repository repair, upload, tag, release, deploy, credential, or README live PyPI install behavior.
+- User impact: new users who get a clean doctor result can continue directly into the demo, readiness scorecard, and guard command without hunting through docs.
+- Remaining blocker: production PyPI remains blocked; first-run onboarding still depends on the user running local commands.
+- Next safe slice: v0.22 profile/monorepo intelligence follow-up.
