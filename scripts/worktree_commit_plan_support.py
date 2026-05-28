@@ -296,6 +296,7 @@ BATCH_RULES = (
             "src/qa_z/config_validation.py",
             "src/qa_z/commands",
             "src/qa_z/commands/**",
+            "src/qa_z/doctor.py",
             "src/qa_z/execution_*.py",
             "src/qa_z/git_runtime.py",
             "src/qa_z/guard",
@@ -317,6 +318,8 @@ BATCH_RULES = (
             "tests/test_coverage_gap_discovery.py",
             "tests/test_demo_json_failure_contracts.py",
             "tests/test_demo_guard_action_package.py",
+            "tests/test_doctor.py",
+            "tests/test_doctor_docs.py",
             "tests/test_execution*.py",
             "tests/test_git_runtime*.py",
             "tests/test_guard_cli.py",
@@ -332,6 +335,8 @@ BATCH_RULES = (
             "tests/test_skill_install_cli.py",
             "tests/test_surface_discovery*.py",
             "tests/test_task_selection*.py",
+            "docs/doctor.md",
+            "docs/reports/v0.21-first-run-onboarding.md",
             "src/qa_z/planner/contracts.py",
             "src/qa_z/templates/**",
             "qa/contracts/**",
@@ -600,6 +605,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.10.0-beta-pypi-readiness.md",
     "docs/reports/v0.10.0-beta-installed-package-smoke.md",
     "docs/reports/v0.20-production-pypi-publish-gate.md",
+    "docs/reports/v0.21-first-run-onboarding.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (

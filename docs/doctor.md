@@ -46,6 +46,22 @@ JSON fields are `status`, `version`, `checks`, `warnings`, `errors`,
 `suggestions`, and `next_actions`. Each check includes `id`, `status`,
 `message`, `evidence`, and `suggestion`.
 
+## Clean doctor next actions
+
+When all checks pass, `qa-z doctor` still prints the first-run path instead of
+ending with an empty next step:
+
+```text
+Next actions:
+1. Run `qa-z demo auth-bug`.
+2. Run `qa-z scorecard`.
+3. Run `qa-z guard --adapter codex --deep auto --fail-on-risk`.
+```
+
+These actions keep the onboarding flow local and deterministic: run the packaged
+demo first, inspect repository readiness, then run the guard path for the
+current repository.
+
 `qa-z doctor --strict` exits non-zero for warnings when an operator wants
 missing instruction files, profile mismatch, or other setup warnings to fail a
 handoff gate.

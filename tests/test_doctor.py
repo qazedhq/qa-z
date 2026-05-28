@@ -10,6 +10,7 @@ import pytest
 
 from qa_z.cli import main
 from qa_z.config import EXAMPLE_CONFIG
+from qa_z.doctor import DoctorCheck
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -53,6 +54,15 @@ def test_doctor_passes_in_normal_source_checkout(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr("qa_z.doctor.find_executable", fake_tool_lookup())
+    monkeypatch.setattr(
+        "qa_z.doctor.runtime_artifact_check",
+        lambda root: DoctorCheck(
+            id="runtime.artifacts",
+            status="passed",
+            message=f"writable at {root / '.qa-z'}",
+            evidence={"runtime_dir": str(root / ".qa-z"), "writable": True},
+        ),
+    )
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
 
     exit_code, payload = run_doctor_json([], capsys)
@@ -67,6 +77,25 @@ def test_doctor_passes_in_normal_source_checkout(
     assert install_check["status"] == "passed"
     assert "source checkout" in install_check["evidence"]["modes"]
     assert check_by_id(payload, "config.qa_z_yaml")["status"] == "passed"
+
+
+def test_passed_doctor_suggests_first_run_next_actions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_ready_config(tmp_path)
+    monkeypatch.setattr("qa_z.doctor.find_executable", fake_tool_lookup())
+
+    exit_code, payload = run_doctor_json(["--path", str(tmp_path)], capsys)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert payload["next_actions"] == [
+        "Run `qa-z demo auth-bug`.",
+        "Run `qa-z scorecard`.",
+        "Run `qa-z guard --adapter codex --deep auto --fail-on-risk`.",
+    ]
 
 
 def test_doctor_warns_when_qa_z_yaml_is_missing(
