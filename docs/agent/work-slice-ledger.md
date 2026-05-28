@@ -2556,3 +2556,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: teams can validate a strict merge policy and attach it to guard evidence before using QA-Z as a merge gate.
 - Remaining blocker: richer policy-to-finding enforcement remains future work; production PyPI remains blocked pending separate release-owner proof.
 - Next safe slice: v0.29 team governance baseline and waiver artifacts.
+
+
+## 2026-05-28 v0.29 Team Governance
+- Repo: JustTyping
+- Lane: team governance -> baseline, waiver, and audit trail artifacts.
+- User-facing flow: `qa-z baseline create` -> `qa-z waiver add` -> `qa-z governance report`.
+- Slice type: Contract / Evidence
+- Before: QA-Z had local evidence artifacts but no explicit team governance artifact store.
+- Root cause: waivers and baselines need a deterministic audit trail before any organization-level process can safely build on them.
+- Change made: added local baseline creation, expiring waiver append, governance report summary, docs, and v0.29 report.
+- Validation run: focused governance command RED/GREEN tests, governance docs RED/GREEN test, related CLI/runtime/current-truth tests, targeted Ruff, format, mypy, hygiene, and diff whitespace.
+- Evidence: governance tests first failed on missing command registration; after implementation they passed and verify `.qa-z/governance/baseline.json`, `.qa-z/governance/waivers.json`, report status, waiver summary, and audit-trail paths.
+- Gate delta: governance artifacts are local evidence only; they do not mutate GitHub settings, branch protection, CODEOWNERS, external services, package uploads, releases, deploys, or target repository code.
+- User impact: teams can record a baseline, add expiring waivers, and produce a local governance report for review.
+- Remaining blocker: CODEOWNERS integration and richer waiver matching are future local slices; production PyPI remains blocked pending separate release-owner proof.
+- Next safe slice: v0.30 public beta stabilization audit across CLI, docs, and validation evidence.
