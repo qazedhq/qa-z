@@ -248,6 +248,31 @@ def test_policy_docs_pin_local_only_boundaries() -> None:
         assert forbidden not in policy_docs
 
 
+def test_governance_docs_pin_local_only_boundaries() -> None:
+    docs_readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    governance_docs = (ROOT / "docs" / "governance.md").read_text(encoding="utf-8")
+
+    assert "[Governance](governance.md)" in docs_readme
+    for text in (
+        "qa-z baseline create",
+        "qa-z waiver add",
+        "qa-z governance report",
+        ".qa-z/governance/baseline.json",
+        ".qa-z/governance/waivers.json",
+        "local deterministic",
+        "They are not approval to",
+        "upload to PyPI",
+    ):
+        assert text in governance_docs
+
+    for forbidden in (
+        "mutates GitHub settings",
+        "uploads to PyPI",
+        "runs an external executor",
+    ):
+        assert forbidden not in governance_docs
+
+
 def test_evidence_summary_docs_pin_local_first_read_boundary() -> None:
     docs = (ROOT / "docs" / "evidence-summary.md").read_text(encoding="utf-8")
 

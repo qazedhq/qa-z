@@ -27,11 +27,14 @@ from qa_z.commands.reviewing import (
 )
 from qa_z.commands.runtime import (
     register_autonomy_command,
+    register_baseline_command,
     register_benchmark_command,
     register_executor_bridge_command,
     register_executor_result_command,
+    register_governance_command,
     register_policy_command,
     register_scorecard_command,
+    register_waiver_command,
 )
 from qa_z.commands.sessioning import (
     register_repair_session_command,
@@ -96,6 +99,9 @@ COMMAND_REGISTRY_GROUPS = {
         CommandRegistrar(name="benchmark", register=register_benchmark_command),
         CommandRegistrar(name="scorecard", register=register_scorecard_command),
         CommandRegistrar(name="policy", register=register_policy_command),
+        CommandRegistrar(name="baseline", register=register_baseline_command),
+        CommandRegistrar(name="waiver", register=register_waiver_command),
+        CommandRegistrar(name="governance", register=register_governance_command),
     ),
 }
 
