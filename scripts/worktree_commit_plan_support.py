@@ -237,6 +237,7 @@ BATCH_RULES = (
             "tests/test_pypi_governance_docs.py",
             "tests/test_examples.py",
             "tests/test_launch_growth_package.py",
+            "tests/test_public_beta_stabilization.py",
             "docs/governance.md",
             "docs/policy.md",
             "docs/reports/v0.10.0-beta-readiness.md",
@@ -258,6 +259,7 @@ BATCH_RULES = (
             "docs/reports/v0.20-production-pypi-publish-gate.md",
             "docs/reports/v0.28-policy-packs.md",
             "docs/reports/v0.29-team-governance.md",
+            "docs/reports/v0.30-public-beta-stabilization.md",
             "docs/product/**",
             "docs/roadmap.md",
             "docs/superpowers/plans/*github*release*.md",
@@ -624,6 +626,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.17-multi-agent-adapter-quality.md",
     "docs/reports/v0.28-policy-packs.md",
     "docs/reports/v0.29-team-governance.md",
+    "docs/reports/v0.30-public-beta-stabilization.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (

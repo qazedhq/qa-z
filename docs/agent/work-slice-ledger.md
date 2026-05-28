@@ -2572,3 +2572,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: teams can record a baseline, add expiring waivers, and produce a local governance report for review.
 - Remaining blocker: CODEOWNERS integration and richer waiver matching are future local slices; production PyPI remains blocked pending separate release-owner proof.
 - Next safe slice: v0.30 public beta stabilization audit across CLI, docs, and validation evidence.
+
+
+## 2026-05-28 v0.30 Public Beta Stabilization
+- Repo: JustTyping
+- Lane: roadmap stabilization -> CLI and evidence audit.
+- User-facing flow: v0.20-v0.30 product surface -> current local commands, reports, and release boundary.
+- Slice type: Evidence / Contract
+- Before: v0.20-v0.29 work had concrete local slices, but the roadmap needed a single current-truth stabilization packet before any public beta wording.
+- Root cause: public beta claims require command-surface and release-boundary evidence, not just individual feature reports.
+- Change made: added `docs/reports/v0.30-public-beta-stabilization.md` and `tests/test_public_beta_stabilization.py` to pin CLI command availability and the v0.20-v0.30 evidence matrix.
+- Validation run: focused public beta stabilization RED/GREEN test plus targeted feature packs for policy, governance, adapters, docs, and GitHub Action adapter validation.
+- Evidence: the stabilization test first failed on the missing v0.30 report, then passed after the report was added; CLI audit verifies doctor, init, summary, repair-session, github-summary, repair-prompt, scorecard, policy, baseline, waiver, and governance command registration.
+- Gate delta: public beta stabilization is documented as local evidence only; production PyPI, release, deploy, and README live install claims remain blocked.
+- User impact: maintainers can see exactly which v0.20-v0.30 roadmap surfaces are implemented locally and which external release gates still block public beta release execution.
+- Remaining blocker: production PyPI approval/trust/upload proof and hosted release execution remain external blockers.
+- Next safe slice: run a full release-candidate validation sweep when the branch is ready for review.
