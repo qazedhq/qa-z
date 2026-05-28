@@ -97,7 +97,7 @@ def register_guard_command(subparsers: argparse._SubParsersAction) -> None:
     guard_parser.add_argument("--slug", help="optional contract slug")
     guard_parser.add_argument(
         "--adapter",
-        choices=(*SUPPORTED_REPAIR_ADAPTERS, "human"),
+        choices=SUPPORTED_REPAIR_ADAPTERS,
         default="codex",
         help="repair-prompt audience metadata",
     )

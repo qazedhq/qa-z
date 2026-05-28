@@ -366,6 +366,17 @@ def test_adapter_renderer_outputs_required_merge_safety_sections(
     assert "bypass validation" not in prompt.lower()
 
 
+def test_human_adapter_outputs_review_checklist(tmp_path: Path) -> None:
+    handoff = build_handoff(tmp_path)
+
+    prompt = render_repair_handoff_for_adapter("human", handoff)
+
+    assert prompt.startswith("# QA-Z Human Reviewer Repair Handoff\n")
+    assert "Use this as a human review checklist before merging." in prompt
+    assert "Decision" in prompt
+    assert "Waiver or follow-up needed" in prompt
+
+
 def adapter_label(adapter: str) -> str:
     """Return the expected user-facing adapter label."""
     return {
@@ -375,6 +386,7 @@ def adapter_label(adapter: str) -> str:
         "aider": "aider",
         "openhands": "OpenHands",
         "generic": "Generic",
+        "human": "Human Reviewer",
     }[adapter]
 
 

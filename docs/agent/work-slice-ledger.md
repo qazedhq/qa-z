@@ -2437,7 +2437,7 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - Slice type: Flow / Evidence
 - Before: normalized repair handoff data existed, but only Codex and Claude Markdown were first-class adapter artifacts and the common merge-safety sections were not enforced across other tools.
 - Root cause: QA-Z's core boundary is model-agnostic, but adapter presentation had not caught up with the broader Codex, Claude Code, Cursor, aider, OpenHands, and human-review workflows.
-- Change made: added a shared adapter renderer registry, expanded `repair-prompt`, guard, and repair-session artifacts to write `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`, and documented the shared adapter contract.
+- Change made: added a shared adapter renderer registry, expanded `repair-prompt`, guard, and repair-session artifacts to write `codex.md`, `claude.md`, `cursor.md`, `aider.md`, `openhands.md`, and `generic.md`, later extended the same registry to `human.md`, and documented the shared adapter contract.
 - Validation run: focused repair-handoff and repair-prompt tests are passing; full slice validation is recorded in the PR closeout.
 - Evidence: `tests/test_repair_handoff.py` covers supported adapter outputs, required merge-safety sections, unknown adapter failure, selected adapter stdout, and artifact writes.
 - Gate delta: no external agent API call, live model call, release, deploy, package upload, version bump, live PyPI install claim, or generated runtime artifact was added.
@@ -2524,3 +2524,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: new users can see the recommended profile, confidence, evidence files, active assumptions, and next command as a compact decision block before writing starter files.
 - Remaining blocker: production PyPI remains blocked; broader monorepo workspace health scoring is still future local product work.
 - Next safe slice: verify whether the existing evidence navigator already satisfies v0.23, then either record the proof or harden the next missing local evidence gap.
+
+
+## 2026-05-28 v0.26 Human Repair Adapter
+- Repo: JustTyping
+- Lane: repair handoff -> human reviewer checklist.
+- User-facing flow: failed QA-Z run -> `qa-z repair-prompt --adapter human` -> evidence-backed human review -> local verification.
+- Slice type: Flow / Evidence
+- Before: human reviewers had to use the neutral `generic` adapter, while the supported adapter contract was aimed at external coding tools.
+- Root cause: v0.17 normalized multi-agent handoff prompts but did not give human review a first-class merge-safety checklist or GitHub Action adapter value.
+- Change made: added `human` to the repair handoff adapter registry, Action input validation, guard CLI adapter choices, adapter docs, and adapter quality report; the human prompt asks for a decision, files reviewed or changed, validation results, and waiver/follow-up status.
+- Validation run: focused human adapter RED/GREEN test, GitHub Action adapter validation test, repair handoff/GitHub workflow/docs pack, current-truth/worktree commit-plan pack, targeted Ruff, format, mypy, hygiene, and diff whitespace.
+- Evidence: `tests/test_repair_handoff.py::test_human_adapter_outputs_review_checklist` failed first on unknown adapter `human`, then passed after the registry/profile change; `tests/test_github_workflow.py::test_qa_z_action_validates_inputs_and_keeps_sarif_opt_in` pins the Action-supported adapter list.
+- Gate delta: human review can receive a deterministic QA-Z handoff artifact without adding live executor orchestration, GitHub bot comments, package uploads, tags, releases, deploys, credentials, or README live PyPI install claims.
+- User impact: maintainers can hand QA-Z evidence to a person for final review without repurposing a tool-oriented adapter prompt.
+- Remaining blocker: human review still happens outside QA-Z; QA-Z only prepares deterministic local handoff evidence and validation expectations.
+- Next safe slice: split v0.28 policy pack core after the human adapter PR lands and main checks stay green.

@@ -471,15 +471,19 @@ BATCH_RULES = (
             "src/qa_z/repair_session_*.py",
             "src/qa_z/verification.py",
             "src/qa_z/verification_*.py",
+            "src/qa_z/adapters/**",
             "src/qa_z/reporters/*.py",
             "src/qa_z/reporters/verification_publish.py",
             "src/qa_z/reporters/github_summary.py",
             "src/qa_z/operator_action_render.py",
             "src/qa_z/commands/review_github_context.py",
+            "docs/agent-adapters.md",
+            "docs/reports/v0.17-multi-agent-adapter-quality.md",
             "tests/test_repair_session*.py",
             "tests/test_verification*.py",
             "tests/test_github_summary*.py",
             "tests/test_repair_prompt*.py",
+            "tests/test_repair_handoff.py",
             "tests/test_review_packet*.py",
             "tests/test_verify_cli_error_contracts.py",
             "tests/test_run_summary*.py",
@@ -609,6 +613,7 @@ RELEASE_OWNED_REPORT_PATTERNS = (
     "docs/reports/v0.20-production-pypi-publish-gate.md",
     "docs/reports/v0.21-first-run-onboarding.md",
     "docs/reports/v0.22-profile-monorepo-intelligence.md",
+    "docs/reports/v0.17-multi-agent-adapter-quality.md",
 )
 
 CROSS_CUTTING_GROUP_RULES = (

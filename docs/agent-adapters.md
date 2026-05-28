@@ -19,7 +19,8 @@ Supported repair-prompt adapters:
 | `cursor` | `.qa-z/runs/latest/repair/cursor.md` | Cursor is the editor workflow |
 | `aider` | `.qa-z/runs/latest/repair/aider.md` | aider is the patch executor |
 | `openhands` | `.qa-z/runs/latest/repair/openhands.md` | OpenHands is the bounded task executor |
-| `generic` | `.qa-z/runs/latest/repair/generic.md` | Human review or another coding tool needs a neutral checklist |
+| `generic` | `.qa-z/runs/latest/repair/generic.md` | Another coding tool needs a neutral checklist |
+| `human` | `.qa-z/runs/latest/repair/human.md` | A human reviewer needs a merge-safety checklist |
 
 `legacy` remains available for the older generic `prompt.md` stdout shape. New
 handoffs should prefer one of the adapter names above.

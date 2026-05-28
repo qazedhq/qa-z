@@ -41,9 +41,9 @@ runs:
         }
 
         case "${{ inputs.adapter }}" in
-          legacy|codex|claude|cursor|aider|openhands|generic) ;;
+          legacy|codex|claude|cursor|aider|openhands|generic|human) ;;
           *)
-            fail_input "adapter" "${{ inputs.adapter }}" "legacy, codex, claude, cursor, aider, openhands, generic" "set adapter to codex for the default repair handoff"
+            fail_input "adapter" "${{ inputs.adapter }}" "legacy, codex, claude, cursor, aider, openhands, generic, human" "set adapter to codex for the default repair handoff"
             ;;
         esac
 
