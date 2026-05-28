@@ -137,6 +137,16 @@ def render_profile_detection(detection: ProfileDetectionResult) -> None:
     evidence = ", ".join(detection.evidence_files) or "none"
     assumptions = ", ".join(detection.activated_check_assumptions)
     print(f"QA-Z init profile detection: {detection.profile}")
+    print(f"Recommended profile: {detection.profile}")
+    print(f"Confidence: {detection.confidence}")
+    print("Evidence:")
+    for evidence_file in detection.evidence_files or ("none",):
+        print(f"- {evidence_file}")
+    print("Activated checks:")
+    for assumption in detection.activated_check_assumptions or ("manual review",):
+        print(f"- {assumption}")
+    print("Next:")
+    print(f"- qa-z init --profile {detection.profile}")
     print(f"confidence: {detection.confidence}")
     print(f"evidence: {evidence}")
     print(f"activated checks: {assumptions}")

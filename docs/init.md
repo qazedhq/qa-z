@@ -21,6 +21,24 @@ The auto detector reports:
 - warnings when repo signals are mixed or no known setup files are present
 - the next command to run
 
+The dry-run output starts with a readable decision block before the legacy
+lowercase compatibility lines:
+
+```text
+QA-Z init profile detection: nextjs
+Recommended profile: nextjs
+Confidence: high
+Evidence:
+- package.json
+- next.config.js
+Activated checks:
+- Next.js TypeScript surface
+- TypeScript fast checks
+- Semgrep deep checks
+Next:
+- qa-z init --profile nextjs
+```
+
 When the dry run looks right, write the starter files:
 
 ```bash
@@ -59,4 +77,3 @@ comments, call live model APIs, or run coding agents.
 
 Production PyPI is not published in this repository state. Use the GitHub source
 install path documented in the quickstart until docs explicitly say otherwise.
-

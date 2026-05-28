@@ -2508,3 +2508,19 @@ Append one entry per meaningful improvement slice. Do not use this ledger to tur
 - User impact: new users who get a clean doctor result can continue directly into the demo, readiness scorecard, and guard command without hunting through docs.
 - Remaining blocker: production PyPI remains blocked; first-run onboarding still depends on the user running local commands.
 - Next safe slice: v0.22 profile/monorepo intelligence follow-up.
+
+
+## 2026-05-28 v0.22 Profile And Monorepo Intelligence
+- Repo: JustTyping
+- Lane: init profile detection -> readable dry-run recommendation.
+- User-facing flow: `qa-z init --profile auto --dry-run` -> recommended profile, confidence, evidence, activated checks, and next command.
+- Slice type: Flow / Evidence
+- Before: the auto detector exposed all required facts, but dry-run output was mostly lowercase compatibility lines that were less scannable for first-time users.
+- Root cause: v0.12 added profile evidence, while v0.22 needed a clearer human recommendation block without changing profile selection or generated config contracts.
+- Change made: added `Recommended profile`, `Confidence`, `Evidence`, `Activated checks`, and `Next` output to the init profile renderer while preserving existing `QA-Z init profile detection`, `confidence`, `evidence`, `activated checks`, and `next command` lines.
+- Validation run: focused init dry-run RED/GREEN test, legacy profile dry-run compatibility test, public docs current-truth RED/GREEN test, init test pack, current-truth/worktree commit-plan pack, targeted Ruff, format, mypy, hygiene, and diff whitespace.
+- Evidence: `tests/test_init_options.py::test_init_auto_dry_run_prints_readable_profile_recommendation` failed first on the missing `Recommended profile` line, then passed; `tests/test_profile_detection.py::test_auto_dry_run_does_not_write_config_and_explains_evidence` continued to pass with the old line expectations; `tests/test_public_docs_current_truth.py::test_init_and_doctor_docs_describe_auto_profile_detection` failed first, then passed after docs were updated.
+- Gate delta: first-run profile selection is easier to review without changing detection rules, generated config contracts, package publish state, GitHub behavior, uploads, deploys, credentials, live model calls, or external calls.
+- User impact: new users can see the recommended profile, confidence, evidence files, active assumptions, and next command as a compact decision block before writing starter files.
+- Remaining blocker: production PyPI remains blocked; broader monorepo workspace health scoring is still future local product work.
+- Next safe slice: verify whether the existing evidence navigator already satisfies v0.23, then either record the proof or harden the next missing local evidence gap.
