@@ -13,6 +13,7 @@ SUPPORTED_REPAIR_ADAPTERS = (
     "aider",
     "openhands",
     "generic",
+    "human",
 )
 
 
@@ -105,6 +106,19 @@ ADAPTER_PROFILES: dict[str, AdapterProfile] = {
             "Files changed",
             "Validation commands and results",
             "Evidence paths reviewed",
+        ),
+    ),
+    "human": AdapterProfile(
+        name="human",
+        label="Human Reviewer",
+        opening="Use this as a human review checklist before merging.",
+        style="Review the evidence-backed target, apply only the scoped repair, and keep the QA-Z verification command as the acceptance gate.",
+        command_expectation="Run the listed commands locally and record the result in the review notes.",
+        reporting_expectations=(
+            "Decision",
+            "Files reviewed or changed",
+            "Validation commands and results",
+            "Waiver or follow-up needed",
         ),
     ),
 }
