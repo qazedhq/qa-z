@@ -42,3 +42,41 @@ def test_verification_report_mentions_fast_and_deep_sections() -> None:
     assert "## Fast Checks" in report
     assert "## Deep Findings" in report
     assert "### Resolved" in report
+
+
+def test_verification_report_includes_copyable_review_summary() -> None:
+    baseline = verification_run(
+        "baseline",
+        fast_checks=[check_result("py_test", "failed", kind="test", exit_code=1)],
+        deep_checks=[
+            check_result(
+                "sg_scan",
+                "failed",
+                kind="static-analysis",
+                findings=[finding("rule.one", "src/app.py", 10, "Blocker")],
+                blocking_findings_count=1,
+            )
+        ],
+    )
+    candidate = verification_run(
+        "candidate",
+        fast_checks=[check_result("py_test", "passed", kind="test", exit_code=0)],
+        deep_checks=[
+            check_result(
+                "sg_scan",
+                "passed",
+                kind="static-analysis",
+                findings=[],
+                blocking_findings_count=0,
+            )
+        ],
+    )
+
+    report = render_verification_report_impl(
+        compare_verification_runs(baseline, candidate)
+    )
+
+    assert "## Review Summary\n\n```text" in report
+    assert "qa-z verify: improved" in report
+    assert "recommendation: safe_to_review" in report
+    assert "blocking: 2 -> 0" in report

@@ -57,6 +57,7 @@ def test_verify_stdout_renders_external_output_dirs(tmp_path: Path) -> None:
     output = session_verify_module.render_verify_stdout("improved", paths, root)
 
     assert "qa-z verify: improved" in output
+    assert "Recommendation: safe_to_review" in output
     assert f"Summary: {paths.summary_path}" in output
     assert f"Compare: {paths.compare_path}" in output
     assert f"Report: {paths.report_path}" in output

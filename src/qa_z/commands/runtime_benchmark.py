@@ -38,6 +38,7 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             args,
             error="benchmark_error",
             message=f"qa-z benchmark: benchmark error: {exc}",
+            details=benchmark_error_details(str(exc)),
         )
     except OSError as exc:
         return _benchmark_error(
@@ -88,21 +89,47 @@ def register_benchmark_command(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _benchmark_error(
-    args: argparse.Namespace, *, error: str, message: str, exit_code: int = 2
+    args: argparse.Namespace,
+    *,
+    error: str,
+    message: str,
+    exit_code: int = 2,
+    details: dict[str, object] | None = None,
 ) -> int:
     if args.json:
-        print(
-            json.dumps(
-                {
-                    "kind": "qa_z.benchmark_error",
-                    "error": error,
-                    "exit_code": exit_code,
-                    "message": message,
-                },
-                indent=2,
-                sort_keys=True,
-            )
-        )
+        payload: dict[str, object] = {
+            "kind": "qa_z.benchmark_error",
+            "error": error,
+            "exit_code": exit_code,
+            "message": message,
+        }
+        if details:
+            payload.update(details)
+        print(json.dumps(payload, indent=2, sort_keys=True))
     else:
         print(message)
     return exit_code
+
+
+def benchmark_error_details(message: str) -> dict[str, object]:
+    """Return machine-readable details for known benchmark blockers."""
+    if (
+        "Benchmark results directory is already in use" not in message
+        and "Could not remove benchmark results lock" not in message
+    ):
+        return {}
+    return {
+        "failure_kind": "benchmark_results_lock",
+        "failure_summary": (
+            "benchmark results directory lock is present or could not be removed"
+        ),
+        "next_actions": [
+            (
+                "Use a different --results-dir for this run, or remove the stale "
+                "lock only after confirming no benchmark is running."
+            )
+        ],
+        "next_commands": [
+            "python -m qa_z benchmark --results-dir <different-results-dir> --json"
+        ],
+    }

@@ -240,6 +240,7 @@ The `repair` object includes:
 - `targets`: ordered repair targets selected from failed fast checks and blocking deep findings
 - `affected_files`: first-seen ordered file list derived from selected targets
 - `objectives`: concise repair objectives derived from selected targets
+- `risk_notes`: deterministic executor warnings for fast-check, deep-finding, and scope risks; every adapter renders these notes
 
 Each repair target includes:
 
@@ -451,7 +452,7 @@ One-sided deep artifacts are not comparable. If only the baseline or only the ca
 - `regression_count`: comparable evidence that became blocking
 - `not_comparable_count`: skipped or non-comparable fast/deep evidence
 
-`report.md` is the human-readable companion. It lists baseline and candidate run ids, final verdict, aggregate counts, fast-check categories, deep-finding categories, and a short reproduction note.
+`report.md` is the human-readable companion. It lists baseline and candidate run ids, final verdict, reviewer-facing recommendation, aggregate counts, a copyable `Review Summary` block, fast-check categories, deep-finding categories, and a short reproduction note.
 
 Verdict derivation is deterministic:
 
@@ -607,6 +608,10 @@ Generated benchmark output policy is defined in `docs/generated-vs-frozen-eviden
 The generated `report.md` repeats `snapshot` near the top so human closure notes can quote generated benchmark evidence instead of recomputing counts.
 
 Benchmark results are comparisons against fixture `expected.json` contracts. They do not replace fast, deep, repair, or verify artifacts, and they do not call live executors.
+
+When `qa-z benchmark --json` fails before producing a summary, it prints a `qa_z.benchmark_error` payload with `error`, `exit_code`, and `message`. Known lock conflicts also include `failure_kind: benchmark_results_lock`, a compact `failure_summary`, and deterministic `next_actions`/`next_commands`. A busy results directory is not a product regression; do not remove its lock while its owner is active.
+
+Handoff benchmark contracts can assert `risk_note_count_min` and `risk_notes_present` through `expect_handoff`. The actual summary derives these from normalized `repair.risk_notes`, so fixtures detect missing executor warnings.
 
 Deep benchmark contracts may assert Semgrep scan-quality diagnostics with `scan_warning_count`, `scan_warnings`-derived fields such as `scan_warning_types_present`, summary-level `scan_quality`, and fixtures such as `deep_scan_warning_diagnostics` and `deep_scan_warning_multi_source_diagnostics`; these warnings remain non-blocking and do not replace finding counts.
 

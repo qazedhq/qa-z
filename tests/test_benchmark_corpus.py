@@ -405,6 +405,21 @@ def test_committed_benchmark_corpus_has_mixed_surface_realism_fixture_set() -> N
         "fast_check",
         "deep_finding",
     ]
+    assert mixed_fast_deep.expect_handoff["risk_note_count_min"] == 3
+    assert mixed_fast_deep.expect_handoff["risk_notes_present"] == [
+        (
+            "Failed fast checks are deterministic gates; do not skip or weaken "
+            "them to pass."
+        ),
+        (
+            "Blocking deep findings are repair targets; do not suppress rules "
+            "unless the contract explicitly permits it."
+        ),
+        (
+            "Keep repair scope to affected files unless the QA-Z evidence clearly "
+            "proves another file is required."
+        ),
+    ]
     assert "src/invoice.ts" in mixed_fast_deep.expect_handoff["affected_files"]
     mixed_fast_deep_ts_lint = by_name[
         "mixed_fast_deep_handoff_ts_lint_python_deep"

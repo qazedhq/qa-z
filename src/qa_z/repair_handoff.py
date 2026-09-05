@@ -103,6 +103,7 @@ class RepairHandoffPacket:
     targets: list[RepairTarget]
     affected_files: list[str]
     repair_objectives: list[str]
+    risk_notes: list[str]
     constraints: list[str]
     non_goals: list[str]
     validation_commands: list[ValidationCommand]
@@ -124,6 +125,7 @@ class RepairHandoffPacket:
                 "targets": [target.to_dict() for target in self.targets],
                 "affected_files": list(self.affected_files),
                 "objectives": list(self.repair_objectives),
+                "risk_notes": list(self.risk_notes),
             },
             "constraints": {
                 "must_follow": list(self.constraints),
@@ -167,6 +169,7 @@ def build_repair_handoff(
         targets=targets,
         affected_files=affected_files,
         repair_objectives=repair_objectives(repair_packet.repair_needed, targets),
+        risk_notes=handoff_risk_notes(targets),
         constraints=unique_preserve_order(
             [
                 *repair_packet.contract.get("constraints", []),
@@ -352,6 +355,29 @@ def repair_objectives(repair_needed: bool, targets: list[RepairTarget]) -> list[
     if not targets:
         return ["Investigate QA-Z repair-needed state and regenerate artifacts."]
     return [target.objective for target in targets]
+
+
+def handoff_risk_notes(targets: list[RepairTarget]) -> list[str]:
+    """Return executor-facing risk notes from selected repair targets."""
+    sources = {target.source for target in targets}
+    notes: list[str] = []
+    if "fast_check" in sources:
+        notes.append(
+            "Failed fast checks are deterministic gates; do not skip or weaken them to pass."
+        )
+    if "deep_finding" in sources:
+        notes.append(
+            "Blocking deep findings are repair targets; do not suppress rules unless the contract explicitly permits it."
+        )
+    if collect_affected_files(targets):
+        notes.append(
+            "Keep repair scope to affected files unless the QA-Z evidence clearly proves another file is required."
+        )
+    if not notes:
+        notes.append(
+            "No repair target was selected; do not edit code from this packet."
+        )
+    return unique_preserve_order(notes)
 
 
 def collect_affected_files(targets: list[RepairTarget]) -> list[str]:
