@@ -354,6 +354,17 @@ def test_guard_composite_action_and_example_workflow_are_parseable() -> None:
     assert action["inputs"]["deep"]["default"] == "auto"
     assert action["inputs"]["profile"]["default"] == "python"
     assert action["inputs"]["adapter"]["default"] == "codex"
+    install_source = action["inputs"]["qa-z-install"]["default"]
+    assert install_source.startswith("git+https://github.com/qazedhq/qa-z.git@")
+    pinned_revision = install_source.rsplit("@", 1)[1]
+    assert len(pinned_revision) == 40
+    assert all(character in "0123456789abcdef" for character in pinned_revision)
+    install_step = next(
+        step for step in action["runs"]["steps"] if step["name"] == "Install QA-Z"
+    )
+    assert install_step["env"]["QA_Z_INSTALL_SOURCE"] == "${{ inputs.qa-z-install }}"
+    assert install_step["run"] == 'python -m pip install -- "$QA_Z_INSTALL_SOURCE"'
+    assert "${{" not in install_step["run"]
     assert action["inputs"]["upload-sarif"]["default"] == "false"
     runs = "\n".join(step.get("run", "") for step in action["runs"]["steps"])
     assert "qa-z doctor" in runs

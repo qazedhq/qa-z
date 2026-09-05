@@ -26,11 +26,12 @@ jobs:
           fail-on-risk: "true"
 ```
 
-The action installs QA-Z from GitHub during alpha after validating inputs, runs
+The action installs QA-Z from a verified GitHub source commit after validating inputs, runs
 `qa-z doctor --json`, then runs `qa-z guard --github-summary`.
 
 ## Inputs
 
+- `qa-z-install`: trusted pip requirement, pinned by default to source commit `c8a0a37dda7f6d643fe2f1cd3211e8502a67e8ea`. Override with another reviewed commit or a local QA-Z checkout path when testing a candidate. This source pin is not a package release claim.
 - `profile`: documented project profile, default `python`.
 - `deep`: guard deep-check policy, default `auto`.
 - `adapter`: repair prompt adapter, default `codex`. Supported values are
