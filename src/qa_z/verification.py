@@ -31,6 +31,7 @@ from qa_z.verification_models import (
 )
 from qa_z.verification_outcome import (
     comparison_json,
+    recommendation_for_verdict,
     verification_summary_dict,
     verify_exit_code,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "compare_fast_checks",
     "compare_verification_runs",
     "comparison_json",
+    "recommendation_for_verdict",
     "count_blocking_checks",
     "count_blocking_deep_findings",
     "count_deep_findings",

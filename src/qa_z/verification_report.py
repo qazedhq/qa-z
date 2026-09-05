@@ -8,12 +8,18 @@ from qa_z.verification_render import render_fast_category, render_finding_catego
 from qa_z.verification_report_sections import (
     render_overview_lines,
     render_reproduction_lines,
+    render_review_summary_lines,
 )
 
 
 def render_verification_report_impl(comparison: VerificationComparison) -> str:
     """Render a human-readable verification report."""
-    lines = [*render_overview_lines(comparison), "## Fast Checks", ""]
+    lines = [
+        *render_overview_lines(comparison),
+        *render_review_summary_lines(comparison),
+        "## Fast Checks",
+        "",
+    ]
     lines.extend(render_fast_category("Resolved", comparison.fast_checks["resolved"]))
     lines.extend(
         render_fast_category("Still failing", comparison.fast_checks["still_failing"])

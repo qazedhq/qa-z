@@ -138,9 +138,22 @@ def test_benchmark_cli_reports_locked_results_dir(
     assert output["kind"] == "qa_z.benchmark_error"
     assert output["error"] == "benchmark_error"
     assert output["exit_code"] == 2
+    assert output["failure_kind"] == "benchmark_results_lock"
+    assert output["failure_summary"] == (
+        "benchmark results directory lock is present or could not be removed"
+    )
     assert "qa-z benchmark: benchmark error:" in output["message"]
     assert "results directory is already in use" in output["message"]
     assert "use a different --results-dir" in output["message"]
+    assert output["next_actions"] == [
+        (
+            "Use a different --results-dir for this run, or remove the stale "
+            "lock only after confirming no benchmark is running."
+        )
+    ]
+    assert output["next_commands"] == [
+        "python -m qa_z benchmark --results-dir <different-results-dir> --json"
+    ]
 
 
 def test_benchmark_cli_json_reports_artifact_write_failure(

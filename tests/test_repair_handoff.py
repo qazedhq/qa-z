@@ -246,6 +246,11 @@ def test_handoff_model_selects_failed_checks_and_blocking_grouped_findings(
         "tests/test_cli.py",
         "src/app.py",
     ]
+    assert data["repair"]["risk_notes"] == [
+        "Failed fast checks are deterministic gates; do not skip or weaken them to pass.",
+        "Blocking deep findings are repair targets; do not suppress rules unless the contract explicitly permits it.",
+        "Keep repair scope to affected files unless the QA-Z evidence clearly proves another file is required.",
+    ]
     assert data["validation"]["commands"] == [
         {
             "id": "check:py_format",
@@ -334,10 +339,12 @@ def test_adapter_renderers_use_same_handoff_data(tmp_path: Path) -> None:
     assert codex.startswith("# QA-Z Codex Repair Handoff\n")
     assert "Implement the repair now." in codex
     assert "## Validation Commands" in codex
+    assert "## Risk Notes" in codex
     assert "`python -m qa_z fast`" in codex
     assert claude.startswith("# QA-Z Claude Code Repair Handoff\n")
     assert "Analyze the QA-Z evidence, then make the smallest safe repair." in claude
     assert "## Non-Goals" in claude
+    assert "## Risk Notes" in claude
     assert "`python -m qa_z fast`" in claude
 
 
@@ -354,6 +361,7 @@ def test_adapter_renderer_outputs_required_merge_safety_sections(
         "## Objective",
         "## Relevant Evidence",
         "## Files and Risks",
+        "## Risk Notes",
         "## Forbidden Actions",
         "## Required Validation",
         "## Final Report Format",
@@ -361,6 +369,8 @@ def test_adapter_renderer_outputs_required_merge_safety_sections(
     ):
         assert heading in prompt
     assert "Do not claim success without validation." in prompt
+    for note in handoff.risk_notes:
+        assert note in prompt
     assert "qa-z verify --from-run" in prompt
     assert "`src/qa_z/runners/fast.py`" in prompt
     assert "bypass validation" not in prompt.lower()

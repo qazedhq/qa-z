@@ -36,6 +36,15 @@ def test_repair_prompt_includes_executor_handoff_sections(
     assert "src/db.ts" not in prompt
     assert "## Non-Goals" in prompt
     assert "* Do not call Codex, Claude, or any external LLM/API from QA-Z." in prompt
+    assert "## Risk Notes" in prompt
+    assert (
+        "* Failed fast checks are deterministic gates; do not skip or weaken them to pass."
+        in prompt
+    )
+    assert (
+        "* Blocking deep findings are repair targets; do not suppress rules unless the contract explicitly permits it."
+        in prompt
+    )
     assert "## Validation Commands" in prompt
     assert "* `ruff format --check .`" in prompt
     assert "* `mypy src tests`" in prompt

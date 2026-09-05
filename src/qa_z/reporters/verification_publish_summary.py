@@ -16,19 +16,7 @@ from qa_z.reporters.verification_publish_support import (
     path_name,
 )
 from qa_z.reporters.verification_publish_render import publish_headline
-
-
-def recommendation_for_verdict(verdict: str) -> str:
-    """Map deterministic verification verdicts to PR-friendly next actions."""
-    if verdict == "improved":
-        return "safe_to_review"
-    if verdict == "mixed":
-        return "review_required"
-    if verdict == "regressed":
-        return "do_not_merge"
-    if verdict == "verification_failed":
-        return "rerun_required"
-    return "continue_repair"
+from qa_z.verification_outcome_summary import recommendation_for_verdict
 
 
 def build_session_verification_publish_summary(

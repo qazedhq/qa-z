@@ -24,6 +24,19 @@ def verification_summary_dict(comparison: VerificationComparison) -> dict[str, A
     }
 
 
+def recommendation_for_verdict(verdict: str) -> str:
+    """Map verification verdicts to reviewer-facing next actions."""
+    if verdict == "improved":
+        return "safe_to_review"
+    if verdict == "mixed":
+        return "review_required"
+    if verdict == "regressed":
+        return "do_not_merge"
+    if verdict == "verification_failed":
+        return "rerun_required"
+    return "continue_repair"
+
+
 def verify_exit_code(verdict: str) -> int:
     if verdict == "improved":
         return 0

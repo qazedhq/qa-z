@@ -27,6 +27,12 @@
       "src/invoice.ts"
     ],
     "repair_needed": true,
+    "risk_note_count_min": 3,
+    "risk_notes_present": [
+      "Failed fast checks are deterministic gates; do not skip or weaken them to pass.",
+      "Blocking deep findings are repair targets; do not suppress rules unless the contract explicitly permits it.",
+      "Keep repair scope to affected files unless the QA-Z evidence clearly proves another file is required."
+    ],
     "schema_version": 1,
     "target_ids": [
       "check:py_test",

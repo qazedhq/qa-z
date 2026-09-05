@@ -197,6 +197,7 @@ def render_profile_handoff(
     lines.extend(render_list("## Forbidden Actions", forbidden_actions))
     lines.extend(render_list("## Forbidden Shortcuts", forbidden_actions))
     lines.extend(render_list("## Non-Goals", handoff.non_goals))
+    lines.extend(render_list("## Risk Notes", handoff.risk_notes))
     lines.extend(
         [
             "## Required Validation",

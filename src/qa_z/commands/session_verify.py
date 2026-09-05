@@ -13,6 +13,7 @@ from qa_z.verification import (
     VerificationArtifactPaths,
     compare_verification_runs,
     load_verification_run,
+    recommendation_for_verdict,
     verify_exit_code,
     write_verification_artifacts,
 )
@@ -248,6 +249,7 @@ def render_verify_stdout(
     lines = [
         f"QA-Z Verify: {display_verdict(verdict)}",
         f"qa-z verify: {verdict}",
+        f"Recommendation: {recommendation_for_verdict(verdict)}",
     ]
     if comparison is not None:
         lines.extend(
