@@ -5,14 +5,14 @@ Use this folder for durable agent operating knowledge. Keep root `AGENTS.md` sho
 ## Required Loop
 1. Confirm dirty state and active repository.
 2. Choose one user-facing or release-blocking flow.
-3. Write a Slice Card before editing.
-4. Use the role split in `subagent-roster.md` when the work benefits from separate audit, implementation, verification, or docs-sync passes.
+3. State the intended change and relevant verification briefly.
+4. Dispatch subagents only when explicitly requested.
 5. Run the narrowest meaningful validation first.
 6. Update only truth surfaces that changed.
-7. Append one entry to `work-slice-ledger.md`.
+7. Update the ledger only when it prevents repeated work or records a changed release decision.
 
 ## Role Execution
-- Default mode is inline: product-flow audit pass, implementation pass, verification pass, docs truth-sync pass.
+- Work directly; separate simulated role passes are unnecessary.
 - Dispatch actual subagents only when the user explicitly asks for subagents, delegation, parallel agents, or focused workers.
 - In inline mode, do not claim separate agents ran.
 
