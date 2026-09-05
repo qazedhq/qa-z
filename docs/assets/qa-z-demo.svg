@@ -8,7 +8,7 @@
   <circle cx="112" cy="64" r="7" fill="#27c93f"/>
   <text x="146" y="70" fill="#9fb3c8" font-family="Cascadia Mono, Consolas, monospace" font-size="18">QA-Z terminal demo</text>
   <g font-family="Cascadia Mono, Consolas, monospace" font-size="18">
-    <text x="64" y="120" fill="#8bd5ff">$ pipx install git+https://github.com/qazedhq/qa-z.git</text>
+    <text x="64" y="120" fill="#8bd5ff">$ pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"</text>
     <text x="64" y="154" fill="#d7e1ea">installed package qa-z from GitHub alpha source</text>
     <text x="64" y="190" fill="#8bd5ff">$ qa-z init --profile python --with-agent-templates</text>
     <text x="64" y="224" fill="#d7e1ea">created qa-z.yaml and agent templates</text>

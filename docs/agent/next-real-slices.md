@@ -11,6 +11,7 @@ Use this file after the operating model is in place. It is a candidate queue, no
 - Priority: P0/P1
 - Flow: current truth -> self-inspect/select-next -> recommended QA slice.
 - User-visible outcome: QA-Z stops recommending already-stale or already-completed tasks.
+- Current coverage note: 2026-05-18 `select-next --refresh` selected only the dirty-worktree integration-risk item; a follow-up fixed commit-plan evidence wording so non-strict JSON artifacts are not described as strict proof.
 - Discovery commands:
   - `rg -n "self-inspect|select-next|roadmap|current-state|current truth|stale" src tests docs benchmarks pyproject.toml`
 - Likely change type: Contract Slice + Evidence Slice.
@@ -31,8 +32,9 @@ Use this file after the operating model is in place. It is a candidate queue, no
 - Priority: P1
 - Flow: benchmark fixture -> result policy -> report/summary -> guard decision.
 - User-visible outcome: Benchmark output is deterministic and parallel experiments do not corrupt default result directories.
+- Current coverage note: 2026-05-18 added benchmark handoff observations for `repair.risk_notes`, pinned the mixed fast/deep handoff fixture with `risk_note_count_min` plus `risk_notes_present`, and added machine-readable `benchmark_results_lock` guidance for JSON lock conflicts; remaining work should focus on uncovered fixture realism or default-results behavior.
 - Discovery commands:
   - `rg -n "benchmark|results-dir|lock|fixture|summary.json|report.md" src tests benchmarks docs`
 - Likely change type: Evidence Slice.
-- Validation candidates: targeted benchmark fixture test; `python -m qa_z benchmark --json` when safe.
+- Validation candidates: targeted benchmark fixture test; `python -m qa_z benchmark --results-dir .qa-z/tmp/benchmark-results --json` for scratch evidence.
 - Stop rule: Use separate results dirs for parallel or scratch experiments.

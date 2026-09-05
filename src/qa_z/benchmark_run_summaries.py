@@ -102,6 +102,9 @@ def summarize_handoff_actual(handoff: RepairHandoffPacket) -> dict[str, Any]:
     targets = [
         dict(target) for target in repair.get("targets", []) if isinstance(target, dict)
     ]
+    risk_notes = [
+        str(note) for note in repair.get("risk_notes", []) if str(note).strip()
+    ]
     commands = [
         dict(command)
         for command in validation.get("commands", [])
@@ -116,6 +119,8 @@ def summarize_handoff_actual(handoff: RepairHandoffPacket) -> dict[str, Any]:
             [str(target.get("source") or "") for target in targets]
         ),
         "affected_files": list(repair.get("affected_files") or []),
+        "risk_notes": risk_notes,
+        "risk_note_count": len(risk_notes),
         "validation_command_ids": [str(command.get("id")) for command in commands],
     }
 

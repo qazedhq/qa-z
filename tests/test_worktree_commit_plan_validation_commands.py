@@ -24,13 +24,13 @@ def test_commit_plan_batches_include_targeted_validation_commands() -> None:
     batches = {batch["id"]: batch for batch in result["batches"]}
 
     assert batches["alpha_release_closure"]["validation_commands"] == [
-        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_alpha_release_bundle_manifest.py tests/test_alpha_release_truth_validator.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
+        "python -m pytest tests/test_alpha_release_gate.py tests/test_alpha_release_gate_environment.py tests/test_alpha_release_preflight.py tests/test_alpha_release_artifact_smoke.py tests/test_package_smoke_rehearsal.py tests/test_package_smoke_rehearsal_architecture.py tests/test_alpha_release_bundle_manifest.py tests/test_alpha_release_truth_validator.py tests/test_release_script_environment.py tests/test_github_workflow.py tests/test_text_file_hygiene.py tests/test_public_raw_urls.py -q",
         "python scripts/alpha_release_gate.py --quick --allow-dirty --json",
         "python scripts/alpha_release_truth_validator.py --proof-head-from-packet --json --output .qa-z/tmp/alpha-release-truth-validator.json",
         "python scripts/alpha_release_gate.py --allow-dirty --json",
     ]
     assert batches["commit_plan_support"]["validation_commands"] == [
-        "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
+        "python -m pytest tests/test_worktree_commit_plan.py tests/test_worktree_commit_plan_public_docs.py tests/test_worktree_commit_plan_release_scripts.py tests/test_worktree_commit_plan_validation_commands.py tests/test_current_truth.py -q",
         "python scripts/worktree_commit_plan.py --json --output .qa-z/tmp/worktree-commit-plan.json",
         "python scripts/worktree_commit_plan.py --summary-only --json --fail-on-generated --fail-on-cross-cutting --output .qa-z/tmp/worktree-commit-plan.json",
     ]

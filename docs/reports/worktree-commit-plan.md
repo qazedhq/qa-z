@@ -188,8 +188,8 @@ proof alignment worktrain, read-only remote proof, and proof-branch execution
 readiness audit. Approval flags were absent, so the result is an
 execution-ready current-head packet, not a publish.
 
-- Proof timestamp: `2026-05-13T14:39Z`.
-- Source HEAD at proof time: `1ede65172f770c66159b2cc5e9e7d4f2063bf634`.
+- Proof timestamp: `2026-05-14T05:27Z`.
+- Source HEAD at proof time: `ab98055ede02bda0377b403ab20d12ffa4863c87`.
 - Branch at proof time: `main`.
 - Remote target: `https://github.com/qazedhq/qa-z.git`.
 - Remote `main` at proof time:
@@ -231,7 +231,7 @@ Current local evidence:
   `python scripts\alpha_release_truth_validator.py --json` validates this
   packet against the current local HEAD and passes only while the packet is
   current-head aligned. The JSON facts expose
-  `proof_branch=codex/alpha-rc-1ede65172f77-20260513` and
+  `proof_branch=codex/alpha-rc-ab98055ede02-20260514` and
   `current_head_remote_proof=local_only_not_remote_visible`, so the next
   approval packet is copyable while recognizing that current HEAD still needs
   remote raw proof.
@@ -279,11 +279,11 @@ Read-only remote proof:
 - Latest read-only workflow proof for remote `main` is for
   `b9a2504ad07d15776eb900f07d6ee83f22ef9076`: `CI` run `25798333000` and
   `Public Raw Hygiene` run `25798332977` completed successfully.
-- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit 1ede65172f770c66159b2cc5e9e7d4f2063bf634`
+- `python scripts\check_public_raw_urls.py --repo qazedhq/qa-z --ref main --commit ab98055ede02bda0377b403ab20d12ffa4863c87`
   passed branch `main` URLs but failed exact-commit raw URLs with HTTP `404`,
   proving the current local HEAD is not yet public on the remote.
-- local `1ede65172f770c66159b2cc5e9e7d4f2063bf634` is not yet remote-visible.
-- Local proof HEAD is 1 commit ahead of remote `main`, so current main has
+- local `ab98055ede02bda0377b403ab20d12ffa4863c87` is not yet remote-visible.
+- Local proof HEAD is 19 commits ahead of remote `main`, so current main has
   branch public raw and read-only CI proof for
   `b9a2504ad07d15776eb900f07d6ee83f22ef9076`, but not for the new local proof
   SHA. Remote alpha readiness is partial until the proof SHA is pushed and
@@ -294,7 +294,7 @@ Approval matrix:
 | Action | Approved? | Executed? | Evidence / blocker |
 |---|---:|---:|---|
 | Read-only remote proof | Yes, safe read-only | Yes | GitHub API, `git ls-remote`, preflight, workflow API, and public raw checks captured. |
-| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 1 commit ahead of remote `main`. |
+| Push | No | No | `PUSH_ALLOWED` unset; local HEAD is 19 commits ahead of remote `main`. |
 | Tag | No | No | `TAG_ALLOWED` unset; existing tags `v0.9.8-alpha` and `v0.9.9-alpha` must not be reused. |
 | GitHub release | No | No | `GITHUB_RELEASE_ALLOWED` unset; release requires approved tag, notes, and post-CI evidence. |
 | Package publish | No | No | `PACKAGE_PUBLISH_ALLOWED` unset; `docs/package-publish-plan.md` keeps registry publishing for a later explicit plan. |
@@ -317,23 +317,23 @@ The conservative push packet is a proof branch, not a direct default-branch
 publish:
 
 ```bash
-test "$(git rev-parse HEAD)" = "1ede65172f770c66159b2cc5e9e7d4f2063bf634"
-git push -u origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:refs/heads/codex/alpha-rc-1ede65172f77-20260513
-git ls-remote --heads origin codex/alpha-rc-1ede65172f77-20260513
+test "$(git rev-parse HEAD)" = "ab98055ede02bda0377b403ab20d12ffa4863c87"
+git push -u origin ab98055ede02bda0377b403ab20d12ffa4863c87:refs/heads/codex/alpha-rc-ab98055ede02-20260514
+git ls-remote --heads origin codex/alpha-rc-ab98055ede02-20260514
 ```
 
 Expected proof branch output must resolve
-`1ede65172f770c66159b2cc5e9e7d4f2063bf634` to
-`refs/heads/codex/alpha-rc-1ede65172f77-20260513`.
+`ab98055ede02bda0377b403ab20d12ffa4863c87` to
+`refs/heads/codex/alpha-rc-ab98055ede02-20260514`.
 
 Direct `main` update needs separate explicit approval:
 
 ```bash
-git push origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:main
+git push origin ab98055ede02bda0377b403ab20d12ffa4863c87:main
 ```
 
 Direct `main` update must use
-`git push origin 1ede65172f770c66159b2cc5e9e7d4f2063bf634:main`, not a
+`git push origin ab98055ede02bda0377b403ab20d12ffa4863c87:main`, not a
 moving `HEAD:main` refspec.
 
 After any approved push, capture remote CI and public raw proof for the pushed
@@ -425,7 +425,7 @@ Rollback and incident packet:
   `git reset` for shared release history.
 - Mistaken proof branch push: if approved by a release owner, delete only the
   proof branch with
-  `git push origin --delete codex/alpha-rc-1ede65172f77-20260513`.
+  `git push origin --delete codex/alpha-rc-ab98055ede02-20260514`.
 - Mistaken direct `main` push: do not force-push by default. Open a rollback PR
   or run `git revert <bad-sha>` on a reviewed branch, then rerun the alpha gate
   and remote proof.
@@ -481,7 +481,7 @@ Remote and publishing proof packet:
   preflight both confirm that target.
 - Remote repository checks and reachability are proven current as of the proof
   timestamp. Current HEAD
-  `1ede65172f770c66159b2cc5e9e7d4f2063bf634` is not yet remote-visible, and
+  `ab98055ede02bda0377b403ab20d12ffa4863c87` is not yet remote-visible, and
   publish remains blocked by `PROOF_ONLY` approval boundaries and the non-empty
   remote state.
 - QA-Z local alpha RC readiness: `Yes` for the local proof packet.

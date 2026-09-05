@@ -1,5 +1,5 @@
 {"version":2,"width":100,"height":28,"env":{"SHELL":"bash","TERM":"xterm-256color"},"title":"QA-Z terminal demo: catch a risky auth change before merge"}
-[0.2,"o","$ pipx install git+https://github.com/qazedhq/qa-z.git\r\n"]
+[0.2,"o","$ pipx install \"git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha\"\r\n"]
 [0.8,"o","installed package qa-z from GitHub alpha source\r\n"]
 [1.1,"o","$ qa-z init --profile python --with-agent-templates\r\n"]
 [1.7,"o","created qa-z.yaml\r\ninstalled agent templates: AGENTS.md, CLAUDE.md\r\n"]

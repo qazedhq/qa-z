@@ -40,6 +40,7 @@ from qa_z.reporters.repair_prompt_sections import (
     format_severity_summary_dict,
     has_blocking_deep_findings,
     repair_prompt_affected_files,
+    repair_prompt_risk_notes,
     repair_prompt_validation_commands,
     render_failure_markdown,
     render_optional_list,
@@ -74,6 +75,7 @@ __all__ = [
     "format_severity_summary_dict",
     "has_blocking_deep_findings",
     "repair_prompt_affected_files",
+    "repair_prompt_risk_notes",
     "repair_prompt_validation_commands",
     "ordered_candidate_files",
     "repair_packet_json",
@@ -276,6 +278,11 @@ def _render_repair_prompt_impl(packet: RepairPacket) -> str:
         )
     )
     lines.extend(render_optional_list("## Non-Goals", DEFAULT_NON_GOALS, bullet="*"))
+    lines.extend(
+        render_optional_list(
+            "## Risk Notes", repair_prompt_risk_notes(packet), bullet="*"
+        )
+    )
     lines.extend(
         render_optional_list(
             "## Validation Commands",

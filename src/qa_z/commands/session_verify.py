@@ -14,6 +14,7 @@ from qa_z.verification import (
     comparison_json,
     compare_verification_runs,
     load_verification_run,
+    recommendation_for_verdict,
     verify_exit_code,
     write_verification_artifacts,
 )
@@ -201,6 +202,7 @@ def render_verify_stdout(
     return "\n".join(
         [
             f"qa-z verify: {verdict}",
+            f"Recommendation: {recommendation_for_verdict(verdict)}",
             f"Summary: {format_relative_path(paths.summary_path, root)}",
             f"Compare: {format_relative_path(paths.compare_path, root)}",
             f"Report: {format_relative_path(paths.report_path, root)}",

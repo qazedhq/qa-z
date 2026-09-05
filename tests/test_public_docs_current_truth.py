@@ -119,6 +119,9 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Use with Codex](use-with-codex.md)",
         "[Use with Claude Code](use-with-claude-code.md)",
         "[Use with Cursor](use-with-cursor.md)",
+        "[Use with aider](use-with-aider.md)",
+        "[Use with OpenHands](use-with-openhands.md)",
+        "[Use with Goose](use-with-goose.md)",
         "[Launch package](launch-package.md)",
         "[Launch posts](launch-posts.md)",
         "[Product direction](product/PRODUCT_DIRECTION.md)",
@@ -127,6 +130,29 @@ def test_docs_index_links_production_readiness_docs() -> None:
         "[Benchmarking](benchmarking.md)",
     ):
         assert link in docs_index
+
+
+def test_comparison_docs_position_qa_z_against_agents_ci_and_review() -> None:
+    comparison = (ROOT / "docs" / "comparison.md").read_text(encoding="utf-8")
+
+    for line in (
+        "Codex/Cursor/aider/OpenHands = code generation and editing.",
+        "Semgrep/CI = checks.",
+        "QA-Z = merge evidence, repair prompt, and verify verdict.",
+        "QA-Z complements human review and existing tools; it does not replace them.",
+        "QA-Z is not a Semgrep wrapper.",
+    ):
+        assert line in comparison
+
+    for tool in (
+        "Codex",
+        "Cursor",
+        "aider",
+        "OpenHands",
+        "GitHub Copilot",
+        "Semgrep",
+    ):
+        assert tool in comparison
 
 
 def test_quickstart_states_repair_verification_success_signal() -> None:
@@ -167,8 +193,10 @@ def test_public_docs_point_to_latest_github_prerelease_without_package_publish()
 
     assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha" in readme
     assert "https://github.com/qazedhq/qa-z/releases/tag/v0.9.8-alpha" not in readme
-    for text in (quickstart, package_plan):
+    for text in (readme, quickstart, package_plan):
         assert "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha" in text
+    assert "pipx install git+https://github.com/qazedhq/qa-z.git\n" not in readme
+    assert "uv tool install git+https://github.com/qazedhq/qa-z.git\n" not in readme
     assert "No GitHub Release has been created yet" not in release_notes
     assert "No tag has been pushed yet" not in release_notes
     assert "This should be created" not in release_notes
@@ -191,6 +219,79 @@ def test_public_docs_point_to_latest_github_prerelease_without_package_publish()
     assert action["inputs"]["qa-z-install"]["default"] == (
         "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
     )
+
+
+def test_package_publish_plan_documents_testpypi_rehearsal_execution() -> None:
+    package_plan = (ROOT / "docs" / "package-publish-plan.md").read_text(
+        encoding="utf-8"
+    )
+    release_handoff = (
+        ROOT / "docs" / "releases" / "v0.9.8-alpha-publish-handoff.md"
+    ).read_text(encoding="utf-8")
+
+    heading = "## TestPyPI Publish Rehearsal - 2026-05-23"
+    assert heading in package_plan
+    rehearsal = package_plan.split(heading, 1)[1].split(
+        "## TestPyPI Publish Rehearsal Checklist - Historical Local-Only Baseline",
+        1,
+    )[0]
+    historical_heading = (
+        "## TestPyPI Publish Rehearsal Checklist - Historical Local-Only Baseline"
+    )
+    assert historical_heading in package_plan
+    historical_rehearsal = package_plan.split(historical_heading, 1)[1].split(
+        "Blocked upload packet:", 1
+    )[0]
+    blocked_upload = package_plan.split("Blocked upload packet:", 1)[1].split(
+        "## v0.10.0-beta", 1
+    )[0]
+
+    for text in (
+        "Package URL: `https://test.pypi.org/project/qa-z/0.9.8a0/`.",
+        "`RELEASE_EXECUTION_APPROVED=true`",
+        "`PACKAGE_PUBLISH_ALLOWED=true`",
+        "`TESTPYPI_UPLOAD_ALLOWED=true`",
+        "`PYPI_UPLOAD_ALLOWED=false`",
+        "`dist/qa_z-0.9.8a0.tar.gz`",
+        "`dist/qa_z-0.9.8a0-py3-none-any.whl`",
+        "`twine upload --repository-url https://test.pypi.org/legacy/`",
+        "TestPyPI simple index with prereleases enabled lists `qa-z (0.9.8a0)`.",
+        "No PyPI upload ran.",
+        "No tag was created.",
+        "No GitHub Release was created.",
+        "No deploy ran.",
+        "Do not use `dist/*` for future uploads",
+    ):
+        assert text in rehearsal
+
+    for command in (
+        "python -m build --sdist --wheel",
+        "python scripts\\alpha_release_artifact_smoke.py --with-deps --json",
+        "python scripts\\package_smoke_rehearsal.py --json --allow-missing-tools",
+        "python -m twine check dist/*",
+        "pipx run --spec dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
+        "uvx --from dist/qa_z-0.9.8a0-py3-none-any.whl qa-z --help",
+    ):
+        assert command in historical_rehearsal
+
+    assert "\npython -m twine upload" not in historical_rehearsal
+    assert "\nuv publish" not in historical_rehearsal
+    assert "`registry_upload_executed=false`" in historical_rehearsal
+    assert (
+        "GitHub prerelease credentials do not authorize TestPyPI or PyPI upload."
+        in package_plan
+    )
+    assert (
+        "TestPyPI and PyPI credentials are registry-owned release credentials."
+        in package_plan
+    )
+    assert "python -m twine upload --repository testpypi dist/*" in blocked_upload
+    assert "python -m twine upload dist/*" in blocked_upload
+    assert (
+        "TestPyPI rehearsal was executed on 2026-05-23 for package metadata `0.9.8a0`."
+        in release_handoff
+    )
+    assert "still records no PyPI publish" in release_handoff
 
 
 def test_launch_package_points_to_complete_good_first_issue_seed_set() -> None:

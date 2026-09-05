@@ -236,6 +236,7 @@ The `repair` object includes:
 - `targets`: ordered repair targets selected from failed fast checks and blocking deep findings
 - `affected_files`: first-seen ordered file list derived from selected targets
 - `objectives`: concise repair objectives derived from selected targets
+- `risk_notes`: deterministic executor warnings for fast-check, deep-finding, and scope risks
 
 Each repair target includes:
 
@@ -256,9 +257,9 @@ Optional target fields:
 
 Deep repair targets are selected from blocking findings only. When grouped findings are present, QA-Z uses grouped findings and filters them by `semgrep.fail_on_severity`; non-blocking grouped findings remain visible in other summaries but are not handoff repair targets. When grouped findings are absent, QA-Z applies the same blocking-severity filter to top findings.
 
-The `validation.commands` list includes failed fast check commands when available, then `python -m qa_z fast`. If blocking deep findings are selected, it also includes `python -m qa_z deep --from-run latest`. The handoff does not run these commands and does not decide success through an LLM.
+The `validation.commands` list includes failed fast check commands when available, then `python -m qa_z fast`. If blocking deep findings are selected, it also includes `python -m qa_z deep --from-run latest`. The handoff does not run these commands and does not decide success through an LLM. `risk_notes` mirror the same safety boundaries in the human prompt and adapter Markdown so external executors see scope, gate, and suppression risks before editing.
 
-`codex.md` and `claude.md` render the same normalized handoff data. `codex.md` is action-oriented for Codex-style execution. `claude.md` is more explanatory and emphasizes constraints, non-goals, and workflow. Both are deterministic Markdown artifacts; neither invokes a live vendor API.
+`codex.md` and `claude.md` render the same normalized handoff data. `codex.md` is action-oriented for Codex-style execution. `claude.md` is more explanatory and emphasizes constraints, non-goals, risk notes, and workflow. Both are deterministic Markdown artifacts; neither invokes a live vendor API.
 
 ## Repair Session
 
@@ -433,7 +434,7 @@ One-sided deep artifacts are not comparable. If only the baseline or only the ca
 - `regression_count`: comparable evidence that became blocking
 - `not_comparable_count`: skipped or non-comparable fast/deep evidence
 
-`report.md` is the human-readable companion. It lists baseline and candidate run ids, final verdict, aggregate counts, fast-check categories, deep-finding categories, and a short reproduction note.
+`report.md` is the human-readable companion. It lists baseline and candidate run ids, final verdict, reviewer-facing recommendation, aggregate counts, a copyable `Review Summary` text block for PR review, fast-check categories, deep-finding categories, and a short reproduction note.
 
 Verdict derivation is deterministic:
 
@@ -555,7 +556,11 @@ The generated `report.md` repeats `snapshot` near the top so human closure notes
 
 Benchmark results are comparisons against fixture `expected.json` contracts. They do not replace fast, deep, repair, or verify artifacts, and they do not call live executors.
 
+When `qa-z benchmark --json` fails before producing a summary, it prints a `qa_z.benchmark_error` payload with `error`, `exit_code`, and `message`. Known lock conflicts also include `failure_kind: benchmark_results_lock`, a compact `failure_summary`, and deterministic `next_actions`/`next_commands` so automation can distinguish a busy or stale results directory from product regressions.
+
 Deep benchmark contracts may assert Semgrep scan-quality diagnostics with `scan_warning_count`, `scan_warnings`-derived fields such as `scan_warning_types_present`, summary-level `scan_quality`, and fixtures such as `deep_scan_warning_diagnostics` and `deep_scan_warning_multi_source_diagnostics`; these warnings remain non-blocking and do not replace finding counts.
+
+Handoff benchmark contracts may assert `risk_note_count_min` and `risk_notes_present` through `expect_handoff`. The actual handoff summary derives these from normalized `repair.risk_notes`, so benchmark fixtures catch drift where executor-facing warnings about deterministic gates, deep-finding suppression, or scope widening disappear.
 
 Fixture contracts may execute the local executor return path through `run.executor_result` and compare the resulting `expect_executor_result` section. That path creates a repair session, packages an executor bridge, ingests a `qa_z.executor_result` artifact, and may attach verification evidence through the same `candidate_run` or `rerun` hints used outside the benchmark.
 

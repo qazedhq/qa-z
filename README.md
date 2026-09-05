@@ -1,6 +1,6 @@
 # QA-Z 🛡️
 
-> Make AI coding safe to merge.
+> AI agents write code. QA-Z decides if it is safe to merge.
 
 [![CI](https://github.com/qazedhq/qa-z/actions/workflows/ci.yml/badge.svg)](https://github.com/qazedhq/qa-z/actions/workflows/ci.yml)
 ![Status](https://img.shields.io/badge/status-alpha-orange)
@@ -8,18 +8,20 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 [![Release](https://img.shields.io/github/v/release/qazedhq/qa-z?include_prereleases&label=release)](https://github.com/qazedhq/qa-z/releases/tag/v0.9.9-alpha)
 
-AI agents write code fast. QA-Z turns their changes into deterministic merge evidence: contracts, checks, repair prompts, and verification reports.
+Make AI coding safe to merge. QA-Z uses deterministic evidence, not live model judgment: local checks, SARIF, a guard verdict, a repair prompt, and a verification report.
 
-See QA-Z catch a risky agent auth change before merge.
+- Install: GitHub alpha source tag today; PyPI/TestPyPI publish is not approved yet.
+- Demo: run the packaged auth-bug scenario.
+- Output: read the `do_not_merge` guard verdict, then hand the repair prompt to an external executor.
+
+Try the auth-bug demo first. QA-Z catches a risky agent auth change before merge.
 
 ![QA-Z terminal demo](docs/assets/qa-z-demo.svg)
 
 This is a deterministic terminal cast proof, not a GIF. The checked-in sources are [docs/assets/qa-z-demo.cast](docs/assets/qa-z-demo.cast), [docs/assets/qa-z-demo.svg](docs/assets/qa-z-demo.svg), and the fuller [agent-auth-bug asciinema cast](docs/assets/qa-z-agent-auth-bug.cast).
 
 ```bash
-pipx install git+https://github.com/qazedhq/qa-z.git
-qa-z init --profile python --with-agent-templates
-qa-z doctor
+pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 qa-z demo auth-bug
 cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
@@ -51,8 +53,8 @@ If the console script is not on PATH, use `python -m qa_z` as a fallback.
 ## GitHub Alpha Install
 
 ```bash
-pipx install git+https://github.com/qazedhq/qa-z.git
-uv tool install git+https://github.com/qazedhq/qa-z.git
+pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
+uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 python -m pip install -e .[dev]
 ```
 
@@ -72,18 +74,11 @@ AI-generated code often arrives with a confident summary and scattered evidence.
 
 Before QA-Z:
 
-- manual context reconstruction
-- disconnected test failures
-- missed security risk
-- unclear agent repair scope
+- manual context reconstruction, disconnected test failures, missed security risk, unclear agent repair scope
 
 After QA-Z:
 
-- QA contract
-- fast and deep evidence
-- repair prompt
-- verified repair
-- reviewable merge verdict
+- QA contract, fast and deep evidence, repair prompt, verified repair, reviewable merge verdict
 
 ## What You Get
 
@@ -176,6 +171,7 @@ See [docs/github-action.md](docs/github-action.md). Add `security-events: write`
 - [Cursor Safety Rules](docs/cursor-safety-rules.md)
 - [Semgrep For AI-Generated Code](docs/semgrep-for-ai-generated-code.md)
 - [Use with GitHub Copilot](docs/use-with-github-copilot.md)
+- Use with [aider](docs/use-with-aider.md), [OpenHands](docs/use-with-openhands.md), and [Goose](docs/use-with-goose.md)
 - [Product direction](docs/product/PRODUCT_DIRECTION.md)
 - [V8 handoff](docs/product/V8_HANDOFF.md)
 - [Product decisions](docs/product/PRODUCT_DECISIONS.md)

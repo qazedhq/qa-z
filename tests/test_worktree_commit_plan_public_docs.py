@@ -14,8 +14,15 @@ def test_commit_plan_routes_public_support_docs_to_current_truth_batch() -> None
             " M SECURITY.md",
             " M CONTRIBUTING.md",
             " M CODE_OF_CONDUCT.md",
+            " M docs/ai-code-merge-checklist.md",
+            " M docs/bad-ai-code-examples.md",
+            " M docs/comparison.md",
+            " M docs/README.md",
             " M docs/product/PRODUCT_DIRECTION.md",
             " M docs/roadmap.md",
+            "?? docs/use-with-aider.md",
+            "?? docs/use-with-openhands.md",
+            "?? docs/use-with-goose.md",
             " M tests/test_public_docs_current_truth.py",
         ]
     )
@@ -26,8 +33,15 @@ def test_commit_plan_routes_public_support_docs_to_current_truth_batch() -> None
         "SECURITY.md",
         "CONTRIBUTING.md",
         "CODE_OF_CONDUCT.md",
+        "docs/ai-code-merge-checklist.md",
+        "docs/bad-ai-code-examples.md",
+        "docs/comparison.md",
+        "docs/README.md",
         "docs/product/PRODUCT_DIRECTION.md",
         "docs/roadmap.md",
+        "docs/use-with-aider.md",
+        "docs/use-with-openhands.md",
+        "docs/use-with-goose.md",
         "tests/test_public_docs_current_truth.py",
     ]
     assert result["unassigned_source_paths"] == []

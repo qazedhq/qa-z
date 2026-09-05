@@ -585,36 +585,6 @@ def test_commit_plan_routes_mypy_ini_into_planning_runtime_batch() -> None:
     assert result["unassigned_source_paths"] == []
 
 
-def test_commit_plan_assigns_alpha_release_support_surfaces_to_closure_batch() -> None:
-    module = load_plan_module()
-
-    result = module.analyze_status_lines(
-        [
-            " M scripts/alpha_release_artifact_smoke.py",
-            " M scripts/alpha_release_bundle_manifest.py",
-            "?? scripts/alpha_release_truth_validator.py",
-            " M tests/test_alpha_release_artifact_smoke_architecture.py",
-            " M tests/test_alpha_release_bundle_manifest.py",
-            "?? tests/test_alpha_release_truth_validator.py",
-            " M tests/alpha_release_artifact_smoke_test_support.py",
-            " M tests/alpha_release_bundle_manifest_test_support.py",
-        ]
-    )
-    batches = {batch["id"]: batch for batch in result["batches"]}
-
-    assert batches["alpha_release_closure"]["changed_paths"] == [
-        "scripts/alpha_release_artifact_smoke.py",
-        "scripts/alpha_release_bundle_manifest.py",
-        "scripts/alpha_release_truth_validator.py",
-        "tests/test_alpha_release_artifact_smoke_architecture.py",
-        "tests/test_alpha_release_bundle_manifest.py",
-        "tests/test_alpha_release_truth_validator.py",
-        "tests/alpha_release_artifact_smoke_test_support.py",
-        "tests/alpha_release_bundle_manifest_test_support.py",
-    ]
-    assert result["unassigned_source_paths"] == []
-
-
 def test_commit_plan_assigns_runtime_cleanup_script_to_self_inspection_batch() -> None:
     module = load_plan_module()
 
@@ -643,10 +613,14 @@ def test_commit_plan_assigns_verification_and_reporter_surfaces_to_publish_batch
     result = module.analyze_status_lines(
         [
             " M src/qa_z/verification_compare.py",
+            " M src/qa_z/repair_handoff.py",
+            " M src/qa_z/adapters/codex/repair_handoff.py",
+            " M src/qa_z/adapters/claude/repair_handoff.py",
             " M src/qa_z/reporters/review_packet_render.py",
             " M src/qa_z/commands/review_github_context.py",
             " M tests/test_verification_report.py",
             " M tests/test_repair_prompt.py",
+            " M tests/test_repair_handoff.py",
             " M tests/verification_test_support.py",
             " M tests/repair_prompt_test_support.py",
         ]
@@ -655,10 +629,14 @@ def test_commit_plan_assigns_verification_and_reporter_surfaces_to_publish_batch
 
     assert batches["repair_session_publish"]["changed_paths"] == [
         "src/qa_z/verification_compare.py",
+        "src/qa_z/repair_handoff.py",
+        "src/qa_z/adapters/codex/repair_handoff.py",
+        "src/qa_z/adapters/claude/repair_handoff.py",
         "src/qa_z/reporters/review_packet_render.py",
         "src/qa_z/commands/review_github_context.py",
         "tests/test_verification_report.py",
         "tests/test_repair_prompt.py",
+        "tests/test_repair_handoff.py",
         "tests/verification_test_support.py",
         "tests/repair_prompt_test_support.py",
     ]

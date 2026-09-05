@@ -98,13 +98,20 @@ def test_demo_asciinema_asset_is_real_cast_shape() -> None:
 
 def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
     readme = read("README.md")
+    demo_plan = read("docs/launch/demo-gif-plan.md")
     demo_cast_lines = read("docs/assets/qa-z-demo.cast").splitlines()
     demo_svg = read("docs/assets/qa-z-demo.svg")
 
     assert "Planned demo asset" not in readme
     assert "docs/assets/qa-z-demo.svg" in readme
     assert "docs/assets/qa-z-demo.cast" in readme
-    assert "See QA-Z catch a risky agent auth change before merge." in readme
+    assert "Try the auth-bug demo first." in readme
+    assert "QA-Z catches a risky agent auth change before merge." in readme
+    assert "AI agents write code. QA-Z decides if it is safe to merge." in readme
+    assert "Output: read the `do_not_merge` guard verdict" in readme
+    assert readme.index("Try the auth-bug demo first.") < readme.index(
+        "docs/assets/qa-z-demo.svg"
+    )
 
     header = json.loads(demo_cast_lines[0])
     body = "\n".join(demo_cast_lines[1:])
@@ -113,8 +120,14 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
     assert header["width"] == 100
     assert header["height"] == 28
     assert "timestamp" not in header
+    tagged_install = "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
+    assert f'pipx install "{tagged_install}"' in readme
+    assert tagged_install in body
+    assert f'pipx install "{tagged_install}"' in demo_svg
+    assert f'pipx install "{tagged_install}"' in demo_plan
+    assert "cd .qa-z/demo/auth-bug" in demo_plan
+
     for text in (
-        "pipx install git+https://github.com/qazedhq/qa-z.git",
         "qa-z init --profile python --with-agent-templates",
         "qa-z doctor",
         "qa-z demo auth-bug",
@@ -127,6 +140,8 @@ def test_readme_demo_visual_is_checked_in_and_public_safe() -> None:
         assert text in demo_svg
 
     public_surfaces = "\n".join([readme, body, demo_svg])
+    assert "pipx install git+https://github.com/qazedhq/qa-z.git\r\n" not in body
+    assert "pipx install git+https://github.com/qazedhq/qa-z.git</text>" not in demo_svg
     for forbidden in ("F:\\", "C:\\Users", "SECRET", "TOKEN", "BEGIN PRIVATE"):
         assert forbidden not in public_surfaces
 
@@ -248,6 +263,63 @@ def test_docs_index_and_readme_link_full_growth_package() -> None:
         "docs/community-distribution.md",
     ):
         assert link in combined
+
+
+def test_ai_merge_safety_docs_are_shareable_and_actionable() -> None:
+    checklist = read("docs/ai-code-merge-checklist.md")
+    bad_examples = read("docs/bad-ai-code-examples.md")
+
+    for text in (
+        "If your team uses AI coding agents, run QA-Z before merge.",
+        "Codex, Claude Code, Cursor, aider, OpenHands, Goose, or GitHub Copilot",
+        "qa-z guard --deep auto",
+        "qa-z repair-prompt --from-run latest --adapter codex",
+        "qa-z verify --baseline-run",
+        "Do not merge when",
+    ):
+        assert text in checklist
+
+    for text in (
+        "Auth bypass",
+        "Permission fallback",
+        "Test bypass",
+        "Dependency drift",
+        "QA-Z signal",
+        "Repair expectation",
+    ):
+        assert text in bad_examples
+
+    combined = checklist + "\n" + bad_examples
+    for forbidden in (
+        "pipx install qa-z",
+        "PyPI is live",
+        "replaces human review",
+        "calls Codex",
+        "calls Claude",
+    ):
+        assert forbidden not in combined
+
+
+def test_agent_specific_adoption_docs_cover_aider_openhands_and_goose() -> None:
+    docs = {
+        "docs/use-with-aider.md": "aider",
+        "docs/use-with-openhands.md": "OpenHands",
+        "docs/use-with-goose.md": "Goose",
+    }
+    readme_and_index = read("README.md") + "\n" + read("docs/README.md")
+
+    for path, agent_name in docs.items():
+        assert path in readme_and_index
+        doc = read(path)
+        assert f"# Use QA-Z With {agent_name}" in doc
+        assert "qa-z guard --deep auto" in doc
+        assert "qa-z repair-prompt --from-run latest --adapter codex" in doc
+        assert "qa-z verify --baseline-run" in doc
+        assert ".qa-z/runs/latest/repair/prompt.md" in doc
+        assert (
+            "QA-Z does not call the agent, edit code, create branches, commit, "
+            "push, or post GitHub comments."
+        ) in doc
 
 
 def test_optional_pr_comment_and_scorecard_surfaces_are_opt_in() -> None:

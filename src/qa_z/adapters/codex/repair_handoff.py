@@ -31,6 +31,7 @@ def render_codex_handoff(handoff: RepairHandoffPacket) -> str:
     lines.extend(render_list("## Affected Files", handoff.affected_files, code=True))
     lines.extend(render_list("## Constraints", handoff.constraints))
     lines.extend(render_list("## Non-Goals", handoff.non_goals))
+    lines.extend(render_list("## Risk Notes", handoff.risk_notes))
     lines.extend(["## Validation Commands", ""])
     lines.extend(
         render_validation_command(command) for command in handoff.validation_commands

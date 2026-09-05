@@ -274,6 +274,9 @@ def test_agent_skill_pack_and_templates_exist() -> None:
         "docs/cursor-safety-rules.md",
         "docs/semgrep-for-ai-generated-code.md",
         "docs/use-with-github-copilot.md",
+        "docs/use-with-aider.md",
+        "docs/use-with-openhands.md",
+        "docs/use-with-goose.md",
         "examples/agent-auth-bug/repo/README.md",
         "examples/agent-auth-bug/repo/app/auth.py",
         "examples/agent-auth-bug/repo/tests/test_auth.py",
@@ -346,8 +349,12 @@ def test_guard_composite_action_and_example_workflow_are_parseable() -> None:
     assert action["inputs"]["deep"]["default"] == "auto"
     assert action["inputs"]["profile"]["default"] == "python"
     assert action["inputs"]["adapter"]["default"] == "codex"
+    assert action["inputs"]["qa-z-install"]["default"] == (
+        "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
+    )
     assert action["inputs"]["upload-sarif"]["default"] == "false"
     runs = "\n".join(step.get("run", "") for step in action["runs"]["steps"])
+    assert 'python -m pip install "${{ inputs.qa-z-install }}"' in runs
     assert "qa-z doctor" in runs
     assert "qa-z guard --deep" in runs
     assert "inputs.profile" in runs
@@ -362,14 +369,22 @@ def test_public_install_docs_and_readme_reference_guard_and_skill_pack() -> None
     case_studies = (ROOT / "docs" / "case-studies.md").read_text(encoding="utf-8")
 
     assert "Make AI coding safe to merge." in readme
-    assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.\n")
+    assert readme.startswith(
+        "# QA-Z 🛡️\n\n> AI agents write code. QA-Z decides if it is safe to merge.\n"
+    )
+    assert "PyPI/TestPyPI publish is not approved yet" in readme
     assert "docs/assets/qa-z-demo.svg" in readme
     assert "docs/assets/qa-z-demo.cast" in readme
     assert "not a GIF" in readme
     assert "qa-z guard" in readme
     assert "qa-z skill install all" in readme
-    assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
-    assert "uv tool install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert (
+        'pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"' in readme
+    )
+    assert (
+        'uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"'
+        in readme
+    )
     assert "qazedhq/qa-z/.github/actions/guard@main" in github_action
     readme_action_section = readme.split("## GitHub Action", 1)[1].split(
         "## Agent QA Playbook", 1

@@ -27,7 +27,8 @@ jobs:
 ```
 
 The action installs QA-Z from GitHub during alpha, runs `qa-z doctor --json`,
-then runs `qa-z guard --github-summary`.
+then runs `qa-z guard --github-summary`. The default `qa-z-install` input pins
+the latest GitHub alpha tag and can be overridden for a fork or future release.
 
 ## Inputs
 
@@ -36,6 +37,8 @@ then runs `qa-z guard --github-summary`.
 - `adapter`: repair prompt adapter, default `codex`.
 - `fail-on-risk`: exits nonzero on blocking verdicts, default `"true"`.
 - `upload-sarif`: uploads `.qa-z/runs/latest/deep/results.sarif`, default `"false"`.
+- `qa-z-install`: Python package spec used to install QA-Z during alpha,
+  default `git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha`.
 
 SARIF upload requires `security-events: write`. Enable it explicitly:
 

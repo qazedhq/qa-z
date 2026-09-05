@@ -27,11 +27,15 @@ jobs:
 
 The action installs QA-Z from GitHub during alpha, validates the `profile` input, runs `qa-z doctor`, then runs `qa-z guard --deep <input> --adapter <input> --github-summary`.
 
+The default `qa-z-install` input pins the latest GitHub alpha tag and can be overridden for a fork or future release.
+
 The `profile` input records the intended starter profile for examples and validates accepted values. Existing `qa-z.yaml` remains the source of truth for guard execution.
 
 The composite action validates `qa-z doctor --json`, runs the guard verdict step, then preserves the summary, optional SARIF, and QA-Z run artifacts with `always()` cleanup steps.
 
 SARIF upload is disabled by default because code scanning permissions can be repository-specific.
+
+Example job summary output is checked in at [docs/assets/qa-z-github-action-summary.md](assets/qa-z-github-action-summary.md). It is generated from the deterministic auth-bug demo shape, not from a live GitHub run.
 
 To upload SARIF, add `security-events: write` and set `upload-sarif: "true"`:
 

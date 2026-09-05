@@ -11,10 +11,11 @@ Checked-in sources:
 README scenario:
 
 ```bash
-pipx install git+https://github.com/qazedhq/qa-z.git
+pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"
 qa-z init --profile python --with-agent-templates
 qa-z doctor
 qa-z demo auth-bug
+cd .qa-z/demo/auth-bug
 qa-z guard --from-run latest --adapter codex
 qa-z repair-prompt --from-run latest --adapter codex
 ```

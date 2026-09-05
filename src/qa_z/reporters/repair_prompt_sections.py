@@ -155,6 +155,28 @@ def repair_prompt_validation_commands(packet: "RepairPacket") -> list[str]:
     return unique_preserve_order(commands)
 
 
+def repair_prompt_risk_notes(packet: "RepairPacket") -> list[str]:
+    """Return executor-facing risk notes for a repair prompt."""
+    notes: list[str] = []
+    if packet.failures:
+        notes.append(
+            "Failed fast checks are deterministic gates; do not skip or weaken them to pass."
+        )
+    if repair_prompt_requires_deep_validation(packet.deep):
+        notes.append(
+            "Blocking deep findings are repair targets; do not suppress rules unless the contract explicitly permits it."
+        )
+    if repair_prompt_affected_files(packet):
+        notes.append(
+            "Keep repair scope to affected files unless the QA-Z evidence clearly proves another file is required."
+        )
+    if not notes and not packet.repair_needed:
+        notes.append(
+            "No repair target was selected; do not edit code from this packet."
+        )
+    return unique_preserve_order(notes)
+
+
 def repair_prompt_requires_deep_validation(deep: dict[str, Any] | None) -> bool:
     """Return whether this prompt needs a deep validation command."""
     return bool(

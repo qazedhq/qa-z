@@ -39,14 +39,31 @@ def test_artifact_schema_documents_auth_bug_demo_json_contract() -> None:
 def test_readme_is_public_landing_page_linking_to_internal_anchors() -> None:
     readme = read_readme()
 
-    assert readme.startswith("# QA-Z 🛡️\n\n> Make AI coding safe to merge.")
-    assert "AI agents write code fast." in readme
+    assert readme.startswith(
+        "# QA-Z 🛡️\n\n> AI agents write code. QA-Z decides if it is safe to merge."
+    )
+    assert (
+        "Make AI coding safe to merge. QA-Z uses deterministic evidence, not live model judgment"
+        in readme
+    )
+    assert (
+        "Install: GitHub alpha source tag today; PyPI/TestPyPI publish is not approved yet."
+        in readme
+    )
+    assert "Demo: run the packaged auth-bug scenario." in readme
+    assert "Output: read the `do_not_merge` guard verdict" in readme
+    assert "Try the auth-bug demo first." in readme
     assert "Is this AI-generated change safe to merge?" in readme
     assert "qa-z demo auth-bug" in readme
     assert "qa-z guard --adapter codex --deep auto --fail-on-risk" in readme
     assert "qa-z skill install all" in readme
-    assert "pipx install git+https://github.com/qazedhq/qa-z.git" in readme
-    assert "uv tool install git+https://github.com/qazedhq/qa-z.git" in readme
+    assert (
+        'pipx install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"' in readme
+    )
+    assert (
+        'uv tool install "git+https://github.com/qazedhq/qa-z.git@v0.9.9-alpha"'
+        in readme
+    )
     assert "python -m pip install semgrep" in readme
     assert "## Agent QA Playbook" in readme
     assert "## Advanced Commands" in readme

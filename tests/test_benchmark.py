@@ -490,6 +490,17 @@ def test_run_benchmark_executes_fast_handoff_and_verify_fixture(tmp_path: Path) 
                 "target_sources": ["fast_check"],
                 "target_ids": ["check:py_type"],
                 "affected_files": ["src/app.py"],
+                "risk_note_count_min": 2,
+                "risk_notes_present": [
+                    (
+                        "Failed fast checks are deterministic gates; do not skip "
+                        "or weaken them to pass."
+                    ),
+                    (
+                        "Keep repair scope to affected files unless the QA-Z "
+                        "evidence clearly proves another file is required."
+                    ),
+                ],
                 "validation_command_ids": ["check:py_type", "qa-z-fast"],
                 "schema_version": 1,
             },
@@ -522,6 +533,7 @@ def test_run_benchmark_executes_fast_handoff_and_verify_fixture(tmp_path: Path) 
     fixture_result = summary["fixtures"][0]
     assert fixture_result["actual"]["fast"]["failed_checks"] == ["py_type"]
     assert fixture_result["actual"]["handoff"]["target_sources"] == ["fast_check"]
+    assert fixture_result["actual"]["handoff"]["risk_note_count"] == 2
     assert fixture_result["actual"]["verify"]["verdict"] == "improved"
     assert fixture_result["categories"]["artifact"] is True
 

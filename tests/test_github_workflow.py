@@ -197,10 +197,40 @@ def test_github_action_docs_explain_composite_action_operational_contract() -> N
         "`always()` cleanup steps."
     ) in docs
     assert (
+        "The default `qa-z-install` input pins the latest GitHub alpha tag and can be "
+        "overridden for a fork or future release."
+    ) in docs
+    assert (
         "SARIF upload is disabled by default because code scanning permissions can be "
         "repository-specific."
     ) in docs
     assert 'upload-sarif: "true"' in docs
+
+
+def test_github_action_docs_include_public_safe_summary_example() -> None:
+    """Adoption docs should show the actual Step Summary shape."""
+    docs = (ROOT / "docs" / "github-action.md").read_text(encoding="utf-8")
+    summary_example = (
+        ROOT / "docs" / "assets" / "qa-z-github-action-summary.md"
+    ).read_text(encoding="utf-8")
+
+    assert "docs/assets/qa-z-github-action-summary.md" in docs
+    for text in (
+        "# QA-Z Summary",
+        "**Fast:** failed",
+        "**Deep:** not run",
+        "## Failed Checks",
+        "`auth_policy`",
+        "No changed-file metadata was captured.",
+        "Repair prompt: `.qa-z/runs/latest/repair/prompt.md`",
+    ):
+        assert text in summary_example
+
+    assert "This is a deterministic local auth-bug example, not a live GitHub run." in (
+        summary_example
+    )
+    for forbidden in ("C:\\", "F:\\", "SECRET", "TOKEN", "BEGIN PRIVATE"):
+        assert forbidden not in summary_example
 
 
 @pytest.mark.parametrize(
