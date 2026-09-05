@@ -2,6 +2,10 @@ name: QA-Z Guard
 description: Run QA-Z guard and preserve deterministic merge evidence.
 
 inputs:
+  qa-z-install:
+    default: git+https://github.com/qazedhq/qa-z.git@c8a0a37dda7f6d643fe2f1cd3211e8502a67e8ea
+    required: false
+    description: Trusted pip requirement for QA-Z; defaults to a verified source commit.
   profile:
     default: python
     required: false
@@ -109,7 +113,9 @@ runs:
 
     - name: Install QA-Z
       shell: bash
-      run: python -m pip install git+https://github.com/qazedhq/qa-z.git
+      env:
+        QA_Z_INSTALL_SOURCE: ${{ inputs.qa-z-install }}
+      run: python -m pip install -- "$QA_Z_INSTALL_SOURCE"
 
     - name: Validate QA-Z config
       shell: bash
