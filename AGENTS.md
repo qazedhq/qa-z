@@ -13,23 +13,11 @@
 - Do not overwrite unrelated dirty work.
 
 ## Startup Routing
-1. Confirm this is `F:\JustTyping` and check dirty state.
-2. Read this file plus `README.md`, `docs/product/PRODUCT_DIRECTION.md`, and `docs/agent/agent-operating-manual.md`, and `docs/agent/next-real-slices.md`.
-3. Pick one QA evidence or release-blocking flow.
-4. Use `.agents/skills/project-improvement-loop/SKILL.md` for broad improvement requests, then `.agents/skills/product-code-slice/SKILL.md` once the operating model is already present.
-5. Implement the smallest safe Flow, Contract, Evidence, or Cleanup Slice.
-6. Validate with the narrowest relevant command and report exact evidence.
-
-## Slice Card
-- Lane:
-- User-facing flow:
-- Slice type:
-- User-visible outcome:
-- Root cause:
-- Files likely touched:
-- Validation:
-- Evidence:
-- Stop rule:
+1. Confirm repository identity, branch, and dirty state; a checkout may live outside `F:\JustTyping`.
+2. Read only the contract needed for the task. Use `docs/product/PRODUCT_DIRECTION.md` for product scope and `docs/agent/next-real-slices.md` when no concrete task is given.
+3. Choose a bounded change and the check that proves it. Explicit workflow and instruction cleanup requests are valid tasks.
+4. Run the relevant check once per changed input. Expand verification after a failure or when release requirements demand it.
+5. Report the change, verification result, and remaining blocker. Cards, simulated role passes, and fixed report templates are optional.
 
 ## Project Priority Flows
 1. Diff/input -> fast/deep analysis -> SARIF/summary -> github-summary -> guard decision.
@@ -43,4 +31,4 @@
 - Full pre-V3 root instructions are archived at `docs/agent/root-agents-before-v3.md`.
 
 ## Completion Rule
-A task is complete only when code, runtime, test, validation, or docs truth moved and fresh evidence is reported. Operating-model or scaffold edits alone do not count as product improvement. External blockers stay blocked, and the next safe local slice must be named.
+A task is complete when the requested change is implemented and relevant evidence is reported. Keep local checks, package publication, and external blockers distinct.
